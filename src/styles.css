@@ -514,3 +514,17 @@ th {
   font-size: 15px;
   font-weight: 700;
 }
+
+.goal-card{
+  border:1px solid var(--border);
+  background: linear-gradient(180deg, #fffdf8 0%, #fff9ef 100%);
+  border-radius: calc(var(--radius) + 2px);
+  padding: 18px 18px 16px;
+}
+.goal-value{
+  font-size: 28px;
+  line-height: 1.05;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-top: 10px;
+}
