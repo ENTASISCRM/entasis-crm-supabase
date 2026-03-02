@@ -292,7 +292,7 @@ function CurvePanel({ title, actual, projected, target, note }) {
         </div>
         <div className="curve-target">
           <div className="muted small">Objectif</div>
-          <div className="curve-target-value">{formatMoney(target || 0)}</div>
+          <div className="curve-target-value">{euro(target || 0)}</div>
         </div>
       </div>
 
@@ -350,11 +350,11 @@ function CurvePanel({ title, actual, projected, target, note }) {
         <div className="curve-foot">
           <div>
             <div className="muted small">Réalisé</div>
-            <div className="kpi">{formatMoney(actual)}</div>
+            <div className="kpi">{euro(actual)}</div>
           </div>
           <div>
             <div className="muted small">Prévisionnel</div>
-            <div className="kpi">{formatMoney(safeProjected)}</div>
+            <div className="kpi">{euro(safeProjected)}</div>
           </div>
           <div>
             <div className="muted small">Avancement</div>
