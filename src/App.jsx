@@ -494,13 +494,17 @@ function DealsTable({ deals, month, profile, onEdit, onDelete, onRefresh }) {
   )
 }
 
-function ObjectifsPanel({ objectifs, month, canEdit, onSave, profile }) {
-  const [form, setForm] = useState({ pp_target: '', pu_target: '' })
+function ForecastPanel({ objectifs, month, profile, teamProfiles, deals }) {
+  const visibleProfiles = useMemo(() => {
+    const base = (teamProfiles || []).filter((item) => item?.is_active && item?.advisor_code)
+    if (profile?.role === 'manager') return base
+    return base.filter((item) => item.advisor_code === profile?.advisor_code)
+  }, [teamProfiles, profile])
 
-  const title = profile?.role === 'manager' ? 'Prévisionnels équipe' : 'Suivi de mes signatures'
+  const title = profile?.role === 'manager' ? 'Prévisionnels équipe' : 'Suivi de mon prévisionnel'
   const subtitle = profile?.role === 'manager'
-    ? 'Saisie facile des PP / PU prévues par conseiller, avec lecture immédiate face au CRM.'
-    : 'Renseigne ta PP et ta PU prévisionnelles. Les dossiers signés et en cours remontent automatiquement dans les courbes du cabinet.'
+    ? 'Les courbes bougent uniquement avec les dossiers CRM : Signé, En cours et Prévu.'
+    : 'Tes dossiers Signé, En cours et Prévu alimentent automatiquement tes courbes. Aucun champ manuel à renseigner ici.'
 
   return (
     <section className="panel">
@@ -528,8 +532,20 @@ function ObjectifsPanel({ objectifs, month, canEdit, onSave, profile }) {
               </div>
 
               <div className="grid grid-2 top-margin">
-                <CurvePanel title="PP annualisée" actual={metrics.ppSigned} projected={ppProjection} target={objectifs?.[month]?.pp_target || 0} note="Signé = réalisé • En cours / Prévu = projeté" />
-                <CurvePanel title="PU" actual={metrics.puSigned} projected={puProjection} target={objectifs?.[month]?.pu_target || 0} note="Signé = réalisé • En cours / Prévu = projeté" />
+                <CurvePanel
+                  title={`PP ${advisorCode}`}
+                  actual={metrics.ppSigned}
+                  projected={ppProjection}
+                  target={objectifs?.[month]?.pp_target || 0}
+                  note="Signé = réalisé • En cours / Prévu = projeté"
+                />
+                <CurvePanel
+                  title={`PU ${advisorCode}`}
+                  actual={metrics.puSigned}
+                  projected={puProjection}
+                  target={objectifs?.[month]?.pu_target || 0}
+                  note="Signé = réalisé • En cours / Prévu = projeté"
+                />
               </div>
             </div>
           )
@@ -540,6 +556,65 @@ function ObjectifsPanel({ objectifs, month, canEdit, onSave, profile }) {
           </div>
         ) : null}
       </div>
+    </section>
+  )
+}
+
+function ObjectifsPanel({ objectifs, month, canEdit, onSave, profile }) {
+  const [form, setForm] = useState({ pp_target: '', pu_target: '' })
+
+  useEffect(() => {
+    setForm({
+      pp_target: objectifs?.[month]?.pp_target ?? '',
+      pu_target: objectifs?.[month]?.pu_target ?? '',
+    })
+  }, [objectifs, month])
+
+  async function submit(e) {
+    e.preventDefault()
+    if (!canEdit) return
+    await onSave({
+      pp_target: Number(form.pp_target || 0),
+      pu_target: Number(form.pu_target || 0),
+    })
+  }
+
+  return (
+    <section className="panel">
+      <div className="panel-head align-start wrap">
+        <div>
+          <h2>Objectifs du cabinet</h2>
+          <div className="muted small">{canEdit ? 'Modification réservée à la direction.' : 'Lecture seule pour les conseillers.'}</div>
+        </div>
+        {!canEdit ? <div className="muted small">Espace {profile?.advisor_code || profile?.full_name || ''}</div> : null}
+      </div>
+
+      {canEdit ? (
+        <form className="stack gap-md" onSubmit={submit}>
+          <div className="grid grid-2">
+            <label>
+              PP annualisée cible
+              <input type="number" value={form.pp_target} onChange={(e) => setForm((prev) => ({ ...prev, pp_target: e.target.value }))} />
+            </label>
+            <label>
+              PU cible
+              <input type="number" value={form.pu_target} onChange={(e) => setForm((prev) => ({ ...prev, pu_target: e.target.value }))} />
+            </label>
+          </div>
+          <button className="btn btn-primary" type="submit">Enregistrer</button>
+        </form>
+      ) : (
+        <div className="grid grid-2">
+          <div className="goal-card">
+            <div className="muted">PP annualisée cible</div>
+            <div className="goal-value">{euro(objectifs?.[month]?.pp_target || 0)}</div>
+          </div>
+          <div className="goal-card">
+            <div className="muted">PU cible</div>
+            <div className="goal-value">{euro(objectifs?.[month]?.pu_target || 0)}</div>
+          </div>
+        </div>
+      )}
     </section>
   )
 }
