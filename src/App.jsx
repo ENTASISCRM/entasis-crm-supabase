@@ -196,13 +196,16 @@ function Header({ profile, month, setMonth, onNewDeal, onSignOut }) {
   )
 }
 
-function Dashboard({ deals, objectifs, month }) {
+function Dashboard({ deals, objectifs, month, signatures }) {
   const monthDeals = deals.filter((deal) => deal.month === month)
   const signed = monthDeals.filter((deal) => deal.status === 'Signé')
   const inProgress = monthDeals.filter((deal) => deal.status === 'En cours')
   const ppSigned = signed.reduce((sum, deal) => sum + annualize(deal.pp_m), 0)
   const puSigned = signed.reduce((sum, deal) => sum + Number(deal.pu || 0), 0)
   const monthlyTargets = objectifs[month] || { pp_target: 0, pu_target: 0 }
+  const monthSignatureRows = signatures.filter((row) => row.month === month)
+  const plannedSignatures = monthSignatureRows.reduce((sum, row) => sum + Number(row.planned_signatures || 0), 0)
+  const signedSignatures = monthSignatureRows.reduce((sum, row) => sum + Number(row.signed_signatures || 0), 0)
 
   return (
     <section className="stack gap-lg">
@@ -210,7 +213,7 @@ function Dashboard({ deals, objectifs, month }) {
         <KpiCard label="Dossiers du mois" value={String(monthDeals.length)} hint={`${signed.length} signés • ${inProgress.length} en cours`} />
         <KpiCard label="PP signé annualisé" value={euro(ppSigned)} hint={`Objectif ${euro(monthlyTargets.pp_target)}`} />
         <KpiCard label="PU signé" value={euro(puSigned)} hint={`Objectif ${euro(monthlyTargets.pu_target)}`} />
-        <KpiCard label="Ticket moyen PU" value={euro(signed.length ? puSigned / signed.length : 0)} hint="Dossiers signés du mois" />
+        <KpiCard label="Signatures équipe" value={`${signedSignatures}`} hint={`${plannedSignatures} prévues sur ${month}`} />
       </div>
 
       <div className="panel">
@@ -363,6 +366,115 @@ function ObjectifsPanel({ objectifs, month, canEdit, onSave }) {
   )
 }
 
+function AdvisorSignaturesPanel({ month, profile, teamProfiles, signatures, deals, onSave }) {
+  const [drafts, setDrafts] = useState({})
+  const [savingCode, setSavingCode] = useState('')
+
+  const visibleProfiles = useMemo(() => {
+    const rows = (teamProfiles || []).filter((item) => item?.is_active && item?.advisor_code)
+    if (!rows.length && profile?.advisor_code) return [profile]
+    if (profile?.role === 'manager') return rows
+    return rows.filter((item) => item.id === profile?.id)
+  }, [teamProfiles, profile])
+
+  useEffect(() => {
+    const next = {}
+    visibleProfiles.forEach((item) => {
+      const row = signatures.find((entry) => entry.month === month && entry.advisor_code === item.advisor_code)
+      next[item.advisor_code] = {
+        planned_signatures: row?.planned_signatures ?? 0,
+        signed_signatures: row?.signed_signatures ?? 0,
+      }
+    })
+    setDrafts(next)
+  }, [visibleProfiles, signatures, month])
+
+  async function saveRow(advisorCode) {
+    setSavingCode(advisorCode)
+    await onSave({
+      month,
+      advisor_code: advisorCode,
+      planned_signatures: Number(drafts[advisorCode]?.planned_signatures || 0),
+      signed_signatures: Number(drafts[advisorCode]?.signed_signatures || 0),
+    })
+    setSavingCode('')
+  }
+
+  const totalPlanned = visibleProfiles.reduce((sum, item) => sum + Number(drafts[item.advisor_code]?.planned_signatures || 0), 0)
+  const totalSigned = visibleProfiles.reduce((sum, item) => sum + Number(drafts[item.advisor_code]?.signed_signatures || 0), 0)
+
+  return (
+    <section className="panel">
+      <div className="panel-head wrap align-start">
+        <div>
+          <h2>Suivi signatures</h2>
+          <div className="muted small">
+            Chaque conseiller peut renseigner ses signatures prévues et signées sur le mois.
+          </div>
+        </div>
+        <div className="muted small signature-summary">
+          {totalPlanned} prévues • {totalSigned} signées
+        </div>
+      </div>
+
+      <div className="stack gap-md">
+        {visibleProfiles.map((item) => {
+          const advisorCode = item.advisor_code
+          const signedInCrm = deals.filter((deal) => deal.month === month && deal.status === 'Signé' && (deal.advisor_code === advisorCode || deal.co_advisor_code === advisorCode)).length
+          const draft = drafts[advisorCode] || { planned_signatures: 0, signed_signatures: 0 }
+          return (
+            <div key={advisorCode} className="signature-row-card">
+              <div className="signature-row-head">
+                <div>
+                  <div className="cell-title">{item.full_name || advisorCode}</div>
+                  <div className="muted tiny">{advisorCode}{item.role === 'manager' ? ' • direction' : ' • conseiller'}</div>
+                </div>
+                <div className="muted tiny">CRM : {signedInCrm} signé{signedInCrm > 1 ? 's' : ''}</div>
+              </div>
+              <div className="grid grid-signatures">
+                <label>
+                  Signatures prévues
+                  <input
+                    type="number"
+                    min="0"
+                    value={draft.planned_signatures}
+                    onChange={(e) => setDrafts((prev) => ({
+                      ...prev,
+                      [advisorCode]: { ...prev[advisorCode], planned_signatures: e.target.value },
+                    }))}
+                  />
+                </label>
+                <label>
+                  Signatures signées
+                  <input
+                    type="number"
+                    min="0"
+                    value={draft.signed_signatures}
+                    onChange={(e) => setDrafts((prev) => ({
+                      ...prev,
+                      [advisorCode]: { ...prev[advisorCode], signed_signatures: e.target.value },
+                    }))}
+                  />
+                </label>
+                <div className="align-end">
+                  <button className="btn btn-primary full-width" type="button" onClick={() => saveRow(advisorCode)} disabled={savingCode === advisorCode}>
+                    {savingCode === advisorCode ? 'Enregistrement…' : 'Enregistrer'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+        {!visibleProfiles.length ? (
+          <div className="notice">
+            Aucun conseiller avec <code>advisor_code</code> actif n’est encore visible. Renseigne les profils dans <strong>public.profiles</strong>.
+          </div>
+        ) : null}
+      </div>
+    </section>
+  )
+}
+
 function DealModal({ open, initialDeal, profile, onClose, onSave }) {
   const [deal, setDeal] = useState(initialDeal)
 
@@ -380,6 +492,8 @@ function DealModal({ open, initialDeal, profile, onClose, onSave }) {
     e.preventDefault()
     await onSave(normalizeDeal(deal))
   }
+
+  const isManager = profile?.role === 'manager'
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -437,7 +551,13 @@ function DealModal({ open, initialDeal, profile, onClose, onSave }) {
           <div className="grid grid-3">
             <label>
               Conseiller principal
-              <input value={deal.advisor_code || ''} onChange={(e) => setField('advisor_code', e.target.value.toUpperCase())} placeholder={profile?.advisor_code || 'LOUIS'} required />
+              <input
+                value={deal.advisor_code || ''}
+                onChange={(e) => setField('advisor_code', e.target.value.toUpperCase())}
+                placeholder={profile?.advisor_code || 'LOUIS'}
+                required
+                disabled={!isManager}
+              />
             </label>
             <label>
               Co-conseiller
@@ -487,8 +607,10 @@ function DealModal({ open, initialDeal, profile, onClose, onSave }) {
 export default function App() {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
+  const [teamProfiles, setTeamProfiles] = useState([])
   const [deals, setDeals] = useState([])
   const [objectifs, setObjectifs] = useState(EMPTY_OBJECTIFS)
+  const [signatures, setSignatures] = useState([])
   const [loading, setLoading] = useState(true)
   const [month, setMonth] = useState(currentMonth())
   const [modalOpen, setModalOpen] = useState(false)
@@ -523,6 +645,8 @@ export default function App() {
     if (!session?.user) {
       setProfile(null)
       setDeals([])
+      setTeamProfiles([])
+      setSignatures([])
       return
     }
     loadEverything()
@@ -533,18 +657,24 @@ export default function App() {
     setLoading(true)
     setError('')
 
-    const [profileRes, dealsRes, objectifsRes] = await Promise.all([
+    const [profileRes, teamProfilesRes, dealsRes, objectifsRes, signaturesRes] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle(),
+      supabase.from('profiles').select('id,email,full_name,role,advisor_code,is_active').order('full_name', { ascending: true }),
       supabase.from('deals').select('*').order('created_at', { ascending: false }),
       supabase.from('objectifs').select('*'),
+      supabase.from('advisor_monthly_signatures').select('*').order('advisor_code', { ascending: true }),
     ])
 
     if (profileRes.error) setError(profileRes.error.message)
+    if (teamProfilesRes.error) setError(teamProfilesRes.error.message)
     if (dealsRes.error) setError(dealsRes.error.message)
     if (objectifsRes.error) setError(objectifsRes.error.message)
+    if (signaturesRes.error) setError(signaturesRes.error.message)
 
     setProfile(profileRes.data || null)
+    setTeamProfiles(teamProfilesRes.data || [])
     setDeals(dealsRes.data || [])
+    setSignatures(signaturesRes.data || [])
 
     const map = { ...EMPTY_OBJECTIFS }
     ;(objectifsRes.data || []).forEach((row) => {
@@ -557,6 +687,7 @@ export default function App() {
   async function saveDeal(deal) {
     const payload = {
       ...deal,
+      advisor_code: profile?.role === 'manager' ? deal.advisor_code : (profile?.advisor_code || deal.advisor_code),
       created_by: session.user.id,
     }
 
@@ -596,6 +727,19 @@ export default function App() {
     await loadEverything()
   }
 
+  async function saveSignature(row) {
+    const payload = {
+      ...row,
+      updated_by: session.user.id,
+    }
+    const { error: saveError } = await supabase.from('advisor_monthly_signatures').upsert(payload)
+    if (saveError) {
+      alert(saveError.message)
+      return
+    }
+    await loadEverything()
+  }
+
   async function signOut() {
     await supabase.auth.signOut()
   }
@@ -624,10 +768,13 @@ export default function App() {
             Ton profil n'existe pas encore dans <code>public.profiles</code> ou n'est pas lisible. Vérifie la table <strong>profiles</strong> dans Supabase.
           </div>
         ) : null}
-        <Dashboard deals={deals} objectifs={objectifs} month={month} />
+        <Dashboard deals={deals} objectifs={objectifs} month={month} signatures={signatures} />
         <div className="grid grid-main">
           <DealsTable deals={deals} month={month} profile={profile} onEdit={startEdit} onDelete={deleteDeal} onRefresh={loadEverything} />
-          <ObjectifsPanel objectifs={objectifs} month={month} canEdit={profile?.role === 'manager'} onSave={saveObjectif} />
+          <div className="stack gap-lg">
+            <ObjectifsPanel objectifs={objectifs} month={month} canEdit={profile?.role === 'manager'} onSave={saveObjectif} />
+            <AdvisorSignaturesPanel month={month} profile={profile} teamProfiles={teamProfiles} signatures={signatures} deals={deals} onSave={saveSignature} />
+          </div>
         </div>
       </main>
       <DealModal open={modalOpen} initialDeal={editingDeal} profile={profile} onClose={() => { setModalOpen(false); setEditingDeal(null) }} onSave={saveDeal} />
