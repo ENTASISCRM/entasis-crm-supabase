@@ -1944,7 +1944,22 @@ export default function App(){
     ])
     const errs=[profRes,teamRes,dealsRes,objRes].filter(r=>r.error).map(r=>r.error.message)
     if(errs.length)setError(errs[0])
-    setProfile(profRes.data||null)
+    let prof=profRes.data
+    // Auto-create profile for new Google OAuth users
+    if(!prof&&session.user){
+      const email=session.user.email||''
+      const fullName=session.user.user_metadata?.full_name||session.user.user_metadata?.name||email.split('@')[0]||''
+      const{data:newProf}=await supabase.from('profiles').upsert({
+        id:session.user.id,
+        email,
+        full_name:fullName,
+        role:'advisor',
+        is_active:true,
+        advisor_code:email.split('@')[0].toUpperCase().slice(0,6),
+      },{onConflict:'id'}).select().maybeSingle()
+      prof=newProf
+    }
+    setProfile(prof||null)
     setTeamProfiles(teamRes.data||[])
     setDeals(dealsRes.data||[])
     const map={...EMPTY_OBJECTIFS}
