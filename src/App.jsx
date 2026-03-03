@@ -1637,7 +1637,7 @@ function AgendaView({deals, profile}){
   )
 }
 
-
+/* ─────────────────────────────────────────────────────────────────────────────
    TEAM VIEW (manager only)
 ───────────────────────────────────────────────────────────────────────────── */
 function TeamView({deals,objectifs,teamProfiles,month}){
