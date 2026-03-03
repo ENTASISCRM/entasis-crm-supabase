@@ -1423,7 +1423,20 @@ function AgendaView({deals, profile}){
       })
       const d=await r.json()
       if(!r.ok){
-        setError(d.error?.code===401?'Token expiré — reconnecte-toi avec Google.':d.error?.message||'Erreur Google Calendar')
+        if(d.error?.code===401){
+          setError('Token expiré — reconnexion en cours…')
+          // Silent reconnect: prompt=none won't show a popup if already logged in
+          await supabase.auth.signInWithOAuth({
+            provider:'google',
+            options:{
+              scopes:'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events',
+              redirectTo:window.location.origin,
+              queryParams:{access_type:'offline',prompt:'none'},
+            }
+          })
+        } else {
+          setError(d.error?.message||'Erreur Google Calendar')
+        }
         setLoading(false);return
       }
       setEvents(d.items||[])
@@ -1907,6 +1920,9 @@ export default function App(){
         await supabase.from('profiles')
           .update({gcal_token:s.provider_token})
           .eq('id',s.user.id)
+        // Reload profile immediately so AgendaView gets the fresh token
+        const{data:prof}=await supabase.from('profiles').select('*').eq('id',s.user.id).maybeSingle()
+        if(prof)setProfile(prof)
       }
     })
     return()=>{active=false;listener.subscription.unsubscribe()}
