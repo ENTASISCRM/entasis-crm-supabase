@@ -1905,24 +1905,23 @@ export default function App(){
   useEffect(()=>{
     if(!isSupabaseConfigured)return
     let active=true
-    async function boot(){
-      const{data}=await supabase.auth.getSession()
-      if(!active)return
-      setSession(data.session||null)
-      setLoading(false)
-    }
-    boot()
+    // getSession resolves loading for normal page loads
+    supabase.auth.getSession().then(({data})=>{
+      if(active){setSession(data.session||null);setLoading(false)}
+    })
+    // onAuthStateChange handles OAuth redirects + captures provider_token
     const{data:listener}=supabase.auth.onAuthStateChange(async(event,s)=>{
       if(!active)return
       setSession(s||null)
-      // Capture provider_token right after OAuth callback and persist it
-      if((event==='SIGNED_IN'||event==='TOKEN_REFRESHED')&&s?.provider_token&&s?.user?.id){
-        await supabase.from('profiles')
-          .update({gcal_token:s.provider_token})
-          .eq('id',s.user.id)
-        // Reload profile immediately so AgendaView gets the fresh token
-        const{data:prof}=await supabase.from('profiles').select('*').eq('id',s.user.id).maybeSingle()
-        if(prof)setProfile(prof)
+      if(event==='SIGNED_IN'||event==='TOKEN_REFRESHED'){
+        setLoading(false)
+        if(s?.provider_token&&s?.user?.id){
+          try{
+            await supabase.from('profiles').update({gcal_token:s.provider_token}).eq('id',s.user.id)
+            const{data:prof}=await supabase.from('profiles').select('*').eq('id',s.user.id).maybeSingle()
+            if(prof&&active)setProfile(prof)
+          }catch(e){console.warn('gcal_token update:',e)}
+        }
       }
     })
     return()=>{active=false;listener.subscription.unsubscribe()}
