@@ -234,12 +234,36 @@ function AuthScreen() {
     if(error)setMsg(error.message)
     else setMsg('Lien de connexion envoyé à '+email)
   }
+  async function signInGoogle(){
+    setLoading(true)
+    await supabase.auth.signInWithOAuth({
+      provider:'google',
+      options:{
+        scopes:GCAL_SCOPES,
+        redirectTo:window.location.href,
+        queryParams:{access_type:'offline',prompt:'consent'},
+      }
+    })
+    setLoading(false)
+  }
 
   return (
     <div className="auth-shell">
       <div className="auth-card">
         <div className="auth-brand">ENTASIS</div>
         <div className="auth-brand-sub">CRM Patrimonial · Équipe interne</div>
+
+        {/* Google sign-in — principal pour l'agenda */}
+        <button className="btn btn-outline w-full" style={{gap:10,justifyContent:'center',marginBottom:4}} disabled={loading} onClick={signInGoogle}>
+          <svg width="16" height="16" viewBox="0 0 16 16"><path d="M15.68 8.18c0-.57-.05-1.11-.14-1.64H8v3.1h4.31a3.68 3.68 0 01-1.6 2.42v2h2.58c1.51-1.39 2.39-3.44 2.39-5.88z" fill="#4285F4"/><path d="M8 16c2.16 0 3.97-.72 5.3-1.94l-2.58-2a4.8 4.8 0 01-7.15-2.52H.96v2.07A8 8 0 008 16z" fill="#34A853"/><path d="M3.57 9.54A4.8 4.8 0 013.32 8c0-.54.09-1.06.25-1.54V4.39H.96A8 8 0 000 8c0 1.29.31 2.51.96 3.61l2.61-2.07z" fill="#FBBC05"/><path d="M8 3.18c1.22 0 2.31.42 3.17 1.24l2.37-2.37A8 8 0 00.96 4.39L3.57 6.46A4.8 4.8 0 018 3.18z" fill="#EA4335"/></svg>
+          Se connecter avec Google
+        </button>
+        <div style={{fontSize:11,color:'var(--t3)',textAlign:'center',marginBottom:12}}>
+          Recommandé — active automatiquement Google Agenda
+        </div>
+
+        <div className="auth-divider">ou email / mot de passe</div>
+
         <form onSubmit={signIn} className="flex-col gap-12">
           <div className="form-group">
             <label className="form-label">Email professionnel</label>
@@ -1376,7 +1400,7 @@ function RelanceModal({open,onClose,onSave,deals,defaultDate}){
   )
 }
 
-function AgendaView({session,deals,profile}){
+function AgendaView({providerToken,session,deals,profile}){
   const [events,setEvents]=useState([])
   const [loading,setLoading]=useState(false)
   const [error,setError]=useState('')
@@ -1384,7 +1408,7 @@ function AgendaView({session,deals,profile}){
   const [relanceDate,setRelanceDate]=useState('')
   const [viewDays,setViewDays]=useState(7)
 
-  const token=session?.provider_token
+  const token=providerToken||sessionStorage.getItem('gcal_token')||session?.provider_token
   const isGoogleConnected=!!token
 
   const today=new Date(); today.setHours(0,0,0,0)
@@ -1438,7 +1462,8 @@ function AgendaView({session,deals,profile}){
   useEffect(()=>{if(isGoogleConnected)fetchEvents()},[token,viewDays])
 
   async function connectGoogle(){
-    await supabase.auth.signInWithOAuth({
+    // linkIdentity ajoute Google à la session existante sans déconnecter
+    const {error} = await supabase.auth.linkIdentity({
       provider:'google',
       options:{
         scopes:GCAL_SCOPES,
@@ -1446,6 +1471,17 @@ function AgendaView({session,deals,profile}){
         queryParams:{access_type:'offline',prompt:'consent'},
       }
     })
+    // Fallback si linkIdentity non supporté (Supabase < 2.39)
+    if(error){
+      await supabase.auth.signInWithOAuth({
+        provider:'google',
+        options:{
+          scopes:GCAL_SCOPES,
+          redirectTo:window.location.href,
+          queryParams:{access_type:'offline',prompt:'consent'},
+        }
+      })
+    }
   }
 
   const days=[]
@@ -1862,6 +1898,7 @@ function DealModal({open,initialDeal,profile,onClose,onSave}){
 ───────────────────────────────────────────────────────────────────────────── */
 export default function App(){
   const [session,setSession]=useState(null)
+  const [providerToken,setProviderToken]=useState(()=>sessionStorage.getItem('gcal_token')||null)
   const [profile,setProfile]=useState(null)
   const [teamProfiles,setTeamProfiles]=useState([])
   const [deals,setDeals]=useState([])
@@ -1880,10 +1917,27 @@ export default function App(){
       const{data}=await supabase.auth.getSession()
       if(!active)return
       setSession(data.session||null)
+      // Récupère le provider_token si présent dans la session (juste après OAuth callback)
+      if(data.session?.provider_token){
+        setProviderToken(data.session.provider_token)
+        sessionStorage.setItem('gcal_token',data.session.provider_token)
+      }
       setLoading(false)
     }
     boot()
-    const{data:listener}=supabase.auth.onAuthStateChange((_,s)=>setSession(s||null))
+    const{data:listener}=supabase.auth.onAuthStateChange((event,s)=>{
+      setSession(s||null)
+      // Capture le token au moment du callback OAuth
+      if(s?.provider_token){
+        setProviderToken(s.provider_token)
+        sessionStorage.setItem('gcal_token',s.provider_token)
+      }
+      // Si déconnexion, efface le token
+      if(event==='SIGNED_OUT'){
+        setProviderToken(null)
+        sessionStorage.removeItem('gcal_token')
+      }
+    })
     return()=>{active=false;listener.subscription.unsubscribe()}
   },[])
 
@@ -1988,7 +2042,7 @@ export default function App(){
             <ForecastView deals={deals} objectifs={objectifs} month={month} profile={profile} teamProfiles={teamProfiles} canEditObjectifs={isManager} onSaveObjectif={saveObjectif}/>
           )}
           {activeTab==='agenda'&&(
-            <AgendaView session={session} deals={deals} profile={profile}/>
+            <AgendaView providerToken={providerToken} session={session} deals={deals} profile={profile}/>
           )}
           {activeTab==='team'&&isManager&&(
             <TeamView deals={deals} objectifs={objectifs} teamProfiles={teamProfiles} month={month}/>
