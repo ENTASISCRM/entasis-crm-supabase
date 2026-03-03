@@ -859,12 +859,15 @@ function ForecastView({deals,objectifs,month,profile,teamProfiles,canEditObjecti
         </div>
       </div>
 
-      {/* Objectifs block */}
+      {/* Objectifs cabinet block */}
       <div className="card mb-24">
-        <div className="panel-head">
+        <div className="panel-head" style={{flexWrap:'wrap',gap:12}}>
           <div>
-            <div className="section-kicker" style={{marginBottom:2}}>Référentiel cabinet</div>
-            <div style={{fontSize:14,fontWeight:600,color:'var(--t1)'}}>Objectifs du mois</div>
+            <div className="section-kicker" style={{marginBottom:2}}>Objectif global · {month}</div>
+            <div style={{fontSize:14,fontWeight:600,color:'var(--t1)'}}>Objectifs du cabinet — consolidé équipe</div>
+          </div>
+          <div className="notice notice-gold" style={{margin:0,fontSize:12,padding:'6px 12px'}}>
+            Ces objectifs s'appliquent au <strong>cabinet entier</strong>, pas à chaque conseiller individuellement.
           </div>
         </div>
         <div className="panel-body">
@@ -872,24 +875,26 @@ function ForecastView({deals,objectifs,month,profile,teamProfiles,canEditObjecti
             <form onSubmit={submitObj}>
               <div className="form-row form-row-2 mb-16">
                 <div className="form-group">
-                  <label className="form-label">PP annualisée cible (€)</label>
+                  <label className="form-label">PP annualisée cible cabinet (€)</label>
                   <input className="form-input" type="number" value={formObj.pp_target} onChange={e=>setFormObj(p=>({...p,pp_target:e.target.value}))}/>
+                  <div className="form-hint">Objectif total du cabinet pour {month}</div>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">PU cible (€)</label>
+                  <label className="form-label">PU cible cabinet (€)</label>
                   <input className="form-input" type="number" value={formObj.pu_target} onChange={e=>setFormObj(p=>({...p,pu_target:e.target.value}))}/>
+                  <div className="form-hint">Versements uniques attendus pour {month}</div>
                 </div>
               </div>
-              <button className="btn btn-primary btn-sm" type="submit">Enregistrer les objectifs</button>
+              <button className="btn btn-primary btn-sm" type="submit">Enregistrer les objectifs cabinet</button>
             </form>
           ):(
             <div className="objectif-display">
               <div className="objectif-value-card">
-                <div className="objectif-value-label">PP annualisée cible</div>
+                <div className="objectif-value-label">PP annualisée cible cabinet</div>
                 <div className="objectif-value-num">{euro(targets.pp_target||0)}</div>
               </div>
               <div className="objectif-value-card">
-                <div className="objectif-value-label">PU cible</div>
+                <div className="objectif-value-label">PU cible cabinet</div>
                 <div className="objectif-value-num">{euro(targets.pu_target||0)}</div>
               </div>
             </div>
@@ -932,15 +937,27 @@ function ForecastView({deals,objectifs,month,profile,teamProfiles,canEditObjecti
                 title={`PP annualisée · ${code}`}
                 actual={m.ppSigned}
                 projected={m.ppProjected}
-                target={Number(targets.pp_target||0)}
+                target={0}
               />
               <AreaChart
                 title={`PU · ${code}`}
                 actual={m.puSigned}
                 projected={m.puProjected}
-                target={Number(targets.pu_target||0)}
+                target={0}
               />
             </div>
+            {(Number(targets.pp_target)||Number(targets.pu_target))>0&&(
+              <div style={{padding:'10px 20px 16px',display:'flex',gap:24,flexWrap:'wrap'}}>
+                {Number(targets.pp_target)>0&&<div style={{fontSize:12,color:'var(--t3)'}}>
+                  Contribution PP cabinet : <strong style={{color:'var(--t2)'}}>{pct(m.ppProjected,targets.pp_target)}%</strong>
+                  <span style={{marginLeft:6,fontSize:11,color:'var(--t3)'}}>({euro(m.ppProjected)} / {euro(targets.pp_target)} obj. cabinet)</span>
+                </div>}
+                {Number(targets.pu_target)>0&&<div style={{fontSize:12,color:'var(--t3)'}}>
+                  Contribution PU cabinet : <strong style={{color:'var(--t2)'}}>{pct(m.puProjected,targets.pu_target)}%</strong>
+                  <span style={{marginLeft:6,fontSize:11,color:'var(--t3)'}}>({euro(m.puProjected)} / {euro(targets.pu_target)} obj. cabinet)</span>
+                </div>}
+              </div>
+            )}
           </div>
         )
       })}
