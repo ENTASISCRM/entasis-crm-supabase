@@ -454,7 +454,6 @@ function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle}){
   const toH=v=>(H-PT-PB)*Math.min(1,v/maxVal)
   const curIdx=MONTHS.indexOf(currentMonth)
 
-  // Target line points
   const targetPts=data.map((d,i)=>({
     x:PL+i*barGroupW+barGroupW/2,
     y:d.target>0?toY(d.target):null
@@ -493,17 +492,11 @@ function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle}){
               <stop offset="100%" stopColor="rgba(192,155,90,0.15)"/>
             </linearGradient>
           </defs>
-
-          {/* Horizontal grid lines */}
           {gridVals.map((g,i)=>(
             <line key={i} x1={PL} y1={g.y} x2={W-PR} y2={g.y} stroke="var(--bd)" strokeWidth="0.5"/>
           ))}
           <line x1={PL} y1={H-PB} x2={W-PR} y2={H-PB} stroke="var(--bd)" strokeWidth="1"/>
-
-          {/* Target line */}
           {targetPath&&<path d={targetPath} fill="none" stroke="var(--gold)" strokeWidth="1.5" strokeDasharray="4 3" opacity="0.6"/>}
-
-          {/* Bars */}
           {data.map((d,i)=>{
             const cx=PL+i*barGroupW+barGroupW/2
             const bx=cx-barW/2
@@ -516,13 +509,9 @@ function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle}){
             const py=sy-ph
             return (
               <g key={d.month}>
-                {/* Pipeline bar (lighter, on top) */}
                 {ph>0.5&&<rect x={bx} y={py} width={barW} height={ph} fill="url(#bar-pipeline)" rx="2" ry="2"/>}
-                {/* Signed bar */}
                 {sh>0.5&&<rect x={bx} y={sy} width={barW} height={sh} fill={isCurrent?"url(#bar-signed)":"rgba(192,155,90,0.75)"} rx="2" ry="2"/>}
-                {/* Current month glow */}
                 {isCurrent&&hh>0.5&&<rect x={bx-1} y={Math.min(py,sy)-1} width={barW+2} height={hh+2} fill="none" stroke="var(--gold)" strokeWidth="1.5" rx="3" opacity="0.5"/>}
-                {/* Month label */}
                 <text
                   x={cx} y={H-8} textAnchor="middle"
                   fontSize="9.5" fill={isCurrent?'var(--gold)':'var(--t3)'}
@@ -602,7 +591,6 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
   const ppProjPct=pct(m.ppProjected,ppTarget)
   const landing=ppTarget>0?m.ppProjected-ppTarget:null
 
-  // M vs M-1
   const prevIdx=MONTHS.indexOf(month)-1
   const prevMonth=prevIdx>=0?MONTHS[prevIdx]:null
   const prev=prevMonth?advisorMetrics(deals,prevMonth,code):{ppSigned:0,puSigned:0,ppPipeline:0,puPipeline:0}
@@ -617,7 +605,6 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
 
   return (
     <div>
-      {/* Hero */}
       <div className="advisor-hero">
         <div className="advisor-hero-eyebrow">Tableau de bord · {month}</div>
         <div className="advisor-hero-name">{profile?.full_name||code||'Mon mois'}</div>
@@ -652,7 +639,6 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
         </div>
       </div>
 
-      {/* KPIs */}
       <div className="kpi-grid mb-24">
         <KpiCard label="PP signée annualisée" value={euro(m.ppSigned)} hint="Réalisé du mois" accent="gold" progressValue={ppPct} delta={prevMonth?dPpSigned:null}/>
         <KpiCard label="PP en pipeline" value={euro(m.ppPipeline)} hint={`${m.pipelineCount} dossier${m.pipelineCount!==1?'s':''} en cours / prévus`} accent="amber" delta={prevMonth?dPpPipeline:null}/>
@@ -661,25 +647,10 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
       </div>
 
       <div className="grid-2 gap-24" style={{alignItems:'start'}}>
-        {/* Charts */}
         <div className="flex-col gap-16">
-          <AreaChart
-            title="PP annualisée"
-            subtitle="Réalisé vs objectif cabinet"
-            actual={m.ppSigned}
-            projected={m.ppProjected}
-            target={ppTarget}
-          />
-          <AreaChart
-            title="PU"
-            subtitle="Versements uniques"
-            actual={m.puSigned}
-            projected={m.puProjected}
-            target={puTarget}
-          />
+          <AreaChart title="PP annualisée" subtitle="Réalisé vs objectif cabinet" actual={m.ppSigned} projected={m.ppProjected} target={ppTarget}/>
+          <AreaChart title="PU" subtitle="Versements uniques" actual={m.puSigned} projected={m.puProjected} target={puTarget}/>
         </div>
-
-        {/* Priorities */}
         <div>
           <div className="section-header">
             <div>
@@ -707,8 +678,6 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
               <div className="empty-sub">Tous tes dossiers chauds sont traités.</div>
             </div>
           )}
-
-          {/* Ecart objectif */}
           {ppTarget>0&&<div style={{marginTop:20,background:'var(--gold-subtle)',border:'1px solid var(--gold-line)',borderRadius:'var(--rad-lg)',padding:'16px 20px'}}>
             <div className="section-kicker" style={{marginBottom:10}}>Pilotage objectif</div>
             <div className="flex gap-16 flex-wrap">
@@ -731,7 +700,6 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
         </div>
       </div>
 
-      {/* Annual chart */}
       <div style={{marginTop:28}}>
         <div className="section-header">
           <div>
@@ -760,7 +728,6 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles}){
   const puTarget=Number(targets.pu_target||0)
   const activeAdvisors=teamProfiles.filter(p=>p.is_active&&p.advisor_code)
 
-  // M vs M-1
   const prevIdx=MONTHS.indexOf(month)-1
   const prevMonth=prevIdx>=0?MONTHS[prevIdx]:null
   const prevDeals=prevMonth?deals.filter(d=>d.month===prevMonth):[]
@@ -783,7 +750,6 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles}){
 
   return (
     <div>
-      {/* Cabinet KPIs */}
       <div className="section-header">
         <div>
           <div className="section-kicker">Vue direction · {month}</div>
@@ -799,13 +765,11 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles}){
         <KpiCard label="PU prévisionnelle" value={euro(puS+puP)} hint="Atterrissage projeté" accent="blue"/>
       </div>
 
-      {/* Charts cabinet */}
       <div className="grid-2 gap-16 mb-24">
         <AreaChart title="PP cabinet annualisée" subtitle="Réalisé + pipeline → objectif" actual={ppS} projected={ppS+ppP} target={ppTarget}/>
         <AreaChart title="PU cabinet" subtitle="Versements uniques consolidés" actual={puS} projected={puS+puP} target={puTarget}/>
       </div>
 
-      {/* Annual chart */}
       <div className="mb-24">
         <div className="section-header">
           <div>
@@ -817,7 +781,6 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles}){
         <AnnualChart deals={deals} objectifs={objectifs} currentMonth={month} advisorCode={null} title="PP cabinet — vue annuelle" subtitle="Tous conseillers confondus · barres : signée (plein) + pipeline (transparent)"/>
       </div>
 
-      {/* Équipe ranking */}
       <div className="mb-24">
         <div className="section-header">
           <div>
@@ -872,7 +835,6 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles}){
         </div>
       </div>
 
-      {/* Dossiers chauds */}
       {hotDeals.length>0&&<div>
         <div className="section-header">
           <div>
@@ -953,10 +915,7 @@ function PipelineBoard({deals,month,profile,onEdit}){
         </div>
         <input className="search-input" style={{maxWidth:260}} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher un dossier…"/>
       </div>
-
-      {/* Stale pipeline alert */}
       <StalePipelineAlert deals={visible} onEdit={onEdit}/>
-
       <div className="pipeline-board">
         {PIPELINE_COLS.map(col=>{
           const items=byStatus[col.id]||[]
@@ -1031,8 +990,6 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh}){
           <div className="section-sub">{filtered.length} dossier{filtered.length!==1?'s':''} · PP signée {euro(ppTotal)} · PU signée {euro(puTotal)}</div>
         </div>
       </div>
-
-      {/* Toolbar */}
       <div className="card card-p mb-16">
         <div className="table-toolbar">
           <input className="search-input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Recherche client, produit, conseiller…"/>
@@ -1055,22 +1012,13 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh}){
           <button className="btn btn-ghost btn-sm" onClick={onRefresh}><Icon.Refresh/> Rafraîchir</button>
         </div>
       </div>
-
       <div className="table-wrap">
         {filtered.length>0?(
           <table className="data-table">
             <thead><tr>
-              <th>Client</th>
-              <th>Produit</th>
-              <th>PP annualisée</th>
-              <th>PU</th>
-              <th>Conseiller</th>
-              <th>Mois</th>
-              <th>Statut</th>
-              <th>Priorité</th>
-              <th>Ancienneté</th>
-              <th>Compagnie</th>
-              <th></th>
+              <th>Client</th><th>Produit</th><th>PP annualisée</th><th>PU</th>
+              <th>Conseiller</th><th>Mois</th><th>Statut</th><th>Priorité</th>
+              <th>Ancienneté</th><th>Compagnie</th><th></th>
             </tr></thead>
             <tbody>
               {filtered.map(deal=>(
@@ -1153,8 +1101,6 @@ function ForecastView({deals,objectifs,month,profile,teamProfiles,canEditObjecti
           <div className="section-sub">Dossiers signés, en cours et prévus uniquement · {month}</div>
         </div>
       </div>
-
-      {/* Objectifs cabinet block */}
       <div className="card mb-24">
         <div className="panel-head" style={{flexWrap:'wrap',gap:12}}>
           <div>
@@ -1196,8 +1142,6 @@ function ForecastView({deals,objectifs,month,profile,teamProfiles,canEditObjecti
           )}
         </div>
       </div>
-
-      {/* Per-advisor charts */}
       {visibleProfiles.map(p=>{
         const code=p.advisor_code
         const m=advisorMetrics(deals,month,code)
@@ -1209,37 +1153,15 @@ function ForecastView({deals,objectifs,month,profile,teamProfiles,canEditObjecti
                 <div className="forecast-code">{code} · {p.role==='manager'?'Direction':'Conseiller'}</div>
               </div>
               <div className="forecast-metrics">
-                <div className="forecast-metric">
-                  <div className="forecast-metric-label">PP signée</div>
-                  <div className="forecast-metric-value">{euro(m.ppSigned)}</div>
-                </div>
-                <div className="forecast-metric">
-                  <div className="forecast-metric-label">PP projetée</div>
-                  <div className="forecast-metric-value">{euro(m.ppProjected)}</div>
-                </div>
-                <div className="forecast-metric">
-                  <div className="forecast-metric-label">PU projetée</div>
-                  <div className="forecast-metric-value">{euro(m.puProjected)}</div>
-                </div>
-                <div className="forecast-metric">
-                  <div className="forecast-metric-label">Dossiers</div>
-                  <div className="forecast-metric-value">{m.total}</div>
-                </div>
+                <div className="forecast-metric"><div className="forecast-metric-label">PP signée</div><div className="forecast-metric-value">{euro(m.ppSigned)}</div></div>
+                <div className="forecast-metric"><div className="forecast-metric-label">PP projetée</div><div className="forecast-metric-value">{euro(m.ppProjected)}</div></div>
+                <div className="forecast-metric"><div className="forecast-metric-label">PU projetée</div><div className="forecast-metric-value">{euro(m.puProjected)}</div></div>
+                <div className="forecast-metric"><div className="forecast-metric-label">Dossiers</div><div className="forecast-metric-value">{m.total}</div></div>
               </div>
             </div>
             <div className="forecast-charts-grid">
-              <AreaChart
-                title={`PP annualisée · ${code}`}
-                actual={m.ppSigned}
-                projected={m.ppProjected}
-                target={0}
-              />
-              <AreaChart
-                title={`PU · ${code}`}
-                actual={m.puSigned}
-                projected={m.puProjected}
-                target={0}
-              />
+              <AreaChart title={`PP annualisée · ${code}`} actual={m.ppSigned} projected={m.ppProjected} target={0}/>
+              <AreaChart title={`PU · ${code}`} actual={m.puSigned} projected={m.puProjected} target={0}/>
             </div>
             {(Number(targets.pp_target)||Number(targets.pu_target))>0&&(
               <div style={{padding:'10px 20px 16px',display:'flex',gap:24,flexWrap:'wrap'}}>
@@ -1269,19 +1191,14 @@ function ForecastView({deals,objectifs,month,profile,teamProfiles,canEditObjecti
   )
 }
 
-
-
 /* ─────────────────────────────────────────────────────────────────────────────
-   AGENDA VIEW — Google Calendar URL approach (no OAuth required)
+   AGENDA VIEW
 ───────────────────────────────────────────────────────────────────────────── */
 function fmtDay(d){ return d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}) }
 function fmtTime(d){ if(!d)return ''; return d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) }
 function isToday(d){ const t=new Date(); return d.getDate()===t.getDate()&&d.getMonth()===t.getMonth()&&d.getFullYear()===t.getFullYear() }
-
-// Format date for Google Calendar URL: YYYYMMDDTHHMMSS
 function toGCalDate(date){ return date.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'').slice(0,15)+'Z' }
 
-// Opens Google Calendar "new event" page pre-filled with data
 function openGCalEvent({title, startDate, startTime, durationMin, description}){
   const start = new Date(`${startDate}T${startTime}:00`)
   const end = new Date(start.getTime() + durationMin*60000)
@@ -1295,7 +1212,6 @@ function openGCalEvent({title, startDate, startTime, durationMin, description}){
   window.open(`https://calendar.google.com/calendar/r/eventedit?${params}`, '_blank')
 }
 
-// Opens Google Calendar week view
 function openGCal(){ window.open('https://calendar.google.com/calendar/r/week','_blank') }
 
 function RelanceModal({open, onClose, deals}){
@@ -1329,7 +1245,6 @@ function RelanceModal({open, onClose, deals}){
       notes||'',
       deal?`\n📎 Dossier : ${deal.client} — ${deal.product} — ${deal.advisor_code}\nPP : ${euro(annualize(deal.pp_m))} | Statut : ${deal.status}`:''
     ].filter(Boolean).join('\n').trim()
-
     openGCalEvent({title, startDate:date, startTime:time, durationMin:Number(duration), description})
     onClose()
   }
@@ -1425,7 +1340,6 @@ function AgendaView({deals, profile}){
       if(!r.ok){
         if(d.error?.code===401){
           setError('Token expiré — reconnexion en cours…')
-          // Silent reconnect: prompt=none won't show a popup if already logged in
           await supabase.auth.signInWithOAuth({
             provider:'google',
             options:{
@@ -1444,18 +1358,6 @@ function AgendaView({deals, profile}){
     setLoading(false)
   }
 
-  async function createEvent(payload){
-    if(!token)return
-    const r=await fetch(`${GCAL}/calendars/primary/events`,{
-      method:'POST',
-      headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
-      body:JSON.stringify(payload)
-    })
-    if(!r.ok){const d=await r.json();alert(d.error?.message||'Erreur création');return}
-    setRelanceOpen(false)
-    await fetchEvents()
-  }
-
   async function deleteEvent(id){
     if(!token||!window.confirm('Supprimer cet événement de Google Agenda ?'))return
     await fetch(`${GCAL}/calendars/primary/events/${id}`,{
@@ -1466,7 +1368,6 @@ function AgendaView({deals, profile}){
 
   useEffect(()=>{if(isGoogleConnected)fetchEvents()},[token,viewDays])
 
-  // Group by day
   const days=[]
   for(let i=0;i<viewDays;i++){
     const d=new Date(today); d.setDate(today.getDate()+i)
@@ -1475,7 +1376,6 @@ function AgendaView({deals, profile}){
   }
   const crmCount=events.filter(e=>e.extendedProperties?.private?.entasisCrm==='true').length
 
-  // Not connected
   if(!isGoogleConnected) return (
     <div>
       <div className="section-header">
@@ -1504,7 +1404,6 @@ function AgendaView({deals, profile}){
 
   return (
     <div>
-      {/* Header */}
       <div className="section-header">
         <div>
           <div className="section-kicker">Google Agenda · synchronisé</div>
@@ -1535,13 +1434,11 @@ function AgendaView({deals, profile}){
         </div>
       )}
 
-      {/* Connected indicator */}
       <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:20}}>
         <div style={{width:8,height:8,borderRadius:'50%',background:'var(--signed)'}}/>
         <span style={{fontSize:12,color:'var(--t3)'}}>Connecté en tant que {profile?.email||profile?.full_name}</span>
       </div>
 
-      {/* Days */}
       <div style={{display:'flex',flexDirection:'column',gap:10}}>
         {days.map(({date,events:dayEvts})=>{
           const isT=isTodayFn(date)
@@ -1552,7 +1449,6 @@ function AgendaView({deals, profile}){
               background:isT?'rgba(192,155,90,0.04)':'var(--card)',
               overflow:'hidden',
             }}>
-              {/* Day header */}
               <div style={{
                 padding:'10px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',
                 borderBottom:dayEvts.length>0?`1px solid ${isT?'var(--gold-line)':'var(--bd)'}`:'none',
@@ -1570,8 +1466,6 @@ function AgendaView({deals, profile}){
                   <Icon.CalPlus/> Relance
                 </button>
               </div>
-
-              {/* Events list */}
               {dayEvts.length>0?(
                 <div style={{padding:'8px 12px',display:'flex',flexDirection:'column',gap:6}}>
                   {dayEvts.map(evt=>{
@@ -1588,7 +1482,6 @@ function AgendaView({deals, profile}){
                         background:isCrm?'rgba(192,155,90,0.06)':'white',
                         border:`1px solid ${isCrm?'var(--gold-line)':'var(--bd)'}`,
                       }}>
-                        {/* Time */}
                         <div style={{minWidth:48,textAlign:'right',flexShrink:0,paddingTop:1}}>
                           {allDay
                             ?<span style={{fontSize:10,fontWeight:600,color:'var(--t3)',textTransform:'uppercase'}}>Journée</span>
@@ -1596,9 +1489,7 @@ function AgendaView({deals, profile}){
                                {end&&<div style={{fontSize:10,color:'var(--t3)'}}>{fmtHour(end)}</div>}</>
                           }
                         </div>
-                        {/* Bar */}
                         <div style={{width:3,alignSelf:'stretch',borderRadius:2,background:isCrm?'var(--gold)':'var(--progress)',flexShrink:0,minHeight:20}}/>
-                        {/* Content */}
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{fontWeight:600,fontSize:13,color:'var(--t1)',display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
                             {evt.summary||'(sans titre)'}
@@ -1642,7 +1533,6 @@ function AgendaView({deals, profile}){
       <RelanceModal
         open={relanceOpen}
         onClose={()=>setRelanceOpen(false)}
-        onSave={createEvent}
         deals={deals}
         defaultDate={relanceDate}
       />
@@ -1673,7 +1563,6 @@ function TeamView({deals,objectifs,teamProfiles,month}){
           <div className="section-sub">{activeAdvisors.length} conseiller{activeAdvisors.length!==1?'s':''} actifs · {month}</div>
         </div>
       </div>
-
       {rows.map((row,i)=>{
         const ppPct=pct(row.ppSigned,ppTarget)
         const ppProjPct=pct(row.ppProjected,ppTarget)
@@ -1714,12 +1603,7 @@ function TeamView({deals,objectifs,teamProfiles,month}){
                 <KpiCard label="PU signée" value={euro(row.puSigned)} accent="green"/>
                 <KpiCard label="Dossiers" value={String(row.total)} hint={`${row.signedCount} signés`}/>
               </div>
-              <AreaChart
-                title={`Prévisionnel PP · ${row.advisor_code}`}
-                actual={row.ppSigned}
-                projected={row.ppProjected}
-                target={ppTarget}
-              />
+              <AreaChart title={`Prévisionnel PP · ${row.advisor_code}`} actual={row.ppSigned} projected={row.ppProjected} target={ppTarget}/>
             </div>
           </div>
         )
@@ -1739,10 +1623,19 @@ function TeamView({deals,objectifs,teamProfiles,month}){
 
 /* ─────────────────────────────────────────────────────────────────────────────
    DEAL MODAL
+   FIX #2 : auto-fill advisor_code + required={isManager} sur le champ conseiller
 ───────────────────────────────────────────────────────────────────────────── */
 function DealModal({open,initialDeal,profile,onClose,onSave}){
   const [deal,setDeal]=useState(initialDeal)
   useEffect(()=>setDeal(initialDeal),[initialDeal])
+
+  // ✅ FIX BUG #2 : auto-remplissage du conseiller principal si vide
+  useEffect(()=>{
+    if(deal && !deal.advisor_code && profile?.advisor_code){
+      setDeal(p=>({...p, advisor_code: profile.advisor_code}))
+    }
+  },[profile?.advisor_code])
+
   if(!open||!deal)return null
 
   const set=(k,v)=>setDeal(p=>({...p,[k]:v}))
@@ -1767,7 +1660,6 @@ function DealModal({open,initialDeal,profile,onClose,onSave}){
 
         <form onSubmit={submit}>
           <div className="modal-body">
-            {/* Client & mois */}
             <div>
               <div className="form-section-title mb-16">Informations client</div>
               <div className="form-row form-row-2">
@@ -1794,7 +1686,6 @@ function DealModal({open,initialDeal,profile,onClose,onSave}){
               </div>
             </div>
 
-            {/* Produit */}
             <div>
               <div className="form-section-title mb-16">Dossier</div>
               <div className="form-row form-row-2">
@@ -1830,7 +1721,6 @@ function DealModal({open,initialDeal,profile,onClose,onSave}){
               </div>
             </div>
 
-            {/* Dates */}
             <div className="form-row form-row-2">
               <div className="form-group">
                 <label className="form-label">Date de signature prévue</label>
@@ -1842,13 +1732,20 @@ function DealModal({open,initialDeal,profile,onClose,onSave}){
               </div>
             </div>
 
-            {/* Équipe & priorité */}
             <div>
               <div className="form-section-title mb-16">Équipe & suivi</div>
               <div className="form-row form-row-3">
                 <div className="form-group">
                   <label className="form-label">Conseiller principal *</label>
-                  <input className="form-input" value={deal.advisor_code||''} onChange={e=>set('advisor_code',e.target.value.toUpperCase())} placeholder={profile?.advisor_code||'CODE'} required disabled={!isManager}/>
+                  {/* ✅ FIX BUG #2 : required={isManager} uniquement, le champ est pré-rempli auto pour les conseillers */}
+                  <input
+                    className="form-input"
+                    value={deal.advisor_code||''}
+                    onChange={e=>set('advisor_code',e.target.value.toUpperCase())}
+                    placeholder={profile?.advisor_code||'CODE'}
+                    required={isManager}
+                    disabled={!isManager}
+                  />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Co-conseiller</label>
@@ -1869,7 +1766,6 @@ function DealModal({open,initialDeal,profile,onClose,onSave}){
               </div>
             </div>
 
-            {/* Notes */}
             <div className="form-group">
               <label className="form-label">Notes</label>
               <textarea className="form-textarea" rows={4} value={deal.notes||''} onChange={e=>set('notes',e.target.value)} placeholder="Contexte client, objections, prochaine étape, pièces manquantes…"/>
@@ -1888,6 +1784,7 @@ function DealModal({open,initialDeal,profile,onClose,onSave}){
 
 /* ─────────────────────────────────────────────────────────────────────────────
    APP ROOT
+   FIX #1 : INITIAL_SESSION + try/finally dans loadAll
 ───────────────────────────────────────────────────────────────────────────── */
 export default function App(){
   const [session,setSession]=useState(null)
@@ -1905,15 +1802,14 @@ export default function App(){
   useEffect(()=>{
     if(!isSupabaseConfigured)return
     let active=true
-    // getSession resolves loading for normal page loads
     supabase.auth.getSession().then(({data})=>{
       if(active){setSession(data.session||null);setLoading(false)}
     })
-    // onAuthStateChange handles OAuth redirects + captures provider_token
     const{data:listener}=supabase.auth.onAuthStateChange(async(event,s)=>{
       if(!active)return
       setSession(s||null)
-      if(event==='SIGNED_IN'||event==='TOKEN_REFRESHED'){
+      // ✅ FIX BUG #1a : ajout de INITIAL_SESSION pour gérer le refresh
+      if(event==='SIGNED_IN'||event==='TOKEN_REFRESHED'||event==='INITIAL_SESSION'){
         setLoading(false)
         if(s?.provider_token&&s?.user?.id){
           try{
@@ -1933,38 +1829,43 @@ export default function App(){
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[session?.user?.id])
 
+  // ✅ FIX BUG #1b : try/finally garantit que setLoading(false) est toujours appelé
   async function loadAll(){
     setLoading(true);setError('')
-    const[profRes,teamRes,dealsRes,objRes]=await Promise.all([
-      supabase.from('profiles').select('*').eq('id',session.user.id).maybeSingle(),
-      supabase.from('profiles').select('id,email,full_name,role,advisor_code,is_active').order('full_name',{ascending:true}),
-      supabase.from('deals').select('*').order('created_at',{ascending:false}),
-      supabase.from('objectifs').select('*'),
-    ])
-    const errs=[profRes,teamRes,dealsRes,objRes].filter(r=>r.error).map(r=>r.error.message)
-    if(errs.length)setError(errs[0])
-    let prof=profRes.data
-    // Auto-create profile for new Google OAuth users
-    if(!prof&&session.user){
-      const email=session.user.email||''
-      const fullName=session.user.user_metadata?.full_name||session.user.user_metadata?.name||email.split('@')[0]||''
-      const{data:newProf}=await supabase.from('profiles').upsert({
-        id:session.user.id,
-        email,
-        full_name:fullName,
-        role:'advisor',
-        is_active:true,
-        advisor_code:email.split('@')[0].toUpperCase().slice(0,6),
-      },{onConflict:'id'}).select().maybeSingle()
-      prof=newProf
+    try {
+      const[profRes,teamRes,dealsRes,objRes]=await Promise.all([
+        supabase.from('profiles').select('*').eq('id',session.user.id).maybeSingle(),
+        supabase.from('profiles').select('id,email,full_name,role,advisor_code,is_active').order('full_name',{ascending:true}),
+        supabase.from('deals').select('*').order('created_at',{ascending:false}),
+        supabase.from('objectifs').select('*'),
+      ])
+      const errs=[profRes,teamRes,dealsRes,objRes].filter(r=>r.error).map(r=>r.error.message)
+      if(errs.length)setError(errs[0])
+      let prof=profRes.data
+      if(!prof&&session.user){
+        const email=session.user.email||''
+        const fullName=session.user.user_metadata?.full_name||session.user.user_metadata?.name||email.split('@')[0]||''
+        const{data:newProf}=await supabase.from('profiles').upsert({
+          id:session.user.id,
+          email,
+          full_name:fullName,
+          role:'advisor',
+          is_active:true,
+          advisor_code:email.split('@')[0].toUpperCase().slice(0,6),
+        },{onConflict:'id'}).select().maybeSingle()
+        prof=newProf
+      }
+      setProfile(prof||null)
+      setTeamProfiles(teamRes.data||[])
+      setDeals(dealsRes.data||[])
+      const map={...EMPTY_OBJECTIFS}
+      ;(objRes.data||[]).forEach(row=>{map[row.month]=row})
+      setObjectifs(map)
+    } catch(e) {
+      setError('Erreur chargement : '+e.message)
+    } finally {
+      setLoading(false)
     }
-    setProfile(prof||null)
-    setTeamProfiles(teamRes.data||[])
-    setDeals(dealsRes.data||[])
-    const map={...EMPTY_OBJECTIFS}
-    ;(objRes.data||[]).forEach(row=>{map[row.month]=row})
-    setObjectifs(map)
-    setLoading(false)
   }
 
   async function saveDeal(deal){
