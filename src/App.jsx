@@ -1825,28 +1825,42 @@ export default function App(){
 
   useEffect(()=>{
     if(!session?.user){setProfile(null);setDeals([]);setTeamProfiles([]);return}
-    loadAll()
+    // ✅ FIX : on passe session directement pour éviter la stale closure
+    loadAll(session)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[session?.user?.id])
 
-  // ✅ FIX BUG #1b : try/finally garantit que setLoading(false) est toujours appelé
-  async function loadAll(){
+  // ✅ FIX : session passé en paramètre (évite stale closure) + timeout 15s anti-boucle infinie
+  async function loadAll(currentSession){
+    const s=currentSession||session
+    if(!s?.user)return
+    const userId=s.user.id
     setLoading(true);setError('')
+
+    // Timeout de sécurité : force la sortie du loader après 15s
+    let timedOut=false
+    const safetyTimer=setTimeout(()=>{
+      timedOut=true
+      setLoading(false)
+      setError('Chargement trop long — vérifie les policies RLS Supabase ou ta connexion.')
+    },15000)
+
     try {
       const[profRes,teamRes,dealsRes,objRes]=await Promise.all([
-        supabase.from('profiles').select('*').eq('id',session.user.id).maybeSingle(),
+        supabase.from('profiles').select('*').eq('id',userId).maybeSingle(),
         supabase.from('profiles').select('id,email,full_name,role,advisor_code,is_active').order('full_name',{ascending:true}),
         supabase.from('deals').select('*').order('created_at',{ascending:false}),
         supabase.from('objectifs').select('*'),
       ])
+      if(timedOut)return
       const errs=[profRes,teamRes,dealsRes,objRes].filter(r=>r.error).map(r=>r.error.message)
       if(errs.length)setError(errs[0])
       let prof=profRes.data
-      if(!prof&&session.user){
-        const email=session.user.email||''
-        const fullName=session.user.user_metadata?.full_name||session.user.user_metadata?.name||email.split('@')[0]||''
+      if(!prof&&s.user){
+        const email=s.user.email||''
+        const fullName=s.user.user_metadata?.full_name||s.user.user_metadata?.name||email.split('@')[0]||''
         const{data:newProf}=await supabase.from('profiles').upsert({
-          id:session.user.id,
+          id:userId,
           email,
           full_name:fullName,
           role:'advisor',
@@ -1862,9 +1876,10 @@ export default function App(){
       ;(objRes.data||[]).forEach(row=>{map[row.month]=row})
       setObjectifs(map)
     } catch(e) {
-      setError('Erreur chargement : '+e.message)
+      if(!timedOut)setError('Erreur chargement : '+e.message)
     } finally {
-      setLoading(false)
+      clearTimeout(safetyTimer)
+      if(!timedOut)setLoading(false)
     }
   }
 
