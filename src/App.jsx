@@ -1531,11 +1531,11 @@ const FUNDS_DEFAULT=[
     {name:'Lazard Japon AC H EUR',        isin:'FR0014008M81', cat:'Actions Japon',        refSymbol:'INDEX:NKY',        refLabel:'Nikkei 225', color:'#EF4444'},
     {name:'AXA Or et Matières Premières', isin:'FR0010011171', cat:'Matières premières',   refSymbol:'TVC:GOLD',       refLabel:'Or',         color:'#F59E0B'},
     {name:'AP Meeschaert Gl. Convictions',isin:'FR001400CSI0', cat:'Actions Monde Value',  refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',    color:'#10B981'},
-    {name:'Fidelity Em Mkts A-USD',       isin:'LU0261950470', cat:'Actions Ém. Marchés',  refSymbol:'AMEX:EEM',       refLabel:'EEM ETF',    color:'#F97316'},
-    {name:'Fidelity Global Technology',   isin:'LU0099574567', cat:'Actions Technologie',  refSymbol:'NASDAQ:QQQ',       refLabel:'Nasdaq QQQ', color:'#7C3AED'},
+    {name:'Fidelity Em Mkts A-USD',       isin:'LU0261950470', yahooTicker:'FJ2Z.F', cat:'Actions Ém. Marchés',  refSymbol:'AMEX:EEM',       refLabel:'EEM ETF',    color:'#F97316'},
+    {name:'Fidelity Global Technology',   isin:'LU0099574567', yahooTicker:'FJ2P.F', cat:'Actions Technologie',  refSymbol:'NASDAQ:QQQ',       refLabel:'Nasdaq QQQ', color:'#7C3AED'},
     {name:'Quadrige France Smallcaps',    isin:'FR0011466093', cat:'Actions France Small', refSymbol:'INDEX:CAC40',      refLabel:'CAC 40',     color:'#0EA5E9'},
-    {name:'Pictet Clean Energy Transtn',  isin:'LU0280435461', cat:'Énergie Propre',       refSymbol:'AMEX:ICLN',        refLabel:'ICLN ETF',   color:'#06B6D4'},
-    {name:'First Eagle Amundi Intl',      isin:'LU0068578508', cat:'Actions Monde Flex.',  refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',    color:'#84CC16'},
+    {name:'Pictet Clean Energy Transtn',  isin:'LU0280435461', yahooTicker:'0P00008OBP.F', cat:'Énergie Propre',       refSymbol:'AMEX:ICLN',        refLabel:'ICLN ETF',   color:'#06B6D4'},
+    {name:'First Eagle Amundi Intl',      isin:'LU0068578508', yahooTicker:'0P0000RXYQ.F', cat:'Actions Monde Flex.',  refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',    color:'#84CC16'},
     {name:'Groupama Global Disruption',   isin:'LU1897556517', cat:'Actions Innovation',   refSymbol:'NASDAQ:QQQ',       refLabel:'Nasdaq QQQ', color:'#EC4899'},
     {name:'Claresco USA',                 isin:'LU1379103812', cat:'Actions USA',          refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',    color:'#6366F1'},
   ]
@@ -1552,10 +1552,12 @@ function MarketView(){
   const [newFund,setNewFund]=useState({name:'',isin:'',cat:'',refLabel:'',refSymbol:''})
   const [addError,setAddError]=useState('')
   const [addLoading,setAddLoading]=useState(false)
+  const [editPerfIsin,setEditPerfIsin]=useState(null)
+  const [editPerfVals,setEditPerfVals]=useState({perf1W:'',perf1M:'',perf3M:'',perf1Y:''})
 
-  async function fetchNAV(isin){
+  async function fetchNAV(isin, yahooTicker){
     try{
-      const r=await fetch(`/api/nav?isin=${isin}`)
+      const r=await fetch(`/api/nav?isin=${isin}${yahooTicker?`&ticker=${yahooTicker}`:''}`)
       if(!r.ok)return null
       return await r.json()
     }catch{return null}
@@ -1563,7 +1565,7 @@ function MarketView(){
 
   async function loadAllNAV(){
     setLoading(true)
-    const results=await Promise.all(funds.map(f=>fetchNAV(f.isin)))
+    const results=await Promise.all(funds.map(f=>fetchNAV(f.isin, f.yahooTicker)))
     const map={}
     results.forEach((d,i)=>{if(d&&d.vl)map[funds[i].isin]=d})
     setNavData(map)
@@ -1754,7 +1756,7 @@ function MarketView(){
             <span style={{fontWeight:600,fontSize:13,color:'var(--t1)'}}>{selectedFund.name}</span>
             <span style={{fontSize:11,color:'var(--t3)'}}>· Indice de réf. : {selectedFund.refLabel}</span>
             {navData[selectedFund.isin]&&(
-              <div style={{marginLeft:8,display:'flex',gap:10}}>
+              <div style={{marginLeft:8,display:'flex',gap:10,alignItems:'center'}}>
                 {[['1S','perf1W'],['1M','perf1M'],['3M','perf3M'],['1Y','perf1Y']].map(([lbl,key])=>{
                   const v=navData[selectedFund.isin][key]
                   return v!=null?(
@@ -1765,6 +1767,18 @@ function MarketView(){
                 })}
               </div>
             )}
+            <button onClick={()=>{
+              const d=navData[selectedFund.isin]
+              setEditPerfVals({
+                perf1W: d?.perf1W!=null?String(d.perf1W):'',
+                perf1M: d?.perf1M!=null?String(d.perf1M):'',
+                perf3M: d?.perf3M!=null?String(d.perf3M):'',
+                perf1Y: d?.perf1Y!=null?String(d.perf1Y):'',
+              })
+              setEditPerfIsin(selectedFund.isin)
+            }} style={{marginLeft:8,padding:'3px 10px',fontSize:11,background:'var(--bg)',border:'1px solid var(--bd)',borderRadius:'var(--rad)',color:'var(--t2)',cursor:'pointer',fontWeight:500}}>
+              ✎ Saisir perfs
+            </button>
             <button onClick={()=>setSelectedFund(null)} style={{marginLeft:'auto',background:'transparent',border:'none',color:'var(--t3)',cursor:'pointer',fontSize:18,lineHeight:1}}>✕</button>
           </div>
           <div className="tradingview-widget-container" id="tv-detail-chart" style={{height:380}}>
@@ -1776,6 +1790,48 @@ function MarketView(){
       <div style={{padding:'10px 14px',background:'rgba(192,155,90,0.04)',border:'1px solid var(--gold-line)',borderRadius:'var(--rad)',fontSize:11,color:'var(--t3)',lineHeight:1.6}}>
         ℹ️ <strong style={{color:'var(--t2)'}}>VL quotidienne J+1</strong> — Performances calculées sur les VL historiques. Cliquez sur un fonds pour afficher le graphique de son indice de référence.
       </div>
+
+      {/* Modal saisie manuelle perfs */}
+      {editPerfIsin&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:1001,display:'flex',alignItems:'center',justifyContent:'center'}}
+          onClick={()=>setEditPerfIsin(null)}>
+          <div style={{background:'var(--surface)',borderRadius:'var(--rad-lg)',padding:28,width:360,boxShadow:'0 20px 60px rgba(0,0,0,0.3)'}}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{fontWeight:700,fontSize:15,color:'var(--t1)',marginBottom:4}}>Saisie manuelle des performances</div>
+            <div style={{fontSize:11,color:'var(--t3)',marginBottom:18}}>{funds.find(f=>f.isin===editPerfIsin)?.name} · {editPerfIsin}</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:18}}>
+              {[['1 semaine','perf1W'],['1 mois','perf1M'],['3 mois','perf3M'],['1 an','perf1Y']].map(([lbl,key])=>(
+                <div key={key}>
+                  <div style={{fontSize:11,fontWeight:600,color:'var(--t2)',marginBottom:4,textTransform:'uppercase',letterSpacing:'0.04em'}}>{lbl} (%)</div>
+                  <input type="number" step="0.01" value={editPerfVals[key]}
+                    onChange={e=>setEditPerfVals(p=>({...p,[key]:e.target.value}))}
+                    placeholder="ex: -3.12"
+                    style={{width:'100%',padding:'7px 10px',border:'1px solid var(--bd)',borderRadius:'var(--rad)',fontSize:13,background:'var(--bg)',color:'var(--t1)',boxSizing:'border-box'}}/>
+                </div>
+              ))}
+            </div>
+            <div style={{fontSize:10,color:'var(--t3)',marginBottom:14,fontStyle:'italic'}}>Source : fiches Morningstar. Valeurs en %, ex: -3.12 pour -3,12%</div>
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={()=>{
+                const patch={}
+                const keys=['perf1W','perf1M','perf3M','perf1Y']
+                keys.forEach(k=>{
+                  const v=parseFloat(editPerfVals[k])
+                  patch[k]=isNaN(v)?null:v
+                })
+                setNavData(prev=>({...prev,[editPerfIsin]:{...(prev[editPerfIsin]||{}), ...patch}}))
+                setEditPerfIsin(null)
+              }} style={{flex:1,padding:'9px 0',background:'var(--gold)',color:'white',border:'none',borderRadius:'var(--rad)',fontWeight:600,fontSize:13,cursor:'pointer'}}>
+                Enregistrer
+              </button>
+              <button onClick={()=>setEditPerfIsin(null)}
+                style={{padding:'9px 18px',background:'var(--bg)',color:'var(--t2)',border:'1px solid var(--bd)',borderRadius:'var(--rad)',fontWeight:600,fontSize:13,cursor:'pointer'}}>
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal ajout allocation */}
       {addModal&&(
