@@ -7,10 +7,9 @@ export const isSupabaseConfigured = !!(supabaseUrl && supabaseKey)
 
 export const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseKey || 'placeholder', {
   auth: {
-    persistSession:   true,
-    autoRefreshToken: true,
+    persistSession:     true,
+    autoRefreshToken:   true,
     detectSessionInUrl: true,
-    storageKey: 'entasis-auth-v1',   // clé unique → évite conflits entre onglets
-    lock: 'none',                    // désactive le lock qui cause l'AbortError
+    storageKey:         'entasis-auth-v1',
   },
 })
