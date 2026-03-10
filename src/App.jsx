@@ -327,7 +327,7 @@ function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,leadsAvai
 /* ─────────────────────────────────────────────────────────────────────────────
    TOP BAR
 ───────────────────────────────────────────────────────────────────────────── */
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡',prospection:'Prospection LinkedIn 🎯'}
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡',prospection:'Prospection LinkedIn'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh}){
   return (
@@ -1612,7 +1612,7 @@ function MarketView(){
   },[])
 
   function PerfBadge({val}){
-    if(val==null)return <span style={{color:'var(--t3)',fontSize:11}}>—</span>
+    if(val==null||val===0)return <span style={{color:'var(--t3)',fontSize:11}}>—</span>
     const up=val>0,down=val<0
     return(
       <span style={{
@@ -1632,7 +1632,7 @@ function MarketView(){
     <div>
       <div className="section-header">
         <div>
-          <div className="section-kicker">Swiss Life 2026 · VL quotidienne · performances 1M / 3M / 1Y</div>
+          <div className="section-kicker">Swiss Life 2026 · VL quotidienne · performances 1S / 1M / 3M / 1Y</div>
           <div className="section-title">Suivi allocations clients</div>
           <div className="section-sub">
             {loading?'Chargement des VL…':`${totalLoaded}/${funds.length} fonds chargés · ${lastUpdate||'—'}`}
@@ -1654,8 +1654,8 @@ function MarketView(){
       {/* Table */}
       <div style={{border:'1px solid var(--bd)',borderRadius:'var(--rad-lg)',overflow:'hidden',marginBottom:selectedFund?20:0,background:'white'}}>
         {/* Header */}
-        <div style={{display:'grid',gridTemplateColumns:'28px 1fr 100px 75px 80px 80px 80px 130px',background:'var(--bg)',borderBottom:'2px solid var(--bd)'}}>
-          {['#','Fonds','ISIN','VL','1 mois','3 mois','1 an','Indice réf.'].map(h=>(
+        <div style={{display:'grid',gridTemplateColumns:'28px 1fr 100px 75px 80px 80px 80px 80px 130px',background:'var(--bg)',borderBottom:'2px solid var(--bd)'}}>
+          {['#','Fonds','ISIN','VL','1 sem','1 mois','3 mois','1 an','Indice réf.'].map(h=>(
             <div key={h} style={{padding:'8px 10px',fontSize:10,fontWeight:700,color:'var(--t3)',textTransform:'uppercase',letterSpacing:'0.04em',borderRight:'1px solid var(--bd)'}}>{h}</div>
           ))}
         </div>
@@ -1667,7 +1667,7 @@ function MarketView(){
             <div key={f.isin}
               onClick={()=>setSelectedFund(isSelected?null:f)}
               style={{
-                display:'grid',gridTemplateColumns:'28px 1fr 100px 75px 80px 80px 80px 130px',
+                display:'grid',gridTemplateColumns:'28px 1fr 100px 75px 80px 80px 80px 80px 130px',
                 borderBottom:'1px solid var(--bd)',
                 background:isSelected?'rgba(192,155,90,0.06)':i%2===0?'white':'rgba(248,246,242,0.4)',
                 cursor:'pointer',transition:'background .15s',
@@ -1701,6 +1701,10 @@ function MarketView(){
                     :<span style={{fontSize:11,color:'var(--t3)'}}>—</span>
                 }
               </div>
+              {/* 1S */}
+              <div style={{padding:'10px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <PerfBadge val={d?.perf1W}/>
+              </div>
               {/* 1M */}
               <div style={{padding:'10px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center',justifyContent:'center'}}>
                 <PerfBadge val={d?.perf1M}/>
@@ -1732,7 +1736,7 @@ function MarketView(){
             <span style={{fontSize:11,color:'var(--t3)'}}>· Indice de réf. : {selectedFund.refLabel}</span>
             {navData[selectedFund.isin]&&(
               <div style={{marginLeft:8,display:'flex',gap:10}}>
-                {[['1M','perf1M'],['3M','perf3M'],['1Y','perf1Y']].map(([lbl,key])=>{
+                {[['1S','perf1W'],['1M','perf1M'],['3M','perf3M'],['1Y','perf1Y']].map(([lbl,key])=>{
                   const v=navData[selectedFund.isin][key]
                   return v!=null?(
                     <span key={key} style={{fontSize:11,fontWeight:700,color:v>0?'#10B981':v<0?'#EF4444':'var(--t2)'}}>
@@ -2268,8 +2272,7 @@ function ProspectionView({prospects,profile,teamProfiles,onRefresh,onProspectsCh
       </div>
 
       {/* Kanban */}
-      {filtered.length>0?(
-        <div style={{display:'grid',gridTemplateColumns:`repeat(${kanbanCols.length},1fr)`,gap:10,overflowX:'auto'}}>
+      <div style={{display:'grid',gridTemplateColumns:`repeat(${kanbanCols.length},1fr)`,gap:10,overflowX:'auto'}}>
           {kanbanCols.map(col=>{
             const items=byStatus[col.id]||[]
             const sc=PROSPECT_STATUS_COLOR[col.id]||PROSPECT_STATUS_COLOR.a_contacter
@@ -2316,8 +2319,9 @@ function ProspectionView({prospects,profile,teamProfiles,onRefresh,onProspectsCh
             )
           })}
         </div>
-      ):(
-        <div className="table-empty-state">
+      </div>
+      {filtered.length===0&&(
+        <div className="table-empty-state" style={{marginTop:20}}>
           <div className="empty-icon">📧</div>
           <div className="empty-title">Aucun prospect</div>
           <div className="empty-sub">Les prospects Clay arriveront ici via Zapier.</div>
