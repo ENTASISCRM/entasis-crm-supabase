@@ -2319,7 +2319,6 @@ function ProspectionView({prospects,profile,teamProfiles,onRefresh,onProspectsCh
             )
           })}
         </div>
-      </div>
       {filtered.length===0&&(
         <div className="table-empty-state" style={{marginTop:20}}>
           <div className="empty-icon">📧</div>
