@@ -579,7 +579,7 @@ function LeadRDVModal({open,lead,onClose,onBooked}){
 /* ─────────────────────────────────────────────────────────────────────────────
    LEAD ROW — vue liste compacte
 ───────────────────────────────────────────────────────────────────────────── */
-function LeadRow({lead,profile,onTake,onRelease,onCreateRDV,onConvertDeal,onReset}){
+function LeadRow({lead,profile,onTake,onRelease,onCreateRDV,onConvertDeal,onReset,onKill}){
   const remaining=useLeadTimer(lead)
   const isMyLead=lead.taken_by===profile?.id
   const isBooked=lead.status==='booked'
@@ -590,12 +590,12 @@ function LeadRow({lead,profile,onTake,onRelease,onCreateRDV,onConvertDeal,onRese
 
   return (
     <div style={{
-      display:'grid',gridTemplateColumns:'100px 150px 128px 180px 100px 80px 150px',
+      display:'grid',gridTemplateColumns:'100px 150px 128px 180px 100px 80px 150px 110px',
       alignItems:'center',
       minHeight:36,
       borderBottom:'1px solid var(--bd)',
       background:isMyLead?'rgba(192,155,90,0.05)':isBooked?'rgba(16,185,129,0.04)':'transparent',
-      opacity:isTaken&&!isMyLead?0.45:1,
+      opacity:isDead?0.35:isTaken&&!isMyLead?0.45:1,textDecoration:isDead?'line-through':'none',
     }}
     onMouseEnter={e=>e.currentTarget.style.background='rgba(192,155,90,0.07)'}
     onMouseLeave={e=>e.currentTarget.style.background=isMyLead?'rgba(192,155,90,0.05)':isBooked?'rgba(16,185,129,0.04)':'transparent'}
@@ -639,12 +639,23 @@ function LeadRow({lead,profile,onTake,onRelease,onCreateRDV,onConvertDeal,onRese
         {isBooked&&isMyLead&&(
           <button onClick={()=>onConvertDeal(lead)} style={{padding:'4px 8px',background:'var(--gold)',color:'white',border:'none',borderRadius:4,fontSize:11,cursor:'pointer'}}>+ Dossier</button>
         )}
-        {isTaken&&!isMyLead&&!isBooked&&(
+        {isTaken&&!isMyLead&&!isBooked&&!isDead&&(
           <span style={{fontSize:10,color:'var(--t3)'}}>En appel…</span>
+        )}
+        {isDead&&(
+          <span style={{fontSize:10,color:'#9CA3AF',fontStyle:'italic'}}>❌ Mort</span>
+        )}
+        {isMyLead&&!isBooked&&!isDead&&(
+          <button onClick={()=>onKill(lead)} title="Marquer non-intéressé" style={{padding:'3px 6px',background:'transparent',color:'#9CA3AF',border:'1px solid #E5E7EB',borderRadius:4,fontSize:10,cursor:'pointer'}}>💀</button>
         )}
         {(profile?.role==='manager'||(isMyLead))&&!isAvailable&&(
           <button onClick={()=>onReset(lead)} title="Annuler / remettre disponible" style={{padding:'3px 6px',background:'transparent',color:'#EF4444',border:'1px solid #FCA5A5',borderRadius:4,fontSize:10,cursor:'pointer',marginLeft:'auto'}}>✕</button>
         )}
+      </div>
+      <div style={{padding:'0 8px',height:'100%',display:'flex',alignItems:'center',borderLeft:'1px solid var(--bd)'}}>
+        <span style={{fontSize:10.5,color:'var(--t3)',whiteSpace:'nowrap'}}>
+          {lead.created_at?new Date(lead.created_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—'}
+        </span>
       </div>
     </div>
   )
@@ -700,6 +711,7 @@ function LeadRoom({leads,profile,onLeadsChange,onConvertDeal,onRefresh}){
   }
 
   const available=leads.filter(l=>l.status==='available'||l.status==='released')
+  const dead=leads.filter(l=>l.status==='dead')
   const mine=leads.filter(l=>l.taken_by===profile?.id&&l.status==='contacted')
   const myBooked=leads.filter(l=>l.taken_by===profile?.id&&l.status==='booked')
   const otherContacted=leads.filter(l=>l.status==='contacted'&&l.taken_by!==profile?.id)
@@ -711,7 +723,7 @@ function LeadRoom({leads,profile,onLeadsChange,onConvertDeal,onRefresh}){
     let list=
       filter==='mine'      ?[...mine,...myBooked]:
       filter==='available' ?available:
-      [...available,...mine,...otherContacted,...booked]
+      [...available,...mine,...otherContacted,...booked,...dead]
 
     // filtre campagne
     if(campagneF!=='all')list=list.filter(l=>l.campagne===campagneF)
@@ -734,7 +746,7 @@ function LeadRoom({leads,profile,onLeadsChange,onConvertDeal,onRefresh}){
   const paginated=filtered.slice(0,(page)*PAGE_SIZE)
   const hasMore=page*PAGE_SIZE<filtered.length
 
-  const cardProps={onTake:takeLead,onRelease:releaseLead,onCreateRDV:l=>{setRdvLead(l);setRdvOpen(true)},onConvertDeal,onReset:resetLead,profile}
+  const cardProps={onTake:takeLead,onRelease:releaseLead,onCreateRDV:l=>{setRdvLead(l);setRdvOpen(true)},onConvertDeal,onReset:resetLead,onKill:killLead,profile}
 
   return (
     <div>
@@ -745,6 +757,7 @@ function LeadRoom({leads,profile,onLeadsChange,onConvertDeal,onRefresh}){
           {label:'En appel',value:leads.filter(l=>l.status==='contacted').length,color:'var(--progress)',bg:'var(--progress-bg)',bd:'var(--progress-bd)'},
           {label:'RDV planifiés',value:booked.length,color:'#10B981',bg:'rgba(16,185,129,0.06)',bd:'rgba(16,185,129,0.2)'},
           {label:'Total leads',value:leads.length,color:'var(--t2)',bg:'var(--bg)',bd:'var(--bd)'},
+          {label:'❌ Non-intéressés',value:leads.filter(l=>l.status==='dead').length,color:'#9CA3AF',bg:'var(--bg)',bd:'var(--bd)'},
         ].map(s=>(
           <div key={s.label} style={{background:s.bg,border:`1px solid ${s.bd}`,borderRadius:'var(--rad-lg)',padding:'14px 18px',cursor:'pointer'}} onClick={()=>{if(s.label==='Disponibles')setFilter('available');else if(s.label==='Total leads')setFilter('all')}}>
             <div style={{fontSize:11,color:'var(--t3)',marginBottom:6,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.05em'}}>{s.label}</div>
@@ -842,8 +855,8 @@ function LeadRoom({leads,profile,onLeadsChange,onConvertDeal,onRefresh}){
         <>
           {viewMode==='list'?(
             <div style={{background:'white',border:'1px solid var(--bd)',borderRadius:'var(--rad-lg)',overflow:'hidden'}}>
-              <div style={{display:'grid',gridTemplateColumns:'100px 150px 128px 180px 100px 80px 150px',background:'var(--bg)',borderBottom:'2px solid var(--bd)'}}>
-                {['Campagne','Nom','Téléphone','Email','Patrimoine','TMI','Action'].map(h=>(
+              <div style={{display:'grid',gridTemplateColumns:'100px 150px 128px 180px 100px 80px 150px 110px',background:'var(--bg)',borderBottom:'2px solid var(--bd)'}}>
+                {['Campagne','Nom','Téléphone','Email','Patrimoine','TMI','Action','Reçu le'].map(h=>(
                   <div key={h} style={{padding:'6px 8px',fontSize:10,fontWeight:700,color:'var(--t3)',textTransform:'uppercase',letterSpacing:'0.05em',borderRight:'1px solid var(--bd)'}}>{h}</div>
                 ))}
               </div>
