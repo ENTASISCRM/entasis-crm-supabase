@@ -1527,9 +1527,9 @@ function RelanceModal({open,onClose,deals,defaultDate}){
 function MarketView(){
   const funds=[
     {name:'Lazard Japon AC H EUR',        isin:'FR0014008M81', cat:'Actions Japon',        refSymbol:'INDEX:NKY',        refLabel:'Nikkei 225', color:'#EF4444'},
-    {name:'AXA Or et Matières Premières', isin:'FR0010011171', cat:'Matières premières',   refSymbol:'COMEX:GC1!',       refLabel:'Or',         color:'#F59E0B'},
+    {name:'AXA Or et Matières Premières', isin:'FR0010011171', cat:'Matières premières',   refSymbol:'TVC:GOLD',       refLabel:'Or',         color:'#F59E0B'},
     {name:'AP Meeschaert Gl. Convictions',isin:'FR001400CSI0', cat:'Actions Monde Value',  refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',    color:'#10B981'},
-    {name:'Fidelity Em Mkts A-USD',       isin:'LU0261950470', cat:'Actions Ém. Marchés',  refSymbol:'NASDAQ:EEM',       refLabel:'EEM ETF',    color:'#F97316'},
+    {name:'Fidelity Em Mkts A-USD',       isin:'LU0261950470', cat:'Actions Ém. Marchés',  refSymbol:'AMEX:EEM',       refLabel:'EEM ETF',    color:'#F97316'},
     {name:'Fidelity Global Technology',   isin:'LU0099574567', cat:'Actions Technologie',  refSymbol:'NASDAQ:QQQ',       refLabel:'Nasdaq QQQ', color:'#7C3AED'},
     {name:'Quadrige France Smallcaps',    isin:'FR0011466093', cat:'Actions France Small', refSymbol:'INDEX:CAC40',      refLabel:'CAC 40',     color:'#0EA5E9'},
     {name:'Pictet Clean Energy Transtn',  isin:'LU0280435461', cat:'Énergie Propre',       refSymbol:'AMEX:ICLN',        refLabel:'ICLN ETF',   color:'#06B6D4'},
@@ -1595,10 +1595,10 @@ function MarketView(){
     s.innerHTML=JSON.stringify({
       symbols:[
         {proName:'INDEX:NKY',       title:'Nikkei 225'},
-        {proName:'COMEX:GC1!',      title:'Or'},
+        {proName:'TVC:GOLD',        title:'Or (XAU/USD)'},
         {proName:'FOREXCOM:SPXUSD', title:'S&P 500'},
         {proName:'NASDAQ:QQQ',      title:'Nasdaq QQQ'},
-        {proName:'NASDAQ:EEM',      title:'Ém. Marchés'},
+        {proName:'TVC:MSEI',        title:'Ém. Marchés'},
         {proName:'INDEX:CAC40',     title:'CAC 40'},
         {proName:'AMEX:ICLN',       title:'Clean Energy'},
         {proName:'FX_IDC:EURUSD',   title:'EUR/USD'},
