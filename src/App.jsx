@@ -1526,16 +1526,16 @@ function RelanceModal({open,onClose,deals,defaultDate}){
 
 function MarketView(){
   const funds=[
-    {name:'Lazard Japon AC H EUR',        isin:'FR0014008M81', cat:'Actions Japon',        refSymbol:'INDEX:NKY',         refLabel:'Nikkei 225', color:'#EF4444'},
-    {name:'AXA Or et Matières Premières', isin:'FR0010011171', cat:'Matières premières',   refSymbol:'COMEX:GC1!',        refLabel:'Or (Gold)',  color:'#F59E0B'},
-    {name:'AP Meeschaert Gl. Convictions',isin:'FR001400CSI0', cat:'Actions Monde Value',  refSymbol:'FOREXCOM:SPXUSD',   refLabel:'S&P 500',    color:'#10B981'},
-    {name:'Fidelity Em Mkts A-USD',       isin:'LU0261950470', cat:'Actions Ém. Marchés',  refSymbol:'NASDAQ:EEM',        refLabel:'EEM ETF',    color:'#F97316'},
-    {name:'Fidelity Global Technology',   isin:'LU0099574567', cat:'Actions Technologie',  refSymbol:'NASDAQ:QQQ',        refLabel:'Nasdaq QQQ', color:'#7C3AED'},
-    {name:'Quadrige France Smallcaps',    isin:'FR0011466093', cat:'Actions France Small', refSymbol:'INDEX:CAC40',       refLabel:'CAC 40',     color:'#0EA5E9'},
-    {name:'Pictet Clean Energy Transtn',  isin:'LU0280435461', cat:'Énergie Propre',       refSymbol:'AMEX:ICLN',         refLabel:'ICLN ETF',   color:'#06B6D4'},
-    {name:'First Eagle Amundi Intl',      isin:'LU0068578508', cat:'Actions Monde Flex.',  refSymbol:'FOREXCOM:SPXUSD',   refLabel:'S&P 500',    color:'#84CC16'},
-    {name:'Groupama Global Disruption',   isin:'LU1897556517', cat:'Actions Innovation',   refSymbol:'NASDAQ:QQQ',        refLabel:'Nasdaq QQQ', color:'#EC4899'},
-    {name:'Claresco USA',                 isin:'LU1379103812', cat:'Actions USA',          refSymbol:'FOREXCOM:SPXUSD',   refLabel:'S&P 500',    color:'#6366F1'},
+    {name:'Lazard Japon AC H EUR',        isin:'FR0014008M81', cat:'Actions Japon',        refSymbol:'INDEX:NKY',        refLabel:'Nikkei 225', color:'#EF4444'},
+    {name:'AXA Or et Matières Premières', isin:'FR0010011171', cat:'Matières premières',   refSymbol:'COMEX:GC1!',       refLabel:'Or',         color:'#F59E0B'},
+    {name:'AP Meeschaert Gl. Convictions',isin:'FR001400CSI0', cat:'Actions Monde Value',  refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',    color:'#10B981'},
+    {name:'Fidelity Em Mkts A-USD',       isin:'LU0261950470', cat:'Actions Ém. Marchés',  refSymbol:'NASDAQ:EEM',       refLabel:'EEM ETF',    color:'#F97316'},
+    {name:'Fidelity Global Technology',   isin:'LU0099574567', cat:'Actions Technologie',  refSymbol:'NASDAQ:QQQ',       refLabel:'Nasdaq QQQ', color:'#7C3AED'},
+    {name:'Quadrige France Smallcaps',    isin:'FR0011466093', cat:'Actions France Small', refSymbol:'INDEX:CAC40',      refLabel:'CAC 40',     color:'#0EA5E9'},
+    {name:'Pictet Clean Energy Transtn',  isin:'LU0280435461', cat:'Énergie Propre',       refSymbol:'AMEX:ICLN',        refLabel:'ICLN ETF',   color:'#06B6D4'},
+    {name:'First Eagle Amundi Intl',      isin:'LU0068578508', cat:'Actions Monde Flex.',  refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',    color:'#84CC16'},
+    {name:'Groupama Global Disruption',   isin:'LU1897556517', cat:'Actions Innovation',   refSymbol:'NASDAQ:QQQ',       refLabel:'Nasdaq QQQ', color:'#EC4899'},
+    {name:'Claresco USA',                 isin:'LU1379103812', cat:'Actions USA',          refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',    color:'#6366F1'},
   ]
 
   const [navData,setNavData]=useState({})
@@ -1563,16 +1563,13 @@ function MarketView(){
 
   useEffect(()=>{
     loadAllNAV()
-    // Refresh toutes les 4h
     const t=setInterval(loadAllNAV,4*60*60*1000)
     return()=>clearInterval(t)
   },[])
 
-  // TradingView chart pour fonds sélectionné
   useEffect(()=>{
     if(!selectedFund)return
-    const id='tv-detail-chart'
-    const el=document.getElementById(id)
+    const el=document.getElementById('tv-detail-chart')
     if(!el)return
     el.innerHTML=''
     const s=document.createElement('script')
@@ -1580,7 +1577,7 @@ function MarketView(){
     s.src='https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js'
     s.async=true
     s.innerHTML=JSON.stringify({
-      symbol:selectedFund.refSymbol,width:'100%',height:350,
+      symbol:selectedFund.refSymbol,width:'100%',height:380,
       locale:'fr',interval:'D',timezone:'Europe/Paris',
       theme:'light',style:'1',hide_top_toolbar:false,
       allow_symbol_change:false,save_image:false,
@@ -1588,7 +1585,6 @@ function MarketView(){
     el.appendChild(s)
   },[selectedFund])
 
-  // Ticker bande top
   useEffect(()=>{
     const el=document.getElementById('tv-mkt-ticker')
     if(!el||el.querySelector('script'))return
@@ -1598,19 +1594,34 @@ function MarketView(){
     s.async=true
     s.innerHTML=JSON.stringify({
       symbols:[
-        {proName:'INDEX:NKY',        title:'Nikkei 225'},
-        {proName:'COMEX:GC1!',       title:'Or'},
-        {proName:'FOREXCOM:SPXUSD',  title:'S&P 500'},
-        {proName:'NASDAQ:QQQ',       title:'Nasdaq QQQ'},
-        {proName:'NASDAQ:EEM',       title:'Ém. Marchés'},
-        {proName:'INDEX:CAC40',      title:'CAC 40'},
-        {proName:'AMEX:ICLN',        title:'Clean Energy'},
-        {proName:'FX_IDC:EURUSD',    title:'EUR/USD'},
+        {proName:'INDEX:NKY',       title:'Nikkei 225'},
+        {proName:'COMEX:GC1!',      title:'Or'},
+        {proName:'FOREXCOM:SPXUSD', title:'S&P 500'},
+        {proName:'NASDAQ:QQQ',      title:'Nasdaq QQQ'},
+        {proName:'NASDAQ:EEM',      title:'Ém. Marchés'},
+        {proName:'INDEX:CAC40',     title:'CAC 40'},
+        {proName:'AMEX:ICLN',       title:'Clean Energy'},
+        {proName:'FX_IDC:EURUSD',   title:'EUR/USD'},
       ],
       colorTheme:'light',isTransparent:false,showSymbolLogo:true,locale:'fr'
     })
     el.appendChild(s)
   },[])
+
+  function PerfBadge({val}){
+    if(val==null)return <span style={{color:'var(--t3)',fontSize:11}}>—</span>
+    const up=val>0,down=val<0
+    return(
+      <span style={{
+        fontSize:11.5,fontWeight:700,
+        color:up?'#10B981':down?'#EF4444':'var(--t2)',
+        background:up?'rgba(16,185,129,0.1)':down?'rgba(239,68,68,0.1)':'var(--bg)',
+        padding:'2px 7px',borderRadius:4,whiteSpace:'nowrap'
+      }}>
+        {up?'+':''}{val.toFixed(2)}%
+      </span>
+    )
+  }
 
   const totalLoaded=Object.keys(navData).length
 
@@ -1618,30 +1629,30 @@ function MarketView(){
     <div>
       <div className="section-header">
         <div>
-          <div className="section-kicker">Swiss Life 2026 · VL quotidienne + indice de référence live</div>
+          <div className="section-kicker">Swiss Life 2026 · VL quotidienne · performances 1M / 3M / 1Y</div>
           <div className="section-title">Suivi allocations clients</div>
           <div className="section-sub">
-            {loading?'Chargement des VL…':`${totalLoaded}/${funds.length} fonds chargés · mis à jour ${lastUpdate||'—'}`}
+            {loading?'Chargement des VL…':`${totalLoaded}/${funds.length} fonds chargés · ${lastUpdate||'—'}`}
           </div>
         </div>
         <button onClick={loadAllNAV} disabled={loading}
           style={{padding:'7px 14px',background:loading?'var(--bd)':'var(--gold)',color:'white',border:'none',borderRadius:'var(--rad)',fontSize:12,fontWeight:600,cursor:loading?'not-allowed':'pointer'}}>
-          {loading?'Chargement…':'↻ Actualiser VL'}
+          {loading?'Chargement…':'↻ Actualiser'}
         </button>
       </div>
 
-      {/* Ticker bande indices */}
+      {/* Ticker bande */}
       <div style={{marginBottom:20,borderRadius:'var(--rad-lg)',overflow:'hidden',border:'1px solid var(--bd)'}}>
         <div className="tradingview-widget-container" id="tv-mkt-ticker">
           <div className="tradingview-widget-container__widget"></div>
         </div>
       </div>
 
-      {/* Table principale */}
+      {/* Table */}
       <div style={{border:'1px solid var(--bd)',borderRadius:'var(--rad-lg)',overflow:'hidden',marginBottom:selectedFund?20:0,background:'white'}}>
         {/* Header */}
-        <div style={{display:'grid',gridTemplateColumns:'32px 1fr 110px 80px 80px 140px 100px',gap:0,background:'var(--bg)',borderBottom:'2px solid var(--bd)'}}>
-          {['#','Fonds','ISIN','VL (€)','Var. J-1','Catégorie','Indice réf.'].map(h=>(
+        <div style={{display:'grid',gridTemplateColumns:'28px 1fr 100px 75px 80px 80px 80px 130px',background:'var(--bg)',borderBottom:'2px solid var(--bd)'}}>
+          {['#','Fonds','ISIN','VL','1 mois','3 mois','1 an','Indice réf.'].map(h=>(
             <div key={h} style={{padding:'8px 10px',fontSize:10,fontWeight:700,color:'var(--t3)',textTransform:'uppercase',letterSpacing:'0.04em',borderRight:'1px solid var(--bd)'}}>{h}</div>
           ))}
         </div>
@@ -1649,49 +1660,59 @@ function MarketView(){
         {funds.map((f,i)=>{
           const d=navData[f.isin]
           const isSelected=selectedFund?.isin===f.isin
-          const isUp=d?.change>0
-          const isDown=d?.change<0
           return(
             <div key={f.isin}
               onClick={()=>setSelectedFund(isSelected?null:f)}
               style={{
-                display:'grid',gridTemplateColumns:'32px 1fr 110px 80px 80px 140px 100px',
-                gap:0,borderBottom:'1px solid var(--bd)',
+                display:'grid',gridTemplateColumns:'28px 1fr 100px 75px 80px 80px 80px 130px',
+                borderBottom:'1px solid var(--bd)',
                 background:isSelected?'rgba(192,155,90,0.06)':i%2===0?'white':'rgba(248,246,242,0.4)',
                 cursor:'pointer',transition:'background .15s',
-                borderLeft:isSelected?`3px solid var(--gold)`:'3px solid transparent',
+                borderLeft:isSelected?'3px solid var(--gold)':'3px solid transparent',
               }}
               onMouseEnter={e=>!isSelected&&(e.currentTarget.style.background='rgba(192,155,90,0.04)')}
               onMouseLeave={e=>!isSelected&&(e.currentTarget.style.background=i%2===0?'white':'rgba(248,246,242,0.4)')}
             >
-              <div style={{padding:'10px',display:'flex',alignItems:'center',borderRight:'1px solid var(--bd)'}}>
+              {/* # */}
+              <div style={{padding:'10px 8px',display:'flex',alignItems:'center',borderRight:'1px solid var(--bd)'}}>
                 <span style={{fontSize:11,fontWeight:700,color:'var(--t3)'}}>{i+1}</span>
               </div>
-              <div style={{padding:'10px',borderRight:'1px solid var(--bd)',minWidth:0}}>
+              {/* Nom */}
+              <div style={{padding:'10px',borderRight:'1px solid var(--bd)',minWidth:0,display:'flex',flexDirection:'column',justifyContent:'center'}}>
                 <div style={{fontSize:12.5,fontWeight:600,color:'var(--t1)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.name}</div>
-                {d?.date&&<div style={{fontSize:10,color:'var(--t3)',marginTop:1}}>VL au {d.date}</div>}
+                <div style={{fontSize:10,color:'var(--t3)',marginTop:1}}>{f.cat}{d?.date?` · VL au ${d.date}`:''}</div>
               </div>
+              {/* ISIN */}
               <div style={{padding:'10px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center'}}>
-                <span style={{fontSize:10.5,color:'var(--t3)',fontFamily:'monospace',letterSpacing:'0.01em'}}>{f.isin}</span>
+                <span style={{fontSize:10,color:'var(--t3)',fontFamily:'monospace'}}>{f.isin}</span>
               </div>
+              {/* VL */}
               <div style={{padding:'10px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center',justifyContent:'flex-end'}}>
-                {loading&&!d?(<div style={{width:40,height:14,background:'var(--bd)',borderRadius:3,animation:'pulse 1.5s infinite'}}/>):
-                  d?.vl?(<span style={{fontSize:13,fontWeight:700,color:'var(--t1)'}}>{d.vl.toFixed(2)}<span style={{fontSize:10,color:'var(--t3)',marginLeft:2}}>{d.currency||'EUR'}</span></span>):
-                  (<span style={{fontSize:11,color:'var(--t3)'}}>—</span>)
+                {loading&&!d
+                  ?<div style={{width:42,height:14,background:'var(--bd)',borderRadius:3}}/>
+                  :d?.vl
+                    ?<div style={{textAlign:'right'}}>
+                      <div style={{fontSize:12.5,fontWeight:700,color:'var(--t1)'}}>{d.vl.toFixed(2)}</div>
+                      <div style={{fontSize:9.5,color:'var(--t3)'}}>{d.currency||'EUR'}</div>
+                    </div>
+                    :<span style={{fontSize:11,color:'var(--t3)'}}>—</span>
                 }
               </div>
-              <div style={{padding:'10px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center',justifyContent:'flex-end'}}>
-                {d?.change!=null?(
-                  <span style={{fontSize:12,fontWeight:700,color:isUp?'#10B981':isDown?'#EF4444':'var(--t2)',background:isUp?'rgba(16,185,129,0.1)':isDown?'rgba(239,68,68,0.1)':'var(--bg)',padding:'2px 7px',borderRadius:4}}>
-                    {isUp?'+':''}{d.change.toFixed(2)}%
-                  </span>
-                ):(<span style={{fontSize:11,color:'var(--t3)'}}>—</span>)}
+              {/* 1M */}
+              <div style={{padding:'10px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <PerfBadge val={d?.perf1M}/>
               </div>
-              <div style={{padding:'10px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center'}}>
-                <span style={{fontSize:11,color:'var(--t2)'}}>{f.cat}</span>
+              {/* 3M */}
+              <div style={{padding:'10px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <PerfBadge val={d?.perf3M}/>
               </div>
-              <div style={{padding:'10px',display:'flex',alignItems:'center',gap:5}}>
-                <div style={{width:6,height:6,borderRadius:'50%',background:f.color,flexShrink:0}}/>
+              {/* 1Y */}
+              <div style={{padding:'10px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <PerfBadge val={d?.perf1Y}/>
+              </div>
+              {/* Indice réf */}
+              <div style={{padding:'10px',display:'flex',alignItems:'center',gap:6}}>
+                <div style={{width:7,height:7,borderRadius:'50%',background:f.color,flexShrink:0}}/>
                 <span style={{fontSize:11,color:'var(--t2)',fontWeight:500}}>{f.refLabel}</span>
               </div>
             </div>
@@ -1699,25 +1720,35 @@ function MarketView(){
         })}
       </div>
 
-      {/* Chart détail fonds sélectionné */}
+      {/* Chart détail */}
       {selectedFund&&(
         <div style={{border:'1px solid var(--gold-line)',borderRadius:'var(--rad-lg)',overflow:'hidden',background:'white',marginBottom:20}}>
           <div style={{padding:'10px 16px',borderBottom:'1px solid var(--bd)',display:'flex',alignItems:'center',gap:10,background:'rgba(192,155,90,0.04)'}}>
             <div style={{width:8,height:8,borderRadius:'50%',background:selectedFund.color}}/>
             <span style={{fontWeight:600,fontSize:13,color:'var(--t1)'}}>{selectedFund.name}</span>
             <span style={{fontSize:11,color:'var(--t3)'}}>· Indice de réf. : {selectedFund.refLabel}</span>
-            <button onClick={()=>setSelectedFund(null)} style={{marginLeft:'auto',background:'transparent',border:'none',color:'var(--t3)',cursor:'pointer',fontSize:16}}>✕</button>
+            {navData[selectedFund.isin]&&(
+              <div style={{marginLeft:8,display:'flex',gap:10}}>
+                {[['1M','perf1M'],['3M','perf3M'],['1Y','perf1Y']].map(([lbl,key])=>{
+                  const v=navData[selectedFund.isin][key]
+                  return v!=null?(
+                    <span key={key} style={{fontSize:11,fontWeight:700,color:v>0?'#10B981':v<0?'#EF4444':'var(--t2)'}}>
+                      {lbl} : {v>0?'+':''}{v.toFixed(2)}%
+                    </span>
+                  ):null
+                })}
+              </div>
+            )}
+            <button onClick={()=>setSelectedFund(null)} style={{marginLeft:'auto',background:'transparent',border:'none',color:'var(--t3)',cursor:'pointer',fontSize:18,lineHeight:1}}>✕</button>
           </div>
-          <div className="tradingview-widget-container" id="tv-detail-chart" style={{height:350}}>
+          <div className="tradingview-widget-container" id="tv-detail-chart" style={{height:380}}>
             <div className="tradingview-widget-container__widget" style={{height:'100%'}}></div>
           </div>
         </div>
       )}
 
-      {/* Note VL */}
       <div style={{padding:'10px 14px',background:'rgba(192,155,90,0.04)',border:'1px solid var(--gold-line)',borderRadius:'var(--rad)',fontSize:11,color:'var(--t3)',lineHeight:1.6}}>
-        ℹ️ <strong style={{color:'var(--t2)'}}>VL quotidienne</strong> — Les VL des OPCVM sont publiées une fois par jour par les sociétés de gestion (J+1). 
-        Cliquez sur un fonds pour afficher le graphique de son indice de référence en temps réel.
+        ℹ️ <strong style={{color:'var(--t2)'}}>VL quotidienne J+1</strong> — Performances calculées sur les VL historiques. Cliquez sur un fonds pour afficher le graphique de son indice de référence.
       </div>
     </div>
   )
