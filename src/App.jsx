@@ -647,7 +647,7 @@ function LeadRow({lead,profile,onTake,onRelease,onCreateRDV,onConvertDeal}){
   )
 }
 
-function LeadRoom({leads,profile,onLeadsChange,onConvertDeal}){
+function LeadRoom({leads,profile,onLeadsChange,onConvertDeal,onRefresh}){
   const [rdvLead,setRdvLead]=useState(null)
   const [rdvOpen,setRdvOpen]=useState(false)
   const [filter,setFilter]=useState('all')
@@ -795,9 +795,14 @@ function LeadRoom({leads,profile,onLeadsChange,onConvertDeal}){
           <button onClick={()=>setViewMode('list')} title="Vue liste" style={{padding:'7px 10px',background:viewMode==='list'?'var(--gold)':'white',color:viewMode==='list'?'white':'var(--t2)',border:'none',cursor:'pointer',fontSize:14}}>≡</button>
         </div>
 
-        <div style={{fontSize:11.5,color:'var(--t3)',display:'flex',alignItems:'center',gap:5,flexShrink:0}}>
-          <span style={{width:7,height:7,borderRadius:'50%',background:'#10B981',display:'inline-block'}}/>
-          Temps réel
+        <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
+          <button onClick={onRefresh} title="Rafraîchir les leads" style={{display:'flex',alignItems:'center',gap:4,padding:'5px 10px',background:'white',border:'1px solid var(--bd)',borderRadius:'var(--rad)',fontSize:11.5,color:'var(--t2)',cursor:'pointer'}}>
+            <Icon.Refresh/> Actualiser
+          </button>
+          <div style={{fontSize:11.5,color:'var(--t3)',display:'flex',alignItems:'center',gap:5}}>
+            <span style={{width:7,height:7,borderRadius:'50%',background:'#10B981',display:'inline-block'}}/>
+            Temps réel
+          </div>
         </div>
       </div>
 
@@ -1752,9 +1757,9 @@ export default function App(){
   useEffect(()=>{
     if(!session?.user)return
     fetchLeads()
-    const poll=setInterval(fetchLeads,15000)
+    const poll=setInterval(fetchLeads,5000)
     const channel=supabase.channel('leads-room')
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'leads'},()=>fetchLeads())
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'leads'},()=>{console.log('[Leads] INSERT Realtime');fetchLeads()})
       .on('postgres_changes',{event:'UPDATE',schema:'public',table:'leads'},payload=>{
         setLeads(prev=>prev.map(l=>l.id===payload.new.id?payload.new:l))
       })
@@ -1933,7 +1938,7 @@ export default function App(){
           {!profile&&<div className="notice notice-warn">Profil introuvable dans <span className="code">public.profiles</span>. Vérifie la table et les policies.</div>}
 
           {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile}/>)}
-          {activeTab==='leads'&&<LeadRoom leads={leads} profile={profile} onLeadsChange={setLeads} onConvertDeal={convertLeadToDeal}/>}
+          {activeTab==='leads'&&<LeadRoom leads={leads} profile={profile} onLeadsChange={setLeads} onConvertDeal={convertLeadToDeal} onRefresh={fetchLeads}/>}
           {activeTab==='pipeline'&&<PipelineBoard deals={deals} month={month} profile={profile} onEdit={startEdit}/>}
           {activeTab==='dossiers'&&<DealsTable deals={deals} month={month} profile={profile} onEdit={startEdit} onDelete={deleteDeal} onRefresh={loadAll}/>}
           {activeTab==='forecast'&&<ForecastView deals={deals} objectifs={objectifs} month={month} profile={profile} teamProfiles={teamProfiles} canEditObjectifs={isManager} onSaveObjectif={saveObjectif}/>}
