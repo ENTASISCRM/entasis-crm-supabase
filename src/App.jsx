@@ -103,6 +103,8 @@ const Icon = {
   Link:      ()=><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M5 7L7.5 4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/><path d="M4 5.5l-1 1a2.121 2.121 0 003 3l1-1" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/><path d="M8 6.5l1-1a2.121 2.121 0 00-3-3l-1 1" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>,
   Phone:     ()=><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 2.5c0 5.5 3 8.5 8.5 8.5l1-2.5-2-1-1 1c-1.5-.5-3-2-3.5-3.5l1-1-1-2L2 2.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" fill="none"/></svg>,
   Mail:      ()=><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="3" width="10" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.3" fill="none"/><path d="M1.5 4l5 3.5L11.5 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>,
+  Prospect:  ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><circle cx="7.5" cy="7" r="3" stroke="currentColor" strokeWidth="1.4" fill="none" opacity=".85"/><path d="M2.5 17c0-3 2.2-5 5-5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".8"/><path d="M12.5 12l1.5 1.5 2.5-2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity=".7"/></svg>,
+  Copy:      ()=><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="4" y="4" width="7.5" height="7.5" rx="1.2" stroke="currentColor" strokeWidth="1.3" fill="none"/><path d="M9 4V2.5a1 1 0 00-1-1H2.5a1 1 0 00-1 1V8a1 1 0 001 1H4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>,
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -265,7 +267,7 @@ function AuthScreen() {
 /* ─────────────────────────────────────────────────────────────────────────────
    SIDEBAR
 ───────────────────────────────────────────────────────────────────────────── */
-function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,leadsAvailable}){
+function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,leadsAvailable,prospectsNew}){
   const isManager=profile?.role==='manager'
 
   const hotCount=useMemo(()=>{
@@ -284,6 +286,7 @@ function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,leadsAvai
     {key:'forecast',  label:'Prévisionnel', Icon:Icon.Forecast},
     {key:'agenda',    label:'Agenda',    Icon:Icon.Calendar},
     {key:'market',    label:'Marchés',   Icon:Icon.Market},
+    {key:'prospection', label:'Prospection', Icon:Icon.Prospect, badge:prospectsNew},
     ...(isManager?[{key:'team', label:'Équipe', Icon:Icon.Team}]:[]),
   ]
 
@@ -324,20 +327,20 @@ function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,leadsAvai
 /* ─────────────────────────────────────────────────────────────────────────────
    TOP BAR
 ───────────────────────────────────────────────────────────────────────────── */
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡'}
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡',prospection:'Prospection LinkedIn 🎯'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh}){
   return (
     <div className="topbar">
       <div className="topbar-title">{PAGE_TITLES[activeTab]||'CRM'}</div>
       <div className="topbar-actions">
-        {activeTab!=='leads'&&(
+        {activeTab!=='leads'&&activeTab!=='prospection'&&(
           <select className="month-select" value={month} onChange={e=>setMonth(e.target.value)}>
             {MONTHS.map(m=><option key={m} value={m}>{m}</option>)}
           </select>
         )}
         <button className="btn btn-ghost btn-sm" onClick={onRefresh}><Icon.Refresh/></button>
-        {activeTab!=='leads'&&<button className="btn btn-gold" onClick={onNewDeal}><Icon.Plus/> Nouveau dossier</button>}
+        {activeTab!=='leads'&&activeTab!=='prospection'&&<button className="btn btn-gold" onClick={onNewDeal}><Icon.Plus/> Nouveau dossier</button>}
       </div>
     </div>
   )
@@ -1995,6 +1998,344 @@ function DealModal({open,initialDeal,profile,onClose,onSave}){
 /* ─────────────────────────────────────────────────────────────────────────────
    APP ROOT
 ───────────────────────────────────────────────────────────────────────────── */
+// ProspectionView — Onglet Prospection LinkedIn / Clay
+// À intégrer dans App.jsx
+
+const PROSPECT_STATUS = ['a_contacter','invite','connecte','message_envoye','en_discussion','rdv_propose','rdv_pris','converti','non_interesse']
+const PROSPECT_STATUS_LABEL = {
+  a_contacter:    'À contacter',
+  invite:         'Invitation envoyée',
+  connecte:       'Connecté',
+  message_envoye: 'Message envoyé',
+  en_discussion:  'En discussion',
+  rdv_propose:    'RDV proposé',
+  rdv_pris:       'RDV pris ✓',
+  converti:       'Converti 🎉',
+  non_interesse:  'Non intéressé',
+}
+const PROSPECT_STATUS_COLOR = {
+  a_contacter:    {bg:'var(--bg)',bd:'var(--bd)',color:'var(--t3)'},
+  invite:         {bg:'rgba(14,165,233,0.07)',bd:'rgba(14,165,233,0.2)',color:'#0EA5E9'},
+  connecte:       {bg:'rgba(124,58,237,0.07)',bd:'rgba(124,58,237,0.2)',color:'#7C3AED'},
+  message_envoye: {bg:'rgba(192,155,90,0.08)',bd:'var(--gold-line)',color:'var(--gold)'},
+  en_discussion:  {bg:'var(--progress-bg)',bd:'var(--progress-bd)',color:'var(--progress)'},
+  rdv_propose:    {bg:'rgba(249,115,22,0.07)',bd:'rgba(249,115,22,0.2)',color:'#F97316'},
+  rdv_pris:       {bg:'rgba(16,185,129,0.07)',bd:'rgba(16,185,129,0.2)',color:'#10B981'},
+  converti:       {bg:'var(--signed-bg)',bd:'var(--signed-bd)',color:'var(--signed)'},
+  non_interesse:  {bg:'var(--cancelled-bg)',bd:'var(--cancelled-bd)',color:'var(--cancelled)'},
+}
+const NICHES = ['Pharmaciens','Chirurgiens-dentistes','Vétérinaires','Architectes','Dirigeants PME']
+
+function ProspectModal({open,prospect,profile,teamProfiles,onClose,onSave}){
+  const [p,setP]=useState(prospect)
+  useEffect(()=>setP(prospect),[prospect])
+  if(!open||!p)return null
+  const set=(k,v)=>setP(prev=>({...prev,[k]:v}))
+  const isManager=profile?.role==='manager'
+  const sc=PROSPECT_STATUS_COLOR[p.status]||PROSPECT_STATUS_COLOR.a_contacter
+
+  async function handleSave(){
+    await onSave(p)
+    onClose()
+  }
+
+  async function handleCopyAndAdvance(){
+    if(p.message_linkedin){
+      try{await navigator.clipboard.writeText(p.message_linkedin)}catch(e){}
+    }
+    if(p.status==='a_contacter'||p.status==='invite'||p.status==='connecte'){
+      const next='message_envoye'
+      const updated={...p,status:next,last_action_at:new Date().toISOString()}
+      setP(updated)
+      await onSave(updated)
+    }
+    onClose()
+  }
+
+  return(
+    <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
+      <div className="modal-panel" style={{maxWidth:600}}>
+        <div className="modal-head">
+          <div>
+            <div className="modal-title">{p.nom||'Prospect'}</div>
+            <div className="modal-subtitle">{p.poste||''}{p.entreprise?` · ${p.entreprise}`:''}</div>
+          </div>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:16}}>
+          {/* Statut */}
+          <div className="form-group">
+            <label className="form-label">Statut pipeline</label>
+            <select className="form-select" value={p.status||'a_contacter'} onChange={e=>set('status',e.target.value)}>
+              {PROSPECT_STATUS.map(s=><option key={s} value={s}>{PROSPECT_STATUS_LABEL[s]}</option>)}
+            </select>
+          </div>
+
+          {/* Message LinkedIn */}
+          {p.message_linkedin&&(
+            <div className="form-group">
+              <label className="form-label">Message LinkedIn généré par IA</label>
+              <div style={{
+                background:'rgba(192,155,90,0.05)',border:'1px solid var(--gold-line)',
+                borderRadius:'var(--rad)',padding:'12px 14px',fontSize:13,
+                color:'var(--t2)',lineHeight:1.6,whiteSpace:'pre-wrap',
+              }}>
+                {p.message_linkedin}
+              </div>
+              <button
+                onClick={handleCopyAndAdvance}
+                style={{
+                  marginTop:8,display:'flex',alignItems:'center',gap:6,
+                  padding:'8px 14px',background:'var(--gold)',color:'white',
+                  border:'none',borderRadius:'var(--rad)',fontSize:12,fontWeight:600,cursor:'pointer',
+                }}
+              >
+                📋 Copier le message
+                {(p.status==='a_contacter'||p.status==='invite'||p.status==='connecte')&&
+                  <span style={{opacity:.8,fontWeight:400}}> · passe en "Message envoyé"</span>}
+              </button>
+            </div>
+          )}
+
+          {/* Contact */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+            <div className="form-group">
+              <label className="form-label">Email</label>
+              <input className="form-input" value={p.email||''} onChange={e=>set('email',e.target.value)} placeholder="—"/>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Téléphone</label>
+              <input className="form-input" value={p.telephone||''} onChange={e=>set('telephone',e.target.value)} placeholder="—"/>
+            </div>
+          </div>
+
+          {/* RDV */}
+          {(p.status==='rdv_propose'||p.status==='rdv_pris')&&(
+            <div className="form-group">
+              <label className="form-label">Date RDV</label>
+              <input className="form-input" type="datetime-local" value={p.rdv_at?p.rdv_at.slice(0,16):''} onChange={e=>set('rdv_at',e.target.value?new Date(e.target.value).toISOString():null)}/>
+            </div>
+          )}
+
+          {/* Assignation manager */}
+          {isManager&&(
+            <div className="form-group">
+              <label className="form-label">Conseiller assigné</label>
+              <select className="form-select" value={p.advisor_code||''} onChange={e=>set('advisor_code',e.target.value)}>
+                <option value="">— Non assigné —</option>
+                {(teamProfiles||[]).filter(t=>t.is_active&&t.advisor_code).map(t=>(
+                  <option key={t.advisor_code} value={t.advisor_code}>{t.full_name||t.advisor_code}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Notes */}
+          <div className="form-group">
+            <label className="form-label">Notes</label>
+            <textarea className="form-textarea" rows={3} value={p.notes||''} onChange={e=>set('notes',e.target.value)} placeholder="Contexte, objections, points à préparer…"/>
+          </div>
+
+          {/* LinkedIn */}
+          {p.linkedin_url&&(
+            <a href={p.linkedin_url} target="_blank" rel="noopener noreferrer"
+              style={{display:'inline-flex',alignItems:'center',gap:6,fontSize:12,color:'#0EA5E9',textDecoration:'none'}}>
+              🔗 Voir profil LinkedIn
+            </a>
+          )}
+        </div>
+        <div className="modal-foot">
+          <button className="btn btn-outline" onClick={onClose}>Fermer</button>
+          <button className="btn btn-gold" onClick={handleSave}>Enregistrer</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ProspectionView({prospects,profile,teamProfiles,onRefresh,onProspectsChange}){
+  const [search,setSearch]=useState('')
+  const [nicheF,setNicheF]=useState('all')
+  const [advisorF,setAdvisorF]=useState('all')
+  const [modalOpen,setModalOpen]=useState(false)
+  const [selected,setSelected]=useState(null)
+  const isManager=profile?.role==='manager'
+
+  // Filtrage
+  const filtered=useMemo(()=>{
+    let list=prospects
+    if(!isManager&&profile?.advisor_code)list=list.filter(p=>p.advisor_code===profile.advisor_code)
+    if(nicheF!=='all')list=list.filter(p=>p.niche===nicheF)
+    if(advisorF!=='all')list=list.filter(p=>p.advisor_code===advisorF)
+    if(search.trim()){
+      const q=search.toLowerCase()
+      list=list.filter(p=>`${p.nom||''} ${p.entreprise||''} ${p.poste||''} ${p.niche||''}`.toLowerCase().includes(q))
+    }
+    return list
+  },[prospects,isManager,profile,nicheF,advisorF,search])
+
+  // KPIs
+  const kpis=useMemo(()=>({
+    total:filtered.length,
+    messagesSent:filtered.filter(p=>['message_envoye','en_discussion','rdv_propose','rdv_pris','converti'].includes(p.status)).length,
+    inDiscussion:filtered.filter(p=>p.status==='en_discussion').length,
+    rdvPris:filtered.filter(p=>p.status==='rdv_pris').length,
+    convertis:filtered.filter(p=>p.status==='converti').length,
+  }),[filtered])
+
+  const tauxReponse=kpis.messagesSent>0?Math.round((kpis.inDiscussion+kpis.rdvPris+kpis.convertis)/kpis.messagesSent*100):0
+
+  // Par colonne kanban
+  const byStatus=useMemo(()=>{
+    const map={}
+    PROSPECT_STATUS.forEach(s=>map[s]=[])
+    filtered.forEach(p=>{if(map[p.status])map[p.status].push(p)})
+    return map
+  },[filtered])
+
+  // Colonnes kanban à afficher (on regroupe les premières)
+  const kanbanCols=[
+    {id:'a_contacter',   label:'À contacter'},
+    {id:'message_envoye',label:'Message envoyé'},
+    {id:'en_discussion', label:'En discussion'},
+    {id:'rdv_pris',      label:'RDV pris ✓'},
+    {id:'converti',      label:'Convertis 🎉'},
+  ]
+
+  async function handleSave(updatedProspect){
+    const{error:e}=await supabase.from('prospects').update(updatedProspect).eq('id',updatedProspect.id)
+    if(e){alert(e.message);return}
+    onProspectsChange(prev=>prev.map(p=>p.id===updatedProspect.id?updatedProspect:p))
+  }
+
+  function openModal(prospect){
+    setSelected(prospect)
+    setModalOpen(true)
+  }
+
+  const niches=[...new Set(prospects.map(p=>p.niche).filter(Boolean))].sort()
+  const advisors=isManager?[...new Set(prospects.map(p=>p.advisor_code).filter(Boolean))].sort():[]
+
+  return(
+    <div>
+      {/* Header + KPIs */}
+      <div className="section-header">
+        <div>
+          <div className="section-kicker">Prospection LinkedIn · Clay</div>
+          <div className="section-title">Pipeline de prospection</div>
+          <div className="section-sub">{filtered.length} prospect{filtered.length!==1?'s':''} · Taux réponse {tauxReponse}%</div>
+        </div>
+        <button className="btn btn-ghost btn-sm" onClick={onRefresh}>↻ Actualiser</button>
+      </div>
+
+      {/* KPIs */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12,marginBottom:20}}>
+        {[
+          {label:'Total prospects',value:kpis.total,color:'var(--t1)',bg:'var(--bg)',bd:'var(--bd)'},
+          {label:'Messages envoyés',value:kpis.messagesSent,color:'var(--gold)',bg:'rgba(192,155,90,0.06)',bd:'var(--gold-line)'},
+          {label:'Taux réponse',value:`${tauxReponse}%`,color:'var(--progress)',bg:'var(--progress-bg)',bd:'var(--progress-bd)'},
+          {label:'RDV pris',value:kpis.rdvPris,color:'#10B981',bg:'rgba(16,185,129,0.07)',bd:'rgba(16,185,129,0.2)'},
+          {label:'Convertis',value:kpis.convertis,color:'var(--signed)',bg:'var(--signed-bg)',bd:'var(--signed-bd)'},
+        ].map(s=>(
+          <div key={s.label} style={{background:s.bg,border:`1px solid ${s.bd}`,borderRadius:'var(--rad-lg)',padding:'14px 18px'}}>
+            <div style={{fontSize:11,color:'var(--t3)',marginBottom:6,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.05em'}}>{s.label}</div>
+            <div style={{fontSize:26,fontWeight:700,color:s.color,fontFamily:'var(--font-serif)'}}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filtres */}
+      <div style={{display:'flex',gap:8,marginBottom:16,alignItems:'center',flexWrap:'wrap'}}>
+        <div style={{position:'relative',flex:1,minWidth:160,maxWidth:280}}>
+          <input className="search-input" value={search} onChange={e=>setSearch(e.target.value)}
+            placeholder="Nom, entreprise, poste…"
+            style={{width:'100%',paddingLeft:32,height:34,fontSize:12}}/>
+          <span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',fontSize:13,color:'var(--t3)',pointerEvents:'none'}}>🔍</span>
+          {search&&<button onClick={()=>setSearch('')} style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'var(--t3)',fontSize:13,padding:0}}>×</button>}
+        </div>
+        {niches.length>1&&(
+          <select className="filter-select" value={nicheF} onChange={e=>setNicheF(e.target.value)} style={{height:34,fontSize:12}}>
+            <option value="all">Toutes niches</option>
+            {niches.map(n=><option key={n} value={n}>{n} · {prospects.filter(p=>p.niche===n).length}</option>)}
+          </select>
+        )}
+        {isManager&&advisors.length>1&&(
+          <select className="filter-select" value={advisorF} onChange={e=>setAdvisorF(e.target.value)} style={{height:34,fontSize:12}}>
+            <option value="all">Tous conseillers</option>
+            {advisors.map(a=><option key={a} value={a}>{a}</option>)}
+          </select>
+        )}
+      </div>
+
+      {/* Kanban */}
+      {filtered.length>0?(
+        <div style={{display:'grid',gridTemplateColumns:`repeat(${kanbanCols.length},1fr)`,gap:10,overflowX:'auto'}}>
+          {kanbanCols.map(col=>{
+            const items=byStatus[col.id]||[]
+            const sc=PROSPECT_STATUS_COLOR[col.id]||PROSPECT_STATUS_COLOR.a_contacter
+            return(
+              <div key={col.id} style={{
+                background:'var(--bg)',border:'1px solid var(--bd)',borderRadius:'var(--rad-lg)',
+                minHeight:200,display:'flex',flexDirection:'column',
+              }}>
+                {/* Tête colonne */}
+                <div style={{
+                  padding:'10px 12px',borderBottom:'2px solid var(--bd)',
+                  display:'flex',alignItems:'center',justifyContent:'space-between',
+                  background:sc.bg,borderRadius:'var(--rad-lg) var(--rad-lg) 0 0',
+                }}>
+                  <span style={{fontSize:11.5,fontWeight:700,color:sc.color}}>{col.label}</span>
+                  <span style={{fontSize:11,fontWeight:600,background:sc.bd,color:sc.color,padding:'1px 7px',borderRadius:10,border:`1px solid ${sc.bd}`}}>{items.length}</span>
+                </div>
+                {/* Cards */}
+                <div style={{padding:8,display:'flex',flexDirection:'column',gap:6,flex:1}}>
+                  {items.map(p=>(
+                    <div key={p.id}
+                      onClick={()=>openModal(p)}
+                      style={{
+                        background:'white',border:'1px solid var(--bd)',borderRadius:'var(--rad)',
+                        padding:'9px 11px',cursor:'pointer',transition:'box-shadow .15s',
+                      }}
+                      onMouseEnter={e=>e.currentTarget.style.boxShadow='var(--sh-xs)'}
+                      onMouseLeave={e=>e.currentTarget.style.boxShadow='none'}
+                    >
+                      <div style={{fontWeight:600,fontSize:12.5,color:'var(--t1)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:3}}>{p.nom}</div>
+                      <div style={{fontSize:11,color:'var(--t3)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.poste||p.entreprise||'—'}</div>
+                      {p.niche&&<div style={{marginTop:5,display:'inline-block',fontSize:9.5,fontWeight:600,padding:'1px 5px',borderRadius:3,background:'rgba(192,155,90,0.1)',color:'var(--gold)',border:'1px solid var(--gold-line)'}}>{p.niche}</div>}
+                      {p.advisor_code&&isManager&&<div style={{marginTop:3,fontSize:10,color:'var(--t3)'}}>{p.advisor_code}</div>}
+                      {p.message_linkedin&&col.id==='a_contacter'&&(
+                        <div style={{marginTop:5,fontSize:10,color:'var(--gold)',display:'flex',alignItems:'center',gap:3}}>
+                          <span>📋</span> Message prêt
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {!items.length&&<div style={{fontSize:11.5,color:'var(--t3)',fontStyle:'italic',padding:'10px 4px',textAlign:'center'}}>Aucun prospect</div>}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ):(
+        <div className="table-empty-state">
+          <div className="empty-icon">📧</div>
+          <div className="empty-title">Aucun prospect</div>
+          <div className="empty-sub">Les prospects Clay arriveront ici via Zapier.</div>
+        </div>
+      )}
+
+      <ProspectModal
+        open={modalOpen}
+        prospect={selected}
+        profile={profile}
+        teamProfiles={teamProfiles}
+        onClose={()=>{setModalOpen(false);setSelected(null)}}
+        onSave={handleSave}
+      />
+    </div>
+  )
+}
+
 export default function App(){
   const [session,setSession]=useState(null)
   const [profile,setProfile]=useState(null)
@@ -2008,6 +2349,12 @@ export default function App(){
   const [editingDeal,setEditingDeal]=useState(null)
   const [error,setError]=useState('')
   const [activeTab,setActiveTab]=useState('dashboard')
+  const [prospects,setProspects]=useState([])
+  const [prospectsNew,setProspectsNew]=useState(0)
+
+  const fetchProspects=()=>supabase.from('prospects').select('*').order('created_at',{ascending:false}).then(({data})=>{
+    if(data){setProspects(data);setProspectsNew(data.filter(p=>p.status==='a_contacter').length)}
+  })
 
   // ── Leads — fetch + Realtime + polling 15s ────────────────────────────────
   const fetchLeads=()=>supabase.from('leads').select('*').order('created_at',{ascending:false}).then(({data})=>{if(data)setLeads(data)})
@@ -2077,11 +2424,12 @@ export default function App(){
     const userId=s.user.id
     setError('')
     try {
-      const[profRes,teamRes,dealsRes,objRes]=await Promise.all([
+      const[profRes,teamRes,dealsRes,objRes,prospRes]=await Promise.all([
         supabase.from('profiles').select('*').eq('id',userId).maybeSingle(),
         supabase.from('profiles').select('id,email,full_name,role,advisor_code,is_active').order('full_name',{ascending:true}),
         supabase.from('deals').select('*').order('created_at',{ascending:false}),
         supabase.from('objectifs').select('*'),
+        supabase.from('prospects').select('*').order('created_at',{ascending:false}),
       ])
       const errs=[profRes,teamRes,dealsRes,objRes].filter(r=>r.error).map(r=>r.error.message)
       if(errs.length)setError(errs[0])
@@ -2106,6 +2454,9 @@ export default function App(){
       setProfile(prof||null)
       setTeamProfiles(teamRes.data||[])
       setDeals(dealsRes.data||[])
+      const prospData=prospRes.data||[]
+      setProspects(prospData)
+      setProspectsNew(prospData.filter(p=>p.status==='a_contacter').length)
       const map={...EMPTY_OBJECTIFS}
       ;(objRes.data||[]).forEach(row=>{map[row.month]=row})
       setObjectifs(map)
@@ -2184,6 +2535,7 @@ export default function App(){
         deals={deals}
         month={month}
         leadsAvailable={leadsAvailable}
+        prospectsNew={prospectsNew}
       />
       <div className="app-main">
         <TopBar activeTab={activeTab} month={month} setMonth={setMonth} onNewDeal={startCreate} onRefresh={loadAll}/>
@@ -2199,6 +2551,7 @@ export default function App(){
           {activeTab==='agenda'&&<AgendaView deals={deals} profile={profile}/>}
           {activeTab==='market'&&<MarketView/>}
           {activeTab==='team'&&isManager&&<TeamView deals={deals} objectifs={objectifs} teamProfiles={teamProfiles} month={month}/>}
+          {activeTab==='prospection'&&<ProspectionView prospects={prospects} profile={profile} teamProfiles={teamProfiles} onRefresh={fetchProspects} onProspectsChange={setProspects}/>}
         </div>
       </div>
 
