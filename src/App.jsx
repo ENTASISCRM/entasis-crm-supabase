@@ -2087,13 +2087,21 @@ export default function App(){
       if(errs.length)setError(errs[0])
       let prof=profRes.data
       if(!prof&&s.user){
-        const email=s.user.email||''
-        const fullName=s.user.user_metadata?.full_name||s.user.user_metadata?.name||email.split('@')[0]||''
-        const{data:newProf}=await supabase.from('profiles').upsert({
-          id:userId,email,full_name:fullName,role:'advisor',is_active:true,
-          advisor_code:email.split('@')[0].toUpperCase().slice(0,6),
-        },{onConflict:'id'}).select().maybeSingle()
-        prof=newProf
+        // Retry 3x avec délai croissant avant de créer
+        for(let i=0;i<3&&!prof;i++){
+          await new Promise(r=>setTimeout(r,(i+1)*800))
+          const{data:retry}=await supabase.from('profiles').select('*').eq('id',userId).maybeSingle()
+          prof=retry
+        }
+        if(!prof){
+          const email=s.user.email||''
+          const fullName=s.user.user_metadata?.full_name||s.user.user_metadata?.name||email.split('@')[0]||''
+          const{data:newProf}=await supabase.from('profiles').upsert({
+            id:userId,email,full_name:fullName,role:'advisor',is_active:true,
+            advisor_code:email.split('@')[0].toUpperCase().slice(0,6),
+          },{onConflict:'id'}).select().maybeSingle()
+          prof=newProf
+        }
       }
       setProfile(prof||null)
       setTeamProfiles(teamRes.data||[])
@@ -2181,7 +2189,7 @@ export default function App(){
         <TopBar activeTab={activeTab} month={month} setMonth={setMonth} onNewDeal={startCreate} onRefresh={loadAll}/>
         <div className="app-content">
           {error&&<div className="notice notice-error">{error}</div>}
-          {!profile&&<div className="notice notice-warn">Profil introuvable dans <span className="code">public.profiles</span>. Vérifie la table et les policies.</div>}
+          {!profile&&error&&<div className="notice notice-warn">Profil introuvable dans <span className="code">public.profiles</span>. Vérifie la table et les policies.</div>}
 
           {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile}/>)}
           {activeTab==='leads'&&<LeadRoom leads={leads} profile={profile} onLeadsChange={setLeads} onConvertDeal={convertLeadToDeal} onRefresh={fetchLeads}/>}
