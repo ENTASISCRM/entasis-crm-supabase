@@ -579,7 +579,7 @@ function LeadRDVModal({open,lead,onClose,onBooked}){
 /* ─────────────────────────────────────────────────────────────────────────────
    LEAD ROW — vue liste compacte
 ───────────────────────────────────────────────────────────────────────────── */
-function LeadRow({lead,profile,onTake,onRelease,onCreateRDV,onConvertDeal}){
+function LeadRow({lead,profile,onTake,onRelease,onCreateRDV,onConvertDeal,onReset}){
   const remaining=useLeadTimer(lead)
   const isMyLead=lead.taken_by===profile?.id
   const isBooked=lead.status==='booked'
@@ -641,6 +641,9 @@ function LeadRow({lead,profile,onTake,onRelease,onCreateRDV,onConvertDeal}){
         )}
         {isTaken&&!isMyLead&&!isBooked&&(
           <span style={{fontSize:10,color:'var(--t3)'}}>En appel…</span>
+        )}
+        {(profile?.role==='manager'||(isMyLead))&&!isAvailable&&(
+          <button onClick={()=>onReset(lead)} title="Annuler / remettre disponible" style={{padding:'3px 6px',background:'transparent',color:'#EF4444',border:'1px solid #FCA5A5',borderRadius:4,fontSize:10,cursor:'pointer',marginLeft:'auto'}}>✕</button>
         )}
       </div>
     </div>
@@ -727,7 +730,7 @@ function LeadRoom({leads,profile,onLeadsChange,onConvertDeal,onRefresh}){
   const paginated=filtered.slice(0,(page)*PAGE_SIZE)
   const hasMore=page*PAGE_SIZE<filtered.length
 
-  const cardProps={onTake:takeLead,onRelease:releaseLead,onCreateRDV:l=>{setRdvLead(l);setRdvOpen(true)},onConvertDeal,profile}
+  const cardProps={onTake:takeLead,onRelease:releaseLead,onCreateRDV:l=>{setRdvLead(l);setRdvOpen(true)},onConvertDeal,onReset:resetLead,profile}
 
   return (
     <div>
