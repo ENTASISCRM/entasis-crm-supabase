@@ -1538,10 +1538,10 @@ function MarketView(){
     {name:'Claresco USA',                 isin:'LU1379103812', cat:'Actions USA',          refSymbol:'FOREXCOM:SPXUSD',   refLabel:'S&P 500',    color:'#6366F1'},
   ]
 
-  const [navData,setNavData]=React.useState({})
-  const [loading,setLoading]=React.useState(true)
-  const [lastUpdate,setLastUpdate]=React.useState(null)
-  const [selectedFund,setSelectedFund]=React.useState(null)
+  const [navData,setNavData]=useState({})
+  const [loading,setLoading]=useState(true)
+  const [lastUpdate,setLastUpdate]=useState(null)
+  const [selectedFund,setSelectedFund]=useState(null)
 
   async function fetchNAV(isin){
     try{
@@ -1561,7 +1561,7 @@ function MarketView(){
     setLoading(false)
   }
 
-  React.useEffect(()=>{
+  useEffect(()=>{
     loadAllNAV()
     // Refresh toutes les 4h
     const t=setInterval(loadAllNAV,4*60*60*1000)
@@ -1569,7 +1569,7 @@ function MarketView(){
   },[])
 
   // TradingView chart pour fonds sélectionné
-  React.useEffect(()=>{
+  useEffect(()=>{
     if(!selectedFund)return
     const id='tv-detail-chart'
     const el=document.getElementById(id)
@@ -1589,7 +1589,7 @@ function MarketView(){
   },[selectedFund])
 
   // Ticker bande top
-  React.useEffect(()=>{
+  useEffect(()=>{
     const el=document.getElementById('tv-mkt-ticker')
     if(!el||el.querySelector('script'))return
     const s=document.createElement('script')
