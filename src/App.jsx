@@ -388,7 +388,6 @@ function LeadCard({lead,profile,onTake,onRelease,onCreateRDV,onConvertDeal}){
   const isTaken=lead.status==='contacted'
   const isBooked=lead.status==='booked'
   const isAvailable=lead.status==='available'||lead.status==='released'
-
   const campagneColor={'SUCCESSION':'#7C3AED','LEADS':'#0EA5E9','REUNION':'#10B981'}
   const cc=campagneColor[lead.campagne]||'#6B7280'
 
@@ -396,58 +395,51 @@ function LeadCard({lead,profile,onTake,onRelease,onCreateRDV,onConvertDeal}){
     <div style={{
       background:isMyLead?'rgba(192,155,90,0.04)':isBooked?'rgba(16,185,129,0.04)':'white',
       border:`1.5px solid ${isMyLead?'var(--gold-line)':isBooked?'rgba(16,185,129,0.3)':'var(--bd)'}`,
-      borderRadius:'var(--rad-lg)',padding:'16px 18px',
-      opacity:isTaken&&!isMyLead?0.55:1,transition:'all .2s',
+      borderRadius:'var(--rad-lg)',padding:'11px 13px',
+      opacity:isTaken&&!isMyLead?0.5:1,transition:'all .2s',
     }}>
-      {/* Header */}
-      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:10}}>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4,flexWrap:'wrap'}}>
-            <span style={{fontSize:10,fontWeight:700,letterSpacing:'0.06em',padding:'2px 7px',borderRadius:3,background:cc+'18',color:cc,border:`1px solid ${cc}30`}}>{lead.campagne}</span>
-            {isMyLead&&remaining!==null&&<TimerBadge remaining={remaining}/>}
-            {isBooked&&<span style={{fontSize:10,fontWeight:700,color:'#10B981',background:'rgba(16,185,129,0.1)',padding:'2px 7px',borderRadius:3,border:'1px solid rgba(16,185,129,0.2)'}}>✓ RDV PLANIFIÉ</span>}
-            {isTaken&&!isMyLead&&!isBooked&&<span style={{fontSize:10,color:'var(--t3)',padding:'2px 6px',borderRadius:3,background:'var(--bg)',border:'1px solid var(--bd)'}}>En cours de traitement</span>}
-          </div>
-          <div style={{fontSize:15,fontWeight:700,color:'var(--t1)',marginBottom:2}}>{lead.nom}</div>
-          <div style={{fontSize:11,color:'var(--t3)'}}>
-            Reçu {lead.created_at?new Date(lead.created_at).toLocaleString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'—'}
-          </div>
-        </div>
+      {/* Ligne 1 — campagne + statut + timer */}
+      <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:5,flexWrap:'wrap'}}>
+        <span style={{fontSize:9.5,fontWeight:700,letterSpacing:'0.06em',padding:'1px 6px',borderRadius:3,background:cc+'18',color:cc,border:`1px solid ${cc}30`}}>{lead.campagne}</span>
+        {isMyLead&&remaining!==null&&<TimerBadge remaining={remaining}/>}
+        {isBooked&&<span style={{fontSize:9.5,fontWeight:700,color:'#10B981',background:'rgba(16,185,129,0.1)',padding:'1px 6px',borderRadius:3,border:'1px solid rgba(16,185,129,0.2)'}}>✓ RDV</span>}
+        {isTaken&&!isMyLead&&!isBooked&&<span style={{fontSize:9.5,color:'var(--t3)',padding:'1px 5px',borderRadius:3,background:'var(--bg)',border:'1px solid var(--bd)'}}>En appel</span>}
+        <span style={{marginLeft:'auto',fontSize:10,color:'var(--t3)'}}>
+          {lead.created_at?new Date(lead.created_at).toLocaleString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'—'}
+        </span>
       </div>
 
-      {/* Données */}
-      <div style={{display:'flex',flexWrap:'wrap',gap:7,marginBottom:12}}>
+      {/* Ligne 2 — nom */}
+      <div style={{fontSize:13.5,fontWeight:700,color:'var(--t1)',marginBottom:7,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{lead.nom}</div>
+
+      {/* Ligne 3 — contact */}
+      <div style={{display:'flex',flexDirection:'column',gap:4,marginBottom:8}}>
         {lead.telephone&&(
-          <a href={`tel:${lead.telephone}`} style={{display:'inline-flex',alignItems:'center',gap:5,fontSize:12.5,fontWeight:600,color:'var(--t1)',background:'var(--bg)',border:'1px solid var(--bd)',borderRadius:'var(--rad)',padding:'5px 10px',textDecoration:'none'}}>
+          <a href={`tel:${lead.telephone}`} style={{display:'inline-flex',alignItems:'center',gap:5,fontSize:12,fontWeight:600,color:'var(--t1)',textDecoration:'none'}}>
             <Icon.Phone/> {lead.telephone}
           </a>
         )}
         {lead.email&&(
-          <span style={{display:'inline-flex',alignItems:'center',gap:5,fontSize:12,color:'var(--t2)',background:'var(--bg)',border:'1px solid var(--bd)',borderRadius:'var(--rad)',padding:'5px 10px',maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+          <span style={{display:'inline-flex',alignItems:'center',gap:5,fontSize:11,color:'var(--t3)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
             <Icon.Mail/> {lead.email}
-          </span>
-        )}
-        {lead.patrimoine_net&&(
-          <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:11.5,color:'#7C3AED',background:'rgba(124,58,237,0.06)',border:'1px solid rgba(124,58,237,0.15)',borderRadius:'var(--rad)',padding:'4px 9px'}}>
-            💰 {lead.patrimoine_net}
-          </span>
-        )}
-        {lead.tmi&&(
-          <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:11.5,color:'#0EA5E9',background:'rgba(14,165,233,0.06)',border:'1px solid rgba(14,165,233,0.15)',borderRadius:'var(--rad)',padding:'4px 9px'}}>
-            📊 TMI {lead.tmi}
-          </span>
-        )}
-        {lead.actifs&&(
-          <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:11.5,color:'var(--t2)',background:'var(--bg)',border:'1px solid var(--bd)',borderRadius:'var(--rad)',padding:'4px 9px'}}>
-            🏠 {lead.actifs.length>28?lead.actifs.slice(0,28)+'…':lead.actifs}
           </span>
         )}
       </div>
 
+      {/* Ligne 4 — profil financier inline */}
+      {(lead.patrimoine_net||lead.tmi||lead.actifs)&&(
+        <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:8}}>
+          {lead.patrimoine_net&&<span style={{fontSize:10.5,color:'#7C3AED',background:'rgba(124,58,237,0.06)',border:'1px solid rgba(124,58,237,0.15)',borderRadius:3,padding:'2px 6px',fontWeight:500}}>💰 {lead.patrimoine_net}</span>}
+          {lead.tmi&&<span style={{fontSize:10.5,color:'#0EA5E9',background:'rgba(14,165,233,0.06)',border:'1px solid rgba(14,165,233,0.15)',borderRadius:3,padding:'2px 6px',fontWeight:500}}>TMI {lead.tmi}</span>}
+          {lead.actifs&&<span style={{fontSize:10.5,color:'var(--t3)',background:'var(--bg)',border:'1px solid var(--bd)',borderRadius:3,padding:'2px 6px'}}>🏠 {lead.actifs.length>22?lead.actifs.slice(0,22)+'…':lead.actifs}</span>}
+        </div>
+      )}
+
       {/* Actions */}
-      <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+      <div style={{display:'flex',gap:6}}>
         {isAvailable&&(
-          <button onClick={()=>onTake(lead)} style={{flex:1,minWidth:120,padding:'9px 16px',background:'var(--gold)',color:'white',border:'none',borderRadius:'var(--rad)',fontSize:13,fontWeight:700,cursor:'pointer',transition:'opacity .15s'}}
+          <button onClick={()=>onTake(lead)}
+            style={{flex:1,padding:'7px 10px',background:'var(--gold)',color:'white',border:'none',borderRadius:'var(--rad)',fontSize:12,fontWeight:700,cursor:'pointer'}}
             onMouseEnter={e=>e.currentTarget.style.opacity='.85'}
             onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
             ⚡ Je prends ce lead
@@ -455,19 +447,20 @@ function LeadCard({lead,profile,onTake,onRelease,onCreateRDV,onConvertDeal}){
         )}
         {isMyLead&&!isBooked&&(
           <>
-            <button onClick={()=>onCreateRDV(lead)} style={{flex:1,padding:'9px 14px',background:'#10B981',color:'white',border:'none',borderRadius:'var(--rad)',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:5,transition:'opacity .15s'}}
-              onMouseEnter={e=>e.currentTarget.style.opacity='.85'}
-              onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
-              <Icon.CalPlus/> Créer RDV
+            <button onClick={()=>onCreateRDV(lead)}
+              style={{flex:1,padding:'7px 10px',background:'#10B981',color:'white',border:'none',borderRadius:'var(--rad)',fontSize:12,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:4}}>
+              <Icon.CalPlus/> RDV
             </button>
-            <button onClick={()=>onRelease(lead)} style={{padding:'9px 12px',background:'transparent',color:'var(--t3)',border:'1px solid var(--bd)',borderRadius:'var(--rad)',fontSize:12,cursor:'pointer'}}>
-              Libérer
+            <button onClick={()=>onRelease(lead)}
+              style={{padding:'7px 10px',background:'transparent',color:'var(--t3)',border:'1px solid var(--bd)',borderRadius:'var(--rad)',fontSize:11,cursor:'pointer'}}>
+              ↩
             </button>
           </>
         )}
         {isBooked&&isMyLead&&(
-          <button onClick={()=>onConvertDeal(lead)} style={{flex:1,padding:'9px 14px',background:'var(--gold)',color:'white',border:'none',borderRadius:'var(--rad)',fontSize:13,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:5}}>
-            <Icon.Plus/> Créer dossier CRM
+          <button onClick={()=>onConvertDeal(lead)}
+            style={{flex:1,padding:'7px 10px',background:'var(--gold)',color:'white',border:'none',borderRadius:'var(--rad)',fontSize:12,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:4}}>
+            <Icon.Plus/> Créer dossier
           </button>
         )}
       </div>
@@ -861,7 +854,7 @@ function LeadRoom({leads,profile,onLeadsChange,onConvertDeal}){
               ))}
             </div>
           ):(
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))',gap:14}}>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))',gap:10}}>
               {paginated.map(lead=>(
                 <LeadCard key={lead.id} lead={lead} {...cardProps}/>
               ))}
