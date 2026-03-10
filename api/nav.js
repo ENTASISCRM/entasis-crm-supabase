@@ -6,23 +6,27 @@ export default async function handler(req, res) {
   const { isin, ticker } = req.query
   if (!isin) return res.status(400).json({ error: 'isin required' })
 
-  // Utilise le ticker direct si fourni (fonds LU non couverts via recherche ISIN)
-  const symbol = ticker || null
-
   try {
-    let resolvedSymbol = symbol
+    let resolvedSymbol = ticker || null
 
     // Si pas de ticker direct → recherche via Yahoo
     if (!resolvedSymbol) {
       const searchRes = await fetch(
-        `https://query2.finance.yahoo.com/v1/finance/search?q=${isin}&quotesCount=1&newsCount=0&enableFuzzyQuery=false`,
+        `https://query2.finance.yahoo.com/v1/finance/search?q=${isin}&quotesCount=10&newsCount=0&enableFuzzyQuery=false`,
         { headers: { 'User-Agent': 'Mozilla/5.0' } }
       )
       const searchData = await searchRes.json()
-      const quote = searchData?.quotes?.[0]
-      if (!quote?.symbol) return res.status(404).json({ error: 'not found', isin })
-      resolvedSymbol = quote.symbol
+      const quotes = searchData?.quotes || []
+
+      if (quotes.length === 0) return res.status(404).json({ error: 'not found', isin })
+
+      // Préférer les codes 0P (OTC/Morningstar) car ils ont l'historique complet
+      // Sinon prendre le premier résultat
+      const preferred = quotes.find(q => q.symbol && q.symbol.startsWith('0P'))
+      resolvedSymbol = (preferred || quotes[0]).symbol
     }
+
+    if (!resolvedSymbol) return res.status(404).json({ error: 'no symbol', isin })
 
     const priceRes = await fetch(
       `https://query2.finance.yahoo.com/v8/finance/chart/${resolvedSymbol}?interval=1d&range=1y`,
@@ -39,6 +43,12 @@ export default async function handler(req, res) {
       .filter(x => x.c != null)
 
     if (valid.length === 0) return res.status(404).json({ error: 'no closes', symbol: resolvedSymbol })
+
+    // Vérifier si les données sont plates (fonds LU sans historique réel)
+    const uniquePrices = new Set(valid.map(x => Math.round(x.c * 100)))
+    if (uniquePrices.size <= 2) {
+      return res.status(404).json({ error: 'flat data', symbol: resolvedSymbol })
+    }
 
     const last   = valid[valid.length - 1]
     const prev   = valid[valid.length - 2]
