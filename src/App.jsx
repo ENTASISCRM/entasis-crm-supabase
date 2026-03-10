@@ -592,7 +592,7 @@ function LeadRow({lead,profile,onTake,onRelease,onCreateRDV,onConvertDeal,onRese
 
   return (
     <div style={{
-      display:'grid',gridTemplateColumns:'100px 150px 128px 180px 100px 80px 150px 110px',
+      display:'grid',gridTemplateColumns:'100px 150px 128px 170px 100px 70px 220px 100px',
       alignItems:'center',
       minHeight:36,
       borderBottom:'1px solid var(--bd)',
@@ -860,8 +860,8 @@ function LeadRoom({leads,profile,onLeadsChange,onConvertDeal,onRefresh}){
       {paginated.length>0?(
         <>
           {viewMode==='list'?(
-            <div style={{background:'white',border:'1px solid var(--bd)',borderRadius:'var(--rad-lg)',overflow:'hidden'}}>
-              <div style={{display:'grid',gridTemplateColumns:'100px 150px 128px 180px 100px 80px 150px 110px',background:'var(--bg)',borderBottom:'2px solid var(--bd)'}}>
+            <div style={{background:'white',border:'1px solid var(--bd)',borderRadius:'var(--rad-lg)',overflow:'visible'}}>
+              <div style={{display:'grid',gridTemplateColumns:'100px 150px 128px 170px 100px 70px 220px 100px',background:'var(--bg)',borderBottom:'2px solid var(--bd)'}}>
                 {['Campagne','Nom','Téléphone','Email','Patrimoine','TMI','Action','Reçu le'].map(h=>(
                   <div key={h} style={{padding:'6px 8px',fontSize:10,fontWeight:700,color:'var(--t3)',textTransform:'uppercase',letterSpacing:'0.05em',borderRight:'1px solid var(--bd)'}}>{h}</div>
                 ))}
