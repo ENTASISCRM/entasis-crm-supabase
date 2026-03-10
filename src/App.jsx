@@ -388,6 +388,7 @@ function LeadCard({lead,profile,onTake,onRelease,onCreateRDV,onConvertDeal}){
   const isTaken=lead.status==='contacted'
   const isBooked=lead.status==='booked'
   const isAvailable=lead.status==='available'||lead.status==='released'
+  const isDead=lead.status==='dead'
   const campagneColor={'SUCCESSION':'#7C3AED','LEADS':'#0EA5E9','REUNION':'#10B981'}
   const cc=campagneColor[lead.campagne]||'#6B7280'
 
@@ -585,6 +586,7 @@ function LeadRow({lead,profile,onTake,onRelease,onCreateRDV,onConvertDeal,onRese
   const isBooked=lead.status==='booked'
   const isTaken=lead.status==='contacted'
   const isAvailable=lead.status==='available'||lead.status==='released'
+  const isDead=lead.status==='dead'
   const campagneColor={'SUCCESSION':'#7C3AED','LEADS':'#0EA5E9','REUNION':'#10B981'}
   const cc=campagneColor[lead.campagne]||'#6B7280'
 
