@@ -2537,13 +2537,12 @@ export default function App(){
   useEffect(()=>{
     if(!isSupabaseConfigured)return
     let active=true
-
-    // onAuthStateChange en premier — capture SIGNED_IN au retour OAuth
+    // onAuthStateChange gère tout, y compris INITIAL_SESSION
+    const fallback=setTimeout(()=>{if(active)setLoading(false)},8000)
     const{data:listener}=supabase.auth.onAuthStateChange(async(event,s)=>{
       if(!active)return
-      if(event==='INITIAL_SESSION')return // ignoré — on utilise getSession()
-      if(event==='SIGNED_OUT'){setSession(null);setLoading(false);return}
-      if(event==='SIGNED_IN'||event==='TOKEN_REFRESHED'){
+      if(event==='INITIAL_SESSION'||event==='SIGNED_IN'||event==='TOKEN_REFRESHED'){
+        clearTimeout(fallback)
         setSession(s||null)
         setLoading(false)
         if(s?.provider_token&&s?.user?.id){
@@ -2554,22 +2553,10 @@ export default function App(){
           }catch(e){console.warn('gcal_token update:',e)}
         }
       }
+      if(event==='SIGNED_OUT'){clearTimeout(fallback);setSession(null);setLoading(false)}
     })
 
-    // getSession après — gère la session existante et le hash OAuth #access_token
-    const fallback=setTimeout(()=>{if(active)setLoading(false)},8000)
-    supabase.auth.getSession()
-      .then(({data})=>{
-        clearTimeout(fallback)
-        if(!active)return
-        setSession(data.session||null)
-        setLoading(false)
-      })
-      .catch(()=>{clearTimeout(fallback);if(active)setLoading(false)})
-
     return()=>{active=false;clearTimeout(fallback);listener.subscription.unsubscribe()}
-  },[])
-
   useEffect(()=>{
     if(!session?.user){setProfile(null);setDeals([]);setTeamProfiles([]);return}
     loadAll(session)
@@ -2624,6 +2611,7 @@ export default function App(){
       ;(objRes.data||[]).forEach(row=>{map[row.month]=row})
       setObjectifs(map)
     } catch(e) {
+             if(/lock/i.test(e?.message))return
       setError('Erreur chargement : '+e.message)
     }
   }
