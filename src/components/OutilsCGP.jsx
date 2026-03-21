@@ -930,12 +930,10 @@ function SimulateurImmoNeuf() {
   const [aiLoading, setAiLoading] = useState(false)
 
   const NOTAIRE_PCT = 0.025
-  const HONORAIRES_PCT = 0.025
 
   const result = useMemo(() => {
     const fraisNotaire = Math.round(prixBien * NOTAIRE_PCT)
-    const honoraires = Math.round(prixBien * HONORAIRES_PCT)
-    const coutTotal = prixBien + fraisNotaire + honoraires
+    const coutTotal = prixBien + fraisNotaire
     const emprunt = Math.max(0, coutTotal - apport)
     const r = tauxInteret / 100 / 12
     const n = dureeEmprunt * 12
@@ -977,7 +975,7 @@ function SimulateurImmoNeuf() {
     const yearlyValeur = Array.from({ length: dureeEmprunt }, (_, i) => Math.round(prixBien * Math.pow(1.015, i + 1)))
 
     return {
-      fraisNotaire, honoraires, coutTotal, emprunt, mensualiteCredit: Math.round(mensualiteCredit),
+      fraisNotaire, coutTotal, emprunt, mensualiteCredit: Math.round(mensualiteCredit),
       assuranceMensuelle: Math.round(assuranceMensuelle), mensualiteTotale: Math.round(mensualiteTotale),
       coutCredit: Math.round(coutCredit), loyerMensuel, loyerAnnuel, rendBrut, cashflowMensuel: Math.round(cashflowMensuel),
       economieTVA, amortTable, yearlyRestant, yearlyValeur,
@@ -1034,14 +1032,13 @@ function SimulateurImmoNeuf() {
             {[
               ['Prix du bien', euro(prixBien)],
               ['Frais de notaire (2,5%)', euro(result.fraisNotaire)],
-              ['Honoraires Entasis (2,5%)', euro(result.honoraires)],
               ['Coût total acquisition', euro(result.coutTotal)],
               ['Apport', euro(apport)],
               ['Montant emprunté', euro(result.emprunt)],
             ].map(([label, val], i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: `1px solid ${C.bd}`, fontSize: 12, fontWeight: i === 3 || i === 5 ? 700 : 400 }}>
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: `1px solid ${C.bd}`, fontSize: 12, fontWeight: i === 2 || i === 4 ? 700 : 400 }}>
                 <span style={{ color: C.ivoryMuted }}>{label}</span>
-                <span style={{ color: i === 3 || i === 5 ? C.ivory : C.ivoryMuted }}>{val}</span>
+                <span style={{ color: i === 2 || i === 4 ? C.ivory : C.ivoryMuted }}>{val}</span>
               </div>
             ))}
           </div>
