@@ -530,7 +530,7 @@ const WEMO = {
   prixPart: 200,
   valeurReconstitution: 218.73,        // au 31/12/2025
   td2025: 0.1527,                      // taux distribution réel 2025 (exceptionnel)
-  tdCible: 0.07,                       // objectif long terme, non garanti
+  tdCible: 0.07,                       // objectif long terme, non garanti, net de frais de gestion, brut de fiscalité
   triCible: 0.075,
   perfGlobaleCible: 0.08,
   foreignPct: 0.8552,                  // Europe hors France
@@ -541,9 +541,10 @@ const WEMO = {
   nbBiens: 31,
   ticketMin: 1000,                     // 5 parts
   dureeRecommandee: 8,
-  fraisEntree: 0.09,
-  fraisSortie: 0.10,                   // sur capital total à la sortie
-  delaiJouissance: 4,                  // mois
+  fraisSouscription: 0.10,             // 10% HT sur capital investi à l'entrée
+  commissionGestion: 0.11,             // 11% HT — déjà incluse dans le TD (net de frais)
+  // Pas de commission de sortie — SCPI à capital variable, retrait par confrontation au marché
+  delaiJouissance: 7,                  // mois
   ps: 0.172,
   // Classes d'actifs
   actifCommerce: 0.739, actifLogistique: 0.151, actifEducation: 0.073, actifBureaux: 0.038,
@@ -556,21 +557,29 @@ function SimulateurSCPI() {
   const [isRate, setIsRate] = useState(25)
   const [duree, setDuree] = useState(10)
   const [revalo, setRevalo] = useState(1)
+  const [rendement, setRendement] = useState(7)
   const [aiNote, setAiNote] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
   const [copied, setCopied] = useState(false)
 
   const nbParts = Math.floor(montant / WEMO.prixPart)
   const montantEffectif = nbParts * WEMO.prixPart
+  const rendementDecimal = rendement / 100
 
   const result = useMemo(() => {
-    const fraisE = montantEffectif * WEMO.fraisEntree
-    const netInvesti = montantEffectif - fraisE
+    // Frais de souscription 10% HT payés EN SUS du capital investi
+    // Capital en parts = montantEffectif (travaille et génère des revenus)
+    // Frais = montantEffectif × 10% (coût additionnel)
+    // Décaissement total = montantEffectif + frais
+    const capitalEnParts = montantEffectif
+    const fraisE = Math.round(montantEffectif * WEMO.fraisSouscription)
+    const decaissementTotal = montantEffectif + fraisE
 
     function calcStructure(isIS) {
       const rate = isIS ? isRate / 100 : tmiRate / 100
-      // Distribution based on 7% target (on net invested capital)
-      const revenusBrutsAn = netInvesti * WEMO.tdCible
+      // TD is already net de frais de gestion, brut de fiscalité
+      // Revenue base = full capital in parts (not reduced by fees)
+      const revenusBrutsAn = capitalEnParts * rendementDecimal
 
       // PS 17.2% applies ONLY on the 14.5% French assets portion
       const psAn = isIS ? 0 : revenusBrutsAn * WEMO.francePct * WEMO.ps
@@ -585,17 +594,14 @@ function SimulateurSCPI() {
       const totalImpot = Math.round(impotAn * effectiveYears)
       const totalNet = Math.round(revenusNetsAn * effectiveYears)
 
-      // Exit: nb parts × prix part at exit (revalorised) — frais sortie 10% on total capital at exit
+      // Exit: nb parts × prix part at exit (revalorised) — NO exit fees
       const prixPartSortie = WEMO.prixPart * Math.pow(1 + revalo / 100, duree)
       const capitalSortie = nbParts * prixPartSortie
-      const fraisSortie = Math.round(capitalSortie * WEMO.fraisSortie)
-      const capitalNetSortie = Math.round(capitalSortie - fraisSortie)
 
-      // TRI: solve for r in montantEffectif = sum(revenusNetsAn/(1+r)^t, t=1..duree) + capitalNetSortie/(1+r)^duree
-      // Using Newton's method
+      // TRI: Newton's method — initial outlay = decaissementTotal (capital + fees on top)
       let tri = 0.05
       for (let iter = 0; iter < 50; iter++) {
-        let npv = -montantEffectif
+        let npv = -decaissementTotal
         let dnpv = 0
         for (let t = 1; t <= duree; t++) {
           const cashflow = t <= Math.ceil(WEMO.delaiJouissance / 12) ? 0 : revenusNetsAn
@@ -604,8 +610,8 @@ function SimulateurSCPI() {
           dnpv -= t * cashflow / (disc * (1 + tri))
         }
         const disc = Math.pow(1 + tri, duree)
-        npv += capitalNetSortie / disc
-        dnpv -= duree * capitalNetSortie / (disc * (1 + tri))
+        npv += capitalSortie / disc
+        dnpv -= duree * capitalSortie / (disc * (1 + tri))
         if (Math.abs(dnpv) < 1e-12) break
         const step = npv / dnpv
         tri = tri - step
@@ -613,10 +619,10 @@ function SimulateurSCPI() {
       }
 
       return {
-        montantInvesti: montantEffectif, fraisEntree: Math.round(fraisE), netInvesti: Math.round(netInvesti),
+        capitalEnParts, fraisEntree: fraisE, decaissementTotal,
         revenusBrutsAn: Math.round(revenusBrutsAn), psAn: Math.round(psAn), impotAn: Math.round(impotAn), revenusNetsAn: Math.round(revenusNetsAn),
         totalBrut, totalPS, totalImpot, totalNet,
-        capitalSortie: Math.round(capitalSortie), fraisSortie, capitalNetSortie,
+        capitalSortie: Math.round(capitalSortie),
         tri: isFinite(tri) ? tri : 0, nbParts,
       }
     }
@@ -624,7 +630,7 @@ function SimulateurSCPI() {
     const ir = calcStructure(false)
     const is = calcStructure(true)
 
-    // Yearly evolution for chart
+    // Yearly evolution for chart (value of parts + cumulated net revenue)
     const yearly = Array.from({ length: duree }, (_, i) => {
       const an = i + 1
       const prixPartAn = WEMO.prixPart * Math.pow(1 + revalo / 100, an)
@@ -635,7 +641,7 @@ function SimulateurSCPI() {
     })
 
     return { ir, is, yearly }
-  }, [montantEffectif, nbParts, tmiRate, isRate, duree, revalo])
+  }, [montantEffectif, nbParts, tmiRate, isRate, duree, revalo, rendementDecimal])
 
   const chartData = {
     labels: result.yearly.map(y => `An ${y.an}`),
@@ -654,16 +660,18 @@ function SimulateurSCPI() {
 
 Données officielles Wemo One (source wemo-reim.fr) :
 - TD 2025 réel : 15,27% (exceptionnel, phase de lancement)
-- TD cible long terme : 7% net de frais, brut de fiscalité
+- TD cible long terme : 7% net de frais de gestion (11% HT), brut de fiscalité
 - TRI cible : 7,5% — Performance globale cible : 8%
+- Frais de souscription : 10% HT
+- Pas de commission de sortie (SCPI à capital variable, retrait par confrontation au marché)
 - 85,52% patrimoine européen hors France (Italie 50,4%, Espagne 35,1%)
 - Classes d'actifs : Commerce 73,9%, Logistique 15,1%
 - Capitalisation : 100M€, 3600 associés, 31 biens
 
-Résultats simulation sur ${duree} ans :
+Résultats simulation sur ${duree} ans (hypothèse rendement ${rendement}%) :
 - TRI estimé : ${pctFmt(d.tri)}
 - Revenus nets annuels : ${euro(d.revenusNetsAn)}
-- Capital net sortie : ${euro(d.capitalNetSortie)}
+- Capital à la sortie : ${euro(d.capitalSortie)}
 
 IMPORTANT : Mentionne clairement que le TD 2025 de 15,27% est exceptionnel et ne reflète pas la performance future. Le taux cible long terme est de 7%. Mentionne les risques (liquidité limitée, capital non garanti, marché immobilier européen). Rappelle que les performances passées ne préjugent pas des performances futures.`
       const text = await callAI('Tu es un CGP senior chez Entasis Conseil. Rédige des notes conformes AMF : pas de promesse de rendement garanti, mention systématique des risques, distinction claire entre performance passée et objectif futur.', prompt)
@@ -677,11 +685,12 @@ IMPORTANT : Mentionne clairement que le TD 2025 de 15,27% est exceptionnel et ne
     const is = result.is
     const text = `SIMULATION SCPI WEMO ONE — Entasis Conseil
 ══════════════════════════════════════════
-Investissement : ${euro(montantEffectif)} (${nbParts} parts × ${WEMO.prixPart} €)
+Capital en parts : ${euro(montantEffectif)} (${nbParts} parts × ${WEMO.prixPart} €)
+Frais souscription (10% HT, en sus) : ${euro(result.ir.fraisEntree)}
+Décaissement total : ${euro(result.ir.decaissementTotal)}
 Durée : ${duree} ans · Revalorisation : ${revalo}%/an
-
-TD cible long terme : 7% (brut de fiscalité)
-TD 2025 réel : 15,27% (exceptionnel — phase de lancement)
+Hypothèse rendement : ${rendement}% (cible officielle : 7%)
+Pas de frais de sortie (SCPI à capital variable)
 
 COMPARAISON IR vs IS
 ──────────────────
@@ -691,8 +700,7 @@ PS (14,5% FR) / an :      ${euro(ir.psAn).padStart(10)}    —
 Impôt / an :              ${euro(ir.impotAn).padStart(10)}    ${euro(is.impotAn).padStart(10)}
 Revenus nets / an :       ${euro(ir.revenusNetsAn).padStart(10)}    ${euro(is.revenusNetsAn).padStart(10)}
 Revenus cumulés :         ${euro(ir.totalNet).padStart(10)}    ${euro(is.totalNet).padStart(10)}
-Frais sortie (10%) :      ${euro(ir.fraisSortie).padStart(10)}    ${euro(is.fraisSortie).padStart(10)}
-Capital net sortie :      ${euro(ir.capitalNetSortie).padStart(10)}    ${euro(is.capitalNetSortie).padStart(10)}
+Capital sortie :          ${euro(ir.capitalSortie).padStart(10)}    ${euro(is.capitalSortie).padStart(10)}
 TRI estimé :              ${pctFmt(ir.tri).padStart(10)}    ${pctFmt(is.tri).padStart(10)}
 
 ⚠ Les performances passées ne préjugent pas des performances futures.
@@ -729,9 +737,9 @@ Simulation indicative — Entasis Conseil`
             { label: 'TD 2025', value: '15,27%', accent: C.success },
             { label: 'TD cible LT', value: '7%', accent: C.gold },
             { label: 'TRI cible', value: '7,5%' },
-            { label: 'Frais entrée', value: '9%' },
-            { label: 'Frais sortie', value: '10%' },
-            { label: 'Délai jouiss.', value: '4 mois' },
+            { label: 'Souscription', value: '10% HT' },
+            { label: 'Gestion', value: '11% HT' },
+            { label: 'Délai jouiss.', value: '7 mois' },
           ].map(c => (
             <div key={c.label} style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 9.5, color: C.ivoryDim, textTransform: 'uppercase', fontWeight: 600, marginBottom: 4, letterSpacing: '.03em' }}>{c.label}</div>
@@ -787,7 +795,7 @@ Simulation indicative — Entasis Conseil`
 
       {/* ── DISCLAIMER ────────────────────────────────────────────── */}
       <div style={{ background: 'rgba(201,168,76,0.06)', border: `1px solid ${C.goldLine}`, borderRadius: 10, padding: '12px 16px', marginBottom: 20, fontSize: 11.5, lineHeight: 1.7, color: C.ivoryMuted }}>
-        <strong style={{ color: C.gold }}>⚠ Avertissement</strong> — Le taux de distribution 2025 de 15,27% ne reflète pas la performance future. Ce taux exceptionnel s'explique par la phase de lancement de la SCPI et des conditions d'acquisition particulièrement favorables. Le taux cible long terme est de <strong style={{ color: C.ivory }}>7% net de frais, brut de fiscalité</strong> (non garanti). Les performances passées ne préjugent pas des performances futures. L'investissement en SCPI comporte un risque de perte en capital.
+        <strong style={{ color: C.gold }}>⚠ Avertissement</strong> — Le taux de distribution 2025 de 15,27% ne reflète pas la performance future. Ce taux exceptionnel s'explique par la phase de lancement de la SCPI et des conditions d'acquisition particulièrement favorables. Le taux cible long terme est de <strong style={{ color: C.ivory }}>7% net de frais de gestion, brut de fiscalité</strong> (non garanti). Les performances passées ne préjugent pas des performances futures. L'investissement en SCPI comporte un risque de perte en capital. Frais de souscription : 10% HT. Commission de gestion : 11% HT (déjà déduite du taux de distribution). Pas de commission de sortie (SCPI à capital variable).
       </div>
 
       {/* ── SIMULATION INPUTS + RESULTS ───────────────────────────── */}
@@ -801,6 +809,11 @@ Simulation indicative — Entasis Conseil`
             </div>
           )}
 
+          <Slider label="Hypothèse de rendement long terme" value={rendement} onChange={setRendement} min={4} max={12} step={0.25} suffix="%" />
+          <div style={{ fontSize: 10.5, color: C.ivoryDim, marginTop: -12, marginBottom: 16, lineHeight: 1.5 }}>
+            Cible officielle Wemo One : <strong style={{ color: C.gold }}>7% net de frais, brut de fiscalité</strong>
+          </div>
+
           <div style={{ marginBottom: 18 }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: C.ivoryMuted, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8, fontFamily: FONT_SANS }}>Structure de détention</div>
             <PillSelect options={[{ value: 'IR', label: 'IR (personne physique)' }, { value: 'IS', label: 'IS (société)' }, { value: 'AV', label: 'Assurance Vie' }, { value: 'SCI_IS', label: 'SCI à l\'IS' }]} value={structure} onChange={setStructure} />
@@ -813,16 +826,18 @@ Simulation indicative — Entasis Conseil`
 
           {duree < 8 && (
             <div style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: C.warn, marginTop: 8 }}>
-              ⚠ Durée inférieure à la durée recommandée de 8 ans. Frais de sortie de 10% applicables sur le capital total à la sortie ({euro(Math.round(result.ir.capitalSortie))}).
+              ⚠ Durée inférieure à la durée recommandée de {WEMO.dureeRecommandee} ans. La liquidité des parts n'est pas garantie et le marché secondaire peut impliquer une décote.
             </div>
           )}
 
-          {/* Fiscalité explainer */}
+          {/* Fiscalité & frais explainer */}
           <div style={{ background: C.card, borderRadius: 8, padding: '12px 14px', marginTop: 16, fontSize: 11.5, lineHeight: 1.6, color: C.ivoryDim }}>
-            <strong style={{ color: C.ivory }}>Fiscalité appliquée</strong><br />
+            <strong style={{ color: C.ivory }}>Frais & Fiscalité</strong><br />
+            • Frais de souscription : <strong style={{ color: C.ivory }}>10% HT en sus</strong> du capital investi ({euro(result.ir.capitalEnParts)} + {euro(result.ir.fraisEntree)} = {euro(result.ir.decaissementTotal)})<br />
+            • Commission de gestion : <strong style={{ color: C.ivory }}>11% HT</strong> — déjà incluse dans le taux de distribution (net de frais)<br />
+            • <strong style={{ color: C.success }}>Pas de commission de sortie</strong> — SCPI à capital variable, retrait par confrontation au marché<br />
             • PS 17,2% uniquement sur la part française ({(WEMO.francePct * 100).toFixed(1)}%) soit {euro(Math.round(result.ir.revenusBrutsAn * WEMO.francePct))} d'assiette<br />
-            • Les revenus européens ({(WEMO.foreignPct * 100).toFixed(1)}%) sont <strong style={{ color: C.success }}>exonérés de prélèvements sociaux</strong><br />
-            • Frais de sortie : 10% calculés sur <strong style={{ color: C.ivory }}>nb parts × prix de part à la sortie</strong>
+            • Les revenus européens ({(WEMO.foreignPct * 100).toFixed(1)}%) sont <strong style={{ color: C.success }}>exonérés de prélèvements sociaux</strong>
           </div>
         </div>
 
@@ -839,17 +854,15 @@ Simulation indicative — Entasis Conseil`
               </thead>
               <tbody>
                 {[
-                  ['Capital investi', euro(result.ir.montantInvesti), euro(result.is.montantInvesti)],
-                  ['Frais d\'entrée (9%)', euro(result.ir.fraisEntree), euro(result.is.fraisEntree)],
-                  ['Capital net investi', euro(result.ir.netInvesti), euro(result.is.netInvesti)],
-                  ['Revenus bruts / an', euro(result.ir.revenusBrutsAn), euro(result.is.revenusBrutsAn)],
+                  ['Capital générateur de revenus', euro(result.ir.capitalEnParts), euro(result.is.capitalEnParts)],
+                  ['Frais souscription (10% HT, en sus)', euro(result.ir.fraisEntree), euro(result.is.fraisEntree)],
+                  ['Décaissement total', euro(result.ir.decaissementTotal), euro(result.is.decaissementTotal)],
+                  [`Revenus bruts / an (${rendement}%)`, euro(result.ir.revenusBrutsAn), euro(result.is.revenusBrutsAn)],
                   [`PS 17,2% (part FR ${(WEMO.francePct * 100).toFixed(1)}%)`, euro(result.ir.psAn) + '/an', '—'],
                   [`${structure === 'IS' || structure === 'SCI_IS' ? 'IS' : 'IR'} / an`, euro(result.ir.impotAn) + '/an', euro(result.is.impotAn) + '/an'],
                   ['Revenus nets / an', euro(result.ir.revenusNetsAn), euro(result.is.revenusNetsAn)],
                   [`Revenus nets cumulés (${duree} ans)`, euro(result.ir.totalNet), euro(result.is.totalNet)],
                   ['Capital à la sortie', euro(result.ir.capitalSortie), euro(result.is.capitalSortie)],
-                  ['Frais sortie (10%)', euro(result.ir.fraisSortie), euro(result.is.fraisSortie)],
-                  ['Capital net sortie', euro(result.ir.capitalNetSortie), euro(result.is.capitalNetSortie)],
                 ].map(([label, irVal, isVal], i) => (
                   <tr key={i}>
                     <td style={tdLabel}>{label}</td>
@@ -867,7 +880,7 @@ Simulation indicative — Entasis Conseil`
           </div>
 
           <div style={{ fontSize: 10, color: C.ivoryDim, marginTop: 8, lineHeight: 1.5 }}>
-            Simulation basée sur le TD cible de 7% (non garanti). TRI calculé par actualisation des flux nets. Frais de sortie sur capital total (nb parts × prix part revalorisé).
+            Simulation basée sur une hypothèse de rendement de {rendement}% (cible officielle : 7%, non garanti). TRI calculé par actualisation des flux nets. Pas de frais de sortie (SCPI à capital variable).
           </div>
         </div>
       </div>
