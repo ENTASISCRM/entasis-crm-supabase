@@ -524,9 +524,30 @@ function SimulateurAssuranceVie() {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   TAB 4 — SIMULATEUR SCPI WEMO ONE
+   TAB 4 — SIMULATEUR SCPI WEMO ONE (données officielles wemo-reim.fr, mars 2026)
 ═══════════════════════════════════════════════════════════════════════════ */
-const WEMO = { distribYield: 0.07, foreignPct: 0.85, fraisEntree: 0.09, fraisSortie: 0.10, delaiJouissance: 4, prixPart: 200, ps: 0.172 }
+const WEMO = {
+  prixPart: 200,
+  valeurReconstitution: 218.73,        // au 31/12/2025
+  td2025: 0.1527,                      // taux distribution réel 2025 (exceptionnel)
+  tdCible: 0.07,                       // objectif long terme, non garanti
+  triCible: 0.075,
+  perfGlobaleCible: 0.08,
+  foreignPct: 0.8552,                  // Europe hors France
+  francePct: 0.145,
+  geoItalie: 0.504, geoEspagne: 0.351, geoFrance: 0.145,
+  capitalisation: 100_000_000,
+  nbAssocies: 3600,
+  nbBiens: 31,
+  ticketMin: 1000,                     // 5 parts
+  dureeRecommandee: 8,
+  fraisEntree: 0.09,
+  fraisSortie: 0.10,                   // sur capital total à la sortie
+  delaiJouissance: 4,                  // mois
+  ps: 0.172,
+  // Classes d'actifs
+  actifCommerce: 0.739, actifLogistique: 0.151, actifEducation: 0.073, actifBureaux: 0.038,
+}
 
 function SimulateurSCPI() {
   const [montant, setMontant] = useState(50000)
@@ -539,172 +560,325 @@ function SimulateurSCPI() {
   const [aiLoading, setAiLoading] = useState(false)
   const [copied, setCopied] = useState(false)
 
+  const nbParts = Math.floor(montant / WEMO.prixPart)
+  const montantEffectif = nbParts * WEMO.prixPart
+
   const result = useMemo(() => {
-    const fraisE = montant * WEMO.fraisEntree
-    const netInvesti = montant - fraisE
-    const nbParts = Math.floor(montant / WEMO.prixPart)
+    const fraisE = montantEffectif * WEMO.fraisEntree
+    const netInvesti = montantEffectif - fraisE
 
     function calcStructure(isIS) {
       const rate = isIS ? isRate / 100 : tmiRate / 100
-      const revenusBrutsAn = netInvesti * WEMO.distribYield
-      const frPartFrance = 1 - WEMO.foreignPct // 15%
+      // Distribution based on 7% target (on net invested capital)
+      const revenusBrutsAn = netInvesti * WEMO.tdCible
 
-      // PS only on French part for IR, none for IS
-      const psAn = isIS ? 0 : revenusBrutsAn * frPartFrance * WEMO.ps
+      // PS 17.2% applies ONLY on the 14.5% French assets portion
+      const psAn = isIS ? 0 : revenusBrutsAn * WEMO.francePct * WEMO.ps
       // IR/IS on full distribution
       const impotAn = revenusBrutsAn * rate
       const revenusNetsAn = revenusBrutsAn - psAn - impotAn
 
-      // Cumul sur durée (premier trimestre sans revenu = 4 mois delay)
-      const anneesPleines = duree
-      const totalBrut = revenusBrutsAn * (anneesPleines - WEMO.delaiJouissance / 12)
-      const totalPS = psAn * (anneesPleines - WEMO.delaiJouissance / 12)
-      const totalImpot = impotAn * (anneesPleines - WEMO.delaiJouissance / 12)
-      const totalNet = revenusNetsAn * (anneesPleines - WEMO.delaiJouissance / 12)
+      // Effective years of distribution (minus jouissance delay)
+      const effectiveYears = Math.max(0, duree - WEMO.delaiJouissance / 12)
+      const totalBrut = Math.round(revenusBrutsAn * effectiveYears)
+      const totalPS = Math.round(psAn * effectiveYears)
+      const totalImpot = Math.round(impotAn * effectiveYears)
+      const totalNet = Math.round(revenusNetsAn * effectiveYears)
 
-      // Exit: revalorisation + frais sortie
-      const capitalFinal = netInvesti * Math.pow(1 + revalo / 100, duree)
-      const fraisSortie = duree < 5 ? capitalFinal * WEMO.fraisSortie : duree < 8 ? capitalFinal * 0.05 : 0
-      const capitalNet = capitalFinal - fraisSortie
+      // Exit: nb parts × prix part at exit (revalorised) — frais sortie 10% on total capital at exit
+      const prixPartSortie = WEMO.prixPart * Math.pow(1 + revalo / 100, duree)
+      const capitalSortie = nbParts * prixPartSortie
+      const fraisSortie = Math.round(capitalSortie * WEMO.fraisSortie)
+      const capitalNetSortie = Math.round(capitalSortie - fraisSortie)
 
-      // TRI simplifié
-      const totalFlux = totalNet + capitalNet
-      const tri = Math.pow(totalFlux / montant, 1 / duree) - 1
+      // TRI: solve for r in montantEffectif = sum(revenusNetsAn/(1+r)^t, t=1..duree) + capitalNetSortie/(1+r)^duree
+      // Using Newton's method
+      let tri = 0.05
+      for (let iter = 0; iter < 50; iter++) {
+        let npv = -montantEffectif
+        let dnpv = 0
+        for (let t = 1; t <= duree; t++) {
+          const cashflow = t <= Math.ceil(WEMO.delaiJouissance / 12) ? 0 : revenusNetsAn
+          const disc = Math.pow(1 + tri, t)
+          npv += cashflow / disc
+          dnpv -= t * cashflow / (disc * (1 + tri))
+        }
+        const disc = Math.pow(1 + tri, duree)
+        npv += capitalNetSortie / disc
+        dnpv -= duree * capitalNetSortie / (disc * (1 + tri))
+        if (Math.abs(dnpv) < 1e-12) break
+        const step = npv / dnpv
+        tri = tri - step
+        if (Math.abs(step) < 1e-8) break
+      }
 
       return {
-        montantInvesti: montant, fraisEntree: Math.round(fraisE), netInvesti: Math.round(netInvesti),
+        montantInvesti: montantEffectif, fraisEntree: Math.round(fraisE), netInvesti: Math.round(netInvesti),
         revenusBrutsAn: Math.round(revenusBrutsAn), psAn: Math.round(psAn), impotAn: Math.round(impotAn), revenusNetsAn: Math.round(revenusNetsAn),
-        totalBrut: Math.round(totalBrut), totalPS: Math.round(totalPS), totalImpot: Math.round(totalImpot), totalNet: Math.round(totalNet),
-        capitalFinal: Math.round(capitalFinal), fraisSortie: Math.round(fraisSortie), capitalNet: Math.round(capitalNet),
-        tri, nbParts,
+        totalBrut, totalPS, totalImpot, totalNet,
+        capitalSortie: Math.round(capitalSortie), fraisSortie, capitalNetSortie,
+        tri: isFinite(tri) ? tri : 0, nbParts,
       }
     }
 
     const ir = calcStructure(false)
     const is = calcStructure(true)
 
-    // Yearly patrimoine evolution for chart
+    // Yearly evolution for chart
     const yearly = Array.from({ length: duree }, (_, i) => {
       const an = i + 1
-      const capRevalorised = netInvesti * Math.pow(1 + revalo / 100, an)
-      const revCumul = ir.revenusNetsAn * Math.max(0, an - WEMO.delaiJouissance / 12)
-      return { an, capital: Math.round(capRevalorised), patrimoine: Math.round(capRevalorised + revCumul) }
+      const prixPartAn = WEMO.prixPart * Math.pow(1 + revalo / 100, an)
+      const valeurParts = nbParts * prixPartAn
+      const revCumulIR = ir.revenusNetsAn * Math.max(0, an - WEMO.delaiJouissance / 12)
+      const revCumulIS = is.revenusNetsAn * Math.max(0, an - WEMO.delaiJouissance / 12)
+      return { an, valeurParts: Math.round(valeurParts), patrimoineIR: Math.round(valeurParts + revCumulIR), patrimoineIS: Math.round(valeurParts + revCumulIS) }
     })
 
     return { ir, is, yearly }
-  }, [montant, structure, tmiRate, isRate, duree, revalo])
+  }, [montantEffectif, nbParts, tmiRate, isRate, duree, revalo])
 
   const chartData = {
     labels: result.yearly.map(y => `An ${y.an}`),
     datasets: [
-      { label: 'Valeur des parts', data: result.yearly.map(y => y.capital), borderColor: C.gold, backgroundColor: `${C.gold}20`, fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 },
-      { label: 'Patrimoine total (parts + revenus)', data: result.yearly.map(y => y.patrimoine), borderColor: C.success, fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2 },
+      { label: 'Valeur des parts', data: result.yearly.map(y => y.valeurParts), borderColor: C.gold, backgroundColor: `${C.gold}15`, fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 },
+      { label: 'Patrimoine IR (parts + revenus nets)', data: result.yearly.map(y => y.patrimoineIR), borderColor: C.info, fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2 },
+      { label: 'Patrimoine IS (parts + revenus nets)', data: result.yearly.map(y => y.patrimoineIS), borderColor: C.warn, fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2, borderDash: [5, 3] },
     ],
   }
 
   async function handleAINote() {
     setAiLoading(true)
     try {
-      const d = structure === 'IS' ? result.is : result.ir
-      const prompt = `Rédige une note de synthèse professionnelle (8-10 lignes) pour un client investissant ${euro(montant)} en SCPI Wemo One via ${structure}. Données: rendement 7%, ${duree} ans, TRI estimé ${pctFmt(d.tri)}, revenus nets annuels ${euro(d.revenusNetsAn)}. Mentionne les risques (liquidité, marché immobilier, pas de garantie de rendement).`
-      const text = await callAI('Tu es un CGP senior chez Entasis Conseil. Rédige des notes professionnelles et conformes AMF (pas de promesse de rendement garanti, mention des risques).', prompt)
+      const d = structure === 'IS' || structure === 'SCI_IS' ? result.is : result.ir
+      const prompt = `Rédige une note de synthèse professionnelle (10-12 lignes) pour un client investissant ${euro(montantEffectif)} (${nbParts} parts) en SCPI Wemo One via ${structure}.
+
+Données officielles Wemo One (source wemo-reim.fr) :
+- TD 2025 réel : 15,27% (exceptionnel, phase de lancement)
+- TD cible long terme : 7% net de frais, brut de fiscalité
+- TRI cible : 7,5% — Performance globale cible : 8%
+- 85,52% patrimoine européen hors France (Italie 50,4%, Espagne 35,1%)
+- Classes d'actifs : Commerce 73,9%, Logistique 15,1%
+- Capitalisation : 100M€, 3600 associés, 31 biens
+
+Résultats simulation sur ${duree} ans :
+- TRI estimé : ${pctFmt(d.tri)}
+- Revenus nets annuels : ${euro(d.revenusNetsAn)}
+- Capital net sortie : ${euro(d.capitalNetSortie)}
+
+IMPORTANT : Mentionne clairement que le TD 2025 de 15,27% est exceptionnel et ne reflète pas la performance future. Le taux cible long terme est de 7%. Mentionne les risques (liquidité limitée, capital non garanti, marché immobilier européen). Rappelle que les performances passées ne préjugent pas des performances futures.`
+      const text = await callAI('Tu es un CGP senior chez Entasis Conseil. Rédige des notes conformes AMF : pas de promesse de rendement garanti, mention systématique des risques, distinction claire entre performance passée et objectif futur.', prompt)
       setAiNote(text)
     } catch (e) { setAiNote('Erreur : ' + e.message) }
     setAiLoading(false)
   }
 
   function handleCopySim() {
-    const d = structure === 'IS' ? result.is : result.ir
-    const text = `SIMULATION SCPI WEMO ONE — ${structure}\n${euro(montant)} investis · ${duree} ans\nRevenus nets/an: ${euro(d.revenusNetsAn)}\nTRI estimé: ${pctFmt(d.tri)}\nCapital net sortie: ${euro(d.capitalNet)}\n— Entasis Conseil`
+    const ir = result.ir
+    const is = result.is
+    const text = `SIMULATION SCPI WEMO ONE — Entasis Conseil
+══════════════════════════════════════════
+Investissement : ${euro(montantEffectif)} (${nbParts} parts × ${WEMO.prixPart} €)
+Durée : ${duree} ans · Revalorisation : ${revalo}%/an
+
+TD cible long terme : 7% (brut de fiscalité)
+TD 2025 réel : 15,27% (exceptionnel — phase de lancement)
+
+COMPARAISON IR vs IS
+──────────────────
+                          IR              IS
+Revenus bruts / an :      ${euro(ir.revenusBrutsAn).padStart(10)}    ${euro(is.revenusBrutsAn).padStart(10)}
+PS (14,5% FR) / an :      ${euro(ir.psAn).padStart(10)}    —
+Impôt / an :              ${euro(ir.impotAn).padStart(10)}    ${euro(is.impotAn).padStart(10)}
+Revenus nets / an :       ${euro(ir.revenusNetsAn).padStart(10)}    ${euro(is.revenusNetsAn).padStart(10)}
+Revenus cumulés :         ${euro(ir.totalNet).padStart(10)}    ${euro(is.totalNet).padStart(10)}
+Frais sortie (10%) :      ${euro(ir.fraisSortie).padStart(10)}    ${euro(is.fraisSortie).padStart(10)}
+Capital net sortie :      ${euro(ir.capitalNetSortie).padStart(10)}    ${euro(is.capitalNetSortie).padStart(10)}
+TRI estimé :              ${pctFmt(ir.tri).padStart(10)}    ${pctFmt(is.tri).padStart(10)}
+
+⚠ Les performances passées ne préjugent pas des performances futures.
+Simulation indicative — Entasis Conseil`
     copyText(text)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const thStyle = { textAlign: 'right', padding: '10px 12px', fontSize: 10, textTransform: 'uppercase', fontWeight: 700, borderBottom: `1px solid ${C.bd}` }
+  const tdLabel = { padding: '7px 12px', color: C.ivoryMuted, borderBottom: `1px solid ${C.bd}`, fontSize: 12 }
+  const tdVal = { padding: '7px 12px', textAlign: 'right', color: C.ivory, fontWeight: 600, borderBottom: `1px solid ${C.bd}`, fontSize: 12 }
+
   return (
     <div>
-      {/* Product card */}
-      <div style={{ background: C.card, border: `1px solid ${C.bdGold}`, borderRadius: 12, padding: '16px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 200 }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: C.gold, fontFamily: FONT_SERIF }}>SCPI Wemo One</div>
-          <div style={{ fontSize: 12, color: C.ivoryDim, marginTop: 2 }}>SCPI diversifiée européenne — Wemo REIM</div>
-        </div>
-        {[
-          { label: 'Distribution', value: '7%' }, { label: 'Étranger', value: '85%' },
-          { label: 'Frais entrée', value: '9%' }, { label: 'Frais sortie', value: '10%' },
-          { label: 'Délai jouiss.', value: '4 mois' }, { label: 'Prix/part', value: '200 €' },
-        ].map(c => (
-          <div key={c.label} style={{ textAlign: 'center', minWidth: 70 }}>
-            <div style={{ fontSize: 10, color: C.ivoryDim, textTransform: 'uppercase', fontWeight: 600 }}>{c.label}</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: C.ivory, fontFamily: FONT_SERIF }}>{c.value}</div>
+      {/* ── PRODUCT CARD ──────────────────────────────────────────── */}
+      <div style={{ background: C.card, border: `1px solid ${C.bdGold}`, borderRadius: 14, padding: '20px 24px', marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: C.gold, fontFamily: FONT_SERIF }}>SCPI Wemo One</div>
+            <div style={{ fontSize: 12, color: C.ivoryDim, marginTop: 2 }}>SCPI diversifiée européenne — Wemo REIM · Capitalisation {(WEMO.capitalisation / 1e6).toFixed(0)}M€</div>
           </div>
-        ))}
+          <div style={{ display: 'flex', gap: 6 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 10, background: C.goldBg, color: C.gold, border: `1px solid ${C.goldLine}` }}>{WEMO.nbAssocies.toLocaleString('fr-FR')} associés</span>
+            <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 10, background: C.goldBg, color: C.gold, border: `1px solid ${C.goldLine}` }}>{WEMO.nbBiens} biens</span>
+          </div>
+        </div>
+
+        {/* Key figures row */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 8, marginBottom: 16 }}>
+          {[
+            { label: 'Prix / part', value: `${WEMO.prixPart} €` },
+            { label: 'Val. reconst.', value: `${WEMO.valeurReconstitution.toFixed(2)} €` },
+            { label: 'TD 2025', value: '15,27%', accent: C.success },
+            { label: 'TD cible LT', value: '7%', accent: C.gold },
+            { label: 'TRI cible', value: '7,5%' },
+            { label: 'Frais entrée', value: '9%' },
+            { label: 'Frais sortie', value: '10%' },
+            { label: 'Délai jouiss.', value: '4 mois' },
+          ].map(c => (
+            <div key={c.label} style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 9.5, color: C.ivoryDim, textTransform: 'uppercase', fontWeight: 600, marginBottom: 4, letterSpacing: '.03em' }}>{c.label}</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: c.accent || C.ivory, fontFamily: FONT_SERIF }}>{c.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Geographic & asset class breakdown */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: C.ivoryDim, textTransform: 'uppercase', marginBottom: 8, letterSpacing: '.06em' }}>Répartition géographique</div>
+            {[
+              { label: 'Italie', pct: WEMO.geoItalie, color: '#4ade80' },
+              { label: 'Espagne', pct: WEMO.geoEspagne, color: '#fb923c' },
+              { label: 'France', pct: WEMO.geoFrance, color: '#60a5fa' },
+            ].map(g => (
+              <div key={g.label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: g.color, flexShrink: 0 }} />
+                <span style={{ fontSize: 12, color: C.ivory, flex: 1 }}>{g.label}</span>
+                <div style={{ width: 100, height: 5, background: C.bd, borderRadius: 3, overflow: 'hidden' }}>
+                  <div style={{ width: `${g.pct * 100}%`, height: '100%', background: g.color, borderRadius: 3 }} />
+                </div>
+                <span style={{ fontSize: 11, color: C.ivoryMuted, fontWeight: 600, minWidth: 40, textAlign: 'right' }}>{(g.pct * 100).toFixed(1)}%</span>
+              </div>
+            ))}
+          </div>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: C.ivoryDim, textTransform: 'uppercase', marginBottom: 8, letterSpacing: '.06em' }}>Classes d'actifs</div>
+            {[
+              { label: 'Commerce', pct: WEMO.actifCommerce, color: C.gold },
+              { label: 'Logistique', pct: WEMO.actifLogistique, color: '#a78bfa' },
+              { label: 'Éducation', pct: WEMO.actifEducation, color: '#22d3ee' },
+              { label: 'Bureaux', pct: WEMO.actifBureaux, color: '#f472b6' },
+            ].map(a => (
+              <div key={a.label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: a.color, flexShrink: 0 }} />
+                <span style={{ fontSize: 12, color: C.ivory, flex: 1 }}>{a.label}</span>
+                <div style={{ width: 100, height: 5, background: C.bd, borderRadius: 3, overflow: 'hidden' }}>
+                  <div style={{ width: `${a.pct * 100}%`, height: '100%', background: a.color, borderRadius: 3 }} />
+                </div>
+                <span style={{ fontSize: 11, color: C.ivoryMuted, fontWeight: 600, minWidth: 40, textAlign: 'right' }}>{(a.pct * 100).toFixed(1)}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Ticket minimum */}
+        <div style={{ marginTop: 12, fontSize: 11, color: C.ivoryDim }}>
+          Ticket minimum : {euro(WEMO.ticketMin)} ({WEMO.ticketMin / WEMO.prixPart} parts) · Durée recommandée : {WEMO.dureeRecommandee} ans
+        </div>
       </div>
 
+      {/* ── DISCLAIMER ────────────────────────────────────────────── */}
+      <div style={{ background: 'rgba(201,168,76,0.06)', border: `1px solid ${C.goldLine}`, borderRadius: 10, padding: '12px 16px', marginBottom: 20, fontSize: 11.5, lineHeight: 1.7, color: C.ivoryMuted }}>
+        <strong style={{ color: C.gold }}>⚠ Avertissement</strong> — Le taux de distribution 2025 de 15,27% ne reflète pas la performance future. Ce taux exceptionnel s'explique par la phase de lancement de la SCPI et des conditions d'acquisition particulièrement favorables. Le taux cible long terme est de <strong style={{ color: C.ivory }}>7% net de frais, brut de fiscalité</strong> (non garanti). Les performances passées ne préjugent pas des performances futures. L'investissement en SCPI comporte un risque de perte en capital.
+      </div>
+
+      {/* ── SIMULATION INPUTS + RESULTS ───────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         <div>
-          <Slider label="Montant investi" value={montant} onChange={setMontant} min={5000} max={500000} step={5000} suffix="€" formatValue={v => euro(v)} />
+          <Slider label="Montant investi" value={montant} onChange={setMontant} min={1000} max={500000} step={1000} suffix="€" formatValue={v => `${euro(v)} (${Math.floor(v / WEMO.prixPart)} parts)`} />
+
+          {montantEffectif !== montant && (
+            <div style={{ fontSize: 11, color: C.ivoryDim, marginTop: -12, marginBottom: 12 }}>
+              Arrondi à {nbParts} parts = {euro(montantEffectif)}
+            </div>
+          )}
+
           <div style={{ marginBottom: 18 }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: C.ivoryMuted, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8, fontFamily: FONT_SANS }}>Structure de détention</div>
             <PillSelect options={[{ value: 'IR', label: 'IR (personne physique)' }, { value: 'IS', label: 'IS (société)' }, { value: 'AV', label: 'Assurance Vie' }, { value: 'SCI_IS', label: 'SCI à l\'IS' }]} value={structure} onChange={setStructure} />
           </div>
-          {(structure === 'IR' || structure === 'AV') && <Slider label="TMI" value={tmiRate} onChange={setTmiRate} min={0} max={45} step={1} suffix="%" />}
-          {(structure === 'IS' || structure === 'SCI_IS') && <Slider label="Taux IS" value={isRate} onChange={setIsRate} min={15} max={33} step={1} suffix="%" />}
+
+          {(structure === 'IR' || structure === 'AV') && <Slider label="Votre TMI" value={tmiRate} onChange={setTmiRate} min={0} max={45} step={1} suffix="%" />}
+          {(structure === 'IS' || structure === 'SCI_IS') && <Slider label="Taux IS applicable" value={isRate} onChange={setIsRate} min={15} max={33} step={1} suffix="%" />}
           <Slider label="Durée de détention" value={duree} onChange={setDuree} min={3} max={20} suffix="ans" />
-          <Slider label="Revalorisation annuelle" value={revalo} onChange={setRevalo} min={0} max={5} step={0.5} suffix="%" />
+          <Slider label="Hypothèse revalorisation annuelle" value={revalo} onChange={setRevalo} min={0} max={5} step={0.5} suffix="%" />
 
           {duree < 8 && (
             <div style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: C.warn, marginTop: 8 }}>
-              ⚠ Durée {'<'} 8 ans : frais de sortie applicables ({duree < 5 ? '10%' : '5%'}). Horizon recommandé : 8 ans minimum.
+              ⚠ Durée inférieure à la durée recommandée de 8 ans. Frais de sortie de 10% applicables sur le capital total à la sortie ({euro(Math.round(result.ir.capitalSortie))}).
             </div>
           )}
+
+          {/* Fiscalité explainer */}
+          <div style={{ background: C.card, borderRadius: 8, padding: '12px 14px', marginTop: 16, fontSize: 11.5, lineHeight: 1.6, color: C.ivoryDim }}>
+            <strong style={{ color: C.ivory }}>Fiscalité appliquée</strong><br />
+            • PS 17,2% uniquement sur la part française ({(WEMO.francePct * 100).toFixed(1)}%) soit {euro(Math.round(result.ir.revenusBrutsAn * WEMO.francePct))} d'assiette<br />
+            • Les revenus européens ({(WEMO.foreignPct * 100).toFixed(1)}%) sont <strong style={{ color: C.success }}>exonérés de prélèvements sociaux</strong><br />
+            • Frais de sortie : 10% calculés sur <strong style={{ color: C.ivory }}>nb parts × prix de part à la sortie</strong>
+          </div>
         </div>
 
-        {/* Comparison table */}
+        {/* ── COMPARISON TABLE IR vs IS ────────────────────────────── */}
         <div>
           <div style={{ background: C.card, borderRadius: 10, overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: '10px 12px', color: C.ivoryDim, fontSize: 10, textTransform: 'uppercase', fontWeight: 700, borderBottom: `1px solid ${C.bd}` }}></th>
-                  <th style={{ textAlign: 'right', padding: '10px 12px', color: C.info, fontSize: 10, textTransform: 'uppercase', fontWeight: 700, borderBottom: `1px solid ${C.bd}` }}>IR</th>
-                  <th style={{ textAlign: 'right', padding: '10px 12px', color: C.warn, fontSize: 10, textTransform: 'uppercase', fontWeight: 700, borderBottom: `1px solid ${C.bd}` }}>IS</th>
+                  <th style={{ ...thStyle, textAlign: 'left', color: C.ivoryDim }}></th>
+                  <th style={{ ...thStyle, color: C.info }}>IR</th>
+                  <th style={{ ...thStyle, color: C.warn }}>IS</th>
                 </tr>
               </thead>
               <tbody>
                 {[
                   ['Capital investi', euro(result.ir.montantInvesti), euro(result.is.montantInvesti)],
-                  ['Frais d\'entrée', euro(result.ir.fraisEntree), euro(result.is.fraisEntree)],
+                  ['Frais d\'entrée (9%)', euro(result.ir.fraisEntree), euro(result.is.fraisEntree)],
+                  ['Capital net investi', euro(result.ir.netInvesti), euro(result.is.netInvesti)],
                   ['Revenus bruts / an', euro(result.ir.revenusBrutsAn), euro(result.is.revenusBrutsAn)],
-                  ['PS (part FR 15%)', euro(result.ir.psAn) + '/an', '—'],
-                  ['IR / IS', euro(result.ir.impotAn) + '/an', euro(result.is.impotAn) + '/an'],
+                  [`PS 17,2% (part FR ${(WEMO.francePct * 100).toFixed(1)}%)`, euro(result.ir.psAn) + '/an', '—'],
+                  [`${structure === 'IS' || structure === 'SCI_IS' ? 'IS' : 'IR'} / an`, euro(result.ir.impotAn) + '/an', euro(result.is.impotAn) + '/an'],
                   ['Revenus nets / an', euro(result.ir.revenusNetsAn), euro(result.is.revenusNetsAn)],
-                  ['Revenus cumulés', euro(result.ir.totalNet), euro(result.is.totalNet)],
-                  ['Frais de sortie', euro(result.ir.fraisSortie), euro(result.is.fraisSortie)],
-                  ['Capital net sortie', euro(result.ir.capitalNet), euro(result.is.capitalNet)],
-                ].map(([label, ir, is], i) => (
+                  [`Revenus nets cumulés (${duree} ans)`, euro(result.ir.totalNet), euro(result.is.totalNet)],
+                  ['Capital à la sortie', euro(result.ir.capitalSortie), euro(result.is.capitalSortie)],
+                  ['Frais sortie (10%)', euro(result.ir.fraisSortie), euro(result.is.fraisSortie)],
+                  ['Capital net sortie', euro(result.ir.capitalNetSortie), euro(result.is.capitalNetSortie)],
+                ].map(([label, irVal, isVal], i) => (
                   <tr key={i}>
-                    <td style={{ padding: '7px 12px', color: C.ivoryMuted, borderBottom: `1px solid ${C.bd}` }}>{label}</td>
-                    <td style={{ padding: '7px 12px', textAlign: 'right', color: C.ivory, fontWeight: 600, borderBottom: `1px solid ${C.bd}` }}>{ir}</td>
-                    <td style={{ padding: '7px 12px', textAlign: 'right', color: C.ivory, fontWeight: 600, borderBottom: `1px solid ${C.bd}` }}>{is}</td>
+                    <td style={tdLabel}>{label}</td>
+                    <td style={tdVal}>{irVal}</td>
+                    <td style={tdVal}>{isVal}</td>
                   </tr>
                 ))}
-                <tr>
-                  <td style={{ padding: '10px 12px', color: C.gold, fontWeight: 700 }}>TRI estimé</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right', color: C.gold, fontWeight: 700, fontSize: 14 }}>{pctFmt(result.ir.tri)}</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right', color: C.gold, fontWeight: 700, fontSize: 14 }}>{pctFmt(result.is.tri)}</td>
+                <tr style={{ background: 'rgba(201,168,76,0.05)' }}>
+                  <td style={{ padding: '10px 12px', color: C.gold, fontWeight: 700, fontSize: 13 }}>TRI estimé</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', color: C.gold, fontWeight: 700, fontSize: 16, fontFamily: FONT_SERIF }}>{pctFmt(result.ir.tri)}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', color: C.gold, fontWeight: 700, fontSize: 16, fontFamily: FONT_SERIF }}>{pctFmt(result.is.tri)}</td>
                 </tr>
               </tbody>
             </table>
           </div>
+
+          <div style={{ fontSize: 10, color: C.ivoryDim, marginTop: 8, lineHeight: 1.5 }}>
+            Simulation basée sur le TD cible de 7% (non garanti). TRI calculé par actualisation des flux nets. Frais de sortie sur capital total (nb parts × prix part revalorisé).
+          </div>
         </div>
       </div>
 
+      {/* ── CHART ─────────────────────────────────────────────────── */}
       <SectionDivider label="Évolution du patrimoine" />
-      <div style={{ height: 280, background: C.card, borderRadius: 10, padding: 16 }}>
+      <div style={{ height: 300, background: C.card, borderRadius: 10, padding: 16 }}>
         <Line data={chartData} options={{ ...chartDefaults }} />
       </div>
 
+      {/* ── ACTIONS ───────────────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
         <Btn onClick={handleCopySim} variant={copied ? 'outline' : 'gold'}>{copied ? '✓ Copié' : 'Copier la simulation'}</Btn>
         <Btn onClick={handleAINote} variant="outline" disabled={aiLoading}>{aiLoading ? 'Génération…' : 'Générer note IA'}</Btn>
