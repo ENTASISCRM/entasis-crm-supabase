@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Toaster } from 'react-hot-toast'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
+import VueImmobilier from './components/VueImmobilier'
+import CatalogueProgrammes from './components/CatalogueProgrammes'
+import MesDossiersImmo from './components/MesDossiersImmo'
+import PipelineVEFA from './components/PipelineVEFA'
 
 /* ─────────────────────────────────────────────────────────────────────────────
    CONSTANTS
@@ -105,6 +110,10 @@ const Icon = {
   Mail:      ()=><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="3" width="10" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.3" fill="none"/><path d="M1.5 4l5 3.5L11.5 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>,
   Prospect:  ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><circle cx="7.5" cy="7" r="3" stroke="currentColor" strokeWidth="1.4" fill="none" opacity=".85"/><path d="M2.5 17c0-3 2.2-5 5-5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".8"/><path d="M12.5 12l1.5 1.5 2.5-2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity=".7"/></svg>,
   Copy:      ()=><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="4" y="4" width="7.5" height="7.5" rx="1.2" stroke="currentColor" strokeWidth="1.3" fill="none"/><path d="M9 4V2.5a1 1 0 00-1-1H2.5a1 1 0 00-1 1V8a1 1 0 001 1H4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>,
+  Building:  ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><rect x="4" y="3" width="12" height="15" rx="1.5" stroke="currentColor" strokeWidth="1.4" fill="none" opacity=".8"/><rect x="7" y="6" width="2" height="2" rx=".5" fill="currentColor" opacity=".6"/><rect x="11" y="6" width="2" height="2" rx=".5" fill="currentColor" opacity=".6"/><rect x="7" y="10" width="2" height="2" rx=".5" fill="currentColor" opacity=".5"/><rect x="11" y="10" width="2" height="2" rx=".5" fill="currentColor" opacity=".5"/><rect x="8.5" y="14" width="3" height="4" rx=".5" fill="currentColor" opacity=".7"/></svg>,
+  Catalogue: ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".8"/><rect x="11" y="3" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".6"/><rect x="3" y="11" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".6"/><rect x="11" y="11" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".4"/></svg>,
+  ImmoFolder:()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><path d="M3 6a1 1 0 011-1h4l2 2h6a1 1 0 011 1v7a1 1 0 01-1 1H4a1 1 0 01-1-1V6z" fill="currentColor" opacity=".6"/><rect x="7" y="9" width="2" height="2" rx=".3" fill="currentColor" opacity=".9"/><rect x="10" y="9" width="2" height="2" rx=".3" fill="currentColor" opacity=".7"/></svg>,
+  Kanban:    ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><rect x="2" y="3" width="4" height="14" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".8"/><rect x="8" y="3" width="4" height="10" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".6"/><rect x="14" y="3" width="4" height="12" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".5"/></svg>,
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -267,7 +276,7 @@ function AuthScreen() {
 /* ─────────────────────────────────────────────────────────────────────────────
    SIDEBAR
 ───────────────────────────────────────────────────────────────────────────── */
-function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,leadsAvailable,prospectsNew}){
+function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,leadsAvailable,prospectsNew,dossiersImmoCount}){
   const isManager=profile?.role==='manager'
 
   const hotCount=useMemo(()=>{
@@ -290,6 +299,13 @@ function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,leadsAvai
     ...(isManager?[{key:'team', label:'Équipe', Icon:Icon.Team}]:[]),
   ]
 
+  const immoItems = [
+    {key:'immo-dashboard', label:'Vue Immo', Icon:Icon.Building},
+    {key:'immo-programmes', label:'Programmes', Icon:Icon.Catalogue},
+    {key:'immo-dossiers', label:'Mes Dossiers', Icon:Icon.ImmoFolder, badge:dossiersImmoCount||0},
+    {key:'immo-pipeline', label:'Pipeline VEFA', Icon:Icon.Kanban},
+  ]
+
   return (
     <nav className="sidebar">
       <div className="sidebar-brand">
@@ -304,6 +320,19 @@ function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,leadsAvai
             {label}
             {badge>0&&(
               <span className="nav-item-badge" style={badgeGold?{background:'var(--gold)',color:'white'}:{}}>
+                {badge}
+              </span>
+            )}
+          </button>
+        ))}
+        <div className="nav-divider"/>
+        <div className="nav-section-label">Immobilier Neuf</div>
+        {immoItems.map(({key,label,Icon:NavIcon,badge})=>(
+          <button key={key} className={`nav-item${activeTab===key?' active':''}`} onClick={()=>setActiveTab(key)}>
+            <NavIcon/>
+            {label}
+            {badge>0&&(
+              <span className="nav-item-badge">
                 {badge}
               </span>
             )}
@@ -327,7 +356,7 @@ function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,leadsAvai
 /* ─────────────────────────────────────────────────────────────────────────────
    TOP BAR
 ───────────────────────────────────────────────────────────────────────────── */
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡',prospection:'Prospection LinkedIn'}
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡',prospection:'Prospection LinkedIn','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh}){
   return (
@@ -2479,6 +2508,7 @@ export default function App(){
   const [activeTab,setActiveTab]=useState('dashboard')
   const [prospects,setProspects]=useState([])
   const [prospectsNew,setProspectsNew]=useState(0)
+  const [dossiersImmoCount,setDossiersImmoCount]=useState(0)
 
   const fetchProspects=()=>supabase.from('prospects').select('*').order('created_at',{ascending:false}).then(({data})=>{
     if(data){setProspects(data);setProspectsNew(data.filter(p=>p.status==='a_contacter').length)}
@@ -2585,6 +2615,11 @@ export default function App(){
       const prospData=prospRes.data||[]
       setProspects(prospData)
       setProspectsNew(prospData.filter(p=>p.status==='a_contacter').length)
+      // Count active immo dossiers (silently ignore if table doesn't exist yet)
+      try{
+        const{data:immoData}=await supabase.from('dossiers_immo').select('id',{count:'exact',head:false})
+        setDossiersImmoCount((immoData||[]).filter(d=>true).length)
+      }catch{}
       const map={...EMPTY_OBJECTIFS}
       ;(objRes.data||[]).forEach(row=>{map[row.month]=row})
       setObjectifs(map)
@@ -2664,6 +2699,7 @@ export default function App(){
         month={month}
         leadsAvailable={leadsAvailable}
         prospectsNew={prospectsNew}
+        dossiersImmoCount={dossiersImmoCount}
       />
       <div className="app-main">
         <TopBar activeTab={activeTab} month={month} setMonth={setMonth} onNewDeal={startCreate} onRefresh={loadAll}/>
@@ -2680,6 +2716,10 @@ export default function App(){
           {activeTab==='market'&&<MarketView/>}
           {activeTab==='team'&&isManager&&<TeamView deals={deals} objectifs={objectifs} teamProfiles={teamProfiles} month={month}/>}
           {activeTab==='prospection'&&<ProspectionView prospects={prospects} profile={profile} teamProfiles={teamProfiles} onRefresh={fetchProspects} onProspectsChange={setProspects}/>}
+          {activeTab==='immo-dashboard'&&<VueImmobilier profile={profile} setActiveTab={setActiveTab}/>}
+          {activeTab==='immo-programmes'&&<CatalogueProgrammes setActiveTab={setActiveTab}/>}
+          {activeTab==='immo-dossiers'&&<MesDossiersImmo profile={profile} teamProfiles={teamProfiles} setActiveTab={setActiveTab}/>}
+          {activeTab==='immo-pipeline'&&<PipelineVEFA profile={profile} teamProfiles={teamProfiles}/>}
         </div>
       </div>
 
@@ -2690,6 +2730,7 @@ export default function App(){
         onClose={()=>{setModalOpen(false);setEditingDeal(null)}}
         onSave={saveDeal}
       />
+      <Toaster position="top-right" toastOptions={{style:{background:'#242424',color:'#f5f0e8',border:'1px solid rgba(201,168,76,0.2)',borderRadius:12,fontSize:13,fontFamily:'DM Sans, sans-serif'}}}/>
     </div>
   )
 }

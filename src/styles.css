@@ -1058,4 +1058,829 @@ a { color: inherit; text-decoration: none; }
   .forecast-metrics { gap: 12px; }
   .pipeline-board { gap: 10px; }
   .pipeline-col { min-width: 200px; }
+  .immo-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .immo-main-grid { grid-template-columns: 1fr; }
+  .immo-catalogue-grid { grid-template-columns: repeat(2, 1fr); }
+  .immo-kanban { grid-template-columns: repeat(4, 1fr); }
+  .immo-form-grid { grid-template-columns: 1fr; }
+}
+
+/* ─── Sidebar Divider ─── */
+.nav-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+  margin: 12px 16px;
+}
+
+/* ─── IMMOBILIER NEUF ─── */
+
+.immo-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}
+
+.immo-dashboard { }
+.immo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.immo-kicker {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 4px;
+}
+.immo-title {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--t1);
+}
+
+.immo-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.immo-kpi-card {
+  background: var(--card);
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+  padding: 20px;
+  border-top: 3px solid var(--gold);
+  box-shadow: var(--sh-xs);
+}
+.immo-kpi-label {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--t3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+.immo-kpi-value {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--t1);
+}
+
+.immo-main-grid {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.immo-section {
+  background: var(--card);
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: var(--sh-xs);
+}
+.immo-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.immo-section-title {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--t1);
+}
+
+.immo-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.immo-pill {
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--bd);
+  background: transparent;
+  color: var(--t3);
+  cursor: pointer;
+  transition: all .15s;
+}
+.immo-pill:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.immo-pill.active {
+  background: var(--gold);
+  color: white;
+  border-color: var(--gold);
+}
+
+.immo-programmes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.immo-programme-card {
+  background: var(--bg);
+  border: 1px solid var(--bd);
+  border-radius: 10px;
+  padding: 14px;
+  transition: box-shadow .15s, border-color .15s;
+}
+.immo-programme-card:hover {
+  box-shadow: var(--sh-sm);
+  border-color: rgba(201,168,76,0.3);
+}
+.immo-programme-card-top {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.immo-programme-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--t1);
+  margin-bottom: 2px;
+}
+.immo-programme-ville {
+  font-size: 12px;
+  color: var(--t3);
+  margin-bottom: 8px;
+}
+.immo-programme-typos {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.immo-typo-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(201,168,76,0.12);
+  color: var(--gold);
+  border: 1px solid rgba(201,168,76,0.2);
+}
+.immo-programme-dispositifs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.immo-dispositif-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.immo-programme-prix {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t1);
+  margin-bottom: 10px;
+}
+.immo-programme-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.immo-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.immo-pipeline-section {
+  min-height: 320px;
+}
+.immo-pipeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.immo-pipeline-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--bg);
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: box-shadow .15s;
+}
+.immo-pipeline-item:hover {
+  box-shadow: var(--sh-xs);
+}
+.immo-pipeline-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.immo-pipeline-info {
+  flex: 1;
+  min-width: 0;
+}
+.immo-pipeline-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--t1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.immo-pipeline-programme {
+  font-size: 11.5px;
+  color: var(--t3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.immo-pipeline-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.btn-immo-primary {
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  background: var(--gold);
+  color: white;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.btn-immo-primary:hover { opacity: .9; }
+.btn-immo-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+.btn-immo-secondary {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--bd);
+  background: transparent;
+  color: var(--t2);
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.btn-immo-secondary:hover { border-color: var(--gold); color: var(--gold); }
+.btn-immo-secondary:disabled { opacity: .5; cursor: not-allowed; }
+
+.btn-immo-small {
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border: none;
+  background: var(--gold);
+  color: white;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.btn-immo-small:hover { opacity: .85; }
+
+.btn-immo-small-ghost {
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  border: 1px solid var(--bd);
+  background: transparent;
+  color: var(--t3);
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color .15s, color .15s;
+  display: inline-flex;
+  align-items: center;
+}
+.btn-immo-small-ghost:hover { border-color: var(--gold); color: var(--gold); }
+
+.btn-immo-link {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 10px;
+  margin-top: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--gold);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.btn-immo-link:hover { opacity: .8; }
+
+.btn-immo-ai {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid rgba(201,168,76,0.3);
+  background: rgba(201,168,76,0.08);
+  color: var(--gold);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s;
+}
+.btn-immo-ai:hover { background: rgba(201,168,76,0.15); }
+
+.immo-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--t2);
+}
+
+.immo-catalogue { }
+.immo-catalogue-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.immo-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+}
+.immo-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+}
+.immo-search {
+  width: 100%;
+  padding: 9px 14px 9px 36px;
+  border-radius: 8px;
+  border: 1px solid var(--bd);
+  background: var(--card);
+  color: var(--t1);
+  font-size: 13px;
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color .15s;
+}
+.immo-search:focus { border-color: var(--gold); }
+
+.immo-filter-select {
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--bd);
+  background: var(--card);
+  color: var(--t2);
+  font-size: 12.5px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  outline: none;
+}
+.immo-filter-select:focus { border-color: var(--gold); }
+
+.immo-catalogue-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.immo-catalogue-card {
+  background: var(--card);
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: box-shadow .15s, border-color .15s;
+}
+.immo-catalogue-card:hover {
+  box-shadow: var(--sh-sm);
+  border-color: rgba(201,168,76,0.3);
+}
+.immo-catalogue-card-image {
+  position: relative;
+  height: 140px;
+  background: var(--bg);
+  overflow: hidden;
+}
+.immo-catalogue-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.immo-catalogue-card-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(201,168,76,0.08) 0%, rgba(201,168,76,0.02) 100%);
+}
+.immo-catalogue-card-badges {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.immo-catalogue-card-body {
+  padding: 14px;
+}
+.immo-catalogue-card-name {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--t1);
+  margin-bottom: 2px;
+}
+.immo-catalogue-card-ville {
+  font-size: 12.5px;
+  color: var(--t3);
+  margin-bottom: 10px;
+}
+.immo-catalogue-card-detail {
+  font-size: 12px;
+  color: var(--t3);
+  margin-bottom: 4px;
+}
+.immo-catalogue-card-prix {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--t1);
+  margin-top: 6px;
+  margin-bottom: 12px;
+}
+.immo-catalogue-card-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.immo-ai-panel {
+  background: var(--card);
+  border: 1px solid rgba(201,168,76,0.25);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  box-shadow: var(--sh-sm);
+}
+.immo-ai-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--gold);
+}
+.immo-ai-close {
+  background: transparent;
+  border: none;
+  color: var(--t3);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+}
+.immo-ai-close:hover { color: var(--t1); }
+.immo-ai-shortcuts {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.immo-ai-shortcut {
+  padding: 5px 12px;
+  border-radius: 16px;
+  font-size: 11.5px;
+  font-weight: 500;
+  border: 1px solid rgba(201,168,76,0.25);
+  background: rgba(201,168,76,0.06);
+  color: var(--gold);
+  cursor: pointer;
+  transition: background .15s;
+}
+.immo-ai-shortcut:hover { background: rgba(201,168,76,0.12); }
+.immo-ai-input-wrap {
+  display: flex;
+  gap: 8px;
+}
+.immo-ai-input {
+  flex: 1;
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--bd);
+  background: var(--bg);
+  color: var(--t1);
+  font-size: 13px;
+  font-family: var(--font-sans);
+  outline: none;
+}
+.immo-ai-input:focus { border-color: var(--gold); }
+.immo-ai-response {
+  margin-top: 12px;
+  padding: 14px;
+  background: var(--bg);
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  color: var(--t2);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.immo-dossiers { }
+.immo-dossiers-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.immo-dossiers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.immo-dossier-row {
+  background: var(--card);
+  border: 1px solid var(--bd);
+  border-radius: 10px;
+  padding: 14px 18px;
+  transition: box-shadow .15s;
+}
+.immo-dossier-row:hover { box-shadow: var(--sh-xs); }
+.immo-dossier-row-main {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.immo-dossier-client {
+  flex: 1;
+  min-width: 0;
+}
+.immo-dossier-client-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--t1);
+}
+.immo-dossier-client-sub {
+  font-size: 12px;
+  color: var(--t3);
+}
+.immo-dossier-programme {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+}
+.immo-dossier-programme > div:first-child {
+  font-size: 13px;
+  color: var(--t2);
+}
+.immo-dossier-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+.immo-dossier-amount {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--t1);
+  min-width: 100px;
+  text-align: right;
+}
+.immo-dossier-row-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--bd);
+}
+
+.immo-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+.immo-modal {
+  background: var(--card);
+  border: 1px solid var(--bd);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 640px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: var(--sh-lg);
+}
+.immo-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--bd);
+}
+.immo-modal-title {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--t1);
+}
+.immo-modal-form {
+  padding: 20px 24px;
+}
+.immo-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.immo-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.immo-form-group label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--t3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.immo-form-group input,
+.immo-form-group select,
+.immo-form-group textarea {
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--bd);
+  background: var(--bg);
+  color: var(--t1);
+  font-size: 13px;
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color .15s;
+}
+.immo-form-group input:focus,
+.immo-form-group select:focus,
+.immo-form-group textarea:focus {
+  border-color: var(--gold);
+}
+.immo-form-group textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+.immo-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--bd);
+}
+
+.immo-pipeline-vefa { }
+.immo-pipeline-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.immo-kanban {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 16px;
+}
+.immo-kanban-column {
+  background: var(--card);
+  border: 1px solid var(--bd);
+  border-radius: 10px;
+  min-height: 300px;
+  min-width: 160px;
+}
+.immo-kanban-column-header {
+  padding: 12px;
+  border-top: 3px solid var(--gold);
+  border-radius: 10px 10px 0 0;
+}
+.immo-kanban-column-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--t1);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.immo-kanban-count {
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--bg);
+  color: var(--t3);
+  padding: 1px 6px;
+  border-radius: 10px;
+  border: 1px solid var(--bd);
+}
+.immo-kanban-column-total {
+  font-size: 11px;
+  color: var(--t3);
+  margin-top: 2px;
+}
+.immo-kanban-column-body {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.immo-kanban-card {
+  background: var(--bg);
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: grab;
+  transition: box-shadow .15s, border-color .15s;
+}
+.immo-kanban-card:hover {
+  box-shadow: var(--sh-xs);
+  border-color: rgba(201,168,76,0.3);
+}
+.immo-kanban-card:active { cursor: grabbing; }
+.immo-kanban-card-name {
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--t1);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.immo-kanban-card-programme {
+  font-size: 11px;
+  color: var(--t3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+.immo-kanban-card-prix {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--t1);
+  margin-bottom: 4px;
+}
+.immo-kanban-card-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--t3);
+}
+.immo-kanban-empty {
+  text-align: center;
+  padding: 20px 8px;
+  font-size: 11.5px;
+  color: var(--t3);
+  opacity: .6;
 }
