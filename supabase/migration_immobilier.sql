@@ -43,7 +43,7 @@ CREATE TABLE programmes (
 -- 3. Dossiers clients immobilier
 CREATE TABLE dossiers_immo (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  client_id UUID REFERENCES clients(id),
+  client_id UUID,
   programme_id UUID REFERENCES programmes(id),
   conseiller_id UUID REFERENCES profiles(id),
   client_nom TEXT,
