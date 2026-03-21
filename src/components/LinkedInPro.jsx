@@ -50,16 +50,17 @@ RÈGLES STRICTES :
 SIGNATURE : ne pas signer le post, le nom apparaît automatiquement sur LinkedIn.`
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   AI HELPER
+   AI HELPER (via Vercel serverless proxy)
 ───────────────────────────────────────────────────────────────────────────── */
-async function callAI(system, userMsg) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+async function generateLinkedInPost(theme, ton, contexte) {
+  const res = await fetch('/api/generate-linkedin', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1500, system, messages: [{ role: 'user', content: userMsg }] }),
+    body: JSON.stringify({ theme, ton, contexte }),
   })
   const data = await res.json()
-  return data.content?.[0]?.text || 'Erreur : pas de réponse'
+  if (data.error) throw new Error(data.error)
+  return data.content || 'Erreur : pas de réponse'
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -140,12 +141,7 @@ export default function LinkedInPro({ profile }) {
     try {
       const themeName = THEMES.find(t => t.value === theme)?.label
       const toneName = TONES.find(t => t.value === tone)?.label
-      const prompt = `Rédige un post LinkedIn sur le thème "${themeName}".
-Ton : ${toneName}
-${context ? `Contexte / angle souhaité : ${context}` : 'Pas de contexte spécifique — choisis un angle pertinent et actuel.'}
-
-Rappel : 1300 caractères maximum, hashtags inclus.`
-      const text = await callAI(SYSTEM_PROMPT, prompt)
+      const text = await generateLinkedInPost(themeName, toneName, context)
       setGeneratedPost(text)
     } catch (e) {
       setGeneratedPost('Erreur : ' + e.message)

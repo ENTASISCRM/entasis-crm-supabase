@@ -75,18 +75,14 @@ export default function CatalogueProgrammes({ setActiveTab }) {
     setAiLoading(true)
     setAiResponse('')
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch('/api/generate-note', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          system: PROMPT_IMMOBILIER,
-          messages: [{ role: 'user', content: message }]
-        })
+        body: JSON.stringify({ systemPrompt: PROMPT_IMMOBILIER, userMessage: message })
       })
       const data = await response.json()
-      setAiResponse(data.content?.[0]?.text || 'Pas de réponse')
+      if (data.error) throw new Error(data.error)
+      setAiResponse(data.content || 'Pas de réponse')
     } catch (err) {
       setAiResponse('Erreur : ' + err.message)
     }

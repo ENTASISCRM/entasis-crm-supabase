@@ -75,13 +75,14 @@ const chartDefaults = {
    AI HELPER
 ───────────────────────────────────────────────────────────────────────────── */
 async function callAI(system, userMsg) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('/api/generate-note', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 2000, system, messages: [{ role: 'user', content: userMsg }] }),
+    body: JSON.stringify({ systemPrompt: system, userMessage: userMsg }),
   })
   const data = await res.json()
-  return data.content?.[0]?.text || 'Erreur : pas de réponse'
+  if (data.error) throw new Error(data.error)
+  return data.content || 'Erreur : pas de réponse'
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
