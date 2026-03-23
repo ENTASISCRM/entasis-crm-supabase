@@ -2577,7 +2577,9 @@ export default function App(){
       // INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED
       setSession(s||null)
       setAuthReady(true)
-      setLoading(false)
+      // Don't setLoading(false) here — let loadAll() do it after profile is fetched
+      // Only set loading false if there's no user (unauthenticated)
+      if(!s?.user) setLoading(false)
       // Persist gcal token whenever provider_token is present (any auth event)
       if(s?.provider_token&&s?.user?.id){
         // Save to localStorage immediately as backup (survives page refresh even if Supabase update fails)
@@ -2596,8 +2598,11 @@ export default function App(){
       if(existing&&!session){
         setSession(existing)
         setAuthReady(true)
-        setLoading(false)
+        // Don't setLoading(false) — loadAll() will do it after profile loads
         clearTimeout(fallback)
+      } else if(!existing){
+        setAuthReady(true)
+        setLoading(false)
       }
     }).catch(()=>{})
 
@@ -2612,8 +2617,9 @@ export default function App(){
 
   async function loadAll(currentSession){
     const s=currentSession||session
-    if(!s?.user)return
+    if(!s?.user){setLoading(false);return}
     const userId=s.user.id
+    console.log('[App] loadAll for user:', userId)
     setError('')
     try {
       const[profRes,teamRes,dealsRes,objRes,prospRes]=await Promise.all([
@@ -2626,7 +2632,8 @@ export default function App(){
       const nonProfileErrs=[teamRes,dealsRes,objRes].filter(r=>r.error).map(r=>r.error.message)
       if(nonProfileErrs.length)setError(nonProfileErrs[0])
       let prof=profRes.data
-      if(profRes.error)console.warn('Profile fetch error:',profRes.error.message)
+      console.log('[App] Profile fetch:', prof ? `${prof.full_name} (${prof.role})` : 'null', profRes.error?.message || '')
+      if(profRes.error)console.warn('[App] Profile fetch error:', profRes.error.message, profRes.error.details, profRes.error.hint)
       if(!prof&&s.user){
         // Retry 3x avec délai croissant avant de créer
         for(let i=0;i<3&&!prof;i++){
@@ -2665,6 +2672,8 @@ export default function App(){
         return
       }
       setError('Erreur chargement : '+e.message)
+    } finally {
+      setLoading(false)
     }
   }
 
