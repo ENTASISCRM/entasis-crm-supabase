@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import VueImmobilier from './components/VueImmobilier'
@@ -228,50 +228,282 @@ function ConfigMissing() {
    AUTH SCREEN
 ───────────────────────────────────────────────────────────────────────────── */
 function AuthScreen() {
-  const [loading,setLoading]=useState(false)
-  const [msg,setMsg]=useState('')
+  const [mode, setMode] = useState('login') // 'login' ou 'signup'
+  const [loading, setLoading] = useState(false)
+  const [msg, setMsg] = useState('')
 
-  async function signInGoogle(){
-    setLoading(true);setMsg('')
-    const{error}=await supabase.auth.signInWithOAuth({
-      provider:'google',
-      options:{
-        scopes:'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events',
-        redirectTo:window.location.origin,
-        queryParams:{access_type:'offline',prompt:'consent',hd:'entasis-conseil.fr'},
+  // Champs connexion
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+
+  // Champs inscription
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [resetEmailSent, setResetEmailSent] = useState(false)
+
+  const getErrorMessage = (error) => {
+    const code = error?.message || ''
+    if (code.includes('Invalid login credentials')) return 'Email ou mot de passe incorrect'
+    if (code.includes('rate_limit')) return 'Trop de tentatives, réessayez dans quelques minutes'
+    if (code.includes('user_already_exists')) return 'Un compte existe déjà avec cet email'
+    if (code.includes('invalid_email')) return 'Email invalide'
+    if (code.includes('password')) return 'Le mot de passe doit contenir au moins 8 caractères'
+    return error?.message || 'Erreur inconnue'
+  }
+
+  async function handleLogin() {
+    if (!email || !password) {
+      setMsg('Email et mot de passe requis')
+      return
+    }
+
+    setLoading(true)
+    setMsg('')
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (error) {
+      setMsg(getErrorMessage(error))
+      setLoading(false)
+    }
+  }
+
+  async function handleSignup() {
+    if (!firstName || !lastName || !email || !password || !confirmPassword) {
+      setMsg('Tous les champs sont requis')
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setMsg('Les mots de passe ne correspondent pas')
+      return
+    }
+
+    if (password.length < 8) {
+      setMsg('Le mot de passe doit contenir au moins 8 caractères')
+      return
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      setMsg('Email invalide')
+      return
+    }
+
+    setLoading(true)
+    setMsg('')
+
+    const fullName = `${firstName} ${lastName}`
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: fullName }
       }
     })
-    if(error){setMsg(error.message);setLoading(false)}
+
+    if (error) {
+      setMsg(getErrorMessage(error))
+      setLoading(false)
+      return
+    }
+
+    if (data.user) {
+      // Créer le profil
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: data.user.id,
+          email: data.user.email,
+          full_name: fullName,
+          role: 'advisor',
+          is_active: true
+        })
+
+      if (profileError) {
+        console.warn('Profile creation error:', profileError)
+      }
+
+      setMsg('Compte créé ! Vous pouvez vous connecter.')
+      setMode('login')
+      setFirstName('')
+      setLastName('')
+      setPassword('')
+      setConfirmPassword('')
+      setLoading(false)
+    }
+  }
+
+  async function handleResetPassword() {
+    if (!email) {
+      setMsg('Veuillez saisir votre email')
+      return
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email)
+
+    if (error) {
+      setMsg(getErrorMessage(error))
+    } else {
+      setResetEmailSent(true)
+      setMsg('Email envoyé, vérifiez votre boîte')
+    }
+  }
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      if (mode === 'login') {
+        handleLogin()
+      } else {
+        handleSignup()
+      }
+    }
   }
 
   return (
     <div className="auth-shell">
-      <div className="auth-card" style={{textAlign:'center'}}>
+      <div className="auth-card">
         <div className="auth-brand">ENTASIS</div>
         <div className="auth-brand-sub">CRM Patrimonial · Équipe interne</div>
-        <div style={{margin:'28px 0 24px',fontSize:14,color:'var(--t2)',lineHeight:1.6}}>
-          Connecte-toi avec ton compte<br/>
-          <strong style={{color:'var(--t1)'}}>@entasis-conseil.fr</strong>
-        </div>
-        <button
-          className="btn btn-primary w-full"
-          style={{gap:12,justifyContent:'center',padding:'12px 20px',fontSize:14}}
-          disabled={loading}
-          onClick={signInGoogle}
-        >
-          <svg width="18" height="18" viewBox="0 0 18 18">
-            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
-            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
-            <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-          </svg>
-          {loading?'Redirection…':'Se connecter avec Google'}
-        </button>
-        {msg&&<div className="auth-notice" style={{marginTop:16}}>{msg}</div>}
-        <div style={{marginTop:16,fontSize:11.5,color:'var(--t3)',lineHeight:1.6}}>
-          Accès réservé aux comptes @entasis-conseil.fr<br/>
-          Google Agenda sera automatiquement connecté
-        </div>
+
+        {mode === 'login' ? (
+          <>
+            <div style={{ margin: '28px 0 24px' }}>
+              <input
+                type="email"
+                className="form-input w-full"
+                style={{ marginBottom: 16 }}
+                placeholder="votre@email.fr"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                onKeyPress={handleKeyPress}
+                required
+              />
+              <input
+                type="password"
+                className="form-input w-full"
+                placeholder="Mot de passe"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                onKeyPress={handleKeyPress}
+                minLength={8}
+                required
+              />
+            </div>
+
+            <button
+              className="btn btn-primary w-full"
+              style={{ padding: '12px 20px', fontSize: 14, marginBottom: 16 }}
+              disabled={loading}
+              onClick={handleLogin}
+            >
+              {loading ? 'Connexion...' : 'Se connecter'}
+            </button>
+
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <button
+                onClick={handleResetPassword}
+                style={{ background: 'none', border: 'none', color: 'var(--gold)', cursor: 'pointer', fontSize: 13, textDecoration: 'underline' }}
+              >
+                Mot de passe oublié ?
+              </button>
+            </div>
+
+            <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--t3)' }}>
+              Pas encore de compte ?{' '}
+              <button
+                onClick={() => { setMode('signup'); setMsg(''); setResetEmailSent(false) }}
+                style={{ background: 'none', border: 'none', color: 'var(--gold)', cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                Créer un compte
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ margin: '28px 0 24px' }}>
+              <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+                <input
+                  type="text"
+                  className="form-input"
+                  style={{ flex: 1 }}
+                  placeholder="Prénom"
+                  value={firstName}
+                  onChange={e => setFirstName(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  required
+                />
+                <input
+                  type="text"
+                  className="form-input"
+                  style={{ flex: 1 }}
+                  placeholder="Nom"
+                  value={lastName}
+                  onChange={e => setLastName(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  required
+                />
+              </div>
+
+              <input
+                type="email"
+                className="form-input w-full"
+                style={{ marginBottom: 16 }}
+                placeholder="votre@email.fr"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                onKeyPress={handleKeyPress}
+                required
+              />
+
+              <input
+                type="password"
+                className="form-input w-full"
+                style={{ marginBottom: 16 }}
+                placeholder="Mot de passe (min 8 caractères)"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                onKeyPress={handleKeyPress}
+                minLength={8}
+                required
+              />
+
+              <input
+                type="password"
+                className="form-input w-full"
+                placeholder="Confirmer le mot de passe"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                onKeyPress={handleKeyPress}
+                minLength={8}
+                required
+              />
+            </div>
+
+            <button
+              className="btn btn-primary w-full"
+              style={{ padding: '12px 20px', fontSize: 14, marginBottom: 16 }}
+              disabled={loading}
+              onClick={handleSignup}
+            >
+              {loading ? 'Création...' : 'Créer mon compte'}
+            </button>
+
+            <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--t3)' }}>
+              Déjà un compte ?{' '}
+              <button
+                onClick={() => { setMode('login'); setMsg(''); setFirstName(''); setLastName(''); setConfirmPassword('') }}
+                style={{ background: 'none', border: 'none', color: 'var(--gold)', cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                Se connecter
+              </button>
+            </div>
+          </>
+        )}
+
+        {msg && <div className="auth-notice" style={{ marginTop: 16 }}>{msg}</div>}
       </div>
     </div>
   )
@@ -2539,6 +2771,9 @@ export default function App(){
   const [prospectsNew,setProspectsNew]=useState(0)
   const [dossiersImmoCount,setDossiersImmoCount]=useState(0)
 
+  // Anti race condition ref
+  const loadAllInProgress = useRef(false)
+
   const fetchProspects=()=>supabase.from('prospects').select('*').order('created_at',{ascending:false}).then(({data})=>{
     if(data){setProspects(data);setProspectsNew(data.filter(p=>p.status==='a_contacter').length)}
   })
@@ -2577,11 +2812,6 @@ export default function App(){
         console.log('[Auth] getSession: found user', existing.user.id)
         setSession(existing)
         loadAll(existing)
-        // Persist gcal token if present
-        if(existing.provider_token){
-          try{localStorage.setItem('entasis_gcal_token',existing.provider_token)}catch(e){}
-          supabase.from('profiles').update({gcal_token:existing.provider_token,gcal_token_updated_at:new Date().toISOString()}).eq('id',existing.user.id).then(()=>{}).catch(()=>{})
-        }
       } else {
         console.log('[Auth] getSession: no session')
         setLoading(false)
@@ -2597,42 +2827,64 @@ export default function App(){
         setSession(null);setProfile(null);setDeals([]);setTeamProfiles([]);setLoading(false)
         return
       }
-      if(s?.user){
+      if(event==='SIGNED_IN'&&s?.user){
         setSession(s)
-        // Only reload data on actual sign-in (not token refresh which happens silently)
-        if(event==='SIGNED_IN')loadAll(s)
-        // Persist gcal token
-        if(s.provider_token){
-          try{localStorage.setItem('entasis_gcal_token',s.provider_token)}catch(e){}
-          try{
-            await supabase.from('profiles').update({gcal_token:s.provider_token,gcal_token_updated_at:new Date().toISOString()}).eq('id',s.user.id)
-          }catch(e){console.warn('gcal_token update:',e)}
-        }
+        loadAll(s)
+        return
       }
+      if(event==='TOKEN_REFRESHED'&&s?.user){
+        setSession(s)  // juste mettre à jour la session, pas recharger les données
+        return
+      }
+      // Ignore INITIAL_SESSION car getSession() s'en charge déjà
     })
 
     return()=>{active=false;clearTimeout(safety);listener.subscription.unsubscribe()}
   },[])
 
   async function loadAll(currentSession){
+    if (loadAllInProgress.current) return  // Anti race condition
+    loadAllInProgress.current = true
+
     const s=currentSession||session
-    if(!s?.user){setLoading(false);return}
+    if(!s?.user){setLoading(false);loadAllInProgress.current = false;return}
     const userId=s.user.id
     console.log('[App] loadAll for user:', userId)
     setError('')
     try {
-      const[profRes,teamRes,dealsRes,objRes,prospRes]=await Promise.all([
-        supabase.from('profiles').select('*').eq('id',userId).maybeSingle(),
-        supabase.from('profiles').select('id,email,full_name,role,advisor_code,is_active').order('full_name',{ascending:true}),
-        supabase.from('deals').select('*').order('created_at',{ascending:false}),
-        supabase.from('objectifs').select('*'),
-        supabase.from('prospects').select('*').order('created_at',{ascending:false}),
+      // Remplacer Promise.all par Promise.allSettled
+      const [profRes, teamRes, dealsRes, objRes, leadsRes] = await Promise.allSettled([
+        supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
+        supabase.from('profiles').select('id,email,full_name,role,advisor_code,is_active').order('full_name', {ascending: true}),
+        supabase.from('deals').select('*').order('created_at', {ascending: false}),
+        supabase.from('objectifs').select('*').order('month'),
+        supabase.from('leads').select('*').order('created_at', {ascending: false})
       ])
-      const nonProfileErrs=[teamRes,dealsRes,objRes].filter(r=>r.error).map(r=>r.error.message)
-      if(nonProfileErrs.length)setError(nonProfileErrs[0])
-      let prof=profRes.data
-      console.log('[App] Profile fetch:', prof ? `${prof.full_name} (${prof.role})` : 'null', profRes.error?.message || '')
-      if(profRes.error)console.warn('[App] Profile fetch error:', profRes.error.message, profRes.error.details, profRes.error.hint)
+      // Traiter chaque résultat individuellement
+      let prof = null
+      if (profRes.status === 'fulfilled' && profRes.value.data) {
+        prof = profRes.value.data
+        setProfile(prof)
+      } else {
+        console.warn('[App] Profile fetch failed:', profRes.reason)
+      }
+
+      if (teamRes.status === 'fulfilled' && teamRes.value.data) {
+        setTeamProfiles(teamRes.value.data)
+      }
+      if (dealsRes.status === 'fulfilled' && dealsRes.value.data) {
+        setDeals(dealsRes.value.data)
+      }
+      if (objRes.status === 'fulfilled' && objRes.value.data) {
+        const map = {...EMPTY_OBJECTIFS}
+        objRes.value.data.forEach(row => {map[row.month] = row})
+        setObjectifs(map)
+      }
+      if (leadsRes.status === 'fulfilled' && leadsRes.value.data) {
+        setLeads(leadsRes.value.data)
+      }
+
+      console.log('[App] Profile fetch:', prof ? `${prof.full_name} (${prof.role})` : 'null')
       if(!prof&&s.user){
         // Retry 3x avec délai croissant avant de créer
         for(let i=0;i<3&&!prof;i++){
@@ -2650,41 +2902,38 @@ export default function App(){
           prof=newProf
         }
       }
-      setProfile(prof||null)
-      setTeamProfiles(teamRes.data||[])
-      setDeals(dealsRes.data||[])
-      const prospData=prospRes.data||[]
-      setProspects(prospData)
-      setProspectsNew(prospData.filter(p=>p.status==='a_contacter').length)
       // Count active immo dossiers (silently ignore if table doesn't exist yet)
       try{
         const{data:immoData}=await supabase.from('dossiers_immo').select('id',{count:'exact',head:false})
         setDossiersImmoCount((immoData||[]).filter(d=>true).length)
       }catch{}
-      const map={...EMPTY_OBJECTIFS}
-      ;(objRes.data||[]).forEach(row=>{map[row.month]=row})
-      setObjectifs(map)
     } catch(e) {
-      // Ignore lock contention errors — they resolve on next auth cycle
-      if(e.message?.includes('released because another request stole it')){
-        console.warn('Auth lock contention, will retry on next session event')
-        return
-      }
-      setError('Erreur chargement : '+e.message)
+      console.error('[App] loadAll error:', e)
+      setError(`Erreur chargement: ${e.message}`)
     } finally {
+      loadAllInProgress.current = false  // toujours resetter
       setLoading(false)
     }
   }
 
   // ✅ Fix stale session : getUser() au lieu de session.user.id
   async function saveDeal(deal){
-    const{data:{user}}=await supabase.auth.getUser()
-    const payload={...deal,advisor_code:profile?.role==='manager'?deal.advisor_code:(profile?.advisor_code||deal.advisor_code),created_by:user.id}
-    const existing=deals.some(d=>d.id===deal.id)
-    const q=existing?supabase.from('deals').update(payload).eq('id',deal.id):supabase.from('deals').insert(payload)
-    const{error:e}=await q
-    if(e){alert(e.message);return}
-    setModalOpen(false);setEditingDeal(null);await loadAll()
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser()
+      if (error || !user) throw new Error('Session expirée')
+
+      const payload={...deal,advisor_code:profile?.role==='manager'?deal.advisor_code:(profile?.advisor_code||deal.advisor_code),created_by:user.id}
+      const existing=deals.some(d=>d.id===deal.id)
+      const q=existing?supabase.from('deals').update(payload).eq('id',deal.id):supabase.from('deals').insert(payload)
+      const{error:e}=await q
+      if(e){alert(e.message);return}
+      setModalOpen(false);setEditingDeal(null);await loadAll()
+    } catch(e) {
+      console.error('[saveDeal] Auth error:', e)
+      alert('Session expirée, veuillez vous reconnecter')
+      await supabase.auth.signOut()
+      return
+    }
   }
 
   async function deleteDeal(deal){
@@ -2720,7 +2969,19 @@ export default function App(){
 
   function startCreate(){setEditingDeal(emptyDeal(profile?.advisor_code));setModalOpen(true)}
   function startEdit(deal){setEditingDeal({...deal});setModalOpen(true)}
-  async function signOut(){await supabase.auth.signOut()}
+  async function signOut(){
+    // ✅ Révoquer token Google avant logout Supabase
+    const token = localStorage.getItem('entasis_gcal_token')
+    if(token){
+      try {
+        await fetch(`https://oauth2.googleapis.com/revoke?token=${token}`, {method: 'POST'})
+        console.log('[Auth] Google token révoqué')
+      } catch(e) {
+        console.warn('Échec révocation token Google:', e)
+      }
+    }
+    await supabase.auth.signOut()
+  }
 
   if(!isSupabaseConfigured)return<ConfigMissing/>
 
