@@ -2524,6 +2524,7 @@ function ProspectionView({prospects,profile,teamProfiles,onRefresh,onProspectsCh
 
 export default function App(){
   const [session,setSession]=useState(null)
+  const [authReady,setAuthReady]=useState(false)
   const [profile,setProfile]=useState(null)
   const [teamProfiles,setTeamProfiles]=useState([])
   const [deals,setDeals]=useState([])
@@ -2567,15 +2568,15 @@ export default function App(){
     if(!isSupabaseConfigured)return
     let active=true
 
-    // onAuthStateChange gère TOUS les événements, y compris INITIAL_SESSION
-    // Ne pas appeler getSession() séparément pour éviter le lock contention
-    const fallback=setTimeout(()=>{if(active)setLoading(false)},8000)
+    // onAuthStateChange handles all events including INITIAL_SESSION
+    const fallback=setTimeout(()=>{if(active){setAuthReady(true);setLoading(false)}},8000)
     const{data:listener}=supabase.auth.onAuthStateChange(async(event,s)=>{
       if(!active)return
       clearTimeout(fallback)
-      if(event==='SIGNED_OUT'){try{localStorage.removeItem('entasis_gcal_token')}catch(e){} setSession(null);setLoading(false);return}
-      // INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED → mettre à jour la session
+      if(event==='SIGNED_OUT'){try{localStorage.removeItem('entasis_gcal_token')}catch(e){} setSession(null);setAuthReady(true);setLoading(false);return}
+      // INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED
       setSession(s||null)
+      setAuthReady(true)
       setLoading(false)
       // Persist gcal token whenever provider_token is present (any auth event)
       if(s?.provider_token&&s?.user?.id){
@@ -2588,6 +2589,17 @@ export default function App(){
         }catch(e){console.warn('gcal_token update:',e)}
       }
     })
+
+    // Fallback: getSession() in case INITIAL_SESSION event doesn't fire
+    supabase.auth.getSession().then(({data:{session:existing}})=>{
+      if(!active)return
+      if(existing&&!session){
+        setSession(existing)
+        setAuthReady(true)
+        setLoading(false)
+        clearTimeout(fallback)
+      }
+    }).catch(()=>{})
 
     return()=>{active=false;clearTimeout(fallback);listener.subscription.unsubscribe()}
   },[])
@@ -2703,13 +2715,22 @@ export default function App(){
   async function signOut(){await supabase.auth.signOut()}
 
   if(!isSupabaseConfigured)return<ConfigMissing/>
+
+  // Wait for auth to initialize before showing login or app
+  if(!authReady)return(
+    <div style={{height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:16,background:'var(--bg)'}}>
+      <div style={{fontFamily:'var(--font-serif)',fontSize:22,fontWeight:500,color:'var(--t1)',letterSpacing:'0.05em'}}>ENTASIS</div>
+      <div className="loading-spinner"/>
+    </div>
+  )
+
   if(!session)return<AuthScreen/>
 
   if(loading)return(
     <div style={{height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:16,background:'var(--bg)'}}>
       <div style={{fontFamily:'var(--font-serif)',fontSize:22,fontWeight:500,color:'var(--t1)',letterSpacing:'0.05em'}}>ENTASIS</div>
       <div className="loading-spinner"/>
-      <div className="text-sm text-muted">Chargement du CRM… (peut prendre 20-30s)</div>
+      <div className="text-sm text-muted">Chargement du CRM…</div>
     </div>
   )
 

@@ -11,5 +11,6 @@ export const supabase = createClient(supabaseUrl || 'https://placeholder.supabas
     autoRefreshToken:   true,
     detectSessionInUrl: true,
     storageKey:         'entasis-auth-v1',
+    storage:            typeof window !== 'undefined' ? window.localStorage : undefined,
   },
 })
