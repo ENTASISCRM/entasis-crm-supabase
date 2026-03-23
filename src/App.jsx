@@ -2524,7 +2524,6 @@ function ProspectionView({prospects,profile,teamProfiles,onRefresh,onProspectsCh
 
 export default function App(){
   const [session,setSession]=useState(null)
-  const [authReady,setAuthReady]=useState(false)
   const [profile,setProfile]=useState(null)
   const [teamProfiles,setTeamProfiles]=useState([])
   const [deals,setDeals]=useState([])
@@ -2568,52 +2567,52 @@ export default function App(){
     if(!isSupabaseConfigured)return
     let active=true
 
-    // onAuthStateChange handles all events including INITIAL_SESSION
-    const fallback=setTimeout(()=>{if(active){setAuthReady(true);setLoading(false)}},8000)
+    // Hard safety timeout — never stay on spinner forever
+    const safety=setTimeout(()=>{if(active)setLoading(false)},5000)
+
+    // 1. Check existing session on mount
+    supabase.auth.getSession().then(({data:{session:existing}})=>{
+      if(!active)return
+      if(existing?.user){
+        console.log('[Auth] getSession: found user', existing.user.id)
+        setSession(existing)
+        loadAll(existing)
+        // Persist gcal token if present
+        if(existing.provider_token){
+          try{localStorage.setItem('entasis_gcal_token',existing.provider_token)}catch(e){}
+          supabase.from('profiles').update({gcal_token:existing.provider_token,gcal_token_updated_at:new Date().toISOString()}).eq('id',existing.user.id).then(()=>{}).catch(()=>{})
+        }
+      } else {
+        console.log('[Auth] getSession: no session')
+        setLoading(false)
+      }
+    }).catch(()=>{if(active)setLoading(false)})
+
+    // 2. Listen for auth changes (sign-in, sign-out, token refresh)
     const{data:listener}=supabase.auth.onAuthStateChange(async(event,s)=>{
       if(!active)return
-      clearTimeout(fallback)
-      if(event==='SIGNED_OUT'){try{localStorage.removeItem('entasis_gcal_token')}catch(e){} setSession(null);setAuthReady(true);setLoading(false);return}
-      // INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED
-      setSession(s||null)
-      setAuthReady(true)
-      // Don't setLoading(false) here — let loadAll() do it after profile is fetched
-      // Only set loading false if there's no user (unauthenticated)
-      if(!s?.user) setLoading(false)
-      // Persist gcal token whenever provider_token is present (any auth event)
-      if(s?.provider_token&&s?.user?.id){
-        // Save to localStorage immediately as backup (survives page refresh even if Supabase update fails)
-        try{localStorage.setItem('entasis_gcal_token',s.provider_token)}catch(e){}
-        try{
-          await supabase.from('profiles').update({gcal_token:s.provider_token,gcal_token_updated_at:new Date().toISOString()}).eq('id',s.user.id)
-          const{data:prof}=await supabase.from('profiles').select('*').eq('id',s.user.id).maybeSingle()
-          if(prof&&active)setProfile(prof)
-        }catch(e){console.warn('gcal_token update:',e)}
+      console.log('[Auth] event:', event, s?.user?.id||'no user')
+      if(event==='SIGNED_OUT'){
+        try{localStorage.removeItem('entasis_gcal_token')}catch(e){}
+        setSession(null);setProfile(null);setDeals([]);setTeamProfiles([]);setLoading(false)
+        return
+      }
+      if(s?.user){
+        setSession(s)
+        // Only reload data on actual sign-in (not token refresh which happens silently)
+        if(event==='SIGNED_IN')loadAll(s)
+        // Persist gcal token
+        if(s.provider_token){
+          try{localStorage.setItem('entasis_gcal_token',s.provider_token)}catch(e){}
+          try{
+            await supabase.from('profiles').update({gcal_token:s.provider_token,gcal_token_updated_at:new Date().toISOString()}).eq('id',s.user.id)
+          }catch(e){console.warn('gcal_token update:',e)}
+        }
       }
     })
 
-    // Fallback: getSession() in case INITIAL_SESSION event doesn't fire
-    supabase.auth.getSession().then(({data:{session:existing}})=>{
-      if(!active)return
-      if(existing&&!session){
-        setSession(existing)
-        setAuthReady(true)
-        // Don't setLoading(false) — loadAll() will do it after profile loads
-        clearTimeout(fallback)
-      } else if(!existing){
-        setAuthReady(true)
-        setLoading(false)
-      }
-    }).catch(()=>{})
-
-    return()=>{active=false;clearTimeout(fallback);listener.subscription.unsubscribe()}
+    return()=>{active=false;clearTimeout(safety);listener.subscription.unsubscribe()}
   },[])
-
-  useEffect(()=>{
-    if(!session?.user){setProfile(null);setDeals([]);setTeamProfiles([]);return}
-    loadAll(session)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[session?.user?.id])
 
   async function loadAll(currentSession){
     const s=currentSession||session
@@ -2725,23 +2724,15 @@ export default function App(){
 
   if(!isSupabaseConfigured)return<ConfigMissing/>
 
-  // Wait for auth to initialize before showing login or app
-  if(!authReady)return(
-    <div style={{height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:16,background:'var(--bg)'}}>
-      <div style={{fontFamily:'var(--font-serif)',fontSize:22,fontWeight:500,color:'var(--t1)',letterSpacing:'0.05em'}}>ENTASIS</div>
-      <div className="loading-spinner"/>
-    </div>
-  )
-
-  if(!session)return<AuthScreen/>
-
   if(loading)return(
     <div style={{height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:16,background:'var(--bg)'}}>
       <div style={{fontFamily:'var(--font-serif)',fontSize:22,fontWeight:500,color:'var(--t1)',letterSpacing:'0.05em'}}>ENTASIS</div>
       <div className="loading-spinner"/>
-      <div className="text-sm text-muted">Chargement du CRM…</div>
+      <div className="text-sm text-muted">Chargement…</div>
     </div>
   )
+
+  if(!session)return<AuthScreen/>
 
   const isManager=profile?.role==='manager'
   const leadsAvailable=leads.filter(l=>l.status==='available'||l.status==='released').length
