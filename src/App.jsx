@@ -379,10 +379,18 @@ function AuthScreen() {
 
       // Marquer l'invitation comme utilisée si présente
       if (inviteData?.token) {
-        const { error: inviteError } = await supabase
+        console.log('[Debug] Token utilisé pour UPDATE:',
+          JSON.stringify(inviteData.token))
+        console.log('[Debug] Longueur token:', inviteData.token?.length)
+
+        const { error: inviteError, data: inviteResult } = await supabase
           .from('invitations')
           .update({ used_at: new Date().toISOString() })
           .eq('token', inviteData.token)
+          .select()
+
+        console.log('[Debug] Résultat UPDATE invitation:',
+          { error: inviteError, data: inviteResult })
 
         if (inviteError) {
           console.warn('[Invitation] Erreur marquage utilisée:', inviteError)
