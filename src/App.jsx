@@ -357,17 +357,19 @@ function AuthScreen() {
       const finalRole = inviteData ? inviteData.role : 'advisor'
       const finalAdvisorCode = inviteData ? inviteData.advisorCode : null
 
-      // Créer le profil avec le rôle approprié
+      // Attendre que le trigger handle_new_user crée le profil
+      await new Promise(resolve => setTimeout(resolve, 1000))
+
+      // Mettre à jour le profil créé par le trigger
       const { error: profileError } = await supabase
         .from('profiles')
-        .insert({
-          id: data.user.id,
-          email: data.user.email,
+        .update({
           full_name: fullName,
           role: finalRole,
           advisor_code: finalAdvisorCode,
           is_active: true
         })
+        .eq('id', data.user.id)
 
       if (profileError) {
         console.warn('[Profile] Erreur création:', profileError)
