@@ -26,3 +26,5 @@ Thumbs.db
 # Audit files (documents internes, ne pas versionner)
 audit_*.md
 *_audit.md
+.vercel
+.env*.local

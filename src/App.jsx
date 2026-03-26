@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
-import { Toaster } from 'react-hot-toast'
+import { Toaster, toast } from 'react-hot-toast'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import VueImmobilier from './components/VueImmobilier'
 import CatalogueProgrammes from './components/CatalogueProgrammes'
@@ -242,6 +242,10 @@ function AuthScreen() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [resetEmailSent, setResetEmailSent] = useState(false)
 
+  // États pour les invitations
+  const [inviteToken, setInviteToken] = useState(null)
+  const [inviteRole, setInviteRole] = useState('advisor')
+
   const getErrorMessage = (error) => {
     const code = error?.message || ''
     if (code.includes('Invalid login credentials')) return 'Email ou mot de passe incorrect'
@@ -250,6 +254,38 @@ function AuthScreen() {
     if (code.includes('invalid_email')) return 'Email invalide'
     if (code.includes('password')) return 'Le mot de passe doit contenir au moins 8 caractères'
     return error?.message || 'Erreur inconnue'
+  }
+
+  // Détecter le token d'invitation au chargement
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const inviteToken = params.get('invite')
+    if (inviteToken) {
+      validateInviteToken(inviteToken)
+    }
+  }, [])
+
+  // Valider le token d'invitation
+  async function validateInviteToken(token) {
+    const { data, error } = await supabase
+      .from('invitations')
+      .select('*')
+      .eq('token', token)
+      .is('used_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .single()
+
+    if (error || !data) {
+      setMsg('Ce lien d\'invitation est invalide ou expiré.')
+      return
+    }
+
+    // Passer en mode signup avec rôle pré-configuré
+    setMode('signup')
+    setInviteToken(token)
+    setInviteRole(data.role)
+    if (data.email) setEmail(data.email)
+    setMsg(`Vous avez été invité en tant que ${data.role === 'manager' ? 'Manager' : 'Conseiller CGP'}`)
   }
 
   async function handleLogin() {
@@ -311,19 +347,37 @@ function AuthScreen() {
     }
 
     if (data.user) {
-      // Créer le profil
+      // Créer le profil avec le rôle approprié
+      const profileRole = inviteToken ? inviteRole : 'advisor'
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
           id: data.user.id,
           email: data.user.email,
           full_name: fullName,
-          role: 'advisor',
+          role: profileRole,
           is_active: true
         })
 
       if (profileError) {
         console.warn('Profile creation error:', profileError)
+      }
+
+      // Marquer l'invitation comme utilisée si présente
+      if (inviteToken) {
+        const { error: inviteError } = await supabase
+          .from('invitations')
+          .update({
+            used_at: new Date().toISOString()
+          })
+          .eq('token', inviteToken)
+
+        if (inviteError) {
+          console.warn('Invitation update error:', inviteError)
+        }
+
+        // Nettoyer l'URL après utilisation
+        window.history.replaceState({}, '', window.location.pathname)
       }
 
       setMsg('Compte créé ! Vous pouvez vous connecter.')
@@ -332,6 +386,8 @@ function AuthScreen() {
       setLastName('')
       setPassword('')
       setConfirmPassword('')
+      setInviteToken(null)
+      setInviteRole('advisor')
       setLoading(false)
     }
   }
@@ -411,18 +467,36 @@ function AuthScreen() {
               </button>
             </div>
 
-            <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--t3)' }}>
-              Pas encore de compte ?{' '}
-              <button
-                onClick={() => { setMode('signup'); setMsg(''); setResetEmailSent(false) }}
-                style={{ background: 'none', border: 'none', color: 'var(--gold)', cursor: 'pointer', textDecoration: 'underline' }}
-              >
-                Créer un compte
-              </button>
-            </div>
+            {!inviteToken && (
+              <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--t3)' }}>
+                Pas encore de compte ?{' '}
+                <button
+                  onClick={() => { setMode('signup'); setMsg(''); setResetEmailSent(false) }}
+                  style={{ background: 'none', border: 'none', color: 'var(--gold)', cursor: 'pointer', textDecoration: 'underline' }}
+                >
+                  Créer un compte
+                </button>
+              </div>
+            )}
           </>
         ) : (
           <>
+            {/* Bandeau informatif pour les invitations */}
+            {inviteToken && (
+              <div style={{
+                background: 'var(--gold)',
+                color: '#1a1a1a',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                margin: '20px 0',
+                textAlign: 'center',
+                fontSize: '13px',
+                fontWeight: 600
+              }}>
+                Vous rejoignez Entasis CRM en tant que {inviteRole === 'manager' ? 'Manager' : 'Conseiller CGP'}
+              </div>
+            )}
+
             <div style={{ margin: '28px 0 24px' }}>
               <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
                 <input
@@ -491,15 +565,17 @@ function AuthScreen() {
               {loading ? 'Création...' : 'Créer mon compte'}
             </button>
 
-            <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--t3)' }}>
-              Déjà un compte ?{' '}
-              <button
-                onClick={() => { setMode('login'); setMsg(''); setFirstName(''); setLastName(''); setConfirmPassword('') }}
-                style={{ background: 'none', border: 'none', color: 'var(--gold)', cursor: 'pointer', textDecoration: 'underline' }}
-              >
-                Se connecter
-              </button>
-            </div>
+            {!inviteToken && (
+              <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--t3)' }}>
+                Déjà un compte ?{' '}
+                <button
+                  onClick={() => { setMode('login'); setMsg(''); setFirstName(''); setLastName(''); setConfirmPassword('') }}
+                  style={{ background: 'none', border: 'none', color: 'var(--gold)', cursor: 'pointer', textDecoration: 'underline' }}
+                >
+                  Se connecter
+                </button>
+              </div>
+            )}
           </>
         )}
 
@@ -2303,14 +2379,257 @@ function AgendaView({deals,profile}){
 /* ─────────────────────────────────────────────────────────────────────────────
    TEAM VIEW
 ───────────────────────────────────────────────────────────────────────────── */
-function TeamView({deals,objectifs,teamProfiles,month}){
+function TeamView({deals,objectifs,teamProfiles,month,profile}){
   const activeAdvisors=teamProfiles.filter(p=>p.is_active&&p.advisor_code)
   const targets=objectifs[month]||{pp_target:0,pu_target:0}
   const ppTarget=Number(targets.pp_target||0)
   const rows=useMemo(()=>activeAdvisors.map(p=>{const m=advisorMetrics(deals,month,p.advisor_code);return {...p,...m}}).sort((a,b)=>b.ppSigned-a.ppSigned),[activeAdvisors,deals,month])
 
+  // États pour la gestion des invitations
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteRole, setInviteRole] = useState('advisor')
+  const [invitations, setInvitations] = useState([])
+  const [loadingInvitations, setLoadingInvitations] = useState(false)
+
+  // Charger les invitations existantes
+  useEffect(() => {
+    loadInvitations()
+  }, [])
+
+  async function loadInvitations() {
+    setLoadingInvitations(true)
+    const { data, error } = await supabase
+      .from('invitations')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    if (error) {
+      console.error('Erreur chargement invitations:', error)
+    } else {
+      setInvitations(data || [])
+    }
+    setLoadingInvitations(false)
+  }
+
+  // Générer une invitation
+  async function generateInvitation(email, role) {
+    if (!profile?.id) {
+      toast.error('Erreur: profil utilisateur non trouvé')
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('invitations')
+      .insert({
+        email: email || null,
+        role: role,
+        created_by: profile.id
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Erreur invitation:', error)
+      toast.error('Erreur lors de la création de l\'invitation')
+      return
+    }
+
+    // Construire le lien
+    const link = `${window.location.origin}?invite=${data.token}`
+
+    // Copier dans le presse-papier
+    try {
+      await navigator.clipboard.writeText(link)
+      toast.success('Lien copié dans le presse-papier !')
+    } catch (e) {
+      console.warn('Erreur copie:', e)
+      toast.success('Invitation créée ! Lien: ' + link)
+    }
+
+    // Recharger la liste
+    await loadInvitations()
+
+    // Reset du formulaire
+    setInviteEmail('')
+    setInviteRole('advisor')
+
+    return link
+  }
+
+  // Copier un lien d'invitation existante
+  async function copyInvitationLink(token) {
+    const link = `${window.location.origin}?invite=${token}`
+    try {
+      await navigator.clipboard.writeText(link)
+      toast.success('Lien copié dans le presse-papier !')
+    } catch (e) {
+      toast.error('Erreur lors de la copie du lien')
+    }
+  }
+
+  // Révoquer une invitation
+  async function revokeInvitation(inviteId) {
+    if (!window.confirm('Révoquer cette invitation ?')) return
+
+    const { error } = await supabase
+      .from('invitations')
+      .delete()
+      .eq('id', inviteId)
+
+    if (error) {
+      console.error('Erreur révocation:', error)
+      toast.error('Erreur lors de la révocation')
+    } else {
+      toast.success('Invitation révoquée')
+      await loadInvitations()
+    }
+  }
+
+  // Gérer la soumission du formulaire d'invitation
+  async function handleInviteSubmit(e) {
+    e.preventDefault()
+    await generateInvitation(inviteEmail.trim(), inviteRole)
+  }
+
+  // Déterminer le statut d'une invitation
+  function getInvitationStatus(invitation) {
+    if (invitation.used_at) return 'Utilisé'
+    if (new Date(invitation.expires_at) < new Date()) return 'Expiré'
+    return 'En attente'
+  }
+
   return (
     <div>
+      {/* Section gestion des accès */}
+      <div className="section-header">
+        <div>
+          <div className="section-kicker">Gestion des accès</div>
+          <div className="section-title">Invitations d'équipe</div>
+          <div className="section-sub">Générer des liens d'invitation pour nouveaux utilisateurs</div>
+        </div>
+      </div>
+
+      <div className="card mb-24">
+        <div className="panel-head">
+          <div style={{fontWeight:600,color:'var(--t1)'}}>Générer une invitation</div>
+        </div>
+        <div className="panel-body">
+          <form onSubmit={handleInviteSubmit}>
+            <div className="form-row form-row-2 mb-16">
+              <div className="form-group">
+                <label className="form-label">Email (optionnel)</label>
+                <input
+                  type="email"
+                  className="form-input"
+                  value={inviteEmail}
+                  onChange={e => setInviteEmail(e.target.value)}
+                  placeholder="exemple@cabinet.fr"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Rôle</label>
+                <select
+                  className="form-select"
+                  value={inviteRole}
+                  onChange={e => setInviteRole(e.target.value)}
+                >
+                  <option value="advisor">Conseiller (CGP)</option>
+                  <option value="manager">Manager</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" className="btn btn-primary">
+              Générer un lien d'invitation
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* Liste des invitations en cours */}
+      <div className="card mb-24">
+        <div className="panel-head">
+          <div style={{fontWeight:600,color:'var(--t1)'}}>Invitations récentes</div>
+          {loadingInvitations && <div className="loading-spinner" style={{width:16,height:16}}/>}
+        </div>
+        <div className="panel-body">
+          {invitations.length === 0 ? (
+            <div className="table-empty-state">
+              <div className="empty-icon">✉️</div>
+              <div className="empty-title">Aucune invitation</div>
+              <div className="empty-sub">Générez votre première invitation d'équipe</div>
+            </div>
+          ) : (
+            <div className="table-responsive">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Email</th>
+                    <th>Rôle</th>
+                    <th>Statut</th>
+                    <th>Créé le</th>
+                    <th>Expire le</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invitations.map(invitation => {
+                    const status = getInvitationStatus(invitation)
+                    const isActive = status === 'En attente'
+                    return (
+                      <tr key={invitation.id}>
+                        <td>{invitation.email || <span style={{color:'var(--t3)',fontStyle:'italic'}}>Lien ouvert</span>}</td>
+                        <td>
+                          <span className="badge">
+                            {invitation.role === 'manager' ? 'Manager' : 'Conseiller'}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`badge ${
+                            status === 'Utilisé' ? 'badge-signed' :
+                            status === 'Expiré' ? 'badge-cancelled' :
+                            'badge-progress'
+                          }`}>
+                            {status}
+                          </span>
+                        </td>
+                        <td>{new Date(invitation.created_at).toLocaleDateString('fr-FR')}</td>
+                        <td>{new Date(invitation.expires_at).toLocaleDateString('fr-FR')}</td>
+                        <td>
+                          <div style={{display:'flex',gap:8}}>
+                            {isActive && (
+                              <button
+                                onClick={() => copyInvitationLink(invitation.token)}
+                                className="btn btn-sm"
+                                style={{padding:'4px 8px',fontSize:11}}
+                                title="Copier le lien"
+                              >
+                                📋
+                              </button>
+                            )}
+                            {isActive && (
+                              <button
+                                onClick={() => revokeInvitation(invitation.id)}
+                                className="btn btn-sm"
+                                style={{padding:'4px 8px',fontSize:11,background:'var(--bg-error)',color:'var(--t-error)'}}
+                                title="Révoquer"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Section performance équipe */}
       <div className="section-header"><div><div className="section-kicker">Vue direction</div><div className="section-title">Performance par conseiller</div><div className="section-sub">{activeAdvisors.length} conseiller{activeAdvisors.length!==1?'s':''} actifs · {month}</div></div></div>
       {rows.map((row,i)=>{
         const ppPct=pct(row.ppSigned,ppTarget),ppProjPct=pct(row.ppProjected,ppTarget)
@@ -3024,7 +3343,7 @@ export default function App(){
           {activeTab==='forecast'&&<ForecastView deals={deals} objectifs={objectifs} month={month} profile={profile} teamProfiles={teamProfiles} canEditObjectifs={isManager} onSaveObjectif={saveObjectif}/>}
           {activeTab==='agenda'&&<AgendaView deals={deals} profile={profile}/>}
           {activeTab==='market'&&<MarketView/>}
-          {activeTab==='team'&&isManager&&<TeamView deals={deals} objectifs={objectifs} teamProfiles={teamProfiles} month={month}/>}
+          {activeTab==='team'&&isManager&&<TeamView deals={deals} objectifs={objectifs} teamProfiles={teamProfiles} month={month} profile={profile}/>}
           {activeTab==='prospection'&&<ProspectionView prospects={prospects} profile={profile} teamProfiles={teamProfiles} onRefresh={fetchProspects} onProspectsChange={setProspects}/>}
           {activeTab==='immo-dashboard'&&<VueImmobilier profile={profile} setActiveTab={setActiveTab}/>}
           {activeTab==='immo-programmes'&&<CatalogueProgrammes setActiveTab={setActiveTab}/>}
