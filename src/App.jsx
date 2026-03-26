@@ -262,6 +262,14 @@ function AuthScreen() {
     if (inviteToken) {
       validateInviteToken(inviteToken)
     }
+
+    // Détecter retour depuis Google OAuth pour l'agenda
+    if (params.get('tab') === 'agenda') {
+      // Nettoyer l'URL
+      window.history.replaceState({}, '', window.location.pathname)
+      // L'onglet agenda sera actif via le state
+      // Le token sera capturé par onAuthStateChange
+    }
   }, [])
 
   // Valider le token d'invitation
@@ -2301,15 +2309,25 @@ function AgendaView({deals,profile}){
   }
   const crmCount=events.filter(e=>e.extendedProperties?.private?.entasisCrm==='true').length
 
-  async function reconnectGoogle(){
-    await supabase.auth.signInWithOAuth({
-      provider:'google',
-      options:{
-        scopes:'https://www.googleapis.com/auth/calendar.readonly',
-        redirectTo:window.location.origin,
-        queryParams:{access_type:'offline',prompt:'consent'}
+  async function reconnectGoogle() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        scopes: [
+          'https://www.googleapis.com/auth/calendar',
+          'https://www.googleapis.com/auth/calendar.events'
+        ].join(' '),
+        redirectTo: window.location.origin + '?tab=agenda',
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent'
+        }
       }
     })
+    if (error) {
+      console.error('[GCal] Erreur reconnexion:', error)
+      toast.error('Erreur de connexion Google')
+    }
   }
 
   if(!isGoogleConnected) return (
@@ -2318,8 +2336,8 @@ function AgendaView({deals,profile}){
       <div className="card" style={{maxWidth:460,margin:'48px auto',textAlign:'center',padding:'40px 32px'}}>
         <div style={{fontSize:42,marginBottom:16}}>📅</div>
         <div style={{fontFamily:'var(--font-serif)',fontSize:20,fontWeight:500,color:'var(--t1)',marginBottom:10}}>Google Agenda non connecté</div>
-        <div style={{fontSize:13.5,color:'var(--t2)',lineHeight:1.7,marginBottom:24}}>Le token Google Calendar a expiré ou n'a pas été capturé. Clique ci-dessous pour reconnecter ton compte Google et autoriser l'accès à ton agenda.</div>
-        <button className="btn btn-gold" style={{margin:'0 auto 20px',padding:'12px 24px',fontSize:14}} onClick={reconnectGoogle}>Reconnecter Google Agenda</button>
+        <div style={{fontSize:13.5,color:'var(--t2)',lineHeight:1.7,marginBottom:24}}>Connectez votre compte Google pour accéder à votre agenda depuis le CRM.</div>
+        <button className="btn btn-gold" style={{margin:'0 auto 20px',padding:'12px 24px',fontSize:14}} onClick={reconnectGoogle}>Connecter Google Agenda</button>
         <div style={{fontSize:11,color:'var(--t3)',lineHeight:1.6}}>Tu seras redirigé vers Google pour autoriser l'accès Calendar, puis ramené ici automatiquement.</div>
       </div>
     </div>
@@ -3180,6 +3198,25 @@ export default function App(){
       }
       if(event==='SIGNED_IN'&&s?.user){
         setSession(s)
+
+        // Capturer le token Google Calendar si présent
+        if (s?.provider_token && (s?.provider?.includes?.('google') || s?.provider_token)) {
+          try {
+            localStorage.setItem('entasis_gcal_token', s.provider_token)
+            // Sauvegarder en DB
+            supabase.from('profiles')
+              .update({
+                gcal_token: s.provider_token,
+                gcal_token_updated_at: new Date().toISOString()
+              })
+              .eq('id', s.user.id)
+              .then(() => console.log('[GCal] Token sauvegardé en DB ✅'))
+              .catch(e => console.warn('[GCal] Erreur sauvegarde token:', e))
+          } catch(e) {
+            console.warn('[GCal] Erreur localStorage:', e)
+          }
+        }
+
         loadAll(s)
         return
       }
@@ -3216,6 +3253,14 @@ export default function App(){
       if (profRes.status === 'fulfilled' && profRes.value.data) {
         prof = profRes.value.data
         setProfile(prof)
+
+        // Vérifier si un provider_token est disponible dans la session
+        const { data: { session: currentSession } } = await supabase.auth.getSession()
+        if (currentSession?.provider_token) {
+          try {
+            localStorage.setItem('entasis_gcal_token', currentSession.provider_token)
+          } catch(e) {}
+        }
       } else {
         console.warn('[App] Profile fetch failed:', profRes.reason)
       }

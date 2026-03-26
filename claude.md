@@ -97,7 +97,7 @@ const STATUS_OPTIONS = ['Signé', 'En cours', 'Prévu', 'Annulé']
 const PRODUCTS = ['PER Individuel', 'Assurance Vie'...]
 
 // 🎨 UI COMPONENTS INLINE (lignes 100-1500+)
-function AuthScreen()              // Écran connexion Google
+function AuthScreen()              // 🆕 Écran auth + invitations
 function ConfigMissing()           // Erreur config Supabase
 function Sidebar()                 // Navigation latérale
 function TopBar()                  // Barre supérieure
@@ -113,6 +113,7 @@ function ForecastView()            // Prévisions mensuelles
 function LeadRoom()                // Gestion des leads
 function AgendaView()              // Calendrier deals
 function MarketView()              // Vue marché
+function TeamView()                // 🆕 Gestion équipe + invitations
 
 // 🏠 MAIN APP COMPONENT (lignes finales)
 export default function App()     // Composant principal avec état global
@@ -141,9 +142,45 @@ const [activeTab, setActiveTab] = useState('dashboard')
 'forecast'    → ForecastView
 'agenda'      → AgendaView
 'market'      → MarketView
+'team'        → TeamView (🆕 gestion équipe + invitations)
 'immobilier'  → VueImmobilier (module externe)
 'cgp-tools'   → OutilsCGP (module externe)
 'linkedin'    → LinkedInPro (module externe)
+```
+
+### 🆕 TeamView - Gestion équipe et invitations
+**Fichier** : Intégré dans `src/App.jsx` (lignes 2306-2700+)
+**Rôle** : Interface de gestion d'équipe réservée aux managers
+**Fonctionnalités principales** :
+- **Génération d'invitations** : Formulaire avec email, rôle, advisor_code
+- **Liste des invitations** : Statut (en attente/utilisée/expirée), actions
+- **Gestion advisor_code** : Validation conditionnelle selon le rôle
+- **Liens sécurisés** : Génération automatique de tokens JWT avec expiration
+
+**Interface utilisateur** :
+```javascript
+// Formulaire d'invitation à 3 colonnes
+<form onSubmit={handleInviteSubmit}>
+  <input type="email" placeholder="Email (optionnel)" />
+  <select value={inviteRole}>
+    <option value="advisor">Conseiller CGP</option>
+    <option value="manager">Manager</option>
+  </select>
+  <input
+    type="text"
+    placeholder="Code conseiller"
+    required={inviteRole === 'advisor'}
+  />
+</form>
+
+// Table des invitations avec statuts
+<table>
+  <tr>
+    <td>Email | Rôle | Advisor Code</td>
+    <td>Statut (🟡 En attente | ✅ Utilisée | 🔴 Expirée)</td>
+    <td>Actions (Copier lien | Supprimer)</td>
+  </tr>
+</table>
 ```
 
 ### 📱 Composants externes détaillés
@@ -361,6 +398,26 @@ CREATE TABLE activities (
   created_at timestamptz DEFAULT now()
 );
 ```
+
+#### `invitations` - 🆕 Système d'invitation par lien
+```sql
+CREATE TABLE invitations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  token text UNIQUE NOT NULL,         -- Token JWT unique pour le lien
+  email text,                         -- Email pré-rempli (optionnel)
+  role text NOT NULL CHECK (role IN ('manager', 'advisor')),
+  advisor_code text,                  -- Code conseiller (requis si role='advisor')
+  created_by uuid REFERENCES auth.users(id) NOT NULL,
+  used_at timestamptz,                -- Date d'utilisation (NULL = non utilisé)
+  expires_at timestamptz NOT NULL,    -- Date d'expiration (défaut: +7 jours)
+  created_at timestamptz DEFAULT now()
+);
+```
+**Fonctionnement** :
+- Génération de liens d'invitation sécurisés avec expiration
+- Attribution automatique du rôle et advisor_code lors de l'inscription
+- Suivi des invitations utilisées vs expirées
+- Interface de gestion intégrée dans TeamView pour managers
 
 ### 🏗️ Tables module immobilier
 
@@ -621,6 +678,34 @@ function ageSeverity(days, status) {
 
 ## Points d'attention architecture
 
+### 🆕 Améliorations récentes (Mars 2026)
+
+#### **Système d'invitation sécurisé**
+- **Architecture** : Table `invitations` avec tokens JWT + expiration 7 jours
+- **Sécurité** : Validation côté client ET serveur, liens à usage unique
+- **UX** : Interface manager intuitive + bandeaux informatifs signup
+- **Technique** : Gestion d'état avec `useRef` pour éviter race conditions React
+
+#### **Corrections techniques critiques**
+- **BUG 1 - advisor_code** : Remplacement `useState` → `useRef` pour données invitation
+- **BUG 2 - used_at** : Synchronisation correcte marquage invitations utilisées
+- **BUG 3 - Trigger Supabase** : Passage INSERT → UPDATE pour éviter conflit `handle_new_user`
+
+**Code pattern résolu** :
+```javascript
+// ❌ AVANT : Race condition avec useState
+const [inviteToken, setInviteToken] = useState(null)
+const [inviteRole, setInviteRole] = useState('advisor')
+
+// ✅ APRÈS : Données persistantes avec useRef
+const inviteDataRef = useRef(null)
+inviteDataRef.current = { token, role, advisorCode }
+
+// ✅ Dans handleSignup() : Données toujours disponibles
+const finalAdvisorCode = inviteData?.advisorCode || null
+await supabase.from('profiles').update({ advisor_code: finalAdvisorCode })
+```
+
 ### ⚠️ Limitations techniques actuelles
 1. **App.jsx monolithique** (58k+ tokens) - Refactoring nécessaire
 2. **Pas de lazy loading** - Tous composants chargés au démarrage
@@ -651,6 +736,7 @@ function ageSeverity(days, status) {
 3. **Objectifs mensuels** - Définition et suivi des objectifs PP/PU
 4. **Immobilier neuf** - Catalogue et gestion des programmes immobiliers
 5. **Outils CGP** - Calculateurs financiers et générateurs de contenu
+6. 🆕 **Gestion d'équipe** - Invitations par lien sécurisé + attribution rôles/codes
 
 ### Constants et utilitaires
 ```javascript
@@ -670,8 +756,15 @@ advisorMetrics() - Métriques par conseiller
 ```
 
 ### Authentification et rôles
-- **Manager** : Accès complet à tous les deals et données
+- **Manager** : Accès complet à tous les deals et données + gestion équipe via invitations
 - **Advisor** : Accès limité aux deals où `advisor_code` ou `co_advisor_code` correspond
+
+#### 🆕 Processus d'inscription via invitation
+1. **Génération** : Manager crée invitation avec email/rôle/advisor_code
+2. **Validation** : Token JWT vérifié (expiration + unicité)
+3. **Inscription** : Formulaire pré-rempli selon rôle + bandeau informatif
+4. **Attribution** : Profil créé avec bon rôle et advisor_code via trigger UPDATE
+5. **Finalisation** : Invitation marquée comme utilisée + nettoyage URL
 
 ## Backend (Supabase)
 
@@ -829,8 +922,42 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ### Setup initial base de données
 1. Exécuter `supabase/schema.sql` dans SQL Editor
 2. Exécuter `supabase/migration_immobilier.sql` pour module immobilier
-3. Créer utilisateur manager avec `role='manager'` et `advisor_code='LOUIS'`
-4. Configurer RLS et tester authentification
+3. 🆕 **Ajouter table invitations** :
+```sql
+-- Table pour système d'invitation par lien
+CREATE TABLE invitations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  token text UNIQUE NOT NULL,
+  email text,
+  role text NOT NULL CHECK (role IN ('manager', 'advisor')),
+  advisor_code text,
+  created_by uuid REFERENCES auth.users(id) NOT NULL,
+  used_at timestamptz,
+  expires_at timestamptz NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
+
+-- RLS pour invitations
+ALTER TABLE invitations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "invitations_select_own_or_manager" ON invitations FOR SELECT TO authenticated USING (
+  created_by = auth.uid() OR is_manager()
+);
+
+CREATE POLICY "invitations_insert_manager_only" ON invitations FOR INSERT TO authenticated WITH CHECK (
+  is_manager() AND created_by = auth.uid()
+);
+
+CREATE POLICY "invitations_update_manager_only" ON invitations FOR UPDATE TO authenticated USING (
+  is_manager() AND created_by = auth.uid()
+);
+
+CREATE POLICY "invitations_delete_manager_only" ON invitations FOR DELETE TO authenticated USING (
+  is_manager() AND created_by = auth.uid()
+);
+```
+4. Créer utilisateur manager avec `role='manager'` et `advisor_code='LOUIS'`
+5. Configurer RLS et tester authentification
 
 ### Monitoring et logs
 - Supabase Dashboard pour métriques base de données
