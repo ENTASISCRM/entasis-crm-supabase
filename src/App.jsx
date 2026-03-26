@@ -242,10 +242,8 @@ function AuthScreen() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [resetEmailSent, setResetEmailSent] = useState(false)
 
-  // États pour les invitations
-  const [inviteToken, setInviteToken] = useState(null)
-  const [inviteRole, setInviteRole] = useState('advisor')
-  const [inviteAdvisorCode, setInviteAdvisorCode] = useState(null)
+  // Ref pour les invitations (évite les problèmes d'asynchrone avec useState)
+  const inviteDataRef = useRef(null)
 
   const getErrorMessage = (error) => {
     const code = error?.message || ''
@@ -281,11 +279,16 @@ function AuthScreen() {
       return
     }
 
+    // Stocker les données d'invitation dans la ref
+    inviteDataRef.current = {
+      token: token,
+      role: data.role,
+      advisorCode: data.advisor_code || null,
+      email: data.email || null
+    }
+
     // Passer en mode signup avec rôle pré-configuré
     setMode('signup')
-    setInviteToken(token)
-    setInviteRole(data.role)
-    setInviteAdvisorCode(data.advisor_code || null)
     if (data.email) setEmail(data.email)
     setMsg(`Vous avez été invité en tant que ${data.role === 'manager' ? 'Manager' : 'Conseiller CGP'}`)
   }
@@ -349,37 +352,46 @@ function AuthScreen() {
     }
 
     if (data.user) {
+      // Récupérer les données d'invitation depuis la ref
+      const inviteData = inviteDataRef.current
+      const finalRole = inviteData ? inviteData.role : 'advisor'
+      const finalAdvisorCode = inviteData ? inviteData.advisorCode : null
+
       // Créer le profil avec le rôle approprié
-      const profileRole = inviteToken ? inviteRole : 'advisor'
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
           id: data.user.id,
           email: data.user.email,
           full_name: fullName,
-          role: profileRole,
-          advisor_code: inviteAdvisorCode || null,
+          role: finalRole,
+          advisor_code: finalAdvisorCode,
           is_active: true
         })
 
       if (profileError) {
-        console.warn('Profile creation error:', profileError)
+        console.warn('[Profile] Erreur création:', profileError)
+      } else {
+        console.log('[Profile] Créé avec succès ✅', { role: finalRole, advisor_code: finalAdvisorCode })
       }
 
       // Marquer l'invitation comme utilisée si présente
-      if (inviteToken) {
+      if (inviteData?.token) {
         const { error: inviteError } = await supabase
           .from('invitations')
-          .update({
-            used_at: new Date().toISOString()
-          })
-          .eq('token', inviteToken)
+          .update({ used_at: new Date().toISOString() })
+          .eq('token', inviteData.token)
 
         if (inviteError) {
-          console.warn('Invitation update error:', inviteError)
+          console.warn('[Invitation] Erreur marquage utilisée:', inviteError)
+        } else {
+          console.log('[Invitation] Marquée comme utilisée ✅')
         }
 
-        // Nettoyer l'URL après utilisation
+        // Nettoyer la ref
+        inviteDataRef.current = null
+
+        // Nettoyer l'URL
         window.history.replaceState({}, '', window.location.pathname)
       }
 
@@ -389,9 +401,6 @@ function AuthScreen() {
       setLastName('')
       setPassword('')
       setConfirmPassword('')
-      setInviteToken(null)
-      setInviteRole('advisor')
-      setInviteAdvisorCode(null)
       setLoading(false)
     }
   }
@@ -471,7 +480,7 @@ function AuthScreen() {
               </button>
             </div>
 
-            {!inviteToken && (
+            {!inviteDataRef.current && (
               <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--t3)' }}>
                 Pas encore de compte ?{' '}
                 <button
@@ -486,7 +495,7 @@ function AuthScreen() {
         ) : (
           <>
             {/* Bandeau informatif pour les invitations */}
-            {inviteToken && (
+            {inviteDataRef.current && (
               <div style={{
                 background: 'var(--gold)',
                 color: '#1a1a1a',
@@ -497,7 +506,7 @@ function AuthScreen() {
                 fontSize: '13px',
                 fontWeight: 600
               }}>
-                Vous rejoignez Entasis CRM en tant que {inviteRole === 'manager' ? 'Manager' : 'Conseiller CGP'}
+                Vous rejoignez Entasis CRM en tant que {inviteDataRef.current?.role === 'manager' ? 'Manager' : 'Conseiller CGP'}
               </div>
             )}
 
@@ -569,7 +578,7 @@ function AuthScreen() {
               {loading ? 'Création...' : 'Créer mon compte'}
             </button>
 
-            {!inviteToken && (
+            {!inviteDataRef.current && (
               <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--t3)' }}>
                 Déjà un compte ?{' '}
                 <button
