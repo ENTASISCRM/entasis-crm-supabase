@@ -2285,8 +2285,22 @@ function AgendaView({deals,profile}){
       const r=await fetch(`${GCAL}/calendars/primary/events?${params}`,{headers:{Authorization:`Bearer ${token}`}})
       const d=await r.json()
       if(!r.ok){
-        if(d.error?.code===401){setError('Token expiré — reconnexion en cours…');await supabase.auth.signInWithOAuth({provider:'google',options:{scopes:'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events',redirectTo:window.location.origin,queryParams:{access_type:'offline',prompt:'none'}}})}
-        else{setError(d.error?.message||'Erreur Google Calendar')}
+        if(d.error?.code===401||d.error?.status===401){
+          // Supprimer le token expiré
+          try { localStorage.removeItem('entasis_gcal_token') } catch(e) {}
+
+          // Mettre à jour le profil en DB
+          supabase.from('profiles')
+            .update({ gcal_token: null, gcal_token_updated_at: null })
+            .eq('id', profile.id)
+            .then(() => {})
+            .catch(() => {})
+
+          // NE PAS relancer signInWithOAuth automatiquement - laisser l'utilisateur reconnecter manuellement
+          setError('Token Google expiré. Reconnectez votre compte Google depuis l\'onglet Agenda.')
+        } else {
+          setError(d.error?.message||'Erreur Google Calendar')
+        }
         setLoading(false);return
       }
       setEvents(d.items||[])
