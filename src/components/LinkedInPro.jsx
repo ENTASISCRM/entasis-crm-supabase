@@ -151,7 +151,7 @@ export default function LinkedInPro({ profile }) {
     try {
       const themeName = THEMES.find(t => t.value === theme)?.label
       const toneName = TONES.find(t => t.value === tone)?.label
-      const text = await generateLinkedInPost(themeName, toneName, context)
+      const text = await generateLinkedInPost(theme, tone, context)
       setGeneratedPost(text)
     } catch (e) {
       setGeneratedPost('Erreur : ' + e.message)
