@@ -1,10 +1,28 @@
 // api/nav.js — Vercel serverless function
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
+  const allowedOrigins = [
+    'https://entasis-crm-supabase.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:4173'
+  ]
+
+  const origin = req.headers.origin
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+  } else {
+    res.setHeader('Access-Control-Allow-Origin',
+      'https://entasis-crm-supabase.vercel.app')
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET')
 
   const { isin, ticker, msId } = req.query
   if (!isin) return res.status(400).json({ error: 'isin required' })
+
+  // Validation ISIN
+  const isinRegex = /^[A-Z]{2}[A-Z0-9]{9}[0-9]$/
+  if (isin && !isinRegex.test(isin)) {
+    return res.status(400).json({ error: 'Format ISIN invalide' })
+  }
 
   try {
     // ── MORNINGSTAR PATH (pour fonds LU sans données Yahoo complètes) ──

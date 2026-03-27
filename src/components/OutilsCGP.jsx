@@ -3,6 +3,8 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 import { Line } from 'react-chartjs-2'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
+import { supabase } from '../lib/supabase'
+import toast from 'react-hot-toast'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler)
 
@@ -75,10 +77,20 @@ const chartDefaults = {
    AI HELPER
 ───────────────────────────────────────────────────────────────────────────── */
 async function callAI(system, userMsg) {
+  // Récupérer le token de session
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.access_token) {
+    toast.error('Session expirée, veuillez vous reconnecter')
+    throw new Error('Session expirée')
+  }
+
   const res = await fetch('/api/generate-note', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ systemPrompt: system, userMessage: userMsg }),
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`
+    },
+    body: JSON.stringify({ userMessage: userMsg }),
   })
   const data = await res.json()
   if (data.error) throw new Error(data.error)

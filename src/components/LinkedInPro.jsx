@@ -53,9 +53,19 @@ SIGNATURE : ne pas signer le post, le nom apparaît automatiquement sur LinkedIn
    AI HELPER (via Vercel serverless proxy)
 ───────────────────────────────────────────────────────────────────────────── */
 async function generateLinkedInPost(theme, ton, contexte) {
+  // Récupérer le token de session
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.access_token) {
+    toast.error('Session expirée, veuillez vous reconnecter')
+    throw new Error('Session expirée')
+  }
+
   const res = await fetch('/api/generate-linkedin', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`
+    },
     body: JSON.stringify({ theme, ton, contexte }),
   })
   const data = await res.json()

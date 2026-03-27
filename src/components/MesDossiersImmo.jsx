@@ -118,10 +118,20 @@ export default function MesDossiersImmo({ profile, teamProfiles, setActiveTab })
     setAiLoading(true)
     setAiResponse('')
     try {
+      // Récupérer le token de session
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        toast.error('Session expirée, veuillez vous reconnecter')
+        throw new Error('Session expirée')
+      }
+
       const response = await fetch('/api/generate-note', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ systemPrompt: PROMPT_IMMOBILIER, userMessage: message })
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ userMessage: message })
       })
       const data = await response.json()
       if (data.error) throw new Error(data.error)
