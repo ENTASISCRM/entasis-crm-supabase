@@ -135,11 +135,17 @@ export default function LinkedInPro({ profile }) {
 
   async function loadPosts() {
     setPostsLoading(true)
-    const { data } = await supabase
+    let query = supabase
       .from('linkedin_posts')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(50)
+
+    if (profile?.role !== 'manager') {
+      query = query.eq('conseiller_id', profile?.id)
+    }
+
+    const { data } = await query
     setPosts(data || [])
     setPostsLoading(false)
   }
