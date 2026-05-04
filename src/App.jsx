@@ -10,6 +10,16 @@ import LinkedInPro from './components/LinkedInPro'
 import ClientsView from './components/clients/ClientsView'
 import ClientView from './components/clients/ClientView'
 import WeeklyReview from './components/WeeklyReview.jsx'
+import {
+  annualize,
+  isPipeline,
+  dealMatchesAdvisor,
+  sumAnnualPp,
+  sumPu,
+  advisorMetrics,
+  monthFromDate,
+  alignedMonthForDeal,
+} from './lib/metrics'
 
 /* ─────────────────────────────────────────────────────────────────────────────
    CONSTANTS
@@ -27,7 +37,6 @@ const LEAD_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
    UTILS
 ───────────────────────────────────────────────────────────────────────────── */
 const euro = (v) => Number(v||0).toLocaleString('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0})
-const annualize = (ppm) => Number(ppm||0)*12
 const uid = () => typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():`deal_${Date.now()}_${Math.random().toString(36).slice(2,8)}`
 const currentMonth = () => MONTHS[new Date().getMonth()]||'MARS'
 const pct = (v,t) => t>0?Math.min(999,Math.round((v/t)*100)):0
@@ -48,70 +57,13 @@ const PRIORITY_CLASS = {
   'Urgente':'badge badge-urgent','Haute':'badge badge-high','Normale':'badge badge-normal',
 }
 
-function dealMatchesAdvisor(d,c){return d.advisor_code===c||d.co_advisor_code===c}
+// Note, isPipeline, dealMatchesAdvisor, sumAnnualPp, sumPu, advisorMetrics
+// et annualize sont désormais importés depuis ./lib/metrics et testés dans
+// ./lib/metrics.test.js. Ne pas redéclarer ici.
 
 // Helper pour récupérer le nom client avec fallback
 function getClientName(deal) {
   return deal.clients?.nom || deal.client || 'Client'
-}
-function isPipeline(s){return s==='En cours'||s==='Prévu'}
-function sumAnnualPp(deals, advisorCode) {
-  return deals.reduce((s, d) => {
-    const pp = annualize(d.pp_m)
-    // Si advisorCode est fourni, appliquer la règle 50/50
-    if (advisorCode && d.co_advisor_code) {
-      return s + pp * 0.5
-    }
-    return s + pp
-  }, 0)
-}
-function sumPu(deals, advisorCode) {
-  return deals.reduce((s, d) => {
-    const pu = Number(d.pu || 0)
-    if (advisorCode && d.co_advisor_code) {
-      return s + pu * 0.5
-    }
-    return s + pu
-  }, 0)
-}
-
-function advisorMetrics(deals, month, code) {
-  const scoped = deals.filter(d =>
-    d.month === month && dealMatchesAdvisor(d, code)
-  )
-  const signed = scoped.filter(d => d.status === 'Signé')
-  const pipeline = scoped.filter(d => isPipeline(d.status))
-
-  // Appliquer 50/50 en passant le code conseiller
-  const ppS = sumAnnualPp(signed, code)
-  const puS = sumPu(signed, code)
-  const ppP = sumAnnualPp(pipeline, code)
-  const puP = sumPu(pipeline, code)
-
-  // Nombre de dossiers : 0.5 si co-conseil, 1 sinon
-  const signedCount = signed.reduce((s, d) =>
-    s + (d.co_advisor_code ? 0.5 : 1), 0
-  )
-  const pipelineCount = pipeline.reduce((s, d) =>
-    s + (d.co_advisor_code ? 0.5 : 1), 0
-  )
-
-  return {
-    total: scoped.length,
-    signedCount,
-    pipelineCount,
-    ppSigned: ppS,
-    puSigned: puS,
-    ppPipeline: ppP,
-    puPipeline: puP,
-    ppProjected: ppS + ppP,
-    puProjected: puS + puP,
-    signRate: scoped.length > 0
-      ? Math.round((signedCount / scoped.length) * 100)
-      : 0,
-    avgPp: signedCount > 0 ? ppS / signedCount : 0,
-    hotDeals: scoped.filter(d => d.priority === 'Urgente' || d.priority === 'Haute'),
-  }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -4183,9 +4135,12 @@ export default function App(){
         }, user.id)
       }
 
-      // Appliquer le même client_id à tous les deals
+      // Appliquer le même client_id à tous les deals + auto-aligner le month
+      // sur date_signed pour les deals signés (cf alignedMonthForDeal dans
+      // lib/metrics, testé dans lib/metrics.test).
       const dealsWithClientId = cleanDeals.map(d => ({
         ...d,
+        month: alignedMonthForDeal(d) || d.month,
         client_id: clientId || null,
         advisor_code: profile?.role === 'manager' ? d.advisor_code : (profile?.advisor_code || d.advisor_code),
         created_by: user.id
