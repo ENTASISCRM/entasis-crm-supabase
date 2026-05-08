@@ -1916,6 +1916,11 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
       groups[key].deals.push(deal)
       groups[key].totalPp += (deal.pp_m || 0) * 12
       groups[key].totalPu += deal.pu || 0
+      if (deal.status === 'Signé' && deal.date_signed) {
+        if (!groups[key].latestSignedDate || deal.date_signed > groups[key].latestSignedDate) {
+          groups[key].latestSignedDate = deal.date_signed
+        }
+      }
     })
 
     // Calculer statut global
@@ -1951,7 +1956,7 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
       <div className="table-wrap">
         {groupedDeals.length>0?(
           <table className="data-table">
-            <thead><tr><th>Client</th><th>Produits</th><th>PP annualisée</th><th>PU</th><th>Conseiller</th><th>Statut global</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Client</th><th>Produits</th><th>PP annualisée</th><th>PU</th><th>Conseiller</th><th>Signé le</th><th>Statut global</th><th>Actions</th></tr></thead>
             <tbody>
               {groupedDeals.map(group=>{
                 const currentGroupKey = groupKey(group.deals[0])
@@ -1989,6 +1994,7 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
                         {group.advisor_code}
                         {group.co_advisor_code && <span className="cell-sub"> co: {group.co_advisor_code}</span>}
                       </td>
+                      <td>{group.latestSignedDate ? <span style={{fontSize:14,fontWeight:600,color:'var(--t1)',fontVariantNumeric:'tabular-nums'}}>{new Date(group.latestSignedDate).toLocaleDateString('fr-FR')}</span> : <span style={{color:'var(--t3)'}}>—</span>}</td>
                       <td><span className={STATUS_CLASS[group.globalStatus]||'badge'}>{group.globalStatus}</span></td>
                       <td>
                         <div className="table-actions">
@@ -2023,6 +2029,7 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
                         </td>
                         <td className="cell-mono">{deal.pu>0?euro(deal.pu):'—'}</td>
                         <td><span style={{fontSize:12,color:'var(--t3)'}}>{deal.company||'—'}</span></td>
+                        <td>{deal.date_signed ? <span style={{fontSize:12,color:'var(--t2)',fontVariantNumeric:'tabular-nums'}}>{new Date(deal.date_signed).toLocaleDateString('fr-FR')}</span> : <span style={{color:'var(--t3)'}}>—</span>}</td>
                         <td><span className={STATUS_CLASS[deal.status]||'badge'}>{deal.status}</span></td>
                         <td>
                           <div className="table-actions">
