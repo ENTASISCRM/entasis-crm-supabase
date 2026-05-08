@@ -2708,6 +2708,8 @@ function TeamView({deals,objectifs,teamProfiles,month,profile}){
   const targets=objectifs[month]||{pp_target:0,pu_target:0}
   const ppTarget=Number(targets.pp_target||0)
   const rows=useMemo(()=>activeAdvisors.map(p=>{const m=advisorMetrics(deals,month,p.advisor_code);return {...p,...m}}).sort((a,b)=>b.ppSigned-a.ppSigned),[activeAdvisors,deals,month])
+  const [expandedAdvisors,setExpandedAdvisors]=useState(new Set())
+  const toggleAdvisor=code=>setExpandedAdvisors(s=>{const n=new Set(s);n.has(code)?n.delete(code):n.add(code);return n})
 
   // États pour la gestion des invitations
   const [inviteEmail, setInviteEmail] = useState('')
@@ -2972,47 +2974,39 @@ function TeamView({deals,objectifs,teamProfiles,month,profile}){
       {/* Section performance équipe */}
       <div className="section-header"><div><div className="section-kicker">Vue direction</div><div className="section-title">Performance par conseiller</div><div className="section-sub">{activeAdvisors.length} conseiller{activeAdvisors.length!==1?'s':''} actifs · {month}</div></div></div>
       {rows.map((row,i)=>{
-        const ppPct=pct(row.ppSigned,ppTarget),ppProjPct=pct(row.ppProjected,ppTarget)
-        // Après le calcul des métriques de chaque conseiller
-        const hasCoDeals = deals.some(d =>
-          d.month === month &&
-          dealMatchesAdvisor(d, row.advisor_code) &&
-          d.co_advisor_code
+        const ppProjPct=pct(row.ppProjected,ppTarget)
+        const isExpanded=expandedAdvisors.has(row.advisor_code)
+        const hasCoDeals=deals.some(d=>d.month===month&&dealMatchesAdvisor(d,row.advisor_code)&&d.co_advisor_code)
+        const miniKpi=(label,value,color,accent)=>(
+          <div style={{minWidth:0}}>
+            <div style={{fontSize:10,color:'var(--t3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:2,whiteSpace:'nowrap'}}>{label}</div>
+            <div style={{fontSize:14,fontWeight:600,color:color||'var(--t1)',fontVariantNumeric:'tabular-nums',whiteSpace:'nowrap'}}>{value}</div>
+          </div>
         )
         return (
-          <div key={row.id} className="card mb-16">
-            <div className="panel-head">
-              <div className="flex items-center gap-12">
-                <div className="user-avatar" style={{width:40,height:40,fontSize:14}}>{initials(row.full_name||row.advisor_code)}</div>
-                <div><div style={{fontSize:15,fontWeight:600,color:'var(--t1)'}}>{i===0&&<span style={{color:'var(--gold)',marginRight:6}}>★</span>}{row.full_name||row.advisor_code}</div><div className="text-xs text-muted">{row.advisor_code} · {row.role==='manager'?'Direction':'Conseiller'}</div></div>
+          <div key={row.id} className="card mb-8" style={{padding:'12px 16px'}}>
+            <div style={{display:'grid',gridTemplateColumns:'minmax(180px,210px) 1fr auto auto',gap:16,alignItems:'center'}}>
+              <div style={{display:'flex',alignItems:'center',gap:10,minWidth:0}}>
+                <div className="user-avatar" style={{width:32,height:32,fontSize:11,flexShrink:0}}>{initials(row.full_name||row.advisor_code)}</div>
+                <div style={{minWidth:0}}>
+                  <div style={{fontSize:13,fontWeight:600,color:'var(--t1)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{i===0&&<span style={{color:'var(--gold)',marginRight:4}}>★</span>}{row.full_name||row.advisor_code}</div>
+                  <div style={{fontSize:11,color:'var(--t3)'}}>{row.advisor_code} · {row.role==='manager'?'Direction':'Conseiller'}</div>
+                </div>
               </div>
-              <div className="flex gap-20 flex-wrap">
-                <div style={{textAlign:'right'}}><div className="text-xs text-muted mb-4">Taux signature</div><span className={`badge ${row.signRate>=60?'badge-signed':row.signRate>=30?'badge-progress':'badge-cancelled'}`}>{row.signRate}%</span></div>
-                <div style={{textAlign:'right'}}><div className="text-xs text-muted mb-4">Ticket moyen PP</div><div style={{fontSize:14,fontWeight:600,color:'var(--t1)'}}>{row.signedCount>0?euro(row.avgPp):'—'}</div></div>
-                <div style={{textAlign:'right'}}><div className="text-xs text-muted mb-4">PP obj.</div><div style={{fontSize:14,fontWeight:600,color:'var(--t1)'}}>{ppProjPct}%</div></div>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:14}}>
+                {miniKpi(<>PP signée{hasCoDeals&&<span title="50% sur co-conseil" style={{marginLeft:3,opacity:0.6}}>⚡</span>}</>,euro(row.ppSigned),'var(--gold)')}
+                {miniKpi('PP pipeline',euro(row.ppPipeline))}
+                {miniKpi('PU signée',euro(row.puSigned),'var(--signed)')}
+                {miniKpi('Dossiers',<>{row.total} <span style={{fontSize:11,color:'var(--t3)',fontWeight:400}}>({row.signedCount}✓)</span></>)}
               </div>
+              <div style={{display:'flex',gap:14,alignItems:'center'}}>
+                <div style={{textAlign:'right'}}><div style={{fontSize:10,color:'var(--t3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:2}}>Taux</div><span className={`badge ${row.signRate>=60?'badge-signed':row.signRate>=30?'badge-progress':'badge-cancelled'}`} style={{fontSize:11,padding:'2px 8px'}}>{row.signRate}%</span></div>
+                <div style={{textAlign:'right'}}><div style={{fontSize:10,color:'var(--t3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:2}}>Ticket</div><div style={{fontSize:13,fontWeight:600,color:'var(--t1)',fontVariantNumeric:'tabular-nums'}}>{row.signedCount>0?euro(row.avgPp):'—'}</div></div>
+                <div style={{textAlign:'right'}}><div style={{fontSize:10,color:'var(--t3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:2}}>PP obj.</div><div style={{fontSize:13,fontWeight:600,color:'var(--t1)',fontVariantNumeric:'tabular-nums'}}>{ppProjPct}%</div></div>
+              </div>
+              <button onClick={()=>toggleAdvisor(row.advisor_code)} style={{background:'var(--bg)',border:'1px solid var(--bd)',color:'var(--t2)',padding:'5px 10px',fontSize:11,borderRadius:'var(--rad)',cursor:'pointer',whiteSpace:'nowrap'}}>{isExpanded?'Masquer':'Détails'}</button>
             </div>
-            <div className="panel-body">
-              <div className="kpi-grid mb-16">
-                <KpiCard label={
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    PP signée
-                    {hasCoDeals && (
-                      <span
-                        title="PP calculée à 50% sur les dossiers en co-conseil"
-                        style={{ cursor: 'help', marginLeft: 4, opacity: 0.6 }}
-                      >
-                        ⚡
-                      </span>
-                    )}
-                  </div>
-                } value={euro(row.ppSigned)} accent="gold" progressValue={ppPct}/>
-                <KpiCard label="PP pipeline" value={euro(row.ppPipeline)} hint={`${row.pipelineCount} dossier${row.pipelineCount!==1?'s':''}`} accent="amber"/>
-                <KpiCard label="PU signée" value={euro(row.puSigned)} accent="green"/>
-                <KpiCard label="Dossiers" value={String(row.total)} hint={`${row.signedCount} signés`}/>
-              </div>
-              <AreaChart title={`Prévisionnel PP · ${row.advisor_code}`} actual={row.ppSigned} projected={row.ppProjected} target={ppTarget}/>
-            </div>
+            {isExpanded&&<div style={{marginTop:14,paddingTop:14,borderTop:'1px solid var(--bd)'}}><AreaChart title={`Prévisionnel PP · ${row.advisor_code}`} actual={row.ppSigned} projected={row.ppProjected} target={ppTarget}/></div>}
           </div>
         )
       })}
