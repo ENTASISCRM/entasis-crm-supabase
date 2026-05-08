@@ -40,16 +40,30 @@ supabase functions deploy relance-dossiers-vieillissants
 
 ### 4. Activation des extensions Postgres
 
-Dashboard → Database → Extensions → activer `pg_cron` et `pg_net`.
+Les migrations activent `pg_cron` et `pg_net` automatiquement, mais en
+cas de souci les activer manuellement : Dashboard → Database → Extensions.
 
-### 5. Migrations
+### 5. Stocker la service_role key dans Vault
+
+Dashboard → SQL Editor — coller (en remplaçant la clé par celle du
+projet, visible dans Settings → API) :
+
+```sql
+select vault.create_secret(
+  'eyJ...la_service_role_jwt_complete...',
+  'cron_relance_service_role_key',
+  'Bearer token utilisé par pg_cron pour appeler les Edge Functions'
+);
+```
+
+La clé est encryptée par Supabase. La migration cron récupère la valeur
+décryptée à chaque tick via `vault.decrypted_secrets`.
+
+### 6. Migrations
 
 ```bash
 supabase db push
 ```
-
-⚠️ Avant `db push`, éditer `20260508_cron_relance_dossiers.sql` pour
-remplacer `<PROJECT_REF>` et `<SERVICE_ROLE_KEY>`.
 
 ## Test manuel
 

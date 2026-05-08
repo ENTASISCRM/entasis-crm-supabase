@@ -1,29 +1,29 @@
 -- Schedule pg_cron : déclenche l'Edge Function relance-dossiers-vieillissants
--- tous les jours à 7h UTC (= 8h ou 9h Paris selon l'heure d'été).
+-- tous les jours à 7h UTC (= 9h Paris en été, 8h en hiver).
 --
--- Prérequis (à activer une seule fois côté projet, via Dashboard -> Database -> Extensions) :
---   - pg_cron : déclenche les jobs
---   - pg_net  : permet l'appel HTTP sortant
+-- ⚠️ Cette migration suppose que :
+--   1. Les extensions pg_cron et pg_net sont activées (cf bloc create extension).
+--   2. La service_role_key du projet est stockée dans Supabase Vault sous le nom
+--      'cron_relance_service_role_key'. À faire UNE SEULE FOIS via le SQL Editor
+--      du Dashboard Supabase :
 --
--- Avant d'appliquer cette migration, remplacer les placeholders ci-dessous :
---   - <PROJECT_REF> : ref du projet Supabase (visible dans Settings -> General).
---   - <SERVICE_ROLE_KEY> : clé service_role du projet (Settings -> API). À traiter
---     comme un secret. Idéalement la stocker via vault.create_secret(...) puis y
---     référer (cf doc Supabase). Pour démarrer simple, l'inliner ici suffit côté
---     projet privé — la clé n'est visible qu'aux admins de la base.
+--      select vault.create_secret(
+--        'eyJ...la_service_role_jwt_complete...',
+--        'cron_relance_service_role_key',
+--        'Bearer token utilisé par pg_cron pour appeler les Edge Functions'
+--      );
+--
+-- L'URL du projet est inlinée car non secrète (visible dans tous les clients).
 
 create extension if not exists pg_cron with schema extensions;
-create extension if not exists pg_net with schema extensions;
+create extension if not exists pg_net  with schema extensions;
 
--- Supprime un job existant du même nom pour rester idempotent.
+-- Idempotence : supprime un job existant du même nom avant de le recréer.
 do $$
-declare
-  jid bigint;
+declare jid bigint;
 begin
   select jobid into jid from cron.job where jobname = 'relance-dossiers-vieillissants';
-  if jid is not null then
-    perform cron.unschedule(jid);
-  end if;
+  if jid is not null then perform cron.unschedule(jid); end if;
 end $$;
 
 select cron.schedule(
@@ -31,10 +31,14 @@ select cron.schedule(
   '0 7 * * *',
   $cmd$
   select net.http_post(
-    url     := 'https://<PROJECT_REF>.supabase.co/functions/v1/relance-dossiers-vieillissants',
+    url     := 'https://tvgbblbceqvdtqnbeoik.supabase.co/functions/v1/relance-dossiers-vieillissants',
     headers := jsonb_build_object(
       'Content-Type',  'application/json',
-      'Authorization', 'Bearer <SERVICE_ROLE_KEY>'
+      'Authorization', 'Bearer ' || (
+        select decrypted_secret
+        from vault.decrypted_secrets
+        where name = 'cron_relance_service_role_key'
+      )
     ),
     body    := '{}'::jsonb
   );
