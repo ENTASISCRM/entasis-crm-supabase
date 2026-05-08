@@ -1732,7 +1732,8 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles}){
     return {...p,...m}
   }).sort((a,b)=>(b.ppSigned-a.ppSigned)||(b.puSigned-a.puSigned)),[activeAdvisors,deals,month])
 
-  const topPp=advisorRows[0]?.ppSigned||1
+  const topPp=Math.max(1,...advisorRows.map(r=>r.ppSigned))
+  const topPu=Math.max(1,...advisorRows.map(r=>r.puSigned))
   const hotDeals=monthDeals.filter(d=>(d.priority==='Urgente'||d.priority==='Haute')&&isPipeline(d.status)).sort((a,b)=>annualize(b.pp_m)-annualize(a.pp_m)).slice(0,8)
 
   return (
@@ -1755,12 +1756,14 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles}){
       <div className="mb-24">
         <div className="section-header"><div><div className="section-kicker">Performance équipe</div><div className="section-title">Classement conseillers</div></div></div>
         <div className="table-wrap">
-          <div className="team-row header"><span>Conseiller</span><span>PP signée</span><span>PP projetée</span><span>Dossiers</span><span>Taux sign.</span></div>
+          <div className="team-row header"><span>Conseiller</span><span>PP signée</span><span>PU signée</span><span>PP projetée</span><span>PU projetée</span><span>Dossiers</span><span>Taux sign.</span></div>
           {advisorRows.map((row,i)=>(
             <div key={row.id} className="team-row">
               <div><div className="team-advisor-name">{i===0&&<span style={{color:'var(--gold)',marginRight:6}}>★</span>}{row.full_name||row.advisor_code}</div><div className="team-advisor-code">{row.advisor_code}</div></div>
-              <div className="team-bar-wrap"><div className="team-bar-track"><div className="team-bar-fill signed" style={{width:`${pct(row.ppSigned,topPp)}%`}}/></div><div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:2}}><span className="team-amount">{euro(row.ppSigned)}</span>{row.puSigned>0&&<span style={{fontSize:11,color:'var(--t3)',fontVariantNumeric:'tabular-nums'}}>PU {euro(row.puSigned)}</span>}</div></div>
-              <div className="team-bar-wrap"><div className="team-bar-track"><div className="team-bar-fill" style={{width:`${pct(row.ppProjected,topPp)}%`}}/></div><div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:2}}><span className="team-amount">{euro(row.ppProjected)}</span>{row.puProjected>0&&<span style={{fontSize:11,color:'var(--t3)',fontVariantNumeric:'tabular-nums'}}>PU {euro(row.puProjected)}</span>}</div></div>
+              <div className="team-bar-wrap"><div className="team-bar-track"><div className="team-bar-fill signed" style={{width:`${pct(row.ppSigned,topPp)}%`}}/></div><span className="team-amount">{euro(row.ppSigned)}</span></div>
+              <div className="team-bar-wrap"><div className="team-bar-track"><div className="team-bar-fill signed" style={{width:`${pct(row.puSigned,topPu)}%`}}/></div><span className="team-amount">{euro(row.puSigned)}</span></div>
+              <div className="team-bar-wrap"><div className="team-bar-track"><div className="team-bar-fill" style={{width:`${pct(row.ppProjected,topPp)}%`}}/></div><span className="team-amount">{euro(row.ppProjected)}</span></div>
+              <div className="team-bar-wrap"><div className="team-bar-track"><div className="team-bar-fill" style={{width:`${pct(row.puProjected,topPu)}%`}}/></div><span className="team-amount">{euro(row.puProjected)}</span></div>
               <div className="team-amount" style={{textAlign:'center'}}>{row.total}</div>
               <div><span className={`badge ${row.signRate>=60?'badge-signed':row.signRate>=30?'badge-progress':'badge-cancelled'}`}>{row.signRate}%</span></div>
             </div>
