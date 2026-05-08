@@ -28,3 +28,4 @@ audit_*.md
 *_audit.md
 .vercel
 .env*.local
+supabase/.temp/
