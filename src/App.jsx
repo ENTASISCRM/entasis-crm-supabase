@@ -1729,8 +1729,8 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles}){
 
   const advisorRows=useMemo(()=>activeAdvisors.map(p=>{
     const m=advisorMetrics(deals,month,p.advisor_code)
-    return {...p,...m}
-  }).sort((a,b)=>(b.ppSigned-a.ppSigned)||(b.puSigned-a.puSigned)),[activeAdvisors,deals,month])
+    return {...p,...m,_rankScore:m.ppSigned*0.30+m.puSigned*0.02}
+  }).sort((a,b)=>b._rankScore-a._rankScore),[activeAdvisors,deals,month])
 
   const topPp=Math.max(1,...advisorRows.map(r=>r.ppSigned))
   const topPu=Math.max(1,...advisorRows.map(r=>r.puSigned))
