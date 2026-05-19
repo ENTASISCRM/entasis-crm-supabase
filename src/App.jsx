@@ -3,6 +3,8 @@ import { Toaster, toast } from 'react-hot-toast'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import { logger } from './lib/logger'
 import * as leadsService from './services/leads'
+import * as dealsService from './services/deals'
+import * as clientsService from './services/clients'
 import VueImmobilier from './components/VueImmobilier'
 import CatalogueProgrammes from './components/CatalogueProgrammes'
 import MesDossiersImmo from './components/MesDossiersImmo'
@@ -3094,17 +3096,8 @@ function DealModal({open,initialDeal,profile,supabase,onClose,onSave}){
     if (clientSearch.length < 2) { setClientResults([]); return }
 
     const timer = setTimeout(async () => {
-      try {
-        const { data } = await supabase
-          .from('clients')
-          .select('id, nom, prenom, email, telephone')
-          .or(`nom.ilike.%${clientSearch}%,email.ilike.%${clientSearch}%,telephone.ilike.%${clientSearch}%`)
-          .limit(5)
-        setClientResults(data || [])
-      } catch (error) {
-        console.error('Erreur recherche clients:', error)
-        setClientResults([])
-      }
+      const results = await clientsService.searchByQuery(clientSearch)
+      setClientResults(results)
     }, 300)
 
     return () => clearTimeout(timer)
@@ -4107,45 +4100,10 @@ export default function App(){
     }
   }
 
-  // Fonction helper pour créer ou récupérer un client
-  async function getOrCreateClient(clientData, userId) {
-    if (clientData.client_id) return clientData.client_id // Client déjà existant
-
-    if (!clientData.nom && !clientData.client) return null // Pas de nom client
-
-    const nom = (clientData.nom || clientData.client || '').trim()
-    if (!nom) return null
-
-    // Chercher client existant par nom + advisor_code
-    const { data: existing } = await supabase
-      .from('clients')
-      .select('id')
-      .eq('nom', nom)
-      .eq('advisor_code', clientData.advisor_code || '')
-      .maybeSingle()
-
-    if (existing) return existing.id
-
-    // Créer nouveau client
-    const { data: newClient, error } = await supabase
-      .from('clients')
-      .insert({
-        nom: nom,
-        email: clientData.email || clientData.client_email || null,
-        telephone: clientData.telephone || clientData.client_phone || null,
-        age: clientData.age || clientData.client_age || null,
-        advisor_code: clientData.advisor_code || null,
-        created_by: userId || profile?.id || null
-      })
-      .select('id')
-      .single()
-
-    if (error) {
-      console.error('Erreur création client:', error)
-      return null
-    }
-
-    return newClient?.id || null
+  // Wrapper qui injecte profile.id par défaut comme created_by.
+  // Délègue au service centralisé (cf. src/services/clients.js).
+  function getOrCreateClient(clientData, userId) {
+    return clientsService.findOrCreate(clientData, userId || profile?.id || null)
   }
 
   // ✅ Fix stale session : getUser() au lieu de session.user.id
@@ -4192,18 +4150,15 @@ export default function App(){
       for (const deal of dealsWithClientId) {
         const isExisting = deal.created_at && deals.some(existingDeal => existingDeal.id === deal.id)
 
-        if (isExisting) {
-          const { error: e } = await supabase
-            .from('deals')
-            .update(deal)
-            .eq('id', deal.id)
-          if (e) { alert(e.message); return }
-        } else {
-          const newId = deal.id || `D-${Date.now()}-${Math.random().toString(36).substr(2,5)}`
-          const { error: e } = await supabase
-            .from('deals')
-            .insert({ ...deal, id: newId })
-          if (e) { alert(e.message); return }
+        try {
+          if (isExisting) {
+            await dealsService.update(deal.id, deal)
+          } else {
+            await dealsService.create(deal)
+          }
+        } catch (e) {
+          alert(e.message)
+          return
         }
       }
 
@@ -4238,8 +4193,12 @@ export default function App(){
 
   async function deleteDeal(deal){
     if(!window.confirm(`Supprimer définitivement le dossier de ${getClientName(deal)} ?`))return
-    const{error:e}=await supabase.from('deals').delete().eq('id',deal.id)
-    if(e){alert(e.message);return}
+    try {
+      await dealsService.remove(deal.id)
+    } catch (e) {
+      alert(e.message)
+      return
+    }
     await loadAll()
   }
 
