@@ -21,6 +21,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { corsHeaders, handleCorsPreflight } from "../_shared/cors.ts"
 
 const STALE_DAYS = 30
 const COOLDOWN_VIEILLISSEMENT_DAYS = 7
@@ -29,11 +30,6 @@ const AVIS_GOOGLE_WINDOW_DAYS = 3       // tolérance : envoie entre J+30 et J+3
 const COOLDOWN_AVIS_GOOGLE_DAYS = 90
 const MULTI_EQUIP_MIN_DAYS_SINCE_SIGN = 30
 const COOLDOWN_MULTI_EQUIP_DAYS = 30
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
 
 const fmtEuro = (n: number) =>
   new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
@@ -308,7 +304,9 @@ async function processMultiEquip(
 // ─────────────────────────────────────────────────────────────────────────────
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+  const preflight = handleCorsPreflight(req)
+  if (preflight) return preflight
+  const corsResp = corsHeaders(req)
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -322,7 +320,7 @@ serve(async (req) => {
 
   if (!brevoKey) {
     return new Response(JSON.stringify({ error: 'BREVO_API_KEY not configured' }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      status: 500, headers: { ...corsResp, 'Content-Type': 'application/json' }
     })
   }
 
@@ -354,6 +352,6 @@ serve(async (req) => {
 
   const totalSent = Object.values(results).reduce((s, r) => s + r.sent, 0)
   return new Response(JSON.stringify({ ok: true, totalSent, results }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    headers: { ...corsResp, 'Content-Type': 'application/json' }
   })
 })
