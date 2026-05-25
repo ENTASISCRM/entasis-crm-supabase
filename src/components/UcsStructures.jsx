@@ -10,6 +10,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { logger } from '../lib/logger'
 import * as ucsService from '../services/ucsStructures'
+import * as clientsService from '../services/clients'
 
 const ETATS = [
   { value: 'EN_COURS',   label: 'En cours',   color: '#15803d' },
@@ -181,14 +182,11 @@ export default function UcsStructures({ profile }) {
               onSelect={setSelectedUcsId}
             />
           </div>
-          <div className="ucs-simulator">
-            <p style={{ color: 'var(--t3)', fontSize: 12, fontStyle: 'italic', margin: 0 }}>
-              {selectedUcs
-                ? `Sélection : ${selectedUcs.nom_ucs}`
-                : 'Sélectionnez une UCS dans le catalogue'}
-              {' · Simulateur à venir (UCS-4)'}
-            </p>
-          </div>
+          <Simulator
+            ucs={selectedUcs}
+            profile={profile}
+            isManager={isManager}
+          />
         </div>
       )}
     </div>
@@ -605,4 +603,477 @@ function Row({ u, selected, onClick }) {
       </Td>
     </tr>
   )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Simulator : colonne droite, sticky, calcul commission temps réel
+// ─────────────────────────────────────────────────────────────────────────────
+
+function Simulator({ ucs, profile, isManager }) {
+  const [montantStr, setMontantStr] = useState('')
+  const [clientSearch, setClientSearch] = useState('')
+  const [selectedClient, setSelectedClient] = useState(null)
+  const [clientResults, setClientResults] = useState([])
+  const [saving, setSaving] = useState(false)
+  const [savedFeedback, setSavedFeedback] = useState('')
+
+  // Reset montant + client quand on change d'UCS
+  useEffect(() => {
+    setMontantStr('')
+    setSelectedClient(null)
+    setClientSearch('')
+    setSavedFeedback('')
+  }, [ucs?.id])
+
+  // Parse le montant tapé (accepte espaces et virgules)
+  const montant = useMemo(() => {
+    const cleaned = montantStr.replace(/[^\d,.]/g, '').replace(',', '.')
+    const n = parseFloat(cleaned)
+    return isNaN(n) ? 0 : n
+  }, [montantStr])
+
+  const minimum = ucs?.minimum_requis ? Number(ucs.minimum_requis) : 0
+  const isBelowMin = ucs && montant > 0 && montant < minimum
+  const hasValidMontant = ucs && montant >= minimum
+
+  // Calcul commission (pure function du service)
+  const commission = useMemo(() => {
+    if (!ucs || !hasValidMontant) return null
+    return ucsService.computeCommission(montant, Number(ucs.upfront))
+  }, [ucs, montant, hasValidMontant])
+
+  const couponAnnuel = useMemo(() => {
+    if (!ucs || !hasValidMontant) return null
+    return ucsService.computeCouponAnnuel(montant, Number(ucs.coupon_client))
+  }, [ucs, montant, hasValidMontant])
+
+  // Format affichage avec espaces (européen)
+  const formatInput = (v) => {
+    if (!v) return ''
+    const num = parseFloat(String(v).replace(/[^\d,.]/g, '').replace(',', '.'))
+    if (isNaN(num)) return v
+    return num.toLocaleString('fr-FR', { maximumFractionDigits: 0 })
+  }
+
+  const handleMontantChange = (e) => {
+    // On garde le texte brut pour permettre la saisie progressive
+    setMontantStr(e.target.value)
+    setSavedFeedback('')
+  }
+
+  const handleQuickAdd = (amount) => {
+    setMontantStr(String(Math.round(montant + amount)))
+    setSavedFeedback('')
+  }
+
+  const handleReset = () => {
+    setMontantStr('')
+    setSavedFeedback('')
+  }
+
+  // Recherche client (debounced 300ms via setTimeout)
+  useEffect(() => {
+    if (!clientSearch || clientSearch.length < 2) {
+      setClientResults([])
+      return
+    }
+    const t = setTimeout(async () => {
+      try {
+        const results = await clientsService.searchByQuery(clientSearch)
+        setClientResults(results)
+      } catch (e) {
+        logger.warn('[UCS] client search failed', e)
+        setClientResults([])
+      }
+    }, 300)
+    return () => clearTimeout(t)
+  }, [clientSearch])
+
+  const handleSave = async () => {
+    if (!ucs || !commission || !profile?.id) return
+    setSaving(true)
+    setSavedFeedback('')
+    try {
+      await ucsService.saveSimulation({
+        ucsId: ucs.id,
+        conseillerId: profile.id,
+        clientId: selectedClient?.id || null,
+        montant,
+        commissionConseiller: commission.conseiller,
+        commissionCabinet: commission.cabinet,
+      })
+      setSavedFeedback('Simulation enregistrée ✓')
+    } catch (e) {
+      logger.warn('[UCS] saveSimulation failed', e)
+      setSavedFeedback(`Erreur : ${e.message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // ───────────────── Render ─────────────────
+  if (!ucs) {
+    return (
+      <div className="ucs-simulator">
+        <h2 style={simulatorTitleStyle}>Simulateur de commission</h2>
+        <p style={{ fontSize: 13, color: 'var(--t3)', margin: '8px 0 0' }}>
+          Sélectionnez une UCS dans le catalogue pour démarrer une simulation.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="ucs-simulator">
+      <h2 style={simulatorTitleStyle}>Simulateur de commission</h2>
+      <div style={{ marginTop: 4, fontSize: 13, fontWeight: 600, color: 'var(--t1)' }}>
+        {ucs.nom_ucs}
+      </div>
+      <div style={{ marginTop: 2, fontSize: 11, color: 'var(--t3)', fontFamily: 'monospace' }}>
+        {ucs.code_isin}
+      </div>
+
+      {/* Caractéristiques UCS sélectionnée */}
+      <div style={{
+        marginTop: 16,
+        padding: 12,
+        background: 'var(--bg)',
+        borderRadius: 8,
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '6px 12px',
+        fontSize: 11,
+      }}>
+        <CharRow label="Compagnie" value={ucs.compagnie} />
+        <CharRow label="Upfront" value={fmtPct(ucs.upfront)} highlight />
+        <CharRow label="Coupon/an" value={fmtPct(ucs.coupon_client)} />
+        <CharRow label="Mini ticket" value={fmtEuro(ucs.minimum_requis)} />
+        <CharRow label="SRI" value={ucs.sri ?? '—'} />
+        <CharRow label="Fin commerc." value={fmtDate(ucs.fin_commerc)} />
+      </div>
+
+      {/* Input montant */}
+      <div style={{ marginTop: 20 }}>
+        <label style={{
+          display: 'block',
+          fontSize: 11,
+          fontWeight: 600,
+          color: 'var(--t3)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.04em',
+          marginBottom: 6,
+        }}>
+          Montant client
+        </label>
+        <div style={{ position: 'relative' }}>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={montantStr}
+            onChange={handleMontantChange}
+            placeholder={`Ex: ${fmtEuro(minimum * 4)}`}
+            style={{
+              width: '100%',
+              padding: '12px 36px 12px 14px',
+              fontSize: 20,
+              fontWeight: 700,
+              color: 'var(--t1)',
+              border: `2px solid ${isBelowMin ? '#b91c1c' : 'var(--bd)'}`,
+              borderRadius: 8,
+              outline: 'none',
+              fontFamily: 'inherit',
+              background: '#fff',
+            }}
+          />
+          <span style={{
+            position: 'absolute',
+            right: 14,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            fontSize: 16,
+            color: 'var(--t3)',
+            fontWeight: 600,
+            pointerEvents: 'none',
+          }}>€</span>
+        </div>
+        {isBelowMin && (
+          <div style={{
+            marginTop: 6,
+            fontSize: 11,
+            color: '#b91c1c',
+            fontWeight: 500,
+          }}>
+            ⚠ Montant inférieur au minimum requis ({fmtEuro(minimum)})
+          </div>
+        )}
+        {montant > 0 && !isBelowMin && (
+          <div style={{ marginTop: 4, fontSize: 11, color: 'var(--t3)' }}>
+            {formatInput(montant)} €
+          </div>
+        )}
+      </div>
+
+      {/* Boutons rapides */}
+      <div style={{ marginTop: 10, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {[10000, 25000, 50000, 100000].map(a => (
+          <button key={a} onClick={() => handleQuickAdd(a)} style={quickBtnStyle}>
+            +{a / 1000}k
+          </button>
+        ))}
+        <button onClick={handleReset} style={{ ...quickBtnStyle, background: 'transparent' }}>
+          Reset
+        </button>
+      </div>
+
+      {/* Bloc résultats */}
+      {commission && (
+        <div style={{
+          marginTop: 20,
+          padding: 16,
+          background: 'linear-gradient(to bottom, rgba(201,169,97,0.06), rgba(201,169,97,0.02))',
+          border: '1px solid var(--gold-line, rgba(201,169,97,0.3))',
+          borderRadius: 10,
+        }}>
+          <ResultLine label="Montant placé client" value={fmtEuro(montant)} />
+          <ResultDivider />
+          <ResultLine label={`Upfront total (${fmtPct(ucs.upfront)})`} value={fmtEuro(commission.upfrontTotal)} muted />
+
+          {/* Ma commission — la ligne hero (or, gras, grand) */}
+          <div style={{
+            marginTop: 14,
+            marginBottom: isManager ? 10 : 0,
+            padding: '10px 12px',
+            background: '#fff',
+            border: '2px solid var(--gold)',
+            borderRadius: 8,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'baseline',
+          }}>
+            <span style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: 'var(--gold)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+            }}>
+              Ma commission (1,5 %)
+            </span>
+            <span style={{
+              fontSize: 22,
+              fontWeight: 800,
+              color: 'var(--gold)',
+              fontFamily: 'var(--font-serif, Georgia, serif)',
+            }}>
+              {fmtEuro(commission.conseiller)}
+            </span>
+          </div>
+
+          {/* Rétention cabinet — visible manager seulement */}
+          {isManager && (
+            <>
+              <ResultLine
+                label={`Rétention cabinet (${fmtPct(Math.max(0, ucs.upfront - 1.5))})`}
+                value={fmtEuro(commission.cabinet)}
+                danger={commission.isUnderwater}
+              />
+              {commission.isUnderwater && (
+                <div style={{
+                  marginTop: 8,
+                  padding: '8px 10px',
+                  background: 'rgba(239,68,68,0.08)',
+                  border: '1px solid rgba(239,68,68,0.3)',
+                  borderRadius: 6,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: '#b91c1c',
+                }}>
+                  ⚠ UCS non rentable cabinet, validation Louis requise
+                </div>
+              )}
+            </>
+          )}
+
+          <ResultDivider />
+          <ResultLine
+            label={`Coupon annuel client (${fmtPct(ucs.coupon_client)})`}
+            value={fmtEuro(couponAnnuel)}
+            muted
+          />
+        </div>
+      )}
+
+      {/* Sélecteur client + bouton sauvegarder */}
+      {commission && (
+        <div style={{ marginTop: 16 }}>
+          <label style={{
+            display: 'block',
+            fontSize: 11,
+            fontWeight: 600,
+            color: 'var(--t3)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+            marginBottom: 6,
+          }}>
+            Rattacher à un client (optionnel)
+          </label>
+          <div style={{ position: 'relative' }}>
+            <input
+              type="text"
+              value={selectedClient ? `${selectedClient.nom} ${selectedClient.prenom || ''}`.trim() : clientSearch}
+              onChange={e => {
+                setClientSearch(e.target.value)
+                if (selectedClient) setSelectedClient(null)
+              }}
+              placeholder="Rechercher un client…"
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                fontSize: 12,
+                border: '1px solid var(--bd)',
+                borderRadius: 6,
+                outline: 'none',
+                fontFamily: 'inherit',
+              }}
+            />
+            {clientResults.length > 0 && !selectedClient && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                background: '#fff',
+                border: '1px solid var(--bd)',
+                borderRadius: 6,
+                marginTop: 2,
+                maxHeight: 200,
+                overflowY: 'auto',
+                zIndex: 10,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+              }}>
+                {clientResults.map(c => (
+                  <div
+                    key={c.id}
+                    onClick={() => {
+                      setSelectedClient(c)
+                      setClientSearch('')
+                      setClientResults([])
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      fontSize: 12,
+                      cursor: 'pointer',
+                      borderBottom: '1px solid var(--bd)',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg)'}
+                    onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+                  >
+                    <div style={{ fontWeight: 600 }}>{c.nom} {c.prenom}</div>
+                    <div style={{ fontSize: 10, color: 'var(--t3)' }}>{c.email} · {c.telephone}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{
+              marginTop: 12,
+              width: '100%',
+              padding: '12px 16px',
+              fontSize: 13,
+              fontWeight: 700,
+              color: '#fff',
+              background: saving ? 'var(--t3)' : 'var(--t1)',
+              border: 'none',
+              borderRadius: 8,
+              cursor: saving ? 'wait' : 'pointer',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+            }}
+          >
+            {saving ? 'Enregistrement...' : 'Sauvegarder cette simulation'}
+          </button>
+
+          {savedFeedback && (
+            <div style={{
+              marginTop: 8,
+              padding: '6px 10px',
+              fontSize: 11,
+              fontWeight: 500,
+              background: savedFeedback.startsWith('Erreur')
+                ? 'rgba(239,68,68,0.08)'
+                : 'rgba(16,185,129,0.08)',
+              color: savedFeedback.startsWith('Erreur') ? '#b91c1c' : '#047857',
+              borderRadius: 4,
+              textAlign: 'center',
+            }}>
+              {savedFeedback}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+const simulatorTitleStyle = {
+  fontSize: 18,
+  fontWeight: 700,
+  color: 'var(--t1)',
+  margin: 0,
+  letterSpacing: '-0.005em',
+}
+
+const quickBtnStyle = {
+  padding: '6px 12px',
+  fontSize: 11,
+  fontWeight: 600,
+  color: 'var(--t2)',
+  background: 'var(--bg)',
+  border: '1px solid var(--bd)',
+  borderRadius: 6,
+  cursor: 'pointer',
+}
+
+function CharRow({ label, value, highlight }) {
+  return (
+    <>
+      <span style={{ color: 'var(--t3)', fontWeight: 500 }}>{label}</span>
+      <span style={{
+        textAlign: 'right',
+        fontWeight: highlight ? 700 : 600,
+        color: highlight ? 'var(--gold)' : 'var(--t1)',
+      }}>{value}</span>
+    </>
+  )
+}
+
+function ResultLine({ label, value, muted, danger }) {
+  return (
+    <div style={{
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'baseline',
+      padding: '4px 0',
+    }}>
+      <span style={{
+        fontSize: muted ? 11 : 12,
+        color: danger ? '#b91c1c' : muted ? 'var(--t3)' : 'var(--t2)',
+        fontWeight: 500,
+      }}>{label}</span>
+      <span style={{
+        fontSize: muted ? 12 : 14,
+        fontWeight: danger ? 700 : muted ? 500 : 600,
+        color: danger ? '#b91c1c' : muted ? 'var(--t3)' : 'var(--t1)',
+        fontFamily: 'monospace',
+      }}>{value}</span>
+    </div>
+  )
+}
+
+function ResultDivider() {
+  return <div style={{ height: 1, background: 'var(--bd)', margin: '6px 0' }} />
 }
