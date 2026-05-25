@@ -4217,7 +4217,22 @@ export default function App(){
 
   if(!isSupabaseConfigured)return<ConfigMissing/>
 
-  if(loading)return(
+  // Mode "design preview" : bypass complet du login pour évaluer le visuel
+  // sur les previews Vercel sans avoir à se logger. Déclenché uniquement
+  // par la var d'env VITE_DESIGN_PREVIEW (jamais en production).
+  // Profile mock manager → toutes les pages accessibles, mais aucune
+  // requête Supabase n'aboutira (pas de session) → cosmétique seulement.
+  const isDesignPreview = import.meta.env.VITE_DESIGN_PREVIEW === 'true'
+  const effectiveProfile = isDesignPreview ? {
+    id: 'design-preview',
+    email: 'design@entasis-conseil.fr',
+    full_name: 'Louis Hatton',
+    role: 'manager',
+    advisor_code: 'LH',
+    is_active: true,
+  } : profile
+
+  if(loading && !isDesignPreview)return(
     <div style={{height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:16,background:'var(--bg)'}}>
       <img src="/entasis-logo.png" alt="Entasis Conseil" style={{maxWidth:200,height:'auto'}} />
       <div className="loading-spinner"/>
@@ -4225,14 +4240,14 @@ export default function App(){
     </div>
   )
 
-  if(!session)return<AuthScreen/>
+  if(!session && !isDesignPreview)return<AuthScreen/>
 
-  const isManager=profile?.role==='manager'
+  const isManager = effectiveProfile?.role === 'manager'
 
   return (
     <div className="app-shell">
       <Sidebar
-        profile={profile}
+        profile={effectiveProfile}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onSignOut={signOut}
