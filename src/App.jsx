@@ -1691,7 +1691,7 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
           <div className="advisor-hero-kpi"><div className="advisor-hero-kpi-label">PP projetée</div><div className="advisor-hero-kpi-value">{euro(m.ppProjected)}</div></div>
           <div className="advisor-hero-kpi"><div className="advisor-hero-kpi-label">PU signée</div><div className="advisor-hero-kpi-value">{euro(m.puSigned)}</div></div>
           <div className="advisor-hero-kpi"><div className="advisor-hero-kpi-label">PU projetée</div><div className="advisor-hero-kpi-value">{euro(m.puProjected)}</div></div>
-          {ppTarget>0&&<div className="advisor-hero-kpi"><div className="advisor-hero-kpi-label">{targetSource==='perso'?'Mon palier PP':'Objectif PP'}</div><div className="advisor-hero-kpi-value">{ppProjPct}%</div></div>}
+          {ppTarget>0&&<div className="advisor-hero-kpi"><div className="advisor-hero-kpi-label">{targetSource==='perso'?'Mon palier PP':'Objectif PP'}</div><div className="advisor-hero-kpi-value">{ppPct}%</div><div style={{fontSize:11,color:'var(--t3)',marginTop:2}}>signé · proj. {ppProjPct}%</div></div>}
           {landing!=null&&<div className="advisor-hero-kpi"><div className="advisor-hero-kpi-label">{landing>=0?'Avance sur objectif':'Reste à faire'}</div><div className="advisor-hero-kpi-value" style={{color:landing>=0?'#86EFAC':'#FCA5A5'}}>{landing>=0?'+':''}{euro(Math.abs(landing))}</div></div>}
         </div>
       </div>
