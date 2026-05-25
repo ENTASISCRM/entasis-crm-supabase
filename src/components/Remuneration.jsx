@@ -311,9 +311,12 @@ function SectionDetail({ comm, month }) {
             const clientName = d.deal.clients
               ? `${d.deal.clients.prenom || ''} ${d.deal.clients.nom || ''}`.trim()
               : (d.deal.client_id || '—')
-            // Sous palier : la commission revient 100 % cabinet, on ne montre
-            // pas le taux ni le montant qui seraient trompeurs pour le conseiller.
+            // Phase 1 (rembourse salaire) : 0 € versé au conseiller, la
+            //   commission théorique sert à rembourser le salaire cumulé.
+            // Sous palier : 0 € versé (le fixe couvre), masque taux & montant.
+            const phase1 = d.remboursementSalaire
             const sousPalier = d.sousPalier
+            const masqueValeurs = phase1 || sousPalier
             return (
               <tr key={d.deal.id || i}>
                 <td className="cell-primary">{clientName || '—'}</td>
@@ -322,14 +325,18 @@ function SectionDetail({ comm, month }) {
                   <div className="cell-sub">{d.deal.company || d.deal.compagnie || ''}</div>
                 </td>
                 <td className="cell-mono" style={{ textAlign: 'right' }}>{fmtEur(d.assiette)}</td>
-                <td className="cell-mono" style={{ textAlign: 'right', color: sousPalier ? 'var(--t3)' : 'var(--t1)' }}>
-                  {sousPalier ? '—' : fmtPct(d.taux)}
+                <td className="cell-mono" style={{ textAlign: 'right', color: masqueValeurs ? 'var(--t3)' : 'var(--t1)' }}>
+                  {masqueValeurs ? '—' : fmtPct(d.taux)}
                 </td>
-                <td className="cell-mono" style={{ textAlign: 'right', fontWeight: 600, color: sousPalier ? 'var(--t3)' : 'var(--t1)' }}>
-                  {sousPalier ? '—' : fmtEurPrecis(d.montantEffectif ?? d.montant)}
+                <td className="cell-mono" style={{ textAlign: 'right', fontWeight: 600, color: masqueValeurs ? 'var(--t3)' : 'var(--t1)' }}>
+                  {masqueValeurs ? '—' : fmtEurPrecis(d.montantEffectif ?? d.montant)}
                 </td>
                 <td>
-                  {sousPalier ? (
+                  {phase1 ? (
+                    <span className="badge badge-progress" title="Tous les deals servent à rembourser le salaire cumulé jusqu'à rentabilisation">
+                      Rembourse salaire
+                    </span>
+                  ) : sousPalier ? (
                     <span style={{ color: 'var(--t3)' }}>—</span>
                   ) : d.horsPalier ? (
                     <span className="badge badge-forecast">Hors palier</span>

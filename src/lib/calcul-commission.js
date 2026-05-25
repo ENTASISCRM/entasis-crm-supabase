@@ -259,29 +259,41 @@ export function evaluerRentabilite(contrat, dealsHistoriques = [], profile = nul
 /**
  * Calcule la commission totale d'un mois pour un conseiller.
  *
- * Règle barème BAREME-CDI-2026 (revue 2026-05-25 par Louis après audit) :
- *   • PP (PER, AV) → soumise au palier PP mensuel (17 k€ CDI, individualisé)
- *   • PU (Versement libre, Transfert) → soumise au palier PU mensuel (200 k€)
- *   • HORS PALIER (SCPI, MH, Girardin, PE, UCS, Prévoyance, Mutuelle)
- *     → commissionnés DÈS LE 1er EURO, indépendamment des paliers
- *   • Mandataires : palier_pp=0 et palier_pu=0 → tout est immédiatement
- *     commissionné (palierPp/PuAtteint=true par défaut)
+ * Règle Louis (2026-05-25) — modèle Entasis en deux phases :
  *
- * Calcul :
- *   1. Agrégation : ppRealisee (PP soumise palier), puRealisee (PU soumise palier),
- *      variableHorsPalier (commission immédiate sur SCPI/UCS/etc.)
- *   2. PP soumis palier : si ppRealisee >= palierPp, variable sur l'excédent.
- *      Sinon 0 € (le fixe couvre).
- *   3. PU soumis palier : pareil avec palierPu (indépendant du palier PP).
+ *   PHASE 1 — Remboursement du salaire (NON RENTABILISÉ)
+ *   ────────────────────────────────────────────────────
+ *   Tant que la production cumulée du conseiller (évaluée au TAUX
+ *   MANDATAIRE = "valeur cabinet") n'a pas remboursé son salaire cumulé
+ *   depuis l'embauche, AUCUN variable ne lui est versé. Toutes les
+ *   commissions générées servent à rembourser le coût qu'il représente
+ *   pour le cabinet. Le conseiller voit chaque deal en "rembourse-
+ *   salaire" plutôt qu'en variable réel.
+ *
+ *   PHASE 2 — Primes (RENTABILISÉ)
+ *   ────────────────────────────────
+ *   Une fois le salaire cumulé remboursé, on applique le barème CDI
+ *   officiel BAREME-CDI-2026 :
+ *     • PP (PER, AV) → soumise au palier PP mensuel
+ *     • PU (Versement libre, Transfert) → soumise au palier PU mensuel
+ *     • HORS PALIER (SCPI, MH, Girardin, PE, UCS, Prévoyance, Mutuelle)
+ *       → commissionnés DÈS LE 1er EURO
+ *
+ *   MANDATAIRES / GÉRANTS
+ *   ─────────────────────
+ *   Pas de salaire à rembourser → considérés rentabilisés dès la 1re €
+ *   → commission immédiate au taux mandataire sur tout.
  *
  * Co-conseiller : assiette + commission divisées par 2.
  *
  * @param {Array}  dealsMois         - Deals signés du mois (principal OU co)
  * @param {Object} contrat           - { type_contrat, palier_pp_mensuel, … }
  * @param {Boolean} rentabilise      - Pré-calculé par evaluerRentabilite()
+ *                                     true = phase 2 (primes), false = phase 1
  * @param {Object} profile           - Profile Supabase (pour codes matching)
  * @returns {{ variablePp, variablePu, variableHorsPalier, total,
- *             ppRealisee, puRealisee, palierPpAtteint, palierPuAtteint, detail }}
+ *             ppRealisee, puRealisee, palierPpAtteint, palierPuAtteint,
+ *             rentabilise, detail }}
  */
 export function commissionsMois(dealsMois = [], contrat, rentabilise, profile = null) {
   if (!contrat) {
@@ -289,6 +301,7 @@ export function commissionsMois(dealsMois = [], contrat, rentabilise, profile = 
       variablePp: 0, variablePu: 0, variableHorsPalier: 0, total: 0,
       ppRealisee: 0, puRealisee: 0,
       palierPpAtteint: false, palierPuAtteint: false,
+      rentabilise: false,
       detail: [],
     }
   }
@@ -298,8 +311,6 @@ export function commissionsMois(dealsMois = [], contrat, rentabilise, profile = 
   const codes = codesContrat(contrat, profile)
 
   // 1. Première passe : agréger PP/PU soumis palier pour évaluer les seuils.
-  //    Les deals hors palier ne contribuent pas à ces agrégats — ils ont
-  //    leur propre logique de commission immédiate.
   let ppRealisee = 0
   let puRealisee = 0
   const detail = []
@@ -319,7 +330,30 @@ export function commissionsMois(dealsMois = [], contrat, rentabilise, profile = 
     detail.push({ deal, ...calc, assietteEffective })
   }
 
-  // 2. Évaluation des paliers (indépendants : PP et PU)
+  // 2. PHASE 1 : si pas rentabilisé, toute la prod sert à rembourser le salaire.
+  //    Aucun variable versé au conseiller. Tous les deals → montantEffectif = 0,
+  //    statut "rembourse salaire" exposé pour l'UI.
+  if (!rentabilise) {
+    for (const d of detail) {
+      d.montantEffectif = 0
+      d.sousPalier = false      // pas la même sémantique
+      d.remboursementSalaire = true   // flag UI : "rembourse salaire"
+    }
+    return {
+      variablePp: 0,
+      variablePu: 0,
+      variableHorsPalier: 0,
+      total: 0,
+      ppRealisee,
+      puRealisee,
+      palierPpAtteint: false,
+      palierPuAtteint: false,
+      rentabilise: false,
+      detail,
+    }
+  }
+
+  // 3. PHASE 2 : rentabilisé → application normale du barème CDI
   const palierPpAtteint = palierPp <= 0 || ppRealisee >= palierPp
   const palierPuAtteint = palierPu <= 0 || puRealisee >= palierPu
   const ratioPp = (palierPpAtteint && ppRealisee > palierPp)
@@ -329,11 +363,6 @@ export function commissionsMois(dealsMois = [], contrat, rentabilise, profile = 
     ? (palierPu > 0 ? (puRealisee - palierPu) / puRealisee : 1)
     : 0
 
-  // 3. Commission EFFECTIVE deal par deal, selon le barème officiel :
-  //    • Hors palier (SCPI, MH, Girardin, PE, UCS, Prév., Mutuelle) :
-  //      commissionnés à 100 % dès le 1er euro, peu importe le palier
-  //    • PP soumis palier : commission sur l'excédent au-dessus du palier PP
-  //    • PU soumis palier : commission sur l'excédent au-dessus du palier PU
   let variablePp = 0
   let variablePu = 0
   let variableHorsPalier = 0
@@ -341,23 +370,25 @@ export function commissionsMois(dealsMois = [], contrat, rentabilise, profile = 
   for (const d of detail) {
     const produit = BAREME_PRODUITS[d.produitKey]
     if (produit.horsPalier) {
-      // Commission immédiate (SCPI, MH, Girardin, PE, UCS, Prév., Mutuelle)
+      // SCPI, MH, Girardin, PE, UCS, Prév., Mutuelle → dès le 1er €
       d.montantEffectif = d.montant
       d.sousPalier = false
+      d.remboursementSalaire = false
       variableHorsPalier += d.montant
     } else if (produit.assiette === 'pp') {
-      // PP soumis palier (PER, AV)
       d.montantEffectif = d.montant * ratioPp
       d.sousPalier = !palierPpAtteint
+      d.remboursementSalaire = false
       variablePp += d.montantEffectif
     } else if (produit.assiette === 'pu') {
-      // PU soumis palier (Versement libre, Transfert)
       d.montantEffectif = d.montant * ratioPu
       d.sousPalier = !palierPuAtteint
+      d.remboursementSalaire = false
       variablePu += d.montantEffectif
     } else {
       d.montantEffectif = d.montant
       d.sousPalier = false
+      d.remboursementSalaire = false
     }
   }
 
@@ -370,6 +401,7 @@ export function commissionsMois(dealsMois = [], contrat, rentabilise, profile = 
     puRealisee,
     palierPpAtteint,
     palierPuAtteint,
+    rentabilise: true,
     detail,
   }
 }
