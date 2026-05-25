@@ -1640,6 +1640,16 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
   const dPpPipeline={raw:m.ppPipeline-prev.ppPipeline,label:euro(Math.abs(m.ppPipeline-prev.ppPipeline))}
   const priorities=[...m.hotDeals].sort((a,b)=>({'Urgente':0,'Haute':1,'Normale':2}[a.priority]||2)-({'Urgente':0,'Haute':1,'Normale':2}[b.priority]||2))
 
+  // Stats cabinet (totaux équipe, transparence + émulation).
+  // Pas de chiffre individuel par conseiller, juste les agrégats du mois.
+  const cabinet = useMemo(() => {
+    const monthDeals = deals.filter(d => d.month === month)
+    const signed = monthDeals.filter(d => d.status === 'Signé')
+    const ppCab = signed.reduce((s, d) => s + annualize(d.pp_m), 0)
+    const puCab = signed.reduce((s, d) => s + Number(d.pu || 0), 0)
+    return { ppCab, puCab, signedCount: signed.length, totalCount: monthDeals.length }
+  }, [deals, month])
+
   return (
     <div>
       <div className="advisor-hero">
@@ -1660,6 +1670,19 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
         <KpiCard label="PP en pipeline" value={euro(m.ppPipeline)} hint={`${m.pipelineCount} dossier${m.pipelineCount!==1?'s':''} en cours / prévus`} accent="amber" delta={prevMonth?dPpPipeline:null}/>
         <KpiCard label="PU signée" value={euro(m.puSigned)} hint="Versements uniques signés" accent="green" delta={prevMonth?dPuSigned:null}/>
         <KpiCard label="PU en pipeline" value={euro(m.puPipeline)} hint="À signer ce mois" accent="blue"/>
+      </div>
+
+      {/* Stats cabinet — émulation transparente, pas de chiffres individuels */}
+      <div className="section-header" style={{marginBottom:12}}>
+        <div>
+          <div className="section-kicker">Vue cabinet · {month}</div>
+          <div className="section-title">Le cabinet ce mois</div>
+          <div className="section-sub">Totaux équipe (tous conseillers confondus) — pour la motivation collective.</div>
+        </div>
+      </div>
+      <div className="kpi-grid mb-24" style={{gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))'}}>
+        <KpiCard label="Cabinet · PP signée" value={euro(cabinet.ppCab)} hint={`${cabinet.signedCount} dossier${cabinet.signedCount!==1?'s':''} signé${cabinet.signedCount!==1?'s':''} sur ${cabinet.totalCount}`} accent="gold"/>
+        <KpiCard label="Cabinet · PU signée" value={euro(cabinet.puCab)} hint="Versements uniques équipe" accent="blue"/>
       </div>
       <div className="grid-2 gap-24" style={{alignItems:'start'}}>
         <div className="flex-col gap-16">

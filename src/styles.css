@@ -910,14 +910,15 @@ a { color: inherit; text-decoration: none; }
    ADVISOR DASHBOARD - MON MOIS
 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .advisor-hero {
-  background: linear-gradient(180deg, #1D1D1F 0%, #0A1628 100%);
+  background: var(--paper-grad);
+  border: 0.5px solid var(--bd);
   border-radius: var(--rad-2xl);
   padding: 32px 36px;
-  color: white;
+  color: var(--t1);
   position: relative;
   overflow: hidden;
   margin-bottom: 28px;
-  box-shadow: var(--sh);
+  box-shadow: var(--sh-sm);
 }
 .advisor-hero::before {
   content: '';
@@ -925,7 +926,8 @@ a { color: inherit; text-decoration: none; }
   top: -60px; right: -60px;
   width: 280px; height: 280px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(201,169,97,0.22) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(201,169,97,0.18) 0%, transparent 70%);
+  pointer-events: none;
 }
 .advisor-hero-eyebrow {
   font-size: 11px;
@@ -940,11 +942,11 @@ a { color: inherit; text-decoration: none; }
   font-size: 30px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: white;
+  color: var(--t1);
   line-height: 1.1;
   margin-bottom: 6px;
 }
-.advisor-hero-month { font-size: 14px; color: rgba(255,255,255,0.55); }
+.advisor-hero-month { font-size: 14px; color: var(--t3); }
 .advisor-hero-kpis {
   display: flex;
   gap: 36px;
@@ -953,9 +955,9 @@ a { color: inherit; text-decoration: none; }
   position: relative;
 }
 .advisor-hero-kpi { }
-.advisor-hero-kpi-label { font-size: 11px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.14em; font-weight: 600; margin-bottom: 6px; }
-.advisor-hero-kpi-value { font-family: var(--font-sans); font-size: 22px; font-weight: 700; letter-spacing: -0.015em; font-variant-numeric: tabular-nums; color: white; }
-.advisor-hero-kpi-value.gold { color: var(--gold); }
+.advisor-hero-kpi-label { font-size: 11px; color: var(--t3); text-transform: uppercase; letter-spacing: 0.14em; font-weight: 600; margin-bottom: 6px; }
+.advisor-hero-kpi-value { font-family: var(--font-sans); font-size: 22px; font-weight: 700; letter-spacing: -0.015em; font-variant-numeric: tabular-nums; color: var(--t1); }
+.advisor-hero-kpi-value.gold { color: var(--gold-dk, #A6843F); }
 
 .priorities-list { display: flex; flex-direction: column; gap: 8px; }
 .priority-item {
