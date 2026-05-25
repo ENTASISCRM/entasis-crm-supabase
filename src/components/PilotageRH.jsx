@@ -14,6 +14,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import * as service from '../services/conseillerContrats'
+import * as profilesService from '../services/profiles'
 import { TYPES_CONTRAT, LIBELLE_TYPE_CONTRAT } from '../lib/bareme-entasis'
 
 const fmtEur = (v) => Number(v || 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
@@ -43,9 +44,11 @@ const EMPTY_CONTRAT = {
 
 export default function PilotageRH() {
   const [contrats, setContrats] = useState([])
+  const [profiles, setProfiles] = useState([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(null)   // contrat en cours d'édition (modale)
   const [creating, setCreating] = useState(false)
+  const [prefillProfile, setPrefillProfile] = useState(null)
   const [filterType, setFilterType] = useState('all')
   const [filterActif, setFilterActif] = useState('actifs')
   const [search, setSearch] = useState('')
@@ -53,8 +56,12 @@ export default function PilotageRH() {
   const reload = async () => {
     setLoading(true)
     try {
-      const data = await service.list()
+      const [data, prof] = await Promise.all([
+        service.list(),
+        profilesService.listTeam().catch(() => []),
+      ])
       setContrats(data)
+      setProfiles(prof)
     } catch (e) {
       toast.error('Erreur de chargement : ' + (e.message || ''))
     } finally {
@@ -63,6 +70,16 @@ export default function PilotageRH() {
   }
 
   useEffect(() => { reload() }, [])
+
+  // Profils Supabase non encore reliés à un contrat (= orphelins)
+  // Permet de "rattraper" les comptes créés via invitation avant que
+  // leur contrat soit créé.
+  const profilsOrphelins = useMemo(() => {
+    const linkedIds = new Set(contrats.map(c => c.profile_id).filter(Boolean))
+    return profiles
+      .filter(p => p.is_active && !linkedIds.has(p.id))
+      .sort((a, b) => (a.full_name || a.email || '').localeCompare(b.full_name || b.email || ''))
+  }, [profiles, contrats])
 
   const filtered = useMemo(() => {
     return contrats.filter(c => {
@@ -155,6 +172,50 @@ export default function PilotageRH() {
         </div>
       </div>
 
+      {/* Profils Supabase sans contrat (orphelins) */}
+      {profilsOrphelins.length > 0 && (
+        <div className="card mb-24" style={{ borderTop: '2px solid var(--apple-orange, #FF9500)' }}>
+          <div className="panel-head">
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#FF9500' }}>
+                À traiter · {profilsOrphelins.length} profil{profilsOrphelins.length !== 1 ? 's' : ''}
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t1)', marginTop: 4 }}>
+                Profils Supabase sans contrat
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>
+                Ces conseillers se sont inscrits via une invitation mais n'ont pas encore de contrat dans Pilotage RH.
+              </div>
+            </div>
+          </div>
+          <div className="panel-body" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {profilsOrphelins.map(p => (
+              <div key={p.id} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '10px 14px', background: 'rgba(0,0,0,0.025)',
+                border: '0.5px solid var(--bd)', borderRadius: 12,
+              }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--t1)' }}>
+                    {p.full_name || '(sans nom)'}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--t3)' }}>
+                    {p.email} · {p.advisor_code ? `Code ${p.advisor_code}` : 'Sans code'} · {p.role === 'manager' ? 'Manager' : 'Conseiller'}
+                  </div>
+                </div>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => {
+                    setPrefillProfile(p)
+                    setCreating(true)
+                  }}
+                >+ Créer son contrat</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Toolbar filtres */}
       <div className="table-toolbar mb-16" style={{ marginBottom: 16 }}>
         <input className="search-input" placeholder="Rechercher un conseiller…"
@@ -233,8 +294,21 @@ export default function PilotageRH() {
       {/* Modale d'édition / création */}
       {(editing || creating) && (
         <ContratModal
-          contrat={editing || { ...EMPTY_CONTRAT }}
-          onClose={() => { setEditing(null); setCreating(false) }}
+          contrat={
+            editing
+              ? editing
+              : prefillProfile
+                ? {
+                    ...EMPTY_CONTRAT,
+                    profile_id: prefillProfile.id,
+                    full_name: prefillProfile.full_name || '',
+                    matricule: prefillProfile.advisor_code || '',
+                  }
+                : { ...EMPTY_CONTRAT }
+          }
+          profiles={profiles}
+          contratsExistants={contrats}
+          onClose={() => { setEditing(null); setCreating(false); setPrefillProfile(null) }}
           onSave={handleSave}
         />
       )}
@@ -245,11 +319,22 @@ export default function PilotageRH() {
 // ─────────────────────────────────────────────────────────────────────────
 // Modale d'édition / création de contrat
 // ─────────────────────────────────────────────────────────────────────────
-function ContratModal({ contrat, onClose, onSave }) {
+function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose, onSave }) {
   const [form, setForm] = useState(contrat)
   const isNew = !contrat.id
 
   const handleChange = (key, value) => setForm(prev => ({ ...prev, [key]: value }))
+
+  // Profils disponibles pour la liaison : actifs + non liés ailleurs (sauf
+  // celui qu'on est en train d'éditer s'il était déjà lié).
+  const profilsLies = useMemo(() => {
+    const lies = new Set(
+      contratsExistants
+        .filter(c => c.id !== contrat.id && c.profile_id)
+        .map(c => c.profile_id)
+    )
+    return profiles.filter(p => p.is_active && !lies.has(p.id))
+  }, [profiles, contratsExistants, contrat.id])
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -272,6 +357,38 @@ function ContratModal({ contrat, onClose, onSave }) {
           </div>
 
           <div className="modal-body">
+            {/* Profil Supabase lié — clé pour que le conseiller voie sa
+                ligne via les RLS et que les deals soient correctement
+                rattachés (advisor_code). */}
+            <div className="form-group">
+              <label className="form-label">Profil Supabase lié</label>
+              <select
+                className="form-select"
+                value={form.profile_id || ''}
+                onChange={e => {
+                  const id = e.target.value || null
+                  const p = profilsLies.find(x => x.id === id)
+                  setForm(prev => ({
+                    ...prev,
+                    profile_id: id,
+                    // Pré-remplit nom + matricule si vides et qu'on lie
+                    full_name: prev.full_name || (p?.full_name || ''),
+                    matricule: prev.matricule || (p?.advisor_code || ''),
+                  }))
+                }}
+              >
+                <option value="">— Aucun (contrat orphelin) —</option>
+                {profilsLies.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.full_name || '(sans nom)'} · {p.email} {p.advisor_code ? `· ${p.advisor_code}` : ''}
+                  </option>
+                ))}
+              </select>
+              <div className="form-hint">
+                Sans lien, le conseiller ne pourra pas voir sa rémunération côté CRM (RLS).
+              </div>
+            </div>
+
             <div className="form-row form-row-2">
               <div className="form-group">
                 <label className="form-label">Nom complet</label>
