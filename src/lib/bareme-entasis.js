@@ -17,6 +17,13 @@
 // Frais d'entrée — recommandation cabinet, modifiable par deal
 export const FRAIS_ENTREE_DEFAUT_PCT = 1.0
 
+// Date de remise à zéro du compteur de rentabilité (Louis 2026-05-25).
+// Tous les contrats CDI/CDD/Alternant/Stagiaire repartent à zéro depuis
+// cette date : on ignore le salaire des mois antérieurs ET les deals
+// antérieurs pour le calcul du seuil de rentabilité.
+// Format ISO YYYY-MM-DD. Mois courant = mai 2026 → compte normalement.
+export const DATE_REMISE_A_ZERO_RENTABILITE = '2026-05-01'
+
 // Types de contrats supportés
 export const TYPES_CONTRAT = ['CDI', 'CDD', 'ALTERNANT', 'STAGIAIRE', 'MANDATAIRE', 'GERANT']
 
@@ -181,14 +188,20 @@ export function tauxApplicable(deal, contrat) {
 export const ppAnnualisee = (ppMensuelle) => Number(ppMensuelle || 0) * 12
 
 // ─────────────────────────────────────────────────────────────────────────
-// Helper : calcule le brut cumulé d'un contrat depuis l'embauche jusqu'à
-// une date donnée (par défaut aujourd'hui). Utilisé pour le seuil de
-// rentabilité — référence "brut nu" (consigne Louis : pas de charges
-// patronales dans le calcul V1, lisibilité prime sur rigueur économique).
+// Helper : calcule le brut cumulé d'un contrat pour le SEUIL DE RENTABILITÉ.
+// Le point de départ est le maximum entre :
+//   • date_debut du contrat (embauche)
+//   • DATE_REMISE_A_ZERO_RENTABILITE (consigne Louis 2026-05-25 : on fait
+//     abstraction des mois précédant la mise en place du module)
+// Cela permet d'éviter d'imposer à un alternant de rembourser 8 mois
+// de salaire rétroactifs alors qu'il n'avait pas connaissance du système.
 // ─────────────────────────────────────────────────────────────────────────
 export function brutCumule(contrat, dateRef = new Date()) {
   if (!contrat?.salaire_brut_mensuel) return 0
-  const debut = new Date(contrat.date_debut)
+  const debutContrat = new Date(contrat.date_debut)
+  const remiseZero = new Date(DATE_REMISE_A_ZERO_RENTABILITE)
+  // Point de départ effectif = max(date_debut, remise à zéro)
+  const debut = debutContrat > remiseZero ? debutContrat : remiseZero
   const fin = contrat.date_fin ? new Date(contrat.date_fin) : dateRef
   const ref = dateRef < fin ? dateRef : fin
   if (ref < debut) return 0

@@ -14,6 +14,7 @@ import {
   BAREME_PRODUITS,
   FRAIS_ENTREE_DEFAUT_PCT,
   TYPES_AVEC_SEUIL_RENTABILITE,
+  DATE_REMISE_A_ZERO_RENTABILITE,
   brutCumule,
 } from './bareme-entasis'
 
@@ -236,7 +237,12 @@ export function evaluerRentabilite(contrat, dealsHistoriques = [], profile = nul
   }
 
   const brut = brutCumule(contrat, dateRef)
-  const debut = new Date(contrat.date_debut)
+  // Point de départ effectif = max(date_debut, DATE_REMISE_A_ZERO_RENTABILITE)
+  // Cohérent avec brutCumule : on ne compte que la prod signée à partir
+  // de cette date.
+  const debutContrat = new Date(contrat.date_debut)
+  const remiseZero = new Date(DATE_REMISE_A_ZERO_RENTABILITE)
+  const debut = debutContrat > remiseZero ? debutContrat : remiseZero
   const codes = codesContrat(contrat, profile)
   const valeur = dealsHistoriques.reduce((sum, deal) => {
     if (!deal.date_signed) return sum
