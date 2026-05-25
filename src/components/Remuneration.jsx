@@ -104,6 +104,7 @@ export default function Remuneration({ profile, deals, month }) {
       {vue === 'perso' && (
         <VueConseiller
           contrat={contratPerso}
+          profile={profile}
           deals={deals}
           month={month}
           isManager={isManager}
@@ -124,7 +125,7 @@ export default function Remuneration({ profile, deals, month }) {
 // ─────────────────────────────────────────────────────────────────────────
 // Vue conseiller : son propre suivi
 // ─────────────────────────────────────────────────────────────────────────
-function VueConseiller({ contrat, deals, month, isManager }) {
+function VueConseiller({ contrat, profile, deals, month, isManager }) {
   if (!contrat) {
     return (
       <div className="card card-p">
@@ -138,9 +139,10 @@ function VueConseiller({ contrat, deals, month, isManager }) {
     )
   }
 
-  // Codes de matching : matricule + full_name + advisor_code Supabase.
-  // Permet d'identifier ce conseiller dans les deals (principal OU co).
-  const codesConseiller = useMemo(() => codesContrat(contrat, /* profile */ null), [contrat])
+  // Codes de matching : matricule + full_name + profile.advisor_code.
+  // Inclure profile.advisor_code est essentiel — c'est lui qui est
+  // stocké dans les deals (deal.advisor_code = 'AUTOP', 'PAULIN', etc.).
+  const codesConseiller = useMemo(() => codesContrat(contrat, profile), [contrat, profile])
 
   // Deals où le conseiller intervient (principal OU co)
   const dealsConseiller = useMemo(
@@ -154,13 +156,13 @@ function VueConseiller({ contrat, deals, month, isManager }) {
   )
 
   const rentab = useMemo(
-    () => evaluerRentabilite(contrat, dealsConseiller),
-    [contrat, dealsConseiller]
+    () => evaluerRentabilite(contrat, dealsConseiller, profile),
+    [contrat, dealsConseiller, profile]
   )
 
   const comm = useMemo(
-    () => commissionsMois(dealsMois, contrat, rentab.rentabilise),
-    [dealsMois, contrat, rentab.rentabilise]
+    () => commissionsMois(dealsMois, contrat, rentab.rentabilise, profile),
+    [dealsMois, contrat, rentab.rentabilise, profile]
   )
 
   const salaireFixe = Number(contrat.salaire_brut_mensuel || 0)
