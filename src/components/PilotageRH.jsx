@@ -15,6 +15,7 @@ import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import * as service from '../services/conseillerContrats'
 import * as profilesService from '../services/profiles'
+import { impersonate } from '../services/impersonation'
 import { TYPES_CONTRAT, LIBELLE_TYPE_CONTRAT } from '../lib/bareme-entasis'
 
 const fmtEur = (v) => Number(v || 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
@@ -178,6 +179,33 @@ export default function PilotageRH() {
       reload()
     } catch (e) {
       toast.error('Erreur : ' + (e.message || ''))
+    }
+  }
+
+  // Impersonation : génère un magic link et ouvre la session du conseiller
+  // ciblé dans un nouvel onglet. Tout est audité côté serveur.
+  const handleImpersonate = async (contrat) => {
+    if (!contrat.profile_id) {
+      toast.error('Aucun profil Supabase lié — impossible d\'impersonner')
+      return
+    }
+    const reason = prompt(
+      `Se connecter en tant que ${contrat.full_name} ?\n\n` +
+      `L'action sera journalisée dans audit_impersonation.\n` +
+      `Raison (optionnelle) :`,
+      ''
+    )
+    if (reason === null) return  // Annulé
+    const toastId = toast.loading('Génération du lien…')
+    try {
+      const { link, target } = await impersonate(contrat.profile_id, reason)
+      toast.success(`Connecté en tant que ${target.full_name || target.email}`, { id: toastId })
+      // Ouvre dans un onglet de navigation privée idéalement, mais le browser
+      // ne permet pas de forcer ça en JS → on ouvre dans un nouvel onglet
+      // et on prévient l'utilisateur.
+      window.open(link, '_blank', 'noopener,noreferrer')
+    } catch (e) {
+      toast.error('Erreur : ' + (e.message || ''), { id: toastId })
     }
   }
 
@@ -358,6 +386,13 @@ export default function PilotageRH() {
                   <td>{fmtDate(c.date_fin)}</td>
                   <td style={{ textAlign: 'right' }}>
                     <div className="table-actions" style={{ justifyContent: 'flex-end' }}>
+                      {c.profile_id && c.actif && c.type_contrat !== 'GERANT' && (
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => handleImpersonate(c)}
+                          title="Se connecter en tant que ce conseiller (action auditée)"
+                        >👤 Voir en tant que</button>
+                      )}
                       <button className="btn btn-ghost btn-sm" onClick={() => setEditing(c)}>Éditer</button>
                       <button className="btn btn-danger btn-sm" onClick={() => handleToggleActif(c)}>
                         {c.actif ? 'Désactiver' : 'Réactiver'}
