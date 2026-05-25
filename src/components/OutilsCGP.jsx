@@ -2251,6 +2251,212 @@ Ne fais jamais de promesse de rendement garanti.`
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   CALCULATEUR INTERETS COMPOSES
+   Inputs : capital initial, epargne mensuelle, horizon (annees), taux annuel.
+   Capitalisation mensuelle (convention nominale : r_mois = taux_annuel / 12).
+═══════════════════════════════════════════════════════════════════════════ */
+function CalculateurInteretsComposes() {
+  const [capitalInitial, setCapitalInitial] = useState(10000)
+  const [versementMensuel, setVersementMensuel] = useState(300)
+  const [horizon, setHorizon] = useState(20)         // annees
+  const [tauxAnnuel, setTauxAnnuel] = useState(7)    // %
+
+  // Projection mois par mois → on retient les valeurs annuelles pour graphe + tableau.
+  // Formule iterative : balance_t = balance_{t-1} * (1 + r/12) + versement_mensuel
+  const projection = useMemo(() => {
+    const r = (tauxAnnuel / 100) / 12
+    const years = []
+    let balance = capitalInitial
+    years.push({
+      year: 0,
+      balance,
+      versements: capitalInitial,
+      interets: 0,
+    })
+    for (let y = 1; y <= horizon; y++) {
+      for (let m = 0; m < 12; m++) {
+        balance = balance * (1 + r) + versementMensuel
+      }
+      const versementsCumules = capitalInitial + versementMensuel * 12 * y
+      years.push({
+        year: y,
+        balance,
+        versements: versementsCumules,
+        interets: balance - versementsCumules,
+      })
+    }
+    return years
+  }, [capitalInitial, versementMensuel, horizon, tauxAnnuel])
+
+  const final = projection[projection.length - 1]
+  const fmtEur = (v) => Math.round(v).toLocaleString('fr-FR') + ' €'
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Graphe SVG : aire empilee (versements en or fonce, interets en or clair)
+  // ─────────────────────────────────────────────────────────────────────
+  const chart = useMemo(() => {
+    const W = 760, H = 280, padL = 56, padR = 16, padT = 16, padB = 36
+    const innerW = W - padL - padR
+    const innerH = H - padT - padB
+    const maxY = Math.max(1, final.balance)
+    const xAt = (y) => padL + (y / horizon) * innerW
+    const yAt = (v) => padT + innerH - (v / maxY) * innerH
+
+    // Points pour aire "versements" (bas)
+    const versPts = projection.map(p => `${xAt(p.year)},${yAt(p.versements)}`)
+    const versArea = `M ${padL},${padT + innerH} L ${versPts.join(' L ')} L ${xAt(horizon)},${padT + innerH} Z`
+    // Points pour aire "total" (haut = versements + interets = balance)
+    const totalPts = projection.map(p => `${xAt(p.year)},${yAt(p.balance)}`)
+    // Aire des interets = entre la courbe versements et la courbe total
+    const interetsArea = `M ${versPts.join(' L ')} L ${[...totalPts].reverse().join(' L ')} Z`
+
+    // Graduations Y (5 niveaux)
+    const yTicks = [0, 0.25, 0.5, 0.75, 1].map(p => ({
+      v: maxY * p,
+      y: yAt(maxY * p),
+    }))
+    // Graduations X (max 6)
+    const xStep = horizon <= 6 ? 1 : Math.ceil(horizon / 6)
+    const xTicks = []
+    for (let y = 0; y <= horizon; y += xStep) xTicks.push({ y, x: xAt(y) })
+    if (xTicks[xTicks.length - 1].y !== horizon) xTicks.push({ y: horizon, x: xAt(horizon) })
+
+    return { W, H, padL, padR, padT, padB, innerW, innerH, versArea, interetsArea, totalPts, yTicks, xTicks }
+  }, [projection, horizon, final.balance])
+
+  return (
+    <div>
+      <div style={{ marginBottom: 8 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: C.gold, textTransform: 'uppercase', letterSpacing: '.18em', marginBottom: 6 }}>Outil pédagogique</div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: C.ivory, fontFamily: FONT_SERIF, letterSpacing: '-0.015em' }}>Calculateur d'intérêts composés</div>
+        <div style={{ fontSize: 13, color: C.ivoryDim, marginTop: 4, lineHeight: 1.5 }}>
+          Projette l'évolution d'un capital avec versements réguliers et taux annuel constant.
+          Capitalisation mensuelle.
+        </div>
+      </div>
+
+      <SectionDivider label="Paramètres" />
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+        <div>
+          <Slider label="Capital initial" value={capitalInitial} onChange={setCapitalInitial}
+            min={0} max={500000} step={500} suffix="€"
+            formatValue={(v) => v.toLocaleString('fr-FR') + ' €'} />
+          <Slider label="Épargne mensuelle" value={versementMensuel} onChange={setVersementMensuel}
+            min={0} max={5000} step={50} suffix="€"
+            formatValue={(v) => v.toLocaleString('fr-FR') + ' €'} />
+        </div>
+        <div>
+          <Slider label="Horizon de placement" value={horizon} onChange={setHorizon}
+            min={1} max={40} step={1} suffix="ans" />
+          <Slider label="Taux d'intérêt annuel" value={tauxAnnuel} onChange={setTauxAnnuel}
+            min={0} max={15} step={0.1} suffix="%"
+            formatValue={(v) => v.toFixed(1) + ' %'} />
+        </div>
+      </div>
+
+      <SectionDivider label="Résultats" />
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+        <ResultCard label="Capital final" value={fmtEur(final.balance)}
+          sub={`après ${horizon} an${horizon > 1 ? 's' : ''}`} accent={C.gold} />
+        <ResultCard label="Versements" value={fmtEur(final.versements)}
+          sub={`apport initial + ${horizon * 12} mensualités`} accent={C.info} />
+        <ResultCard label="Intérêts générés" value={fmtEur(final.interets)}
+          sub={`${(final.interets / Math.max(1, final.versements) * 100).toFixed(0)} % des versements`}
+          accent={C.success} />
+      </div>
+
+      {/* Graphique */}
+      <div style={{ background: C.card, border: `1px solid ${C.bd}`, borderRadius: 10, padding: 16, marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: C.ivory }}>Évolution du placement</div>
+          <div style={{ display: 'flex', gap: 16, fontSize: 11, color: C.ivoryDim }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ width: 10, height: 10, borderRadius: 2, background: C.gold, opacity: 0.45 }} />Versements
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ width: 10, height: 10, borderRadius: 2, background: C.gold }} />Intérêts
+            </span>
+          </div>
+        </div>
+        <svg viewBox={`0 0 ${chart.W} ${chart.H}`} width="100%" height="auto" style={{ display: 'block' }}>
+          {/* Grille horizontale */}
+          {chart.yTicks.map((t, i) => (
+            <g key={i}>
+              <line x1={chart.padL} y1={t.y} x2={chart.W - chart.padR} y2={t.y}
+                stroke={C.bd} strokeWidth="0.5" />
+              <text x={chart.padL - 8} y={t.y + 3} textAnchor="end"
+                fontSize="10" fill={C.ivoryDim} fontFamily={FONT_SANS}>
+                {Math.round(t.v / 1000) >= 1 ? `${Math.round(t.v / 1000)}k€` : `${Math.round(t.v)}€`}
+              </text>
+            </g>
+          ))}
+          {/* Aire versements */}
+          <path d={chart.versArea} fill={C.gold} fillOpacity="0.25" />
+          {/* Aire intérêts par-dessus */}
+          <path d={chart.interetsArea} fill={C.gold} fillOpacity="0.75" />
+          {/* Ligne du total */}
+          <polyline points={chart.totalPts.join(' ')} fill="none" stroke={C.gold} strokeWidth="1.5" />
+          {/* Axe X */}
+          {chart.xTicks.map((t, i) => (
+            <text key={i} x={t.x} y={chart.H - 12} textAnchor="middle"
+              fontSize="10" fill={C.ivoryDim} fontFamily={FONT_SANS}>
+              {t.y === 0 ? 'Aujourd\'hui' : `+${t.y} an${t.y > 1 ? 's' : ''}`}
+            </text>
+          ))}
+        </svg>
+      </div>
+
+      {/* Tableau année par année */}
+      <SectionDivider label="Détail année par année" />
+      <div style={{ background: C.card, border: `1px solid ${C.bd}`, borderRadius: 10, overflow: 'hidden' }}>
+        <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead style={{ position: 'sticky', top: 0, background: C.card, zIndex: 1 }}>
+              <tr>
+                {['Année', 'Versements cumulés', 'Intérêts cumulés', 'Capital'].map((h, i) => (
+                  <th key={i} style={{
+                    padding: '10px 14px', textAlign: i === 0 ? 'left' : 'right',
+                    fontSize: 10, fontWeight: 700, color: C.ivoryDim,
+                    textTransform: 'uppercase', letterSpacing: '.14em',
+                    borderBottom: `1px solid ${C.bd}`,
+                  }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {projection.map((p, i) => (
+                <tr key={p.year} style={{ background: i % 2 ? 'rgba(255,255,255,0.02)' : 'transparent' }}>
+                  <td style={{ padding: '8px 14px', color: C.ivory, fontWeight: 600 }}>
+                    {p.year === 0 ? 'Aujourd\'hui' : `+${p.year} an${p.year > 1 ? 's' : ''}`}
+                  </td>
+                  <td style={{ padding: '8px 14px', textAlign: 'right', color: C.ivoryMuted, fontVariantNumeric: 'tabular-nums' }}>
+                    {fmtEur(p.versements)}
+                  </td>
+                  <td style={{ padding: '8px 14px', textAlign: 'right', color: C.gold, fontVariantNumeric: 'tabular-nums' }}>
+                    {fmtEur(p.interets)}
+                  </td>
+                  <td style={{ padding: '8px 14px', textAlign: 'right', color: C.ivory, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                    {fmtEur(p.balance)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 14, fontSize: 11, color: C.ivoryDim, lineHeight: 1.6 }}>
+        Hypothèse : taux constant sur toute la durée et capitalisation mensuelle.
+        Les rendements passés ne préjugent pas des rendements futurs — outil pédagogique uniquement,
+        ne constitue pas un conseil en investissement.
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    MAIN TABS & EXPORT
 ═══════════════════════════════════════════════════════════════════════════ */
 const TABS = [
@@ -2258,6 +2464,7 @@ const TABS = [
   { id: 'av', label: 'Assurance Vie' },
   { id: 'scpi', label: 'SCPI Wemo One' },
   { id: 'immo', label: 'Achat Immo Neuf' },
+  { id: 'compound', label: 'Intérêts composés' },
   { id: 'lettre', label: 'Generateur Lettre' },
 ]
 
@@ -2266,6 +2473,7 @@ const TAB_COMPONENTS = {
   av: SimulateurAssuranceVie,
   scpi: SimulateurSCPI,
   immo: SimulateurImmoNeuf,
+  compound: CalculateurInteretsComposes,
   lettre: GenerateurLettre,
 }
 
