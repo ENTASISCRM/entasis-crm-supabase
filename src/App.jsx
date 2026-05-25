@@ -9,6 +9,7 @@ import * as profilesService from './services/profiles'
 import * as invitationsService from './services/invitations'
 import * as prospectsService from './services/prospects'
 import * as objectifsService from './services/objectifs'
+import * as conseillerContratsService from './services/conseillerContrats'
 import * as dossiersImmoService from './services/dossiersImmo'
 import VueImmobilier from './components/VueImmobilier'
 import CatalogueProgrammes from './components/CatalogueProgrammes'
@@ -1629,8 +1630,25 @@ function KpiCard({label,value,hint,accent,progressValue,delta}){
 function AdvisorDashboard({deals,objectifs,month,profile}){
   const code=profile?.advisor_code||''
   const m=advisorMetrics(deals,month,code)
-  const targets=objectifs[month]||{pp_target:0,pu_target:0}
-  const ppTarget=Number(targets.pp_target||0),puTarget=Number(targets.pu_target||0)
+
+  // Objectif PP individuel = palier_pp_mensuel du contrat du conseiller.
+  // Fallback sur l'objectif cabinet (table objectifs) si pas de contrat lié.
+  const [contratPerso, setContratPerso] = useState(null)
+  useEffect(() => {
+    let alive = true
+    conseillerContratsService.getOwn().catch(() => null).then(c => {
+      if (alive) setContratPerso(c)
+    })
+    return () => { alive = false }
+  }, [profile?.id])
+
+  const targetsCab=objectifs[month]||{pp_target:0,pu_target:0}
+  const palierPpPerso = Number(contratPerso?.palier_pp_mensuel || 0)
+  const palierPuPerso = Number(contratPerso?.palier_pu_mensuel || 0)
+  // Si le conseiller a un palier individuel → on l'utilise. Sinon cabinet.
+  const ppTarget = palierPpPerso > 0 ? palierPpPerso : Number(targetsCab.pp_target||0)
+  const puTarget = palierPuPerso > 0 ? palierPuPerso : Number(targetsCab.pu_target||0)
+  const targetSource = palierPpPerso > 0 ? 'perso' : 'cabinet'
   const ppPct=pct(m.ppSigned,ppTarget),ppProjPct=pct(m.ppProjected,ppTarget)
   const landing=ppTarget>0?m.ppProjected-ppTarget:null
   const prevIdx=MONTHS.indexOf(month)-1,prevMonth=prevIdx>=0?MONTHS[prevIdx]:null
@@ -1661,7 +1679,7 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
           <div className="advisor-hero-kpi"><div className="advisor-hero-kpi-label">PP projetée</div><div className="advisor-hero-kpi-value">{euro(m.ppProjected)}</div></div>
           <div className="advisor-hero-kpi"><div className="advisor-hero-kpi-label">PU signée</div><div className="advisor-hero-kpi-value">{euro(m.puSigned)}</div></div>
           <div className="advisor-hero-kpi"><div className="advisor-hero-kpi-label">PU projetée</div><div className="advisor-hero-kpi-value">{euro(m.puProjected)}</div></div>
-          {ppTarget>0&&<div className="advisor-hero-kpi"><div className="advisor-hero-kpi-label">Objectif PP</div><div className="advisor-hero-kpi-value">{ppProjPct}%</div></div>}
+          {ppTarget>0&&<div className="advisor-hero-kpi"><div className="advisor-hero-kpi-label">{targetSource==='perso'?'Mon palier PP':'Objectif PP'}</div><div className="advisor-hero-kpi-value">{ppProjPct}%</div></div>}
           {landing!=null&&<div className="advisor-hero-kpi"><div className="advisor-hero-kpi-label">{landing>=0?'Avance sur objectif':'Reste à faire'}</div><div className="advisor-hero-kpi-value" style={{color:landing>=0?'#86EFAC':'#FCA5A5'}}>{landing>=0?'+':''}{euro(Math.abs(landing))}</div></div>}
         </div>
       </div>
@@ -1686,8 +1704,8 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
       </div>
       <div className="grid-2 gap-24" style={{alignItems:'start'}}>
         <div className="flex-col gap-16">
-          <AreaChart title="PP annualisée" subtitle="Réalisé vs objectif cabinet" actual={m.ppSigned} projected={m.ppProjected} target={ppTarget}/>
-          <AreaChart title="PU" subtitle="Versements uniques" actual={m.puSigned} projected={m.puProjected} target={puTarget}/>
+          <AreaChart title="PP annualisée" subtitle={targetSource==='perso' ? 'Réalisé vs mon palier mensuel' : 'Réalisé vs objectif cabinet'} actual={m.ppSigned} projected={m.ppProjected} target={ppTarget}/>
+          <AreaChart title="PU" subtitle={targetSource==='perso' ? 'Versements uniques · palier perso' : 'Versements uniques'} actual={m.puSigned} projected={m.puProjected} target={puTarget}/>
         </div>
         <div>
           <div className="section-header"><div><div className="section-kicker">Actions immédiates</div><div className="section-title">Mes priorités</div></div></div>
