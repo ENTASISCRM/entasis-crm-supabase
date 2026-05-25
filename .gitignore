@@ -29,3 +29,8 @@ audit_*.md
 .vercel
 .env*.local
 supabase/.temp/
+
+# Data imports (ne pas versionner les CSV groupement / exports clients)
+data/*.csv
+data/*.xlsx
+data/*.xls

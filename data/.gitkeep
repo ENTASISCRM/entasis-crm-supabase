@@ -1,0 +1,2 @@
+Dossier pour les exports CSV à importer (ucs_export_groupement.csv, etc.).
+Les fichiers .csv sont ignorés par git (cf. .gitignore racine si configuré).
