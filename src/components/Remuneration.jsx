@@ -176,7 +176,8 @@ function VueConseiller({ contrat, profile, deals, month, isManager }) {
 
   return (
     <div>
-      {/* KPIs hero */}
+      {/* KPIs hero — 3 cartes (le statut rentabilité est calculé en interne
+          pour ajuster le taux, mais n'est pas exposé au conseiller). */}
       <div className="kpi-grid mb-24">
         <div className="kpi-card kpi-card-gold">
           <div className="kpi-label">Salaire fixe brut</div>
@@ -192,17 +193,6 @@ function VueConseiller({ contrat, profile, deals, month, isManager }) {
           <div className="kpi-label">Total brut estimé</div>
           <div className="kpi-value">{fmtEur(totalBrut)}</div>
           <div className="kpi-hint">Fixe + variable du mois</div>
-        </div>
-        <div className="kpi-card kpi-card-amber">
-          <div className="kpi-label">Statut rentabilité</div>
-          <div className="kpi-value" style={{ fontSize: 20 }}>
-            {rentab.rentabilise ? '✓ Rentabilisé' : 'En cours'}
-          </div>
-          <div className="kpi-hint">
-            {rentab.rentabilise
-              ? 'Taux CDI standard appliqué'
-              : 'Booster taux mandataire'}
-          </div>
         </div>
       </div>
 
@@ -236,11 +226,6 @@ function VueConseiller({ contrat, profile, deals, month, isManager }) {
             ? 'Tu débloques le variable PU sur la production additionnelle.'
             : `Plus que ${fmtEur(resteAvantPalierPu)} de PU avant de débloquer ton variable PU.`}
         />
-      )}
-
-      {/* Seuil de rentabilité (uniquement si applicable et pas mandataire) */}
-      {!rentab.rentabilise && salaireFixe > 0 && (
-        <SeuilRentabiliteCard rentab={rentab} />
       )}
 
       {/* Détail des deals du mois */}
@@ -278,51 +263,6 @@ function PalierCard({ titre, realise, cible, pct, reste, atteint, variable, hint
           background: atteint
             ? 'linear-gradient(90deg, var(--signed) 0%, #2A9847 100%)'
             : 'linear-gradient(90deg, var(--gold) 0%, var(--gold-dk, #A6843F) 100%)',
-          transition: 'width 0.5s ease',
-        }} />
-      </div>
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-// Carte seuil de rentabilité
-// ─────────────────────────────────────────────────────────────────────────
-function SeuilRentabiliteCard({ rentab }) {
-  const pct = rentab.brutCumule > 0
-    ? Math.min(100, (rentab.valeurCumulee / rentab.brutCumule) * 100)
-    : 100
-  const resteAvant = Math.abs(rentab.ecart)
-
-  return (
-    <div className="card card-p" style={{ marginBottom: 16, background: 'radial-gradient(circle at top right, rgba(201,169,97,0.10) 0%, transparent 60%), var(--paper-grad)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--gold)' }}>
-            Seuil de rentabilité
-          </div>
-          <div style={{ marginTop: 6, fontSize: 14, color: 'var(--t1)', fontWeight: 600, letterSpacing: '-0.005em' }}>
-            Plus que {fmtEur(resteAvant)} de production avant de passer au taux CDI
-          </div>
-          <div style={{ marginTop: 4, fontSize: 12, color: 'var(--t3)' }}>
-            En attendant, tu bénéficies du taux mandataire majoré sur tous les produits.
-          </div>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--t1)', fontFamily: 'var(--font-sans)', letterSpacing: '-0.015em', fontVariantNumeric: 'tabular-nums' }}>
-            {fmtEur(rentab.valeurCumulee)}
-            <span style={{ color: 'var(--t3)', fontWeight: 500, fontSize: 14 }}> / {fmtEur(rentab.brutCumule)}</span>
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>
-            {fmtPct(pct)} de progression
-          </div>
-        </div>
-      </div>
-      <div style={{ height: 8, background: 'rgba(0,0,0,0.05)', borderRadius: 999, overflow: 'hidden' }}>
-        <div style={{
-          height: '100%',
-          width: `${pct}%`,
-          background: 'linear-gradient(90deg, var(--gold) 0%, var(--gold-dk, #A6843F) 100%)',
           transition: 'width 0.5s ease',
         }} />
       </div>
@@ -422,13 +362,12 @@ function VueManager({ contrats, deals, month }) {
       fixe: lignes.reduce((s, l) => s + Number(l.contrat.salaire_brut_mensuel || 0), 0),
       variable: lignes.reduce((s, l) => s + l.comm.total, 0),
       total: lignes.reduce((s, l) => s + l.totalBrut, 0),
-      nonRentab: lignes.filter(l => !l.rentab.rentabilise).length,
     }
   }, [lignes])
 
   return (
     <div>
-      {/* KPIs équipe */}
+      {/* KPIs équipe — 3 cartes (le statut rentabilité reste interne au moteur). */}
       <div className="kpi-grid mb-24">
         <div className="kpi-card kpi-card-gold">
           <div className="kpi-label">Masse fixe brute / mois</div>
@@ -445,11 +384,6 @@ function VueManager({ contrats, deals, month }) {
           <div className="kpi-value">{fmtEur(totals.total)}</div>
           <div className="kpi-hint">Fixe + variable {month}</div>
         </div>
-        <div className="kpi-card kpi-card-amber">
-          <div className="kpi-label">À rentabiliser</div>
-          <div className="kpi-value">{totals.nonRentab}</div>
-          <div className="kpi-hint">Conseillers sous le seuil</div>
-        </div>
       </div>
 
       <div className="table-wrap">
@@ -462,12 +396,11 @@ function VueManager({ contrats, deals, month }) {
               <th style={{ textAlign: 'right' }}>PP réalisée</th>
               <th>Palier PP</th>
               <th style={{ textAlign: 'right' }}>Variable {month}</th>
-              <th>Rentabilité</th>
             </tr>
           </thead>
           <tbody>
             {lignes.length === 0 ? (
-              <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: 'var(--t3)' }}>
+              <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40, color: 'var(--t3)' }}>
                 Aucun conseiller actif. Ajoute des contrats dans Pilotage RH.
               </td></tr>
             ) : lignes.map(l => {
@@ -503,17 +436,6 @@ function VueManager({ contrats, deals, month }) {
                     ) : <span style={{ color: 'var(--t3)', fontSize: 12 }}>—</span>}
                   </td>
                   <td className="cell-mono" style={{ textAlign: 'right', fontWeight: 600, color: 'var(--t1)' }}>{fmtEur(l.comm.total)}</td>
-                  <td>
-                    {!['CDI', 'CDD', 'ALTERNANT', 'STAGIAIRE'].includes(l.contrat.type_contrat) ? (
-                      <span className="badge badge-normal">N/A</span>
-                    ) : l.rentab.rentabilise ? (
-                      <span className="badge badge-signed">✓ Rentabilisé</span>
-                    ) : (
-                      <span className="badge badge-progress" title={`Reste ${fmtEur(Math.abs(l.rentab.ecart))}`}>
-                        En cours
-                      </span>
-                    )}
-                  </td>
                 </tr>
               )
             })}
