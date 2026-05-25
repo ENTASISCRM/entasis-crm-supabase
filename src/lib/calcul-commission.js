@@ -18,7 +18,7 @@ import {
 } from './bareme-entasis'
 
 /**
- * Mappe un produit de l'UI (deal.produit + deal.compagnie) vers une clé
+ * Mappe un produit de l'UI (deal.product + deal.company) vers une clé
  * du barème BAREME_PRODUITS.
  *
  * Liste UI : 'PER Individuel', 'Assurance Vie Française', 'SCPI',
@@ -26,11 +26,14 @@ import {
  *           'Mutuelle Santé', 'Autre'
  *
  * Retourne null si le mapping n'est pas trouvé (commission = 0 par défaut).
+ * Note : les colonnes BDD sont en anglais (product, company), pas en
+ * français (produit, compagnie).
  */
 export function mapProduitDeal(deal) {
   if (!deal) return null
-  const produit = (deal.produit || '').toLowerCase()
-  const compagnie = (deal.compagnie || '').toLowerCase()
+  // Support des deux conventions (anglais BDD + français legacy)
+  const produit = (deal.product || deal.produit || '').toLowerCase()
+  const compagnie = (deal.company || deal.compagnie || '').toLowerCase()
 
   // PER
   if (produit.includes('per')) {
