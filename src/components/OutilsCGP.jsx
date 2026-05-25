@@ -21,21 +21,42 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarEleme
 /* ─────────────────────────────────────────────────────────────────────────────
    DESIGN TOKENS
 ───────────────────────────────────────────────────────────────────────────── */
+// Palette OutilsCGP — alignée Cupertino (light), or en accent discret.
+// Voir src/design-system.md pour la source canonique des tokens.
+// On garde les noms historiques (bg, ivory, ivoryMuted…) pour limiter le
+// diff, mais les valeurs sont désormais light Apple.
 const C = {
-  bg: '#1a1a1a', card: '#242424', cardHover: '#2a2a2a',
-  ivory: '#f5f0e8', ivoryMuted: '#b8b0a2', ivoryDim: '#8a8278',
-  gold: '#C9A84C', goldDark: '#9A7B3A', goldLine: 'rgba(201,168,76,0.3)', goldBg: 'rgba(201,168,76,0.08)',
-  danger: '#ef4444', success: '#4ade80', info: '#60a5fa', warn: '#fb923c',
-  bd: 'rgba(255,255,255,0.08)', bdGold: 'rgba(201,168,76,0.3)',
-  inputBg: '#1a1a1a',
+  bg:         '#F5F5F7',           // Cupertino background
+  card:       '#FFFFFF',           // paper
+  cardHover:  '#FCFCFC',
+  cardGrad:   'linear-gradient(180deg, #FFFFFF 0%, #FCFCFC 100%)',
+  ivory:      '#1D1D1F',           // t1 (Apple black) — texte principal
+  ivoryMuted: '#515154',           // t2 — texte secondaire
+  ivoryDim:   '#86868B',           // t3 — labels
+  gold:       '#C9A961',           // accent or champagne
+  goldDark:   '#A6843F',           // gold lisible sur fond clair
+  goldLine:   'rgba(201,169,97,0.30)',
+  goldBg:     'rgba(201,169,97,0.10)',
+  danger:     '#FF3B30',           // apple red
+  success:    '#34C759',           // apple green
+  info:       '#0071E3',           // apple blue
+  warn:       '#FF9500',           // apple orange
+  bd:         'rgba(60,60,67,0.08)',     // Apple separator
+  bdStrong:   'rgba(60,60,67,0.14)',
+  bdGold:     'rgba(201,169,97,0.30)',
+  inputBg:    'rgba(0,0,0,0.04)',
+  appleBlueBg:'rgba(0,113,227,0.10)',
+  navy:       '#0A1628',
 }
 const FONT_SERIF = "'Inter Tight', -apple-system, BlinkMacSystemFont, sans-serif"
 const FONT_SANS = "'Inter Tight', -apple-system, BlinkMacSystemFont, sans-serif"
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   TAX ENGINE (bareme 2025 sur revenus 2024)
+   TAX ENGINE (barème 2026 sur revenus 2025)
+   Sources : loi de finances 2026 + service-public.fr (TRANCHES_IR_2026).
+   TODO : confirmer PASS_2026 = 48 060 € à publication officielle DGFiP
+   (PASS 2024 = 46 368 €, PASS 2025 = 47 100 €).
 ───────────────────────────────────────────────────────────────────────────── */
-// PASS 2026
 const PASS_2026 = 48060
 
 const TRANCHES_IR = [
@@ -126,15 +147,16 @@ async function callAI(system, userMsg) {
 function Slider({ label, value, onChange, min, max, step = 1, suffix = '', formatValue }) {
   const display = formatValue ? formatValue(value) : `${value.toLocaleString('fr-FR')} ${suffix}`
   return (
-    <div style={{ marginBottom: 18 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: C.ivoryMuted, textTransform: 'uppercase', letterSpacing: '.06em', fontFamily: FONT_SANS }}>{label}</span>
-        <span style={{ fontSize: 14, fontWeight: 700, color: C.gold, fontFamily: FONT_SERIF }}>{display}</span>
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 600, color: C.ivoryDim, textTransform: 'uppercase', letterSpacing: '.14em', fontFamily: FONT_SANS }}>{label}</span>
+        <span style={{ fontSize: 16, fontWeight: 700, color: C.ivory, fontFamily: FONT_SANS, letterSpacing: '-0.015em', fontVariantNumeric: 'tabular-nums' }}>{display}</span>
       </div>
       <input type="range" min={min} max={max} step={step} value={value}
         onChange={e => onChange(parseFloat(e.target.value))}
+        className="ocgp-range"
         style={{ width: '100%', accentColor: C.gold, height: 6, cursor: 'pointer' }} />
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: C.ivoryDim, marginTop: 2 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: C.ivoryDim, marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
         <span>{min.toLocaleString('fr-FR')}{suffix && ` ${suffix}`}</span>
         <span>{max.toLocaleString('fr-FR')}{suffix && ` ${suffix}`}</span>
       </div>
@@ -144,34 +166,47 @@ function Slider({ label, value, onChange, min, max, step = 1, suffix = '', forma
 
 function Field({ label, value, onChange, suffix, type = 'number', step = '1', placeholder }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-      <label style={{ fontSize: 11, fontWeight: 600, color: C.ivoryMuted, textTransform: 'uppercase', letterSpacing: '.06em', fontFamily: FONT_SANS }}>{label}</label>
-      <div style={{ display: 'flex', alignItems: 'center', background: C.inputBg, border: `1px solid ${C.bdGold}`, borderRadius: 8, overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <label style={{ fontSize: 11, fontWeight: 600, color: C.ivoryDim, textTransform: 'uppercase', letterSpacing: '.14em', fontFamily: FONT_SANS }}>{label}</label>
+      <div className="ocgp-field-wrap" style={{ display: 'flex', alignItems: 'center', background: C.inputBg, border: `0.5px solid ${C.bd}`, borderRadius: 10, overflow: 'hidden', transition: 'background 120ms, border-color 120ms, box-shadow 120ms' }}>
         {type === 'select' ? (
           <select value={value} onChange={e => onChange(e.target.value)}
-            style={{ flex: 1, padding: '10px 12px', background: 'transparent', border: 'none', color: C.ivory, fontSize: 14, fontWeight: 600, outline: 'none', fontFamily: FONT_SANS, cursor: 'pointer' }}>
+            style={{ flex: 1, padding: '10px 14px', background: 'transparent', border: 'none', color: C.ivory, fontSize: 14, fontWeight: 500, outline: 'none', fontFamily: FONT_SANS, cursor: 'pointer', letterSpacing: '-0.005em' }}>
             {placeholder}
           </select>
         ) : type === 'textarea' ? (
           <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={4}
-            style={{ flex: 1, padding: '10px 12px', background: 'transparent', border: 'none', color: C.ivory, fontSize: 13, outline: 'none', fontFamily: FONT_SANS, resize: 'vertical', lineHeight: 1.6 }} />
+            style={{ flex: 1, padding: '10px 14px', background: 'transparent', border: 'none', color: C.ivory, fontSize: 13, outline: 'none', fontFamily: FONT_SANS, resize: 'vertical', lineHeight: 1.6, letterSpacing: '-0.005em' }} />
         ) : (
           <input type={type} value={value} step={step} placeholder={placeholder}
             onChange={e => onChange(type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value)}
-            style={{ flex: 1, padding: '10px 12px', background: 'transparent', border: 'none', color: C.ivory, fontSize: 14, fontWeight: 600, outline: 'none', fontFamily: FONT_SANS }} />
+            style={{ flex: 1, padding: '10px 14px', background: 'transparent', border: 'none', color: C.ivory, fontSize: 14, fontWeight: 500, outline: 'none', fontFamily: FONT_SANS, letterSpacing: '-0.005em' }} />
         )}
-        {suffix && <span style={{ padding: '0 12px', fontSize: 11, color: C.ivoryDim, fontWeight: 600, whiteSpace: 'nowrap' }}>{suffix}</span>}
+        {suffix && <span style={{ padding: '0 12px', fontSize: 12, color: C.ivoryDim, fontWeight: 500, whiteSpace: 'nowrap' }}>{suffix}</span>}
       </div>
     </div>
   )
 }
 
 function ResultCard({ label, value, sub, accent = C.gold }) {
+  // Sur fond clair, le texte gold pur (#C9A961) manque de contraste —
+  // on bascule sur gold-dark pour la valeur hero et on garde l'accent
+  // d'origine uniquement pour la bordure supérieure.
+  const valueColor = accent === C.gold ? C.goldDark : accent
   return (
-    <div style={{ background: C.card, borderLeft: `3px solid ${accent}`, borderRadius: 8, padding: '14px 16px' }}>
-      <div style={{ fontSize: 10, fontWeight: 600, color: C.ivoryDim, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6, fontFamily: FONT_SANS }}>{label}</div>
-      <div style={{ fontSize: 22, fontWeight: 700, color: accent, fontFamily: FONT_SERIF, lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: C.ivoryMuted, marginTop: 4 }}>{sub}</div>}
+    <div style={{
+      background: C.cardGrad,
+      borderTop: `2px solid ${accent}`,
+      border: `0.5px solid ${C.bd}`,
+      borderTopWidth: 2,
+      borderTopColor: accent,
+      borderRadius: 16,
+      padding: '18px 20px',
+      boxShadow: '0 0.5px 0 rgba(255,255,255,0.8) inset, 0 4px 12px rgba(0,0,0,0.04), 0 12px 32px -8px rgba(0,0,0,0.05)',
+    }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: C.ivoryDim, textTransform: 'uppercase', letterSpacing: '.14em', marginBottom: 8, fontFamily: FONT_SANS }}>{label}</div>
+      <div style={{ fontSize: 24, fontWeight: 700, color: valueColor, fontFamily: FONT_SANS, lineHeight: 1.1, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>{value}</div>
+      {sub && <div style={{ fontSize: 12, color: C.ivoryMuted, marginTop: 6, letterSpacing: '-0.005em' }}>{sub}</div>}
     </div>
   )
 }
@@ -186,9 +221,15 @@ function PillSelect({ options, value, onChange }) {
         return (
           <button key={key} onClick={() => onChange(key)}
             style={{
-              padding: '7px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-              fontFamily: FONT_SANS, transition: 'all .15s', border: `1px solid ${active ? C.gold : C.bdGold}`,
-              background: active ? C.gold : 'transparent', color: active ? '#1a1a1a' : C.ivoryMuted,
+              padding: '8px 16px', borderRadius: 999, fontSize: 12, fontWeight: 500, cursor: 'pointer',
+              fontFamily: FONT_SANS, transition: 'transform 120ms, box-shadow 120ms, background 120ms',
+              border: active ? '0.5px solid transparent' : `0.5px solid ${C.bd}`,
+              background: active ? 'linear-gradient(180deg, #1D1D1F 0%, #0A1628 100%)' : 'rgba(0,0,0,0.02)',
+              color: active ? '#fff' : C.ivory,
+              letterSpacing: '-0.005em',
+              boxShadow: active
+                ? '0 0.5px 0 rgba(255,255,255,0.20) inset, 0 4px 12px rgba(10,22,40,0.15)'
+                : 'none',
             }}>
             {label}
           </button>
@@ -200,15 +241,58 @@ function PillSelect({ options, value, onChange }) {
 
 function Btn({ children, onClick, variant = 'gold', disabled, style: extraStyle }) {
   const styles = {
-    gold: { background: C.gold, color: '#1a1a1a', border: 'none' },
-    outline: { background: 'transparent', color: C.gold, border: `1px solid ${C.bdGold}` },
-    ghost: { background: 'transparent', color: C.ivoryMuted, border: `1px solid ${C.bd}` },
-    danger: { background: 'transparent', color: C.danger, border: `1px solid rgba(239,68,68,0.3)` },
+    gold: {
+      background: 'linear-gradient(180deg, #D4B776 0%, #C9A961 100%)',
+      color: '#fff',
+      border: '0.5px solid transparent',
+      boxShadow: '0 4px 20px rgba(201,169,97,0.18)',
+      fontWeight: 600,
+    },
+    primary: {
+      background: 'linear-gradient(180deg, #1D1D1F 0%, #0A1628 100%)',
+      color: '#fff',
+      border: '0.5px solid transparent',
+      boxShadow: '0 0.5px 0 rgba(255,255,255,0.20) inset, 0 4px 12px rgba(10,22,40,0.15)',
+      fontWeight: 600,
+    },
+    outline: {
+      background: 'linear-gradient(180deg, #FFFFFF 0%, #FAFAFA 100%)',
+      color: C.ivory,
+      border: `0.5px solid ${C.bd}`,
+      boxShadow: '0 0.5px 0 rgba(255,255,255,0.95) inset, 0 1px 3px rgba(0,0,0,0.04)',
+    },
+    ghost: {
+      background: 'rgba(0,0,0,0.04)',
+      color: C.ivory,
+      border: '0.5px solid transparent',
+    },
+    danger: {
+      background: 'rgba(255,59,48,0.10)',
+      color: C.danger,
+      border: '0.5px solid rgba(255,59,48,0.20)',
+    },
   }
   const s = styles[variant] || styles.gold
   return (
-    <button onClick={onClick} disabled={disabled}
-      style={{ ...s, padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: disabled ? 'not-allowed' : 'pointer', fontFamily: FONT_SANS, opacity: disabled ? 0.5 : 1, transition: 'all .15s', display: 'inline-flex', alignItems: 'center', gap: 6, ...extraStyle }}>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="ocgp-btn"
+      style={{
+        ...s,
+        padding: '10px 18px',
+        borderRadius: 12,
+        fontSize: 13,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        fontFamily: FONT_SANS,
+        opacity: disabled ? 0.5 : 1,
+        transition: 'transform 120ms cubic-bezier(0.16,1,0.3,1), box-shadow 120ms',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        letterSpacing: '-0.005em',
+        ...extraStyle,
+      }}>
       {children}
     </button>
   )
@@ -216,10 +300,10 @@ function Btn({ children, onClick, variant = 'gold', disabled, style: extraStyle 
 
 function SectionDivider({ label }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0 16px' }}>
-      <div style={{ flex: 1, height: 1, background: C.bd }} />
-      <span style={{ fontSize: 10, fontWeight: 700, color: C.ivoryDim, textTransform: 'uppercase', letterSpacing: '.1em', fontFamily: FONT_SANS }}>{label}</span>
-      <div style={{ flex: 1, height: 1, background: C.bd }} />
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '24px 0 18px' }}>
+      <div style={{ flex: 1, height: 0.5, background: C.bd }} />
+      <span style={{ fontSize: 11, fontWeight: 600, color: C.ivoryDim, textTransform: 'uppercase', letterSpacing: '.18em', fontFamily: FONT_SANS }}>{label}</span>
+      <div style={{ flex: 1, height: 0.5, background: C.bd }} />
     </div>
   )
 }
@@ -1749,11 +1833,15 @@ Simulation indicative — Entasis Conseil`
 /* ═══════════════════════════════════════════════════════════════════════════
    TAB 4 — SIMULATEUR ACHAT IMMOBILIER NEUF
 ═══════════════════════════════════════════════════════════════════════════ */
+// LLI : Logement Locatif Intermédiaire — toujours actif en 2026 (à ne pas
+// confondre avec le Pinel, abrogé fin 2024). Pour un particulier, accessible
+// uniquement via SCI/SAS à l'IS — un particulier en nom propre ne peut pas
+// y prétendre. Le simulateur l'utilise comme cas pédagogique.
 const DISPOSITIFS_IMMO = [
-  { value: 'LLI', label: 'LLI', desc: 'TVA 10%, loyer plafonne, engagement 20 ans' },
-  { value: 'LMNP', label: 'LMNP', desc: 'Amortissement, micro-BIC ou reel' },
-  { value: 'RP', label: 'Residence principale', desc: 'Pas de dispositif fiscal' },
-  { value: 'PTZ', label: 'PTZ', desc: 'Primo-accedant, pret a taux zero' },
+  { value: 'LLI', label: 'LLI', desc: 'TVA 10 %, loyer plafonné, 20 ans — via SCI à l\'IS' },
+  { value: 'LMNP', label: 'LMNP', desc: 'Amortissement, micro-BIC ou réel' },
+  { value: 'RP', label: 'Résidence principale', desc: 'Pas de dispositif fiscal' },
+  { value: 'PTZ', label: 'PTZ', desc: 'Primo-accédant, prêt à taux zéro' },
 ]
 
 function SimulateurImmoNeuf() {
@@ -2486,15 +2574,63 @@ export default function OutilsCGP() {
       <style>{`
         .ocgp-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
         .ocgp-tab {
-          padding: 8px 18px; border-radius: 20px; font-size: 12px; font-weight: 600;
-          cursor: pointer; transition: all .15s; font-family: ${FONT_SANS};
-          border: 1px solid ${C.bdGold}; background: transparent; color: ${C.ivoryMuted};
+          padding: 9px 18px; border-radius: 999px; font-size: 13px; font-weight: 500;
+          cursor: pointer; font-family: ${FONT_SANS};
+          border: 0.5px solid ${C.bd}; background: rgba(0,0,0,0.02); color: ${C.ivory};
+          letter-spacing: -0.005em;
+          transition: background 120ms cubic-bezier(0.16,1,0.3,1), transform 120ms, box-shadow 120ms;
         }
-        .ocgp-tab:hover { color: ${C.gold}; border-color: ${C.gold}; }
-        .ocgp-tab.active { background: ${C.gold}; color: #1a1a1a; border-color: ${C.gold}; }
-        .ocgp-body { background: ${C.bg}; border: 1px solid ${C.bdGold}; border-radius: 14px; padding: 24px; }
-        input[type="range"] { -webkit-appearance: none; appearance: none; background: ${C.bd}; border-radius: 3px; outline: none; }
-        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: ${C.gold}; cursor: pointer; border: 2px solid ${C.bg}; }
+        .ocgp-tab:hover { background: rgba(0,0,0,0.04); }
+        .ocgp-tab.active {
+          background: linear-gradient(180deg, #1D1D1F 0%, #0A1628 100%);
+          color: #fff;
+          border-color: transparent;
+          font-weight: 600;
+          box-shadow: 0 0.5px 0 rgba(255,255,255,0.20) inset, 0 4px 12px rgba(10,22,40,0.15);
+        }
+        .ocgp-body {
+          background: linear-gradient(180deg, #FFFFFF 0%, #FCFCFC 100%);
+          border: 0.5px solid ${C.bd};
+          border-radius: 18px;
+          padding: 28px;
+          box-shadow: 0 0.5px 0 rgba(255,255,255,0.8) inset, 0 4px 12px rgba(0,0,0,0.04), 0 12px 32px -8px rgba(0,0,0,0.05);
+        }
+        /* Sliders Apple style — track gris doux, thumb or */
+        .ocgp-range {
+          -webkit-appearance: none;
+          appearance: none;
+          background: rgba(0,0,0,0.06);
+          border-radius: 999px;
+          outline: none;
+          height: 5px;
+        }
+        .ocgp-range::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          background: ${C.gold};
+          cursor: pointer;
+          border: 2px solid #fff;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.18), 0 2px 6px rgba(201,169,97,0.30);
+          transition: transform 120ms;
+        }
+        .ocgp-range::-webkit-slider-thumb:hover { transform: scale(1.1); }
+        .ocgp-range::-moz-range-thumb {
+          width: 18px; height: 18px; border-radius: 50%;
+          background: ${C.gold}; cursor: pointer; border: 2px solid #fff;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.18), 0 2px 6px rgba(201,169,97,0.30);
+        }
+        /* Focus Cupertino sur les inputs */
+        .ocgp-field-wrap:focus-within {
+          background: #FFFFFF;
+          border-color: ${C.info} !important;
+          box-shadow: 0 0 0 4px ${C.appleBlueBg};
+        }
+        /* Hover boutons */
+        .ocgp-btn:hover:not(:disabled) {
+          transform: translateY(-1px);
+        }
       `}</style>
 
       <div className="ocgp-tabs">
