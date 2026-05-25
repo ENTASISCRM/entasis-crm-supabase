@@ -174,26 +174,47 @@ function VueConseiller({ contrat, profile, deals, month, isManager }) {
   const resteAvantPalierPp = Math.max(0, palierPp - comm.ppRealisee)
   const resteAvantPalierPu = Math.max(0, palierPu - comm.puRealisee)
 
+  // Les mandataires ne sont pas salariés : ils facturent Entasis. Pas de
+  // salaire fixe, pas de "brut" (ils touchent le net facturé). On adapte
+  // les KPIs en conséquence.
+  const isMandataire = contrat.type_contrat === 'MANDATAIRE' || contrat.type_contrat === 'GERANT'
+
   return (
     <div>
-      {/* KPIs hero — 3 cartes (le statut rentabilité est calculé en interne
-          pour ajuster le taux, mais n'est pas exposé au conseiller). */}
       <div className="kpi-grid mb-24">
-        <div className="kpi-card kpi-card-gold">
-          <div className="kpi-label">Salaire fixe brut</div>
-          <div className="kpi-value">{fmtEur(salaireFixe)}</div>
-          <div className="kpi-hint">{LIBELLE_TYPE_CONTRAT[contrat.type_contrat]} · garanti</div>
-        </div>
-        <div className="kpi-card kpi-card-green">
-          <div className="kpi-label">Variable {month}</div>
-          <div className="kpi-value">{fmtEur(comm.total)}</div>
-          <div className="kpi-hint">{dealsMois.length} dossier{dealsMois.length !== 1 ? 's' : ''} signé{dealsMois.length !== 1 ? 's' : ''}</div>
-        </div>
-        <div className="kpi-card kpi-card-blue">
-          <div className="kpi-label">Total brut estimé</div>
-          <div className="kpi-value">{fmtEur(totalBrut)}</div>
-          <div className="kpi-hint">Fixe + variable du mois</div>
-        </div>
+        {isMandataire ? (
+          <>
+            {/* Mandataire : pas de fixe ni de brut — ils facturent Entasis */}
+            <div className="kpi-card kpi-card-green">
+              <div className="kpi-label">Commissions {month}</div>
+              <div className="kpi-value">{fmtEur(comm.total)}</div>
+              <div className="kpi-hint">{dealsMois.length} dossier{dealsMois.length !== 1 ? 's' : ''} signé{dealsMois.length !== 1 ? 's' : ''}</div>
+            </div>
+            <div className="kpi-card kpi-card-blue">
+              <div className="kpi-label">À facturer ce mois</div>
+              <div className="kpi-value">{fmtEur(comm.total)}</div>
+              <div className="kpi-hint">{LIBELLE_TYPE_CONTRAT[contrat.type_contrat]} · facture Entasis (net)</div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="kpi-card kpi-card-gold">
+              <div className="kpi-label">Salaire fixe brut</div>
+              <div className="kpi-value">{fmtEur(salaireFixe)}</div>
+              <div className="kpi-hint">{LIBELLE_TYPE_CONTRAT[contrat.type_contrat]} · garanti</div>
+            </div>
+            <div className="kpi-card kpi-card-green">
+              <div className="kpi-label">Variable {month}</div>
+              <div className="kpi-value">{fmtEur(comm.total)}</div>
+              <div className="kpi-hint">{dealsMois.length} dossier{dealsMois.length !== 1 ? 's' : ''} signé{dealsMois.length !== 1 ? 's' : ''}</div>
+            </div>
+            <div className="kpi-card kpi-card-blue">
+              <div className="kpi-label">Total brut estimé</div>
+              <div className="kpi-value">{fmtEur(totalBrut)}</div>
+              <div className="kpi-hint">Fixe + variable du mois</div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Palier PP */}
