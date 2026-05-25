@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { logger } from '../lib/logger'
 import * as ucsService from '../services/ucsStructures'
 import * as clientsService from '../services/clients'
+import * as structureursService from '../services/structureurs'
 
 const ETATS = [
   { value: 'EN_COURS',   label: 'En cours',   color: '#15803d' },
@@ -91,6 +92,9 @@ export default function UcsStructures({ profile }) {
   const [selectedUcsId, setSelectedUcsId] = useState(null)
   const [filters, setFilters] = useState(loadFilters)
   const [adminMode, setAdminMode] = useState(false)
+  // Side panel structureur : visible uniquement pour les managers, ouvert au
+  // clic sur un chip structureur dans une ligne du tableau.
+  const [structureurPanelId, setStructureurPanelId] = useState(null)
 
   // Charge le catalogue (refetch si on change de mode pour rafraîchir après édition admin)
   const reload = () => {
@@ -205,6 +209,8 @@ export default function UcsStructures({ profile }) {
               onSelect={setSelectedUcsId}
               adminMode={isManager && adminMode}
               onReload={reload}
+              isManager={isManager}
+              onStructureurClick={isManager ? setStructureurPanelId : undefined}
             />
           </div>
           <Simulator
@@ -213,6 +219,14 @@ export default function UcsStructures({ profile }) {
             isManager={isManager}
           />
         </div>
+      )}
+
+      {/* Side panel structureur (manager only) */}
+      {isManager && structureurPanelId && (
+        <StructureurSidePanel
+          structureurId={structureurPanelId}
+          onClose={() => setStructureurPanelId(null)}
+        />
       )}
     </div>
   )
@@ -503,7 +517,7 @@ function FilterBar({ filters, setFilters, allCompagnies, toggleEtat, toggleCompa
 // CatalogueTable : tableau dense, clic = sélection (chargement du simulateur)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function CatalogueTable({ ucs, selectedId, onSelect, adminMode, onReload }) {
+function CatalogueTable({ ucs, selectedId, onSelect, adminMode, onReload, isManager, onStructureurClick }) {
   if (ucs.length === 0) {
     return (
       <div style={{
@@ -532,15 +546,14 @@ function CatalogueTable({ ucs, selectedId, onSelect, adminMode, onReload }) {
           <thead>
             <tr style={{ background: 'var(--bg)', borderBottom: '1px solid var(--bd)' }}>
               <Th>État</Th>
+              <Th>Structureur</Th>
               <Th>Nom UCS</Th>
               <Th>ISIN</Th>
               <Th>Compagnie</Th>
               <Th align="right">Upfront</Th>
               <Th align="right">Mini</Th>
               <Th align="right">Coupon/an</Th>
-              <Th>Constat.</Th>
               <Th align="center">SRI</Th>
-              <Th align="right">Enveloppe</Th>
               <Th align="right">Fin commerc.</Th>
               {adminMode && <Th align="center">Actions</Th>}
             </tr>
@@ -554,6 +567,8 @@ function CatalogueTable({ ucs, selectedId, onSelect, adminMode, onReload }) {
                 onClick={() => onSelect(u.id)}
                 adminMode={adminMode}
                 onReload={onReload}
+                isManager={isManager}
+                onStructureurClick={onStructureurClick}
               />
             ))}
           </tbody>
@@ -592,12 +607,18 @@ function Td({ children, align = 'left', style = {} }) {
   )
 }
 
-function Row({ u, selected, onClick, adminMode, onReload }) {
+function Row({ u, selected, onClick, adminMode, onReload, isManager, onStructureurClick }) {
   const etat = ETATS.find(e => e.value === u.etat)
-  const isEnveloppeDanger = u.enveloppe_restante != null && Number(u.enveloppe_restante) < 0
   const dUntilFin = daysUntil(u.fin_commerc)
   const isFinSoon = dUntilFin != null && dUntilFin >= 0 && dUntilFin < 30
   const isFinPast = dUntilFin != null && dUntilFin < 0
+  // upfront peut être NULL (notamment Abeille mini-campagnes via SwissLine circulaire)
+  const hasUpfront = u.upfront != null && !isNaN(Number(u.upfront))
+  const upfrontVal = hasUpfront ? Number(u.upfront) : null
+  // Coupon annuel : on prend coupon_annualise si dispo, sinon coupon_periode × N
+  const couponDisplay = u.coupon_annualise != null
+    ? u.coupon_annualise
+    : (u.coupon_client != null ? u.coupon_client : null)
 
   return (
     <tr
@@ -624,7 +645,42 @@ function Row({ u, selected, onClick, adminMode, onReload }) {
           letterSpacing: '0.04em',
         }}>{etat?.label || u.etat}</span>
       </Td>
-      <Td style={{ maxWidth: 280, whiteSpace: 'normal', lineHeight: 1.3 }}>
+      {/* CHIP STRUCTUREUR (patch #3) — navy, gras, clic ouvre side panel (manager only) */}
+      <Td>
+        {u.structureur?.nom ? (
+          <button
+            type="button"
+            onClick={e => {
+              e.stopPropagation()
+              if (onStructureurClick) onStructureurClick(u.structureur.id)
+            }}
+            disabled={!onStructureurClick}
+            title={onStructureurClick
+              ? `Voir la fiche ${u.structureur.nom}`
+              : u.structureur.nom}
+            style={{
+              display: 'inline-block',
+              padding: '4px 10px',
+              fontSize: 11,
+              fontWeight: 700,
+              color: '#fff',
+              background: '#0A1F44',
+              border: 'none',
+              borderRadius: 4,
+              cursor: onStructureurClick ? 'pointer' : 'default',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              whiteSpace: 'nowrap',
+              fontFamily: 'inherit',
+            }}
+          >
+            {u.structureur.nom}
+          </button>
+        ) : (
+          <span style={{ fontSize: 10, color: 'var(--t3)', fontStyle: 'italic' }}>—</span>
+        )}
+      </Td>
+      <Td style={{ maxWidth: 320, whiteSpace: 'normal', lineHeight: 1.3 }}>
         {u.couleur_badge && (
           <span style={{
             display: 'inline-block',
@@ -637,6 +693,11 @@ function Row({ u, selected, onClick, adminMode, onReload }) {
           }} />
         )}
         <span style={{ fontWeight: 600 }}>{u.nom_ucs}</span>
+        {u.sous_jacent && (
+          <div style={{ fontSize: 10, color: 'var(--t3)', marginTop: 2 }} title={u.sous_jacent}>
+            {u.sous_jacent.length > 60 ? u.sous_jacent.slice(0, 60) + '…' : u.sous_jacent}
+          </div>
+        )}
       </Td>
       <Td style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--t2)' }}>{u.code_isin}</Td>
       <Td>
@@ -645,16 +706,40 @@ function Row({ u, selected, onClick, adminMode, onReload }) {
           fontSize: 10,
           fontWeight: 600,
           borderRadius: 4,
-          background: 'rgba(201,169,97,0.12)',
-          color: '#7c5e1e',
+          background: u.compagnie === 'SWISSLIFE' ? 'rgba(201,169,97,0.15)' : 'rgba(10,31,68,0.08)',
+          color: u.compagnie === 'SWISSLIFE' ? '#7c5e1e' : '#0A1F44',
           textTransform: 'uppercase',
           letterSpacing: '0.03em',
         }}>{u.compagnie}</span>
       </Td>
-      <Td align="right" style={{ fontWeight: 700, color: 'var(--t1)' }}>{fmtPct(u.upfront)}</Td>
-      <Td align="right">{fmtEuro(u.minimum_requis)}</Td>
-      <Td align="right">{fmtPct(u.coupon_client)}</Td>
-      <Td style={{ fontSize: 10.5, color: 'var(--t3)' }}>{u.constatation || '—'}</Td>
+      {/* Upfront avec gestion NULL + warning si <1.5% (cabinet en perte) */}
+      <Td align="right" title={
+        hasUpfront
+          ? (isManager
+              ? `Cabinet : ${fmtPct(upfrontVal - 1.5)} (conseiller fixe 1,5%)`
+              : 'Upfront négocié avec le structureur')
+          : 'Upfront non renseigné — circulaire SwissLine ou à demander au structureur'
+      }>
+        {hasUpfront ? (
+          <span style={{
+            fontWeight: 700,
+            color: upfrontVal < 1.5 ? '#b91c1c' : 'var(--t1)',
+          }}>
+            {fmtPct(upfrontVal)}
+            {upfrontVal < 1.5 && <span style={{ marginLeft: 4 }}>⚠</span>}
+          </span>
+        ) : (
+          <span style={{ fontSize: 10, color: 'var(--t3)', fontStyle: 'italic' }}>n/a</span>
+        )}
+      </Td>
+      <Td align="right" title={u.maximum_autorise ? `Max ${fmtEuro(u.maximum_autorise)}` : undefined}>
+        {fmtEuro(u.minimum_requis)}
+      </Td>
+      <Td align="right" title={u.coupon_periode != null && u.frequence_coupon
+        ? `${u.coupon_periode}% / ${u.frequence_coupon.toLowerCase()}`
+        : undefined}>
+        {couponDisplay != null ? fmtPct(couponDisplay) : '—'}
+      </Td>
       <Td align="center">
         <span style={{
           display: 'inline-block',
@@ -663,12 +748,12 @@ function Row({ u, selected, onClick, adminMode, onReload }) {
           fontSize: 10,
           fontWeight: 700,
           borderRadius: 3,
-          background: 'var(--bg)',
-          border: '1px solid var(--bd)',
-        }}>{u.sri ?? '—'}</span>
-      </Td>
-      <Td align="right" style={{ color: isEnveloppeDanger ? '#b91c1c' : 'var(--t1)', fontWeight: isEnveloppeDanger ? 600 : 400 }}>
-        {fmtEuro(u.enveloppe_restante)}
+          background: u.capital_garanti ? 'rgba(21,128,61,0.12)' : 'var(--bg)',
+          border: `1px solid ${u.capital_garanti ? '#15803d' : 'var(--bd)'}`,
+          color: u.capital_garanti ? '#15803d' : 'var(--t2)',
+        }} title={u.capital_garanti ? 'Capital garanti à échéance' : undefined}>
+          {u.sri ?? '—'}
+        </span>
       </Td>
       <Td align="right" style={{ color: isFinPast ? '#b91c1c' : isFinSoon ? '#c2410c' : 'var(--t2)' }}>
         {fmtDate(u.fin_commerc)}
@@ -812,17 +897,25 @@ function Simulator({ ucs, profile, isManager }) {
   const minimum = ucs?.minimum_requis ? Number(ucs.minimum_requis) : 0
   const isBelowMin = ucs && montant > 0 && montant < minimum
   const hasValidMontant = ucs && montant >= minimum
+  // Upfront peut être NULL (Abeille mini-campagne circulaire SwissLine) →
+  // pas de calcul de commission possible, on prévient l'utilisateur.
+  const hasUpfront = ucs?.upfront != null && !isNaN(Number(ucs.upfront))
 
   // Calcul commission (pure function du service)
   const commission = useMemo(() => {
-    if (!ucs || !hasValidMontant) return null
+    if (!ucs || !hasValidMontant || !hasUpfront) return null
     return ucsService.computeCommission(montant, Number(ucs.upfront))
-  }, [ucs, montant, hasValidMontant])
+  }, [ucs, montant, hasValidMontant, hasUpfront])
+
+  // Coupon annuel : préférer coupon_annualise (nouveau schéma), fallback coupon_client (legacy)
+  const couponAnnuelPct = ucs?.coupon_annualise != null
+    ? Number(ucs.coupon_annualise)
+    : (ucs?.coupon_client != null ? Number(ucs.coupon_client) : null)
 
   const couponAnnuel = useMemo(() => {
-    if (!ucs || !hasValidMontant) return null
-    return ucsService.computeCouponAnnuel(montant, Number(ucs.coupon_client))
-  }, [ucs, montant, hasValidMontant])
+    if (!ucs || !hasValidMontant || couponAnnuelPct == null) return null
+    return ucsService.computeCouponAnnuel(montant, couponAnnuelPct)
+  }, [ucs, montant, hasValidMontant, couponAnnuelPct])
 
   // Format affichage avec espaces (européen)
   const formatInput = (v) => {
@@ -923,7 +1016,7 @@ function Simulator({ ucs, profile, isManager }) {
       }}>
         <CharRow label="Compagnie" value={ucs.compagnie} />
         <CharRow label="Upfront" value={fmtPct(ucs.upfront)} highlight />
-        <CharRow label="Coupon/an" value={fmtPct(ucs.coupon_client)} />
+        <CharRow label="Coupon/an" value={couponAnnuelPct != null ? fmtPct(couponAnnuelPct) : '—'} />
         <CharRow label="Mini ticket" value={fmtEuro(ucs.minimum_requis)} />
         <CharRow label="SRI" value={ucs.sri ?? '—'} />
         <CharRow label="Fin commerc." value={fmtDate(ucs.fin_commerc)} />
@@ -1002,6 +1095,26 @@ function Simulator({ ucs, profile, isManager }) {
         </button>
       </div>
 
+      {/* Cas spécial : pas d'upfront négocié (ex Abeille mini-campagne) */}
+      {hasValidMontant && !hasUpfront && (
+        <div style={{
+          marginTop: 20,
+          padding: 14,
+          background: 'rgba(245,158,11,0.08)',
+          border: '1px solid rgba(245,158,11,0.3)',
+          borderRadius: 10,
+          fontSize: 12,
+          color: '#92400e',
+          lineHeight: 1.5,
+        }}>
+          <strong>⚠ Upfront non renseigné</strong>
+          <br />
+          La commission n'est pas calculable pour cette UCS. Vérifie la circulaire
+          {' '}{ucs?.compagnie === 'SWISSLIFE' ? 'SwissLine' : 'Abeille'} ou demande
+          les conditions au structureur <strong>{ucs?.structureur?.nom || '?'}</strong>.
+        </div>
+      )}
+
       {/* Bloc résultats */}
       {commission && (
         <div style={{
@@ -1073,7 +1186,7 @@ function Simulator({ ucs, profile, isManager }) {
 
           <ResultDivider />
           <ResultLine
-            label={`Coupon annuel client (${fmtPct(ucs.coupon_client)})`}
+            label={`Coupon annuel client (${couponAnnuelPct != null ? fmtPct(couponAnnuelPct) : '—'})`}
             value={fmtEuro(couponAnnuel)}
             muted
           />
@@ -1556,4 +1669,308 @@ function parseCsvLine(line) {
   }
   cells.push(cur)
   return cells
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// StructureurSidePanel : fiche détail structureur en panel droite (manager only)
+// Patch #3 : ouvre au clic sur le chip navy d'une ligne UCS.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function StructureurSidePanel({ structureurId, onClose }) {
+  const [structureur, setStructureur] = useState(null)
+  const [ucsList, setUcsList] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    Promise.all([
+      structureursService.getById(structureurId),
+      structureursService.listUcsForStructureur(structureurId),
+    ])
+      .then(([s, list]) => {
+        if (!active) return
+        setStructureur(s)
+        setUcsList(list)
+      })
+      .catch(e => logger.warn('[Structureur] load failed', e))
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [structureurId])
+
+  const handleMarkContacted = async () => {
+    if (saving) return
+    setSaving(true)
+    try {
+      await structureursService.markContactedToday(structureurId)
+      const s = await structureursService.getById(structureurId)
+      setStructureur(s)
+    } catch (e) {
+      alert(`Erreur : ${e.message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(10,31,68,0.35)',
+        zIndex: 100,
+        display: 'flex',
+        justifyContent: 'flex-end',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: 'min(520px, 92vw)',
+          height: '100%',
+          background: '#fff',
+          boxShadow: '-8px 0 32px rgba(0,0,0,0.15)',
+          overflowY: 'auto',
+          padding: 24,
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+          <div>
+            <div style={{ fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Fiche structureur
+            </div>
+            <h2 style={{
+              margin: '2px 0 0',
+              fontSize: 22,
+              fontWeight: 700,
+              color: '#0A1F44',
+              fontFamily: 'var(--font-serif, Georgia, serif)',
+            }}>
+              {loading ? 'Chargement…' : structureur?.nom || '?'}
+            </h2>
+          </div>
+          <button onClick={onClose} style={{
+            width: 32, height: 32,
+            border: '1px solid var(--bd)',
+            borderRadius: 6,
+            background: '#fff',
+            cursor: 'pointer',
+            fontSize: 16,
+          }}>×</button>
+        </div>
+
+        {!loading && structureur && (
+          <>
+            {/* Section Identité */}
+            <Section title="Identité">
+              <KvRow k="Compagnies" v={
+                (structureur.compagnies_travaillees || []).length === 0
+                  ? <span style={{ color: 'var(--t3)', fontStyle: 'italic' }}>—</span>
+                  : (
+                    <div style={{ display: 'inline-flex', gap: 4 }}>
+                      {(structureur.compagnies_travaillees || []).map(c => (
+                        <span key={c} style={{
+                          padding: '2px 8px',
+                          fontSize: 10,
+                          fontWeight: 600,
+                          borderRadius: 4,
+                          background: c === 'SWISSLIFE' ? 'rgba(201,169,97,0.15)' : 'rgba(10,31,68,0.08)',
+                          color: c === 'SWISSLIFE' ? '#7c5e1e' : '#0A1F44',
+                          letterSpacing: '0.03em',
+                        }}>{c}</span>
+                      ))}
+                    </div>
+                  )
+              } />
+              <KvRow k="Contact principal" v={structureur.contact_principal || '—'} />
+              <KvRow k="Email" v={structureur.email
+                ? <a href={`mailto:${structureur.email}`} style={{ color: 'var(--gold)' }}>{structureur.email}</a>
+                : '—'} />
+              <KvRow k="Téléphone" v={structureur.telephone || '—'} />
+              <KvRow k="Dernier contact" v={
+                structureur.date_dernier_contact
+                  ? <span style={{
+                      color: daysUntil(structureur.date_dernier_contact) != null
+                        && Math.abs(daysUntil(structureur.date_dernier_contact)) > 60
+                        ? '#b91c1c' : 'var(--t1)',
+                    }}>
+                      {fmtDate(structureur.date_dernier_contact)}
+                    </span>
+                  : <span style={{ color: '#b91c1c' }}>Jamais</span>
+              } />
+              <div style={{ marginTop: 8 }}>
+                <button onClick={handleMarkContacted} disabled={saving} style={{
+                  padding: '6px 12px',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  background: '#0A1F44',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 6,
+                  cursor: saving ? 'wait' : 'pointer',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                }}>
+                  {saving ? 'Sauvegarde…' : 'Marquer contact aujourd\'hui'}
+                </button>
+              </div>
+            </Section>
+
+            {/* Section UCS au catalogue */}
+            <Section title={`UCS au catalogue (${ucsList.length})`}>
+              {ucsList.length === 0 ? (
+                <div style={{ fontSize: 12, color: 'var(--t3)', fontStyle: 'italic' }}>
+                  Aucune UCS rattachée à ce structureur.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {ucsList.map(u => {
+                    const etat = ETATS.find(e => e.value === u.etat)
+                    return (
+                      <div key={u.id} style={{
+                        padding: '8px 10px',
+                        background: 'var(--bg)',
+                        borderRadius: 6,
+                        fontSize: 12,
+                        display: 'flex',
+                        gap: 8,
+                        alignItems: 'center',
+                      }}>
+                        <span style={{
+                          padding: '1px 6px',
+                          fontSize: 8,
+                          fontWeight: 700,
+                          color: '#fff',
+                          background: etat?.color || '#666',
+                          borderRadius: 8,
+                          letterSpacing: '0.04em',
+                          whiteSpace: 'nowrap',
+                        }}>{etat?.label || u.etat}</span>
+                        <span style={{ flex: 1, lineHeight: 1.3 }}>{u.nom_ucs}</span>
+                        <span style={{ fontWeight: 700, color: 'var(--t1)', whiteSpace: 'nowrap' }}>
+                          {u.upfront != null ? fmtPct(u.upfront) : 'n/a'}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </Section>
+
+            {/* Section Notes négociation */}
+            <Section title="Notes de négociation">
+              <NotesEditor
+                structureurId={structureurId}
+                initial={structureur.notes_negociation || ''}
+                onSaved={async () => {
+                  const s = await structureursService.getById(structureurId)
+                  setStructureur(s)
+                }}
+              />
+            </Section>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function Section({ title, children }) {
+  return (
+    <div style={{
+      marginBottom: 20,
+      padding: 16,
+      background: '#fff',
+      border: '1px solid var(--bd)',
+      borderRadius: 10,
+    }}>
+      <div style={{
+        fontSize: 10,
+        fontWeight: 700,
+        color: 'var(--t3)',
+        textTransform: 'uppercase',
+        letterSpacing: '0.06em',
+        marginBottom: 10,
+      }}>{title}</div>
+      {children}
+    </div>
+  )
+}
+
+function KvRow({ k, v }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '4px 0', fontSize: 12 }}>
+      <span style={{ color: 'var(--t3)' }}>{k}</span>
+      <span style={{ color: 'var(--t1)', fontWeight: 500, textAlign: 'right', maxWidth: '65%' }}>{v}</span>
+    </div>
+  )
+}
+
+function NotesEditor({ structureurId, initial, onSaved }) {
+  const [value, setValue] = useState(initial)
+  const [saving, setSaving] = useState(false)
+  const [savedAt, setSavedAt] = useState(0)
+
+  useEffect(() => { setValue(initial) }, [initial])
+
+  const handleSave = async () => {
+    if (saving || value === initial) return
+    setSaving(true)
+    try {
+      await structureursService.update(structureurId, { notes_negociation: value })
+      setSavedAt(Date.now())
+      await onSaved?.()
+    } catch (e) {
+      alert(`Erreur : ${e.message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div>
+      <textarea
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        placeholder="Conditions négociées, dernières discussions, points d'attention…"
+        rows={5}
+        style={{
+          width: '100%',
+          padding: 10,
+          fontSize: 12,
+          border: '1px solid var(--bd)',
+          borderRadius: 6,
+          fontFamily: 'inherit',
+          resize: 'vertical',
+          color: 'var(--t1)',
+          outline: 'none',
+        }}
+      />
+      <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 10, color: 'var(--t3)' }}>
+          {savedAt ? '✓ Sauvegardé' : value !== initial ? 'Modifications non sauvegardées' : ''}
+        </span>
+        <button
+          onClick={handleSave}
+          disabled={saving || value === initial}
+          style={{
+            padding: '6px 12px',
+            fontSize: 11,
+            fontWeight: 600,
+            color: '#fff',
+            background: saving || value === initial ? 'var(--t3)' : 'var(--gold)',
+            border: 'none',
+            borderRadius: 6,
+            cursor: saving || value === initial ? 'default' : 'pointer',
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+          }}
+        >
+          {saving ? 'Sauvegarde…' : 'Enregistrer'}
+        </button>
+      </div>
+    </div>
+  )
 }

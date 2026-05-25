@@ -49,15 +49,19 @@ export function computeCouponAnnuel(montant, couponClient) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Charge tout le catalogue UCS. Tri par défaut : EN_COURS d'abord, puis
- * upfront décroissant.
+ * Charge tout le catalogue UCS avec le structureur joint.
+ * Tri par défaut : EN_COURS d'abord, puis upfront décroissant
+ * (NULL en dernier — les UCS sans upfront négocié, ex Abeille).
  */
 export async function listAll() {
   const { data, error } = await supabase
     .from('ucs_structures')
-    .select('*')
-    .order('etat', { ascending: true })   // EN_COURS avant CLOTURE/ANNULATION (alpha)
-    .order('upfront', { ascending: false })
+    .select(`
+      *,
+      structureur:structureurs(id, nom, compagnies_travaillees)
+    `)
+    .order('etat', { ascending: true })
+    .order('upfront', { ascending: false, nullsFirst: false })
   if (error) throw error
   return data || []
 }
