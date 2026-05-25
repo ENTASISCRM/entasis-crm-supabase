@@ -1714,38 +1714,24 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
         <KpiCard label="Cabinet · PP signée" value={euro(cabinet.ppCab)} hint={`${cabinet.signedCount} dossier${cabinet.signedCount!==1?'s':''} signé${cabinet.signedCount!==1?'s':''} sur ${cabinet.totalCount}`} accent="gold"/>
         <KpiCard label="Cabinet · PU signée" value={euro(cabinet.puCab)} hint="Versements uniques équipe" accent="blue"/>
       </div>
-      <div className="grid-2 gap-24" style={{alignItems:'start'}}>
-        <div className="flex-col gap-16">
-          <AreaChart title="PP annualisée" subtitle={targetSource==='perso' ? 'Réalisé vs mon palier mensuel' : 'Réalisé vs objectif cabinet'} actual={m.ppSigned} projected={m.ppProjected} target={ppTarget}/>
-          <AreaChart title="PU" subtitle={targetSource==='perso' ? 'Versements uniques · palier perso' : 'Versements uniques'} actual={m.puSigned} projected={m.puProjected} target={puTarget}/>
-        </div>
-        <div>
-          <div className="section-header"><div><div className="section-kicker">Actions immédiates</div><div className="section-title">Mes priorités</div></div></div>
-          {priorities.length>0?(
-            <div className="priorities-list">
-              {priorities.map(deal=>(
-                <div key={deal.id} className="priority-item">
-                  <div className={`priority-item-dot ${deal.priority==='Urgente'?'urgent':deal.priority==='Haute'?'high':'normal'}`}/>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div className="priority-item-client truncate">{getClientName(deal)}</div>
-                    <div className="priority-item-detail">{deal.product} · <span className={STATUS_CLASS[deal.status]||'badge'}>{deal.status}</span></div>
-                  </div>
-                  <div className="priority-item-amount">{euro(annualize(deal.pp_m))}</div>
+      <div>
+        <div className="section-header"><div><div className="section-kicker">Actions immédiates</div><div className="section-title">Mes priorités</div></div></div>
+        {priorities.length>0?(
+          <div className="priorities-list">
+            {priorities.map(deal=>(
+              <div key={deal.id} className="priority-item">
+                <div className={`priority-item-dot ${deal.priority==='Urgente'?'urgent':deal.priority==='Haute'?'high':'normal'}`}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div className="priority-item-client truncate">{getClientName(deal)}</div>
+                  <div className="priority-item-detail">{deal.product} · <span className={STATUS_CLASS[deal.status]||'badge'}>{deal.status}</span></div>
                 </div>
-              ))}
-            </div>
-          ):(
-            <div className="table-empty-state"><div className="empty-icon">✓</div><div className="empty-title">Aucune priorité urgente</div><div className="empty-sub">Tous tes dossiers chauds sont traités.</div></div>
-          )}
-          {ppTarget>0&&<div style={{marginTop:20,background:'var(--gold-subtle)',border:'1px solid var(--gold-line)',borderRadius:'var(--rad-lg)',padding:'16px 20px'}}>
-            <div className="section-kicker" style={{marginBottom:10}}>Pilotage objectif</div>
-            <div className="flex gap-16 flex-wrap">
-              <div><div className="text-xs text-muted mb-4">Réalisé</div><div className="font-serif" style={{fontSize:18,fontWeight:500}}>{ppPct}%</div></div>
-              <div><div className="text-xs text-muted mb-4">Projeté</div><div className="font-serif" style={{fontSize:18,fontWeight:500}}>{ppProjPct}%</div></div>
-              <div><div className="text-xs text-muted mb-4">Reste à faire</div><div className="font-serif" style={{fontSize:18,fontWeight:500,color:landing!=null&&landing<0?'var(--cancelled)':'var(--signed)'}}>{ppTarget>0?euro(Math.max(0,ppTarget-m.ppProjected)):'—'}</div></div>
-            </div>
-          </div>}
-        </div>
+                <div className="priority-item-amount">{euro(annualize(deal.pp_m))}</div>
+              </div>
+            ))}
+          </div>
+        ):(
+          <div className="table-empty-state"><div className="empty-icon">✓</div><div className="empty-title">Aucune priorité urgente</div><div className="empty-sub">Tous tes dossiers chauds sont traités.</div></div>
+        )}
       </div>
       <div style={{marginTop:28}}>
         <div className="section-header"><div><div className="section-kicker">Vue annuelle</div><div className="section-title">Saisonnalité — 12 mois</div><div className="section-sub">PP annualisée signée + pipeline par mois · mois courant mis en valeur</div></div></div>
