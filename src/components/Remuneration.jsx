@@ -217,8 +217,24 @@ function VueConseiller({ contrat, profile, deals, month, isManager }) {
         )}
       </div>
 
-      {/* Palier PP */}
-      {palierPp > 0 && (
+      {/* PHASE 1 — Seuil de rentabilité (priorité : tous les produits comptent) */}
+      {!rentab.rentabilise && salaireFixe > 0 && (
+        <PalierCard
+          titre="Seuil de rentabilité du mois"
+          realise={rentab.valeurCumulee}
+          cible={rentab.brutCumule}
+          pct={rentab.brutCumule > 0
+            ? Math.min(100, (rentab.valeurCumulee / rentab.brutCumule) * 100)
+            : 0}
+          reste={Math.max(0, rentab.brutCumule - rentab.valeurCumulee)}
+          atteint={false}
+          variable={0}
+          hint={`Plus que ${fmtEur(Math.max(0, rentab.brutCumule - rentab.valeurCumulee))} avant de débloquer ton variable. Tous les produits comptent : PP, PU, SCPI, UCS, MH, Girardin, PE, Prévoyance, Mutuelle (au taux mandataire).`}
+        />
+      )}
+
+      {/* PHASE 2 — Paliers PP / PU (une fois rentabilisé) */}
+      {rentab.rentabilise && palierPp > 0 && (
         <PalierCard
           titre="Palier PP du mois"
           realise={comm.ppRealisee}
@@ -233,8 +249,7 @@ function VueConseiller({ contrat, profile, deals, month, isManager }) {
         />
       )}
 
-      {/* Palier PU */}
-      {palierPu > 0 && (
+      {rentab.rentabilise && palierPu > 0 && (
         <PalierCard
           titre="Palier PU du mois"
           realise={comm.puRealisee}
