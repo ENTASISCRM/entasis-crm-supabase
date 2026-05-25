@@ -362,16 +362,16 @@ export function commissionsMois(dealsMois = [], contrat, rentabilise, profile = 
 }
 
 /**
- * Filtre les deals signés sur un mois donné (YYYY-MM).
+ * Filtre les deals signés sur un mois donné.
+ *
+ * Convention CRM : le mois est en français ("MAI", "JUIN", etc.) et stocké
+ * dans `deal.month`. La colonne month a déjà été alignée sur date_signed
+ * à la sauvegarde (cf. saveDeal dans App.jsx), donc filtrer sur d.month
+ * suffit — c'est exactement ce que fait advisorMetrics dans lib/metrics.js.
  */
 export function dealsDuMois(deals, monthStr) {
   if (!deals || !monthStr) return []
-  return deals.filter(d => {
-    if (d.status !== 'Signé') return false
-    const ds = d.date_signed || d.date
-    if (!ds) return false
-    return String(ds).slice(0, 7) === monthStr
-  })
+  return deals.filter(d => d.status === 'Signé' && d.month === monthStr)
 }
 
 /**
