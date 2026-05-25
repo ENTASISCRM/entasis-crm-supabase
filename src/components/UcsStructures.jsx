@@ -90,8 +90,20 @@ export default function UcsStructures({ profile }) {
   const [error, setError] = useState('')
   const [selectedUcsId, setSelectedUcsId] = useState(null)
   const [filters, setFilters] = useState(loadFilters)
+  const [adminMode, setAdminMode] = useState(false)
 
-  // Charge le catalogue
+  // Charge le catalogue (refetch si on change de mode pour rafraîchir après édition admin)
+  const reload = () => {
+    setLoading(true)
+    return ucsService.listAll()
+      .then(data => { setUcs(data); setError('') })
+      .catch(e => {
+        logger.warn('[UCS] listAll failed', e)
+        setError(e.message || 'Erreur de chargement du catalogue')
+      })
+      .finally(() => setLoading(false))
+  }
+
   useEffect(() => {
     let active = true
     setLoading(true)
@@ -157,11 +169,22 @@ export default function UcsStructures({ profile }) {
   // ───────────────────────────────── Render ─────────────────────────────────
   return (
     <div style={{ padding: '16px 24px 32px', maxWidth: 1600, margin: '0 auto' }}>
-      <Header isManager={isManager} />
+      <Header
+        isManager={isManager}
+        adminMode={adminMode}
+        onToggleAdmin={() => setAdminMode(v => !v)}
+      />
 
       {loading && <LoadingState />}
       {error && !loading && <ErrorState error={error} />}
-      {!loading && !error && ucs.length === 0 && <EmptyState isManager={isManager} />}
+      {!loading && !error && ucs.length === 0 && (
+        <EmptyState isManager={isManager} onAdminClick={() => setAdminMode(true)} />
+      )}
+
+      {/* Mode admin : panneau d'import CSV au-dessus du layout principal */}
+      {isManager && adminMode && (
+        <AdminPanel onReload={reload} />
+      )}
 
       {!loading && !error && ucs.length > 0 && (
         <div className="ucs-layout">
@@ -180,6 +203,8 @@ export default function UcsStructures({ profile }) {
               ucs={filtered}
               selectedId={selectedUcsId}
               onSelect={setSelectedUcsId}
+              adminMode={isManager && adminMode}
+              onReload={reload}
             />
           </div>
           <Simulator
@@ -197,24 +222,53 @@ export default function UcsStructures({ profile }) {
 // Sub-components
 // ─────────────────────────────────────────────────────────────────────────────
 
-function Header({ isManager }) {
+function Header({ isManager, adminMode, onToggleAdmin }) {
   return (
-    <div style={{ marginBottom: 24 }}>
-      <h1 style={{
-        fontFamily: 'var(--font-serif, Georgia, serif)',
-        fontSize: 28,
-        fontWeight: 700,
-        color: 'var(--t1)',
-        margin: 0,
-        letterSpacing: '-0.01em',
-      }}>
-        UCS Produits Structurés
-      </h1>
-      <p style={{ fontSize: 13, color: 'var(--t3)', marginTop: 4 }}>
-        Catalogue des produits structurés du groupement et simulateur de commission.
-        {' '}<strong style={{ color: 'var(--gold)' }}>Commission conseiller : 1,5 % fixe</strong>
-        {isManager && ' · Rétention cabinet = Upfront − 1,5 %'}
-      </p>
+    <div style={{
+      marginBottom: 24,
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      gap: 16,
+      flexWrap: 'wrap',
+    }}>
+      <div>
+        <h1 style={{
+          fontFamily: 'var(--font-serif, Georgia, serif)',
+          fontSize: 28,
+          fontWeight: 700,
+          color: 'var(--t1)',
+          margin: 0,
+          letterSpacing: '-0.01em',
+        }}>
+          UCS Produits Structurés
+        </h1>
+        <p style={{ fontSize: 13, color: 'var(--t3)', marginTop: 4 }}>
+          Catalogue des produits structurés du groupement et simulateur de commission.
+          {' '}<strong style={{ color: 'var(--gold)' }}>Commission conseiller : 1,5 % fixe</strong>
+          {isManager && ' · Rétention cabinet = Upfront − 1,5 %'}
+        </p>
+      </div>
+      {isManager && (
+        <button
+          onClick={onToggleAdmin}
+          style={{
+            padding: '8px 16px',
+            fontSize: 12,
+            fontWeight: 700,
+            color: adminMode ? '#fff' : 'var(--t1)',
+            background: adminMode ? 'var(--t1)' : '#fff',
+            border: '1.5px solid var(--t1)',
+            borderRadius: 8,
+            cursor: 'pointer',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {adminMode ? 'Quitter le mode admin' : 'Mode administrateur'}
+        </button>
+      )}
     </div>
   )
 }
@@ -247,7 +301,7 @@ function ErrorState({ error }) {
   )
 }
 
-function EmptyState({ isManager }) {
+function EmptyState({ isManager, onAdminClick }) {
   return (
     <div style={{
       padding: 32,
@@ -260,12 +314,25 @@ function EmptyState({ isManager }) {
     }}>
       Aucune UCS dans le catalogue.
       {isManager && (
-        <>
-          <br />
-          <span style={{ fontSize: 12 }}>
-            Importez le CSV du groupement via l'interface admin (à venir).
-          </span>
-        </>
+        <div style={{ marginTop: 10 }}>
+          <button
+            onClick={onAdminClick}
+            style={{
+              padding: '8px 16px',
+              fontSize: 12,
+              fontWeight: 700,
+              color: '#fff',
+              background: 'var(--gold)',
+              border: 'none',
+              borderRadius: 6,
+              cursor: 'pointer',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+            }}
+          >
+            Importer le CSV du groupement
+          </button>
+        </div>
       )}
     </div>
   )
@@ -436,7 +503,7 @@ function FilterBar({ filters, setFilters, allCompagnies, toggleEtat, toggleCompa
 // CatalogueTable : tableau dense, clic = sélection (chargement du simulateur)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function CatalogueTable({ ucs, selectedId, onSelect }) {
+function CatalogueTable({ ucs, selectedId, onSelect, adminMode, onReload }) {
   if (ucs.length === 0) {
     return (
       <div style={{
@@ -475,11 +542,19 @@ function CatalogueTable({ ucs, selectedId, onSelect }) {
               <Th align="center">SRI</Th>
               <Th align="right">Enveloppe</Th>
               <Th align="right">Fin commerc.</Th>
+              {adminMode && <Th align="center">Actions</Th>}
             </tr>
           </thead>
           <tbody>
             {ucs.map(u => (
-              <Row key={u.id} u={u} selected={u.id === selectedId} onClick={() => onSelect(u.id)} />
+              <Row
+                key={u.id}
+                u={u}
+                selected={u.id === selectedId}
+                onClick={() => onSelect(u.id)}
+                adminMode={adminMode}
+                onReload={onReload}
+              />
             ))}
           </tbody>
         </table>
@@ -517,7 +592,7 @@ function Td({ children, align = 'left', style = {} }) {
   )
 }
 
-function Row({ u, selected, onClick }) {
+function Row({ u, selected, onClick, adminMode, onReload }) {
   const etat = ETATS.find(e => e.value === u.etat)
   const isEnveloppeDanger = u.enveloppe_restante != null && Number(u.enveloppe_restante) < 0
   const dUntilFin = daysUntil(u.fin_commerc)
@@ -601,8 +676,110 @@ function Row({ u, selected, onClick }) {
           <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.8 }}>({dUntilFin}j)</span>
         )}
       </Td>
+      {adminMode && (
+        <Td align="center" style={{ whiteSpace: 'nowrap' }}>
+          <AdminRowActions u={u} onReload={onReload} />
+        </Td>
+      )}
     </tr>
   )
+}
+
+// Boutons d'action admin sur une row (changement statut + édition enveloppe).
+// onClick=stopPropagation pour ne pas déclencher la sélection de la ligne.
+function AdminRowActions({ u, onReload }) {
+  const [busy, setBusy] = useState(false)
+
+  const handleStatus = async (newEtat) => {
+    if (busy) return
+    if (!confirm(`Marquer "${u.nom_ucs}" comme ${newEtat} ?`)) return
+    setBusy(true)
+    try {
+      await ucsService.markStatus(u.id, newEtat)
+      await onReload?.()
+    } catch (e) {
+      alert(`Erreur : ${e.message}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleEditEnveloppe = async () => {
+    if (busy) return
+    const raw = prompt(
+      `Nouvelle enveloppe restante pour "${u.nom_ucs}" (€) :`,
+      String(u.enveloppe_restante ?? '')
+    )
+    if (raw == null) return
+    const val = parseFloat(String(raw).replace(/[^\d.-]/g, ''))
+    if (isNaN(val)) {
+      alert('Montant invalide')
+      return
+    }
+    setBusy(true)
+    try {
+      await ucsService.update(u.id, { enveloppe_restante: val })
+      await onReload?.()
+    } catch (e) {
+      alert(`Erreur : ${e.message}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div
+      onClick={e => e.stopPropagation()}
+      style={{ display: 'inline-flex', gap: 4 }}
+    >
+      <button
+        onClick={handleEditEnveloppe}
+        disabled={busy}
+        title="Modifier l'enveloppe restante"
+        style={adminActionBtn('var(--t2)')}
+      >€</button>
+      {u.etat !== 'CLOTURE' && (
+        <button
+          onClick={() => handleStatus('CLOTURE')}
+          disabled={busy}
+          title="Marquer CLOTURE"
+          style={adminActionBtn('#c2410c')}
+        >✕</button>
+      )}
+      {u.etat !== 'ANNULATION' && (
+        <button
+          onClick={() => handleStatus('ANNULATION')}
+          disabled={busy}
+          title="Marquer ANNULATION"
+          style={adminActionBtn('#b91c1c')}
+        >⊘</button>
+      )}
+      {u.etat !== 'EN_COURS' && (
+        <button
+          onClick={() => handleStatus('EN_COURS')}
+          disabled={busy}
+          title="Réactiver EN_COURS"
+          style={adminActionBtn('#15803d')}
+        >↺</button>
+      )}
+    </div>
+  )
+}
+
+function adminActionBtn(color) {
+  return {
+    width: 26,
+    height: 26,
+    padding: 0,
+    fontSize: 12,
+    fontWeight: 700,
+    color,
+    background: '#fff',
+    border: `1px solid ${color}`,
+    borderRadius: 4,
+    cursor: 'pointer',
+    lineHeight: 1,
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1076,4 +1253,307 @@ function ResultLine({ label, value, muted, danger }) {
 
 function ResultDivider() {
   return <div style={{ height: 1, background: 'var(--bd)', margin: '6px 0' }} />
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AdminPanel : import CSV (upload + parse + preview + upsert batch)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Format CSV attendu (entête identique à la spec, séparateur virgule) :
+//   etat,nom_ucs,code_isin,compagnie,upfront,minimum_requis,coupon_client,
+//   constatation,sri,enveloppe_restante,fin_commerc,couleur_badge
+//
+// On parse côté navigateur (FileReader + parsing CSV simple), on affiche
+// une preview des 5 premières lignes + un compteur, puis on upsert via
+// ucsService.upsertMany (onConflict: code_isin → idempotent).
+
+function AdminPanel({ onReload }) {
+  const [file, setFile] = useState(null)
+  const [parsed, setParsed] = useState(null)   // { rows, errors }
+  const [importing, setImporting] = useState(false)
+  const [result, setResult] = useState(null)   // { inserted } ou { error }
+
+  const handleFile = (e) => {
+    const f = e.target.files?.[0]
+    if (!f) return
+    setFile(f)
+    setParsed(null)
+    setResult(null)
+    const reader = new FileReader()
+    reader.onload = (evt) => {
+      const text = String(evt.target?.result || '')
+      const { rows, errors } = parseUcsCsv(text)
+      setParsed({ rows, errors })
+    }
+    reader.onerror = () => {
+      setParsed({ rows: [], errors: ['Erreur de lecture du fichier'] })
+    }
+    reader.readAsText(f, 'utf-8')
+  }
+
+  const handleImport = async () => {
+    if (!parsed?.rows?.length || importing) return
+    setImporting(true)
+    setResult(null)
+    try {
+      const r = await ucsService.upsertMany(parsed.rows)
+      setResult({ inserted: r.inserted })
+      await onReload?.()
+    } catch (e) {
+      logger.warn('[UCS] upsertMany failed', e)
+      setResult({ error: e.message })
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const handleReset = () => {
+    setFile(null)
+    setParsed(null)
+    setResult(null)
+  }
+
+  return (
+    <div style={{
+      background: '#fff',
+      border: `2px solid var(--gold)`,
+      borderRadius: 12,
+      padding: 20,
+      marginBottom: 16,
+    }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        gap: 12,
+        marginBottom: 12,
+      }}>
+        <div>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--t1)' }}>
+            Mode administrateur · Import CSV
+          </h3>
+          <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--t3)' }}>
+            Format attendu : <code style={{ fontSize: 11 }}>etat,nom_ucs,code_isin,compagnie,upfront,minimum_requis,coupon_client,constatation,sri,enveloppe_restante,fin_commerc,couleur_badge</code>
+            <br />
+            Upsert sur <code>code_isin</code> : idempotent, peut être ré-importé sans créer de doublons.
+          </p>
+        </div>
+        {file && (
+          <button onClick={handleReset} style={{
+            padding: '6px 12px',
+            fontSize: 11,
+            background: 'var(--bg)',
+            border: '1px solid var(--bd)',
+            borderRadius: 6,
+            cursor: 'pointer',
+          }}>Effacer</button>
+        )}
+      </div>
+
+      {/* File input */}
+      <label style={{
+        display: 'inline-block',
+        padding: '10px 18px',
+        fontSize: 12,
+        fontWeight: 600,
+        color: '#fff',
+        background: 'var(--t1)',
+        borderRadius: 8,
+        cursor: 'pointer',
+        textTransform: 'uppercase',
+        letterSpacing: '0.04em',
+      }}>
+        Choisir un fichier CSV
+        <input
+          type="file"
+          accept=".csv,text/csv"
+          onChange={handleFile}
+          style={{ display: 'none' }}
+        />
+      </label>
+      {file && (
+        <span style={{ marginLeft: 12, fontSize: 12, color: 'var(--t3)' }}>
+          {file.name} ({(file.size / 1024).toFixed(1)} ko)
+        </span>
+      )}
+
+      {/* Preview parse */}
+      {parsed && (
+        <div style={{
+          marginTop: 16,
+          padding: 12,
+          background: 'var(--bg)',
+          borderRadius: 8,
+          fontSize: 12,
+        }}>
+          <div style={{ marginBottom: 8 }}>
+            <strong style={{ color: 'var(--t1)' }}>{parsed.rows.length}</strong> lignes valides détectées
+            {parsed.errors.length > 0 && (
+              <span style={{ marginLeft: 12, color: '#c2410c' }}>
+                · {parsed.errors.length} erreur{parsed.errors.length > 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+          {parsed.errors.length > 0 && (
+            <details style={{ marginBottom: 8 }}>
+              <summary style={{ cursor: 'pointer', color: '#c2410c', fontSize: 11 }}>
+                Voir les erreurs
+              </summary>
+              <ul style={{ fontSize: 11, color: '#7c2d12', margin: '4px 0', paddingLeft: 18 }}>
+                {parsed.errors.slice(0, 10).map((err, i) => <li key={i}>{err}</li>)}
+                {parsed.errors.length > 10 && <li>... et {parsed.errors.length - 10} autres</li>}
+              </ul>
+            </details>
+          )}
+          {parsed.rows.length > 0 && (
+            <details>
+              <summary style={{ cursor: 'pointer', fontSize: 11, color: 'var(--t2)' }}>
+                Preview (5 premières lignes)
+              </summary>
+              <pre style={{
+                fontSize: 10,
+                margin: '6px 0 0',
+                padding: 8,
+                background: '#fff',
+                borderRadius: 4,
+                overflowX: 'auto',
+                color: 'var(--t2)',
+              }}>
+                {JSON.stringify(parsed.rows.slice(0, 5), null, 2)}
+              </pre>
+            </details>
+          )}
+        </div>
+      )}
+
+      {/* Bouton import */}
+      {parsed?.rows?.length > 0 && !result && (
+        <button
+          onClick={handleImport}
+          disabled={importing}
+          style={{
+            marginTop: 12,
+            padding: '10px 20px',
+            fontSize: 13,
+            fontWeight: 700,
+            color: '#fff',
+            background: importing ? 'var(--t3)' : 'var(--gold)',
+            border: 'none',
+            borderRadius: 8,
+            cursor: importing ? 'wait' : 'pointer',
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+          }}
+        >
+          {importing ? 'Import en cours...' : `Importer ${parsed.rows.length} UCS dans Supabase`}
+        </button>
+      )}
+
+      {/* Résultat */}
+      {result && (
+        <div style={{
+          marginTop: 12,
+          padding: 12,
+          background: result.error ? 'rgba(239,68,68,0.08)' : 'rgba(16,185,129,0.08)',
+          border: `1px solid ${result.error ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}`,
+          borderRadius: 6,
+          fontSize: 12,
+          color: result.error ? '#b91c1c' : '#047857',
+          fontWeight: 600,
+        }}>
+          {result.error
+            ? `Erreur d'import : ${result.error}`
+            : `✓ ${result.inserted} UCS importées avec succès`}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Parse CSV simple (séparateur virgule, gère les guillemets pour les valeurs
+// avec virgule interne). Pas de dépendance externe.
+function parseUcsCsv(text) {
+  const errors = []
+  const rows = []
+  const lines = text.split(/\r?\n/).filter(l => l.trim())
+  if (lines.length < 2) {
+    return { rows: [], errors: ['CSV vide ou pas d\'en-tête'] }
+  }
+
+  const header = parseCsvLine(lines[0]).map(h => h.trim().toLowerCase())
+  const expected = [
+    'etat', 'nom_ucs', 'code_isin', 'compagnie', 'upfront',
+    'minimum_requis', 'coupon_client', 'constatation', 'sri',
+    'enveloppe_restante', 'fin_commerc', 'couleur_badge',
+  ]
+  const missing = expected.filter(c => !header.includes(c))
+  if (missing.length) {
+    return { rows: [], errors: [`Colonnes manquantes : ${missing.join(', ')}`] }
+  }
+
+  const idx = Object.fromEntries(expected.map(c => [c, header.indexOf(c)]))
+
+  for (let i = 1; i < lines.length; i++) {
+    const cells = parseCsvLine(lines[i])
+    try {
+      const row = {
+        etat: String(cells[idx.etat] || '').trim().toUpperCase(),
+        nom_ucs: String(cells[idx.nom_ucs] || '').trim(),
+        code_isin: String(cells[idx.code_isin] || '').trim().toUpperCase(),
+        compagnie: String(cells[idx.compagnie] || '').trim(),
+        upfront: parseFloat(cells[idx.upfront]),
+        minimum_requis: parseFloat(cells[idx.minimum_requis]),
+        coupon_client: parseFloat(cells[idx.coupon_client]),
+        constatation: String(cells[idx.constatation] || '').trim().toUpperCase() || null,
+        sri: cells[idx.sri] ? parseInt(cells[idx.sri], 10) : null,
+        enveloppe_restante: cells[idx.enveloppe_restante]
+          ? parseFloat(cells[idx.enveloppe_restante])
+          : null,
+        fin_commerc: cells[idx.fin_commerc] || null,
+        couleur_badge: cells[idx.couleur_badge] || null,
+      }
+      // Validations minimales
+      if (!['EN_COURS', 'CLOTURE', 'ANNULATION'].includes(row.etat)) {
+        errors.push(`Ligne ${i + 1} : etat invalide "${row.etat}"`)
+        continue
+      }
+      if (!row.code_isin || !row.nom_ucs || !row.compagnie) {
+        errors.push(`Ligne ${i + 1} : champs requis manquants`)
+        continue
+      }
+      if (isNaN(row.upfront) || isNaN(row.minimum_requis) || isNaN(row.coupon_client)) {
+        errors.push(`Ligne ${i + 1} : montants invalides`)
+        continue
+      }
+      rows.push(row)
+    } catch (e) {
+      errors.push(`Ligne ${i + 1} : ${e.message}`)
+    }
+  }
+
+  return { rows, errors }
+}
+
+// Parse une ligne CSV en gérant les "double quoted" cells (valeurs avec
+// virgule interne). Implémentation minimaliste, suffisante pour l'export
+// du groupement (pas de quotes échappées internes).
+function parseCsvLine(line) {
+  const cells = []
+  let cur = ''
+  let inQuotes = false
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i]
+    if (c === '"') {
+      inQuotes = !inQuotes
+      continue
+    }
+    if (c === ',' && !inQuotes) {
+      cells.push(cur)
+      cur = ''
+      continue
+    }
+    cur += c
+  }
+  cells.push(cur)
+  return cells
 }
