@@ -16,6 +16,7 @@ import MesDossiersImmo from './components/MesDossiersImmo'
 import PipelineVEFA from './components/PipelineVEFA'
 import OutilsCGP from './components/OutilsCGP'
 import LinkedInPro from './components/LinkedInPro'
+import PilotageRH from './components/PilotageRH'
 import UcsStructures from './components/UcsStructures'
 import Structureurs from './components/Structureurs'
 import ClientsView from './components/clients/ClientsView'
@@ -4266,7 +4267,7 @@ export default function App(){
 
           {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile}/>)}
           {activeTab==='leads'&&<LeadRoomEmbed/>}
-          {activeTab==='pilotage-rh'&&isManager&&<PilotageRhEmbed/>}
+          {activeTab==='pilotage-rh'&&isManager&&<PilotageRH/>}
           {activeTab==='pipeline'&&<PipelineBoard deals={deals} month={month} profile={profile} onEdit={startEdit}/>}
           {activeTab==='dossiers'&&<DealsTable deals={deals} month={month} profile={profile} onEdit={startEdit} onDelete={deleteDeal} onRefresh={loadAll} onSelectClient={(clientId) => {
             setSelectedClientId(clientId)
