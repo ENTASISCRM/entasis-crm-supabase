@@ -12,6 +12,9 @@ import { logger } from '../lib/logger'
 import * as ucsService from '../services/ucsStructures'
 import * as clientsService from '../services/clients'
 import * as structureursService from '../services/structureurs'
+import * as contratsService from '../services/conseillerContrats'
+import * as dealsService from '../services/deals'
+import { evaluerRentabilite } from '../lib/calcul-commission'
 
 const ETATS = [
   { value: 'EN_COURS',   label: 'En cours',   color: '#15803d' },
@@ -95,6 +98,44 @@ export default function UcsStructures({ profile }) {
   // Side panel structureur : visible uniquement pour les managers, ouvert au
   // clic sur un chip structureur dans une ligne du tableau.
   const [structureurPanelId, setStructureurPanelId] = useState(null)
+
+  // Contrat du conseiller connecté + son historique de deals pour
+  // déterminer le taux de commission UCS à afficher (1,5 % si non
+  // rentabilisé ou mandataire, 0,75 % si rentabilisé CDI/Alternant…).
+  const [contratPerso, setContratPerso] = useState(null)
+  const [dealsHistorique, setDealsHistorique] = useState([])
+
+  useEffect(() => {
+    let alive = true
+    ;(async () => {
+      try {
+        const [own, allDeals] = await Promise.all([
+          contratsService.getOwn().catch(() => null),
+          dealsService.listAll().catch(() => []),
+        ])
+        if (!alive) return
+        setContratPerso(own)
+        const code = own?.matricule || own?.full_name
+        const hist = code ? allDeals.filter(d => d.advisor_code === code) : []
+        setDealsHistorique(hist)
+      } catch (e) {
+        logger.warn('[UCS] fetch contrat/deals', e)
+      }
+    })()
+    return () => { alive = false }
+  }, [profile?.id])
+
+  // Taux conseiller UCS : politique interne Entasis
+  //   • Mandataire / Gérant : 1,5 % (toujours)
+  //   • CDI/Alternant/… non rentabilisé : 1,5 % (booster motivation)
+  //   • CDI/Alternant/… rentabilisé : 0,75 % (taux CDI standard)
+  //   • Sans contrat connu : on garde 1,5 % par défaut (cas legacy)
+  const tauxConseillerUcs = useMemo(() => {
+    if (!contratPerso) return 1.5
+    if (['MANDATAIRE', 'GERANT'].includes(contratPerso.type_contrat)) return 1.5
+    const rentab = evaluerRentabilite(contratPerso, dealsHistorique)
+    return rentab.rentabilise ? 0.75 : 1.5
+  }, [contratPerso, dealsHistorique])
 
   // Charge le catalogue (refetch si on change de mode pour rafraîchir après édition admin)
   const reload = () => {
@@ -210,6 +251,7 @@ export default function UcsStructures({ profile }) {
               adminMode={isManager && adminMode}
               onReload={reload}
               isManager={isManager}
+              tauxConseiller={tauxConseillerUcs}
               onStructureurClick={isManager ? setStructureurPanelId : undefined}
             />
           </div>
@@ -217,6 +259,7 @@ export default function UcsStructures({ profile }) {
             ucs={selectedUcs}
             profile={profile}
             isManager={isManager}
+            tauxConseiller={tauxConseillerUcs}
           />
         </div>
       )}
@@ -259,8 +302,10 @@ function Header({ isManager, adminMode, onToggleAdmin }) {
         </h1>
         <p style={{ fontSize: 13, color: 'var(--t3)', marginTop: 4 }}>
           Catalogue des produits structurés du groupement et simulateur de commission.
-          {' '}<strong style={{ color: 'var(--gold)' }}>Commission conseiller : 1,5 % fixe</strong>
-          {isManager && ' · Rétention cabinet = Upfront − 1,5 %'}
+          {' '}<strong style={{ color: 'var(--gold)' }}>
+            Ta commission : {String(tauxConseillerUcs).replace('.', ',')} %
+          </strong>
+          {isManager && ` · Rétention cabinet = Upfront − ${String(tauxConseillerUcs).replace('.', ',')} %`}
         </p>
       </div>
       {isManager && (
@@ -517,7 +562,7 @@ function FilterBar({ filters, setFilters, allCompagnies, toggleEtat, toggleCompa
 // CatalogueTable : tableau dense, clic = sélection (chargement du simulateur)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function CatalogueTable({ ucs, selectedId, onSelect, adminMode, onReload, isManager, onStructureurClick }) {
+function CatalogueTable({ ucs, selectedId, onSelect, adminMode, onReload, isManager, onStructureurClick, tauxConseiller = 1.5 }) {
   if (ucs.length === 0) {
     return (
       <div style={{
@@ -572,6 +617,7 @@ function CatalogueTable({ ucs, selectedId, onSelect, adminMode, onReload, isMana
                 adminMode={adminMode}
                 onReload={onReload}
                 isManager={isManager}
+                tauxConseiller={tauxConseiller}
                 onStructureurClick={onStructureurClick}
               />
             ))}
@@ -611,7 +657,7 @@ function Td({ children, align = 'left', style = {} }) {
   )
 }
 
-function Row({ u, selected, onClick, adminMode, onReload, isManager, onStructureurClick }) {
+function Row({ u, selected, onClick, adminMode, onReload, isManager, onStructureurClick, tauxConseiller = 1.5 }) {
   const etat = ETATS.find(e => e.value === u.etat)
   const dUntilFin = daysUntil(u.fin_commerc)
   const isFinSoon = dUntilFin != null && dUntilFin >= 0 && dUntilFin < 30
@@ -719,15 +765,16 @@ function Row({ u, selected, onClick, adminMode, onReload, isManager, onStructure
           letterSpacing: '0.03em',
         }}>{u.compagnie}</span>
       </Td>
-      {/* Ma commission : 1,5 % fixe — visible tous, en or gras (motivation). */}
+      {/* Ma commission : taux dynamique selon le contrat du conseiller
+          connecté (mandataire/non-rentabilisé = 1,5 %, CDI rentabilisé = 0,75 %). */}
       <Td align="right">
         <span style={{
           fontWeight: 700,
           color: 'var(--gold)',
           fontSize: 12,
           letterSpacing: '0.01em',
-        }} title="Commission conseiller fixe sur toutes les UCS">
-          1,5 %
+        }} title="Taux selon ton contrat et ton seuil de rentabilité">
+          {String(tauxConseiller).replace('.', ',')} %
         </span>
       </Td>
       {/* Upfront : visible managers seulement. Les conseillers n'ont pas
@@ -890,7 +937,7 @@ function adminActionBtn(color) {
 // Simulator : colonne droite, sticky, calcul commission temps réel
 // ─────────────────────────────────────────────────────────────────────────────
 
-function Simulator({ ucs, profile, isManager }) {
+function Simulator({ ucs, profile, isManager, tauxConseiller = 1.5 }) {
   const [montantStr, setMontantStr] = useState('')
   const [clientSearch, setClientSearch] = useState('')
   const [selectedClient, setSelectedClient] = useState(null)
@@ -927,18 +974,19 @@ function Simulator({ ucs, profile, isManager }) {
   const commission = useMemo(() => {
     if (!ucs || !hasValidMontant) return null
     if (hasUpfront) {
-      return ucsService.computeCommission(montant, Number(ucs.upfront))
+      return ucsService.computeCommission(montant, Number(ucs.upfront), tauxConseiller)
     }
     if (!isManager) {
       return {
         upfrontTotal: null,
-        conseiller: (montant * 1.5) / 100,
+        conseiller: (montant * tauxConseiller) / 100,
         cabinet: null,
         isUnderwater: false,
+        tauxConseiller,
       }
     }
     return null
-  }, [ucs, montant, hasValidMontant, hasUpfront, isManager])
+  }, [ucs, montant, hasValidMontant, hasUpfront, isManager, tauxConseiller])
 
   // Coupon annuel : préférer coupon_annualise (nouveau schéma), fallback coupon_client (legacy)
   const couponAnnuelPct = ucs?.coupon_annualise != null
@@ -1193,7 +1241,7 @@ function Simulator({ ucs, profile, isManager }) {
               textTransform: 'uppercase',
               letterSpacing: '0.04em',
             }}>
-              Ma commission (1,5 %)
+              Ma commission ({String(commission.tauxConseiller ?? tauxConseiller).replace('.', ',')} %)
             </span>
             <span style={{
               fontSize: 22,

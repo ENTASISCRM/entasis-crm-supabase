@@ -3,37 +3,42 @@
 // les simulations de commission associées. Cohérent avec la couche
 // services CRM (Phase 2.A).
 //
-// Règle métier commission :
-//   - Conseiller : 1,5 % fixe (hardcoded ici, pas dans la DB)
-//   - Cabinet : Upfront UCS - 1,5 %  (peut être négatif → ⚠ admin)
+// Règle métier commission UCS (politique interne Entasis, dérogatoire au
+// barème PDF qui dit 0,5 % CDI / 1 % mandataire) :
+//   - Mandataire : 1,5 % (toujours)
+//   - CDI / Alternant / Stagiaire NON rentabilisé : 1,5 % (booster motivation)
+//   - CDI / Alternant / Stagiaire rentabilisé : 0,75 % (taux CDI standard)
+//   - Cabinet : Upfront UCS − taux conseiller (peut être négatif → ⚠ admin)
 //
-// Constantes exportées pour réutilisation côté UI.
+// Le taux applicable est passé en paramètre par l'UI selon le contrat
+// du conseiller connecté. 1,5 % reste la valeur par défaut (rétrocompat).
 
 import { supabase } from '../lib/supabase'
 
+// Taux par défaut historique (Mandataire / non-rentabilisé)
 export const COMMISSION_CONSEILLER_PCT = 1.5
+// Taux CDI standard appliqué après rentabilisation
+export const COMMISSION_CONSEILLER_PCT_CDI = 0.75
 
 /**
  * Calcule la répartition de commission pour un montant + une UCS donnée.
  * Pure function, sans appel DB — utilisée en temps réel par le simulateur.
  *
- * @param {number} montant  - Montant placé client en €
- * @param {number} upfront  - Upfront UCS en % (ex: 4.5 pour 4,5%)
- * @returns { upfrontTotal, conseiller, cabinet, isUnderwater }
- *   - upfrontTotal : montant × upfront / 100
- *   - conseiller   : montant × 1.5 / 100  (toujours 1,5 % fixe)
- *   - cabinet      : upfrontTotal - conseiller
- *   - isUnderwater : true si upfront < 1.5 → cabinet en perte
+ * @param {number} montant     - Montant placé client en €
+ * @param {number} upfront     - Upfront UCS en % (ex: 4.5 pour 4,5%)
+ * @param {number} [tauxConseiller=1.5] - % commission conseiller à appliquer
+ * @returns { upfrontTotal, conseiller, cabinet, isUnderwater, tauxConseiller }
  */
-export function computeCommission(montant, upfront) {
+export function computeCommission(montant, upfront, tauxConseiller = COMMISSION_CONSEILLER_PCT) {
   const upfrontTotal = (montant * upfront) / 100
-  const conseiller = (montant * COMMISSION_CONSEILLER_PCT) / 100
+  const conseiller = (montant * tauxConseiller) / 100
   const cabinet = upfrontTotal - conseiller
   return {
     upfrontTotal,
     conseiller,
     cabinet,
     isUnderwater: cabinet < 0,
+    tauxConseiller,
   }
 }
 

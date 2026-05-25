@@ -17,6 +17,7 @@ import PipelineVEFA from './components/PipelineVEFA'
 import OutilsCGP from './components/OutilsCGP'
 import LinkedInPro from './components/LinkedInPro'
 import PilotageRH from './components/PilotageRH'
+import Remuneration from './components/Remuneration'
 import UcsStructures from './components/UcsStructures'
 import Structureurs from './components/Structureurs'
 import ClientsView from './components/clients/ClientsView'
@@ -637,7 +638,7 @@ function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,prospects
   ]
 
   const outilsItems = [
-    {key:'linkedin-pro', label:'LinkedIn Pro', Icon:Icon.LinkedIn},
+    {key:'remuneration', label:'Rémunération', Icon:Icon.Outils},
     {key:'outils', label:'Outils CGP', Icon:Icon.Outils},
   ]
 
@@ -708,7 +709,7 @@ function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,prospects
 /* ─────────────────────────────────────────────────────────────────────────────
    TOP BAR
 ───────────────────────────────────────────────────────────────────────────── */
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs',prospection:'Prospection LinkedIn','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA','linkedin-pro':'LinkedIn Pro',outils:'Outils CGP','pilotage-rh':'Pilotage RH 👥'}
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs',prospection:'Prospection LinkedIn','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA',remuneration:'Rémunération 💎',outils:'Outils CGP','pilotage-rh':'Pilotage RH 👥'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu}){
   return (
@@ -4337,6 +4338,7 @@ export default function App(){
           {activeTab==='immo-dossiers'&&<MesDossiersImmo profile={profile} teamProfiles={teamProfiles} setActiveTab={setActiveTab}/>}
           {activeTab==='immo-pipeline'&&<PipelineVEFA profile={profile} teamProfiles={teamProfiles}/>}
           {activeTab==='linkedin-pro'&&<LinkedInPro profile={profile}/>}
+          {activeTab==='remuneration'&&<Remuneration profile={profile} deals={deals} month={month}/>}
           {activeTab==='outils'&&<OutilsCGP/>}
         </div>
       </div>
