@@ -72,10 +72,15 @@ export default function PilotageRH() {
 
   useEffect(() => { reload() }, [])
 
-  // Helper : normalisation de nom pour matching (insensible casse / accents)
+  // Helper : normalisation de nom pour matching (insensible casse / accents /
+  // tirets / apostrophes). "Nans MARRO-DUZAT" === "Nans Marro Duzat" ===
+  // "nans marro-duzat", etc. Critique pour le matching des profils orphelins
+  // où le format du nom diffère entre profiles.full_name et
+  // conseiller_contrats.full_name.
   const normNom = (s) => (s || '')
     .toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')  // sans accents
+    .replace(/[-–—_'.]/g, ' ')                          // tirets/apostrophes → espace
     .replace(/\s+/g, ' ').trim()
 
   // Profils Supabase non encore reliés à un contrat.
@@ -309,13 +314,47 @@ export default function PilotageRH() {
                       >+ Créer</button>
                     </div>
                   ) : (
-                    <button
-                      className="btn btn-primary btn-sm"
-                      onClick={() => {
-                        setPrefillProfile(p)
-                        setCreating(true)
-                      }}
-                    >+ Créer son contrat</button>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      {/* Dropdown de liaison manuelle pour les cas où le
+                          matching auto échoue (typos, prénoms différents, etc.).
+                          Louis voit tous les contrats orphelins et choisit. */}
+                      <select
+                        defaultValue=""
+                        onChange={(e) => {
+                          const contratId = e.target.value
+                          if (contratId) handleLierAuContrat(p.id, contratId)
+                        }}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: 8,
+                          border: '0.5px solid var(--bd)',
+                          background: 'rgba(0,0,0,0.04)',
+                          fontSize: 12,
+                          fontFamily: 'inherit',
+                          color: 'var(--t1)',
+                          cursor: 'pointer',
+                          maxWidth: 220,
+                        }}
+                        title="Lier ce profil à un contrat existant sans liaison"
+                      >
+                        <option value="">↪ Lier à un contrat…</option>
+                        {contrats
+                          .filter(c => !c.profile_id && c.actif)
+                          .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''))
+                          .map(c => (
+                            <option key={c.id} value={c.id}>
+                              {c.full_name}{c.matricule ? ` (mat. ${c.matricule})` : ''} · {LIBELLE_TYPE_CONTRAT[c.type_contrat]}
+                            </option>
+                          ))}
+                      </select>
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => {
+                          setPrefillProfile(p)
+                          setCreating(true)
+                        }}
+                      >+ Créer</button>
+                    </div>
                   )}
                 </div>
               )
