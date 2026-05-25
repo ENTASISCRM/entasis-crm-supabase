@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Entasis — Proposition 5 · Atelier · Light luxe éditorial</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:           #FBFAF7;          /* blanc ivoire signature luxe */
+    --paper:        #FFFFFF;
+    --paper-2:      #F5F4F0;
+    --line:         #E8E5DE;          /* lignes chaudes */
+    --line-soft:    #F0EDE6;
+    --ink:          #0E1B30;          /* navy presque noir */
+    --ink-2:        #1A2540;
+    --t1:           #0E1B30;
+    --t2:           #58647A;
+    --t3:           #98A0B0;
+    --champagne:    #B89968;          /* or champagne mat */
+    --champagne-soft: #F2E8D5;        /* fond doré très clair */
+    --green:        #0E7E55;
+    --rose:         #B53A2B;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--t1); -webkit-font-smoothing: antialiased; font-feature-settings: 'cv11','ss03'; letter-spacing: -0.003em; }
+  .editorial { font-family: 'Fraunces', Georgia, serif; font-optical-sizing: auto; }
+  .mono { font-family: 'JetBrains Mono', monospace; font-feature-settings: 'tnum'; }
+
+  .text-ink { color: var(--ink); }
+  .text-champagne { color: var(--champagne); }
+  .bg-paper { background: var(--paper); }
+  .bg-paper-2 { background: var(--paper-2); }
+  .border-line { border-color: var(--line); }
+
+  /* Filet champagne signature */
+  .filet { width: 28px; height: 1px; background: var(--champagne); }
+
+  /* Cards : ombres ultra douces type catalogue luxe */
+  .card-soft {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    box-shadow: 0 1px 0 rgba(14,27,48,0.02), 0 16px 32px -16px rgba(14,27,48,0.08);
+  }
+  .card-elev {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    box-shadow: 0 1px 0 rgba(14,27,48,0.02), 0 32px 64px -24px rgba(14,27,48,0.12);
+  }
+
+  /* Logo : on garde la couleur d'origine sur fond clair */
+  .logo-img { max-width: 100%; height: auto; }
+
+  /* Hover row */
+  tr.row-h:hover { background: var(--paper-2); }
+</style>
+</head>
+<body class="min-h-screen flex">
+
+  <!-- SIDEBAR — fond ivoire, contraste fort avec content -->
+  <aside class="w-64 flex-shrink-0 flex flex-col" style="background:var(--paper); border-right: 1px solid var(--line)">
+    <div class="px-7 pt-9 pb-7 text-center" style="border-bottom: 1px solid var(--line)">
+      <img src="entasis-logo.png" alt="Entasis Conseil" class="logo-img mx-auto" style="width:118px"/>
+      <div class="text-[10px] tracking-[0.24em] mt-3 uppercase font-medium" style="color:var(--t3)">CRM Patrimonial</div>
+    </div>
+
+    <nav class="flex-1 py-6 px-3 space-y-px overflow-y-auto">
+      <div class="text-[9px] tracking-[0.22em] px-4 py-3 uppercase font-semibold" style="color:var(--t3)">Navigation</div>
+      <a class="flex items-center gap-3 px-4 py-2.5 text-[13.5px] font-medium rounded-md" style="color:var(--t2)">Vue cabinet</a>
+      <a class="flex items-center gap-3 px-4 py-2.5 text-[13.5px] font-semibold rounded-md relative" style="color:var(--ink); background: var(--champagne-soft)">
+        <span class="absolute left-0 top-2 bottom-2 w-[2px]" style="background:var(--champagne)"></span>
+        Pipeline
+      </a>
+      <a class="flex items-center gap-3 px-4 py-2.5 text-[13.5px] font-medium rounded-md" style="color:var(--t2)">Dossiers</a>
+      <a class="flex items-center gap-3 px-4 py-2.5 text-[13.5px] font-medium rounded-md" style="color:var(--t2)">Clients</a>
+      <a class="flex items-center gap-3 px-4 py-2.5 text-[13.5px] font-medium rounded-md" style="color:var(--t2)">Leads Live</a>
+      <a class="flex items-center gap-3 px-4 py-2.5 text-[13.5px] font-medium rounded-md" style="color:var(--t2)">UCS Produits Structurés</a>
+      <a class="flex items-center gap-3 px-4 py-2.5 text-[13.5px] font-medium rounded-md" style="color:var(--t2)">Structureurs</a>
+      <a class="flex items-center gap-3 px-4 py-2.5 text-[13.5px] font-medium rounded-md" style="color:var(--t2)">Agenda</a>
+
+      <div class="text-[9px] tracking-[0.22em] px-4 py-3 mt-3 uppercase font-semibold" style="color:var(--t3)">Direction</div>
+      <a class="flex items-center gap-3 px-4 py-2.5 text-[13.5px] font-medium rounded-md" style="color:var(--t2)">Équipe</a>
+      <a class="flex items-center gap-3 px-4 py-2.5 text-[13.5px] font-medium rounded-md" style="color:var(--t2)">Revue hebdo</a>
+    </nav>
+
+    <div class="px-5 py-5" style="border-top:1px solid var(--line)">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center text-[12px] font-semibold" style="background:var(--ink); color:white">LH</div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] font-medium truncate text-ink">Louis Hatton</div>
+          <div class="text-[10px] tracking-wider uppercase font-medium" style="color:var(--t3)">Direction</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="flex-1 flex flex-col">
+    <header class="px-14 py-9 bg-paper" style="border-bottom: 1px solid var(--line)">
+      <div class="flex items-end justify-between">
+        <div>
+          <div class="flex items-center gap-3 mb-3">
+            <div class="filet"></div>
+            <div class="text-[10px] tracking-[0.30em] uppercase font-semibold" style="color:var(--champagne)">CRM · Pipeline</div>
+          </div>
+          <h1 class="editorial text-[42px] leading-[1.05] font-medium tracking-tight text-ink">Pipeline commercial</h1>
+          <div class="text-[13.5px] mt-2" style="color:var(--t2)">Vue d'ensemble · Mai 2026 · 19 dossiers actifs</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="px-5 py-3 text-[13px] font-medium rounded-md transition" style="color:var(--ink); border:1px solid var(--line); background:var(--paper)">Exporter</button>
+          <button class="px-6 py-3 text-[13px] font-medium rounded-md text-white" style="background:var(--ink)">+ Nouveau dossier</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="flex-1 px-14 py-12 space-y-12">
+
+      <!-- KPI CARDS -->
+      <section class="grid grid-cols-4 gap-6">
+        <div class="card-soft rounded-xl p-7" style="border-top: 2px solid var(--champagne)">
+          <div class="text-[10px] tracking-[0.22em] uppercase font-semibold mb-4" style="color:var(--champagne)">Pipeline total</div>
+          <div class="editorial text-[42px] leading-none text-ink font-medium">2,4<span class="text-[20px] ml-1 font-normal" style="color:var(--t3)">M€</span></div>
+          <div class="text-[12px] mt-5 font-medium" style="color:var(--green)">↗ +12 % vs N-1</div>
+        </div>
+        <div class="card-soft rounded-xl p-7">
+          <div class="text-[10px] tracking-[0.22em] uppercase font-semibold mb-4" style="color:var(--t3)">RDV ce mois</div>
+          <div class="editorial text-[42px] leading-none text-ink font-medium">42</div>
+          <div class="text-[12px] mt-5" style="color:var(--t2)">8 cette semaine</div>
+        </div>
+        <div class="card-soft rounded-xl p-7">
+          <div class="text-[10px] tracking-[0.22em] uppercase font-semibold mb-4" style="color:var(--t3)">Signatures</div>
+          <div class="editorial text-[42px] leading-none text-ink font-medium">14</div>
+          <div class="text-[12px] mt-5" style="color:var(--t2)">Taux conv. 33 %</div>
+        </div>
+        <div class="card-soft rounded-xl p-7">
+          <div class="text-[10px] tracking-[0.22em] uppercase font-semibold mb-4" style="color:var(--t3)">PP nouvelle</div>
+          <div class="editorial text-[42px] leading-none text-ink font-medium">186<span class="text-[20px] ml-1 font-normal" style="color:var(--t3)">k€</span></div>
+          <div class="mt-5 flex items-center gap-2">
+            <div class="flex-1 h-1 rounded-full" style="background:var(--line-soft)">
+              <div class="h-full rounded-full" style="width:93%; background:var(--champagne)"></div>
+            </div>
+            <span class="text-[11px] mono" style="color:var(--t2)">93%</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- TABLE + FICHE -->
+      <section class="grid grid-cols-3 gap-8">
+        <div class="col-span-2">
+          <div class="flex items-end justify-between mb-6">
+            <div>
+              <div class="flex items-center gap-3 mb-2">
+                <div class="filet"></div>
+                <div class="text-[10px] tracking-[0.28em] uppercase font-semibold" style="color:var(--champagne)">Section</div>
+              </div>
+              <h2 class="editorial text-[26px] text-ink font-medium leading-none">Derniers leads</h2>
+            </div>
+            <a class="text-[12px] tracking-wider uppercase font-semibold text-ink pb-1" style="border-bottom: 1.5px solid var(--champagne)">Voir tout →</a>
+          </div>
+
+          <div class="card-soft rounded-xl overflow-hidden">
+            <table class="w-full">
+              <thead>
+                <tr style="background:var(--paper-2)">
+                  <th class="text-left text-[10px] tracking-[0.18em] uppercase font-semibold px-6 py-4" style="color:var(--t3)">Client</th>
+                  <th class="text-left text-[10px] tracking-[0.18em] uppercase font-semibold px-6 py-4" style="color:var(--t3)">Source</th>
+                  <th class="text-left text-[10px] tracking-[0.18em] uppercase font-semibold px-6 py-4" style="color:var(--t3)">Conseiller</th>
+                  <th class="text-right text-[10px] tracking-[0.18em] uppercase font-semibold px-6 py-4" style="color:var(--t3)">Patrimoine</th>
+                </tr>
+              </thead>
+              <tbody class="text-[14px]">
+                <tr class="row-h" style="border-top:1px solid var(--line-soft)">
+                  <td class="px-6 py-5 font-medium text-ink">Jean-Charles Beaumont</td>
+                  <td class="px-6 py-5" style="color:var(--t2)">Recommandation</td>
+                  <td class="px-6 py-5" style="color:var(--t2)">Paulin De La Fontaine</td>
+                  <td class="px-6 py-5 text-right mono font-semibold text-ink">450 k€</td>
+                </tr>
+                <tr class="row-h" style="border-top:1px solid var(--line-soft)">
+                  <td class="px-6 py-5 font-medium text-ink">Aurélie Mercier-Lambert</td>
+                  <td class="px-6 py-5" style="color:var(--t2)">Site web</td>
+                  <td class="px-6 py-5" style="color:var(--t2)">Quentin Vialle</td>
+                  <td class="px-6 py-5 text-right mono font-semibold text-ink">280 k€</td>
+                </tr>
+                <tr class="row-h" style="border-top:1px solid var(--line-soft)">
+                  <td class="px-6 py-5 font-medium text-ink flex items-center gap-2.5">
+                    Philippe d'Arboussier
+                    <span class="text-[9px] tracking-wider uppercase font-semibold px-2 py-0.5 rounded" style="background:var(--champagne-soft); color:var(--champagne)">VIP</span>
+                  </td>
+                  <td class="px-6 py-5" style="color:var(--t2)">Facebook Ads</td>
+                  <td class="px-6 py-5" style="color:var(--t2)">Gianni Rossi</td>
+                  <td class="px-6 py-5 text-right mono font-semibold" style="color:var(--champagne)">1,2 M€</td>
+                </tr>
+                <tr class="row-h" style="border-top:1px solid var(--line-soft)">
+                  <td class="px-6 py-5 font-medium text-ink">Marie-Hélène Dubois</td>
+                  <td class="px-6 py-5" style="color:var(--t2)">LinkedIn</td>
+                  <td class="px-6 py-5" style="color:var(--t2)">Dany Lebrun</td>
+                  <td class="px-6 py-5 text-right mono font-semibold text-ink">680 k€</td>
+                </tr>
+                <tr class="row-h" style="border-top:1px solid var(--line-soft)">
+                  <td class="px-6 py-5 font-medium text-ink">Sébastien Romieu</td>
+                  <td class="px-6 py-5" style="color:var(--t2)">Recommandation</td>
+                  <td class="px-6 py-5" style="color:var(--t2)">Paulin De La Fontaine</td>
+                  <td class="px-6 py-5 text-right mono font-semibold text-ink">320 k€</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <aside class="card-elev rounded-xl p-8" style="border-top: 2px solid var(--champagne)">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="filet"></div>
+            <div class="text-[10px] tracking-[0.28em] uppercase font-semibold" style="color:var(--champagne)">Client en vue</div>
+          </div>
+          <h3 class="editorial text-[26px] text-ink font-medium leading-tight">Jean-Charles Beaumont</h3>
+          <div class="text-[12px] mt-2" style="color:var(--t2)">Recommandation · Paulin De La Fontaine</div>
+
+          <div class="mt-7 space-y-5">
+            <div>
+              <div class="text-[10px] uppercase tracking-[0.18em] font-semibold mb-1" style="color:var(--t3)">Âge</div>
+              <div class="text-[16px] mono font-medium text-ink">58 ans</div>
+            </div>
+            <div class="pt-5" style="border-top:1px solid var(--line-soft)">
+              <div class="text-[10px] uppercase tracking-[0.18em] font-semibold mb-1" style="color:var(--t3)">Patrimoine</div>
+              <div class="text-[20px] editorial font-medium" style="color:var(--champagne)">450 k€</div>
+            </div>
+            <div class="pt-5" style="border-top:1px solid var(--line-soft)">
+              <div class="text-[10px] uppercase tracking-[0.18em] font-semibold mb-1" style="color:var(--t3)">TMI</div>
+              <div class="text-[16px] mono font-medium text-ink">41 %</div>
+            </div>
+            <div class="pt-5" style="border-top:1px solid var(--line-soft)">
+              <div class="text-[10px] uppercase tracking-[0.18em] font-semibold mb-1" style="color:var(--t3)">Objectif</div>
+              <div class="text-[14px] text-ink">Retraite + transmission</div>
+            </div>
+          </div>
+
+          <button class="w-full mt-8 px-5 py-3 text-[12px] tracking-wider uppercase font-semibold text-white rounded-md" style="background:var(--ink)">
+            Ouvrir la fiche
+          </button>
+        </aside>
+      </section>
+    </div>
+  </main>
+
+  <!-- MODALE -->
+  <div class="fixed inset-0 flex items-center justify-center p-8" style="display:none; background:rgba(14,27,48,0.35); backdrop-filter:blur(10px)" id="modal">
+    <div class="bg-paper w-[520px] rounded-xl card-elev overflow-hidden">
+      <div class="px-8 py-6" style="border-bottom:1px solid var(--line)">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="filet"></div>
+          <div class="text-[10px] tracking-[0.28em] uppercase font-semibold" style="color:var(--champagne)">Création</div>
+        </div>
+        <h3 class="editorial text-[24px] font-medium text-ink mt-1">Nouveau dossier</h3>
+      </div>
+      <div class="p-8 space-y-5">
+        <div>
+          <label class="text-[10px] tracking-[0.18em] uppercase font-semibold block mb-2" style="color:var(--t3)">Client</label>
+          <input class="w-full px-4 py-3 text-[14px] rounded-md focus:outline-none transition" placeholder="Nom du client"
+                 style="border:1px solid var(--line); background:var(--paper); color:var(--ink)"/>
+        </div>
+        <div>
+          <label class="text-[10px] tracking-[0.18em] uppercase font-semibold block mb-2" style="color:var(--t3)">Produit</label>
+          <select class="w-full px-4 py-3 text-[14px] rounded-md focus:outline-none"
+                  style="border:1px solid var(--line); background:var(--paper); color:var(--ink)"><option>PER Individuel</option></select>
+        </div>
+        <div class="flex gap-3 pt-4">
+          <button class="flex-1 px-5 py-3 text-[13px] font-medium rounded-md" style="border:1px solid var(--line); color:var(--ink)">Annuler</button>
+          <button class="flex-1 px-5 py-3 text-[13px] font-medium text-white rounded-md" style="background:var(--ink)">Créer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button class="fixed bottom-6 right-6 px-5 py-3 text-[12px] uppercase tracking-wider font-semibold rounded-md text-white" style="background:var(--ink); box-shadow: 0 16px 32px -8px rgba(14,27,48,0.3)" onclick="document.getElementById('modal').style.display='flex'">Voir la modale</button>
+</body>
+</html>
