@@ -2887,6 +2887,7 @@ function TeamView({deals,objectifs,teamProfiles,month,profile}){
                     <th>Email</th>
                     <th>Rôle</th>
                     <th>Code</th>
+                    <th>Type contrat</th>
                     <th>Statut</th>
                     <th>Créé le</th>
                     <th>Expire le</th>
@@ -2906,6 +2907,42 @@ function TeamView({deals,objectifs,teamProfiles,month,profile}){
                           </span>
                         </td>
                         <td>{invitation.advisor_code || '—'}</td>
+                        <td>
+                          <select
+                            value={invitation.type_contrat || ''}
+                            onChange={async (e) => {
+                              const newType = e.target.value || null
+                              try {
+                                await invitationsService.setTypeContrat(invitation.id, newType)
+                                setInvitations(prev => prev.map(i =>
+                                  i.id === invitation.id ? { ...i, type_contrat: newType } : i
+                                ))
+                                toast.success('Type de contrat mis à jour')
+                              } catch (err) {
+                                toast.error('Erreur : ' + (err.message || ''))
+                              }
+                            }}
+                            style={{
+                              padding: '4px 8px',
+                              borderRadius: 6,
+                              border: '0.5px solid var(--bd)',
+                              background: 'rgba(0,0,0,0.04)',
+                              color: 'var(--t1)',
+                              fontSize: 12,
+                              fontFamily: 'inherit',
+                              cursor: 'pointer',
+                              outline: 'none',
+                            }}
+                          >
+                            <option value="">—</option>
+                            <option value="CDI">CDI</option>
+                            <option value="CDD">CDD</option>
+                            <option value="ALTERNANT">Alternant</option>
+                            <option value="STAGIAIRE">Stagiaire</option>
+                            <option value="MANDATAIRE">Mandataire</option>
+                            <option value="GERANT">Gérant</option>
+                          </select>
+                        </td>
                         <td>
                           <span className={`badge ${
                             status === 'Utilisé' ? 'badge-signed' :

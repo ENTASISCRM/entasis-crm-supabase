@@ -40,8 +40,9 @@ export async function listRecent(limit = 10) {
 
 /**
  * Crée une nouvelle invitation. Retourne la row complète (avec token).
+ * typeContrat optionnel — pré-rempli pour faciliter l'onboarding RH.
  */
-export async function create({ email, role, advisorCode, createdBy }) {
+export async function create({ email, role, advisorCode, createdBy, typeContrat }) {
   const { data, error } = await supabase
     .from('invitations')
     .insert({
@@ -49,11 +50,24 @@ export async function create({ email, role, advisorCode, createdBy }) {
       role,
       advisor_code: advisorCode || null,
       created_by: createdBy,
+      type_contrat: typeContrat || null,
     })
     .select()
     .single()
   if (error) throw error
   return data
+}
+
+/**
+ * Met à jour le type de contrat sur une invitation existante.
+ * Permet de qualifier rétroactivement un conseiller depuis le panel admin.
+ */
+export async function setTypeContrat(invitationId, typeContrat) {
+  const { error } = await supabase
+    .from('invitations')
+    .update({ type_contrat: typeContrat || null })
+    .eq('id', invitationId)
+  if (error) throw error
 }
 
 /**
