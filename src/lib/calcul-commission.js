@@ -259,20 +259,26 @@ export function evaluerRentabilite(contrat, dealsHistoriques = [], profile = nul
 /**
  * Calcule la commission totale d'un mois pour un conseiller.
  *
- * Logique :
- *   1. Sépare les deals du mois en 3 groupes :
- *      - PP (produits avec assiette pp, hors palier=false) : PER, AV
- *      - PU (produits avec assiette pu, hors palier=false) : PU libre/transfert
- *      - Hors palier : SCPI, MH, Girardin, PE, UCS, Prév., Mutuelle
- *   2. PP : si total PP du mois >= palier_pp → variable sur l'EXCÉDENT seulement
- *      Sinon : 0 variable PP (le fixe couvre)
- *   3. PU : pareil avec palier_pu
- *   4. Hors palier : commission dès le 1er € quoi qu'il arrive
+ * Règle Louis (2026-05-25) : TOUS les produits sont soumis au palier PP,
+ * sauf les mandataires qui sont indépendants. Pour un CDI/CDD/Alternant/
+ * Stagiaire, si le palier PP n'est pas franchi → AUCUNE commission, peu
+ * importe le produit (PER, AV, SCPI, UCS, MH, Girardin, PE, Prévoyance,
+ * Mutuelle, PU). Pour les mandataires, palier_pp_mensuel = 0 →
+ * palierPpAtteint=true par défaut → comportement historique (tout
+ * commissionné dès le 1er €).
  *
- * Co-conseiller : si un deal en a un, l'assiette et la commission sont
- * comptées à 50 % pour chacun des deux conseillers (split équitable).
+ * Calcul :
+ *   1. Agrégation : ppRealisee (assiette PP), puRealisee (assiette PU)
+ *   2. palierPpAtteint = (palierPp <= 0) || (ppRealisee >= palierPp)
+ *   3. Si palier PP non atteint → tous les deals sont en "sous palier"
+ *      → montantEffectif = 0 pour tous (100 % cabinet)
+ *   4. Si palier PP atteint :
+ *      - PP soumis palier : variable sur l'excédent (ratio)
+ *      - PU soumis palier : idem avec palier PU
+ *      - "Hors palier" (SCPI, UCS, MH, Girardin, PE, Prév., Mutuelle) :
+ *        commission pleine
  *
- * Pour les mandataires (palier=0), tout est traité comme hors palier.
+ * Co-conseiller : assiette + commission divisées par 2.
  *
  * @param {Array}  dealsMois         - Deals signés du mois (principal OU co)
  * @param {Object} contrat           - { type_contrat, palier_pp_mensuel, … }
@@ -295,13 +301,10 @@ export function commissionsMois(dealsMois = [], contrat, rentabilise, profile = 
   const palierPu = Number(contrat.palier_pu_mensuel || 0)
   const codes = codesContrat(contrat, profile)
 
-  // 1. Agrégation par catégorie. L'assiette retenue pour évaluer le palier
-  //    est elle aussi divisée par 2 en cas de co-conseiller (sinon Alexis
-  //    et Paulin "ensemble" toucheraient chacun le palier full après 17 k
-  //    de PP, ce qui doublerait la production reconnue).
+  // 1. Agrégation par catégorie pour évaluer les paliers. Assiette divisée
+  //    par 2 en cas de co-conseiller (sinon la prod serait comptée double).
   let ppRealisee = 0
   let puRealisee = 0
-  let variableHorsPalier = 0
   const detail = []
 
   for (const deal of dealsMois) {
@@ -315,40 +318,50 @@ export function commissionsMois(dealsMois = [], contrat, rentabilise, profile = 
       ppRealisee += assietteEffective
     } else if (produit.assiette === 'pu' && !produit.horsPalier) {
       puRealisee += assietteEffective
-    } else {
-      // Hors palier : commission immédiate
-      variableHorsPalier += calc.montant
     }
     detail.push({ deal, ...calc, assietteEffective })
   }
 
-  // 2. Variable PP : sur l'excédent au-dessus du palier
-  let variablePp = 0
+  // 2. Évaluation des paliers
   const palierPpAtteint = palierPp <= 0 || ppRealisee >= palierPp
+  const palierPuAtteint = palierPu <= 0 || puRealisee >= palierPu
   const ratioPp = (palierPpAtteint && ppRealisee > palierPp)
     ? (palierPp > 0 ? (ppRealisee - palierPp) / ppRealisee : 1)
     : 0
-  // 3. Variable PU : idem
-  let variablePu = 0
-  const palierPuAtteint = palierPu <= 0 || puRealisee >= palierPu
   const ratioPu = (palierPuAtteint && puRealisee > palierPu)
     ? (palierPu > 0 ? (puRealisee - palierPu) / puRealisee : 1)
     : 0
 
-  // Calcule la commission EFFECTIVE de chaque deal (= ce qui revient
-  // vraiment au conseiller, après application du ratio palier).
-  // Sous palier : 0 € pour le conseiller, 100 % cabinet → on l'expose
-  // pour que l'UI puisse masquer taux + commission et indiquer "Cabinet".
+  // 3. Calcul de la commission EFFECTIVE deal par deal.
+  //    PALIER PP est le gardien général : si non franchi, aucun produit
+  //    n'est commissionné (règle Louis). Pour les mandataires, palier=0
+  //    donc palierPpAtteint=true → comportement historique préservé.
+  let variablePp = 0
+  let variablePu = 0
+  let variableHorsPalier = 0
+
   for (const d of detail) {
     const produit = BAREME_PRODUITS[d.produitKey]
+    // Si le palier PP n'est pas franchi, tout est en sous palier (cabinet 100 %)
+    if (!palierPpAtteint) {
+      d.montantEffectif = 0
+      d.sousPalier = true
+      continue
+    }
+    // Palier PP franchi → on commissionne selon le type de produit
     if (produit.horsPalier) {
+      // Produits hors palier (SCPI, UCS, MH, Girardin, PE, Prév., Mutuelle)
+      // commissionnés à 100 % dès lors que le palier PP est franchi.
       d.montantEffectif = d.montant
       d.sousPalier = false
+      variableHorsPalier += d.montant
     } else if (produit.assiette === 'pp') {
+      // PP soumis palier : commission sur l'excédent au-dessus du palier PP
       d.montantEffectif = d.montant * ratioPp
-      d.sousPalier = !palierPpAtteint
+      d.sousPalier = false
       variablePp += d.montantEffectif
     } else if (produit.assiette === 'pu') {
+      // PU soumis palier : commission sur l'excédent au-dessus du palier PU
       d.montantEffectif = d.montant * ratioPu
       d.sousPalier = !palierPuAtteint
       variablePu += d.montantEffectif
