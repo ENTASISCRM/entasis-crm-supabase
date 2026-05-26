@@ -400,11 +400,17 @@ function VueManager({ contrats, deals, month }) {
     return contrats
       .filter(c => c.actif && c.type_contrat !== 'GERANT')
       .map(c => {
-        const codes = codesContrat(c, null)
+        // Le service liste contrats joint maintenant le profile lié
+        // (c.profile = { id, advisor_code, email, full_name }) → on
+        // l'utilise pour que codesContrat inclue l'advisor_code, sans
+        // quoi le matching deal.advisor_code → contrat échoue côté
+        // manager et le tableau affiche 0 € partout.
+        const profileLie = c.profile || null
+        const codes = codesContrat(c, profileLie)
         const dealsConseiller = dealsDuConseiller(deals, codes)
         const dealsMois = dealsDuMois(dealsConseiller, month)
-        const rentab = evaluerRentabilite(c, dealsConseiller)
-        const comm = commissionsMois(dealsMois, c, rentab.rentabilise)
+        const rentab = evaluerRentabilite(c, dealsConseiller, profileLie)
+        const comm = commissionsMois(dealsMois, c, rentab.rentabilise, profileLie)
         return {
           contrat: c,
           rentab,

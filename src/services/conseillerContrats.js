@@ -15,11 +15,15 @@ const ORDER_TYPE = ['GERANT', 'CDI', 'CDD', 'ALTERNANT', 'STAGIAIRE', 'MANDATAIR
 /**
  * Liste tous les contrats accessibles à l'utilisateur courant.
  * Manager → tous, conseiller → sa ligne uniquement (via RLS).
+ *
+ * Joint le profil Supabase lié (advisor_code, email) pour que la vue
+ * manager puisse matcher correctement deal.advisor_code → contrat sans
+ * avoir à exposer la table profiles séparément.
  */
 export async function list() {
   const { data, error } = await supabase
     .from(TABLE)
-    .select('*')
+    .select('*, profile:profile_id(id, advisor_code, email, full_name)')
     .order('actif', { ascending: false })
     .order('full_name', { ascending: true })
   if (error) throw error
