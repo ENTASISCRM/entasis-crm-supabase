@@ -3151,8 +3151,18 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
     setProducts(prev => prev.filter((_, i) => i !== index))
   }
 
-  useEffect(()=>setDeal(initialDeal),[initialDeal])
-  useEffect(()=>{if(deal&&!deal.advisor_code&&profile?.advisor_code)setDeal(p=>({...p,advisor_code:profile.advisor_code}))},[profile?.advisor_code])
+  useEffect(() => {
+    if (!initialDeal) { setDeal(initialDeal); return }
+    // Pré-remplissage advisor_code à chaque ouverture de modale :
+    // si le user n'est pas manager ET advisor_code vide → on met le sien.
+    // Évite que Quentin ouvre la modale avec un select disabled vide
+    // ou qu'il ne puisse pas saisir de co-conseiller faute de principal.
+    const enriched = { ...initialDeal }
+    if (!enriched.advisor_code && profile?.advisor_code) {
+      enriched.advisor_code = profile.advisor_code
+    }
+    setDeal(enriched)
+  }, [initialDeal, profile?.advisor_code])
 
   // Recherche clients au fur et à mesure de la frappe
   useEffect(() => {
@@ -3575,7 +3585,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                     onChange={e => set('advisor_code', e.target.value || null)}
                     required={isManager}
                     disabled={!isManager}
-                    title={!isManager ? 'Seul un manager peut changer le conseiller principal' : ''}
+                    title={!isManager ? 'Tu es le conseiller principal. Pour partager, sélectionne un co-conseiller à droite.' : ''}
                   >
                     <option value="">— Choisir —</option>
                     {(teamProfiles || [])
@@ -3584,9 +3594,15 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                       .map(t => (
                         <option key={t.id} value={t.advisor_code}>
                           {t.full_name || t.advisor_code} ({t.advisor_code})
+                          {!isManager && t.advisor_code === profile?.advisor_code ? ' · toi' : ''}
                         </option>
                       ))}
                   </select>
+                  {!isManager && (
+                    <div className="form-hint">
+                      C'est toi. Pour partager le dossier, sélectionne un co-conseiller à droite (la commission sera divisée par 2).
+                    </div>
+                  )}
                 </div>
                 <div className="form-group">
                   <label className="form-label">Co-conseiller</label>
