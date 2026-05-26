@@ -312,8 +312,13 @@ export function commissionsMois(dealsMois = [], contrat, rentabilise, profile = 
     }
   }
   const ctx = { ...contrat, rentabilise }
-  const palierPp = Number(contrat.palier_pp_mensuel || 0)
-  const palierPu = Number(contrat.palier_pu_mensuel || 0)
+  // Règle Louis : "du moment qu'il rembourse son salaire il peut débloquer
+  // son variable". Donc si le conseiller n'a pas de salaire à rembourser
+  // (CDI à 0 €, stagiaire à 0 €, mandataire), pas de palier mensuel non
+  // plus → variable déclenché dès le 1er € de production.
+  const aucunSalaire = Number(contrat.salaire_brut_mensuel || 0) <= 0
+  const palierPp = aucunSalaire ? 0 : Number(contrat.palier_pp_mensuel || 0)
+  const palierPu = aucunSalaire ? 0 : Number(contrat.palier_pu_mensuel || 0)
   const codes = codesContrat(contrat, profile)
 
   // 1. Première passe : agréger PP/PU soumis palier pour évaluer les seuils.

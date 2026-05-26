@@ -167,8 +167,11 @@ function VueConseiller({ contrat, profile, deals, month, isManager }) {
 
   const salaireFixe = Number(contrat.salaire_brut_mensuel || 0)
   const totalBrut = salaireFixe + comm.total
-  const palierPp = Number(contrat.palier_pp_mensuel || 0)
-  const palierPu = Number(contrat.palier_pu_mensuel || 0)
+  // Cohérent avec commissionsMois : pas de salaire → pas de palier (le
+  // variable se déclenche dès le 1er € puisqu'il n'y a rien à rembourser).
+  const aucunSalaire = salaireFixe <= 0
+  const palierPp = aucunSalaire ? 0 : Number(contrat.palier_pp_mensuel || 0)
+  const palierPu = aucunSalaire ? 0 : Number(contrat.palier_pu_mensuel || 0)
   const pctPalierPp = palierPp > 0 ? Math.min(100, (comm.ppRealisee / palierPp) * 100) : 0
   const pctPalierPu = palierPu > 0 ? Math.min(100, (comm.puRealisee / palierPu) * 100) : 0
   const resteAvantPalierPp = Math.max(0, palierPp - comm.ppRealisee)
