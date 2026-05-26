@@ -629,8 +629,10 @@ function CatalogueTable({ ucs, selectedId, onSelect, adminMode, onReload, isMana
               {isManager && <Th align="right">Upfront</Th>}
               <Th align="right">Mini</Th>
               <Th align="right">Coupon/an</Th>
+              <Th align="center">Fréq.</Th>
               <Th align="center">SRI</Th>
               <Th align="right">Fin commerc.</Th>
+              <Th align="center">KID</Th>
               {adminMode && <Th align="center">Actions</Th>}
             </tr>
           </thead>
@@ -834,6 +836,28 @@ function Row({ u, selected, onClick, adminMode, onReload, isManager, onStructure
         {couponDisplay != null ? fmtPct(couponDisplay) : '—'}
       </Td>
       <Td align="center">
+        {u.frequence_coupon ? (
+          <span style={{
+            display: 'inline-block',
+            padding: '1px 7px',
+            fontSize: 10,
+            fontWeight: 600,
+            borderRadius: 3,
+            background: 'rgba(0,0,0,0.04)',
+            color: 'var(--t2)',
+            textTransform: 'lowercase',
+            letterSpacing: '0.02em',
+          }} title={`Fréquence de rappel : ${u.frequence_coupon.toLowerCase()}`}>
+            {u.frequence_coupon === 'MENSUELLE' ? 'M'
+              : u.frequence_coupon === 'TRIMESTRIELLE' ? 'T'
+              : u.frequence_coupon === 'SEMESTRIELLE' ? 'S'
+              : u.frequence_coupon === 'ANNUELLE' ? 'A'
+              : u.frequence_coupon === 'QUOTIDIENNE' ? 'J'
+              : '—'}
+          </span>
+        ) : <span style={{ color: 'var(--t3)' }}>—</span>}
+      </Td>
+      <Td align="center">
         <span style={{
           display: 'inline-block',
           minWidth: 18,
@@ -853,6 +877,28 @@ function Row({ u, selected, onClick, adminMode, onReload, isManager, onStructure
         {isFinSoon && !isFinPast && (
           <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.8 }}>({dUntilFin}j)</span>
         )}
+      </Td>
+      <Td align="center">
+        {u.kid_url ? (
+          <a
+            href={u.kid_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              display: 'inline-block',
+              padding: '2px 8px',
+              fontSize: 10,
+              fontWeight: 700,
+              borderRadius: 4,
+              background: 'var(--gold)',
+              color: '#fff',
+              textDecoration: 'none',
+              letterSpacing: '0.04em',
+            }}
+            title="Ouvrir le KID (Key Information Document)"
+          >KID ↗</a>
+        ) : <span style={{ color: 'var(--t3)', fontSize: 10 }}>—</span>}
       </Td>
       {adminMode && (
         <Td align="center" style={{ whiteSpace: 'nowrap' }}>

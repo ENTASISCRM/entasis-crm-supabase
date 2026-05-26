@@ -363,6 +363,9 @@ export default function PilotageRH() {
         </div>
       )}
 
+      {/* Frise chronologique — vue d'ensemble des échéances RH */}
+      <TimelineRH contrats={contrats} />
+
       {/* Toolbar filtres */}
       <div className="table-toolbar mb-16" style={{ marginBottom: 16 }}>
         <input className="search-input" placeholder="Rechercher un conseiller…"
@@ -631,6 +634,166 @@ function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose,
             <button type="submit" className="btn btn-primary">{isNew ? 'Créer' : 'Enregistrer'}</button>
           </div>
         </form>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Frise chronologique RH
+// Affiche les événements clés (embauches, fins de contrat, échéances)
+// regroupés par mois sur une fenêtre de M-2 à M+6.
+// ─────────────────────────────────────────────────────────────────────────
+function TimelineRH({ contrats }) {
+  const events = useMemo(() => {
+    const now = new Date()
+    const debut = new Date(now.getFullYear(), now.getMonth() - 2, 1)
+    const fin = new Date(now.getFullYear(), now.getMonth() + 7, 0)
+    const out = []
+    for (const c of contrats) {
+      if (!c.actif && !c.date_fin) continue
+      if (c.date_debut) {
+        const d = new Date(c.date_debut)
+        if (d >= debut && d <= fin) {
+          out.push({
+            date: d,
+            type: 'start',
+            contrat: c,
+            label: `Embauche · ${c.full_name}`,
+            sub: `${LIBELLE_TYPE_CONTRAT[c.type_contrat]}${c.matricule ? ` · mat. ${c.matricule}` : ''}`,
+          })
+        }
+      }
+      if (c.date_fin) {
+        const d = new Date(c.date_fin)
+        if (d >= debut && d <= fin) {
+          out.push({
+            date: d,
+            type: 'end',
+            contrat: c,
+            label: `Fin de contrat · ${c.full_name}`,
+            sub: `${LIBELLE_TYPE_CONTRAT[c.type_contrat]}${c.matricule ? ` · mat. ${c.matricule}` : ''}`,
+          })
+        }
+      }
+    }
+    return out.sort((a, b) => a.date - b.date)
+  }, [contrats])
+
+  if (events.length === 0) {
+    return (
+      <div className="card card-p mb-24" style={{ textAlign: 'center', padding: '20px 16px', color: 'var(--t3)', fontSize: 13 }}>
+        Aucune échéance RH dans les 6 prochains mois.
+      </div>
+    )
+  }
+
+  // Groupage par mois pour l'affichage
+  const moisFr = ['Janv.', 'Févr.', 'Mars', 'Avril', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.']
+  const groups = {}
+  for (const ev of events) {
+    const key = `${ev.date.getFullYear()}-${String(ev.date.getMonth() + 1).padStart(2, '0')}`
+    if (!groups[key]) {
+      groups[key] = {
+        label: `${moisFr[ev.date.getMonth()]} ${ev.date.getFullYear()}`,
+        events: [],
+      }
+    }
+    groups[key].events.push(ev)
+  }
+  const sortedKeys = Object.keys(groups).sort()
+  const now = new Date()
+  const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+
+  return (
+    <div className="card mb-24">
+      <div className="panel-head">
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--gold)' }}>
+            Frise chronologique
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t1)', marginTop: 4 }}>
+            Échéances RH · {events.length} événement{events.length !== 1 ? 's' : ''} sur 8 mois
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>
+            Embauches, fins de contrat et échéances autour du mois courant.
+          </div>
+        </div>
+      </div>
+      <div className="panel-body" style={{ padding: '8px 20px 20px' }}>
+        <div style={{ position: 'relative', paddingLeft: 28 }}>
+          {/* Ligne verticale de la frise */}
+          <div style={{
+            position: 'absolute', left: 11, top: 8, bottom: 8,
+            width: 2, background: 'rgba(0,0,0,0.06)', borderRadius: 1,
+          }} />
+          {sortedKeys.map(key => {
+            const isCurrent = key === currentKey
+            const isPast = key < currentKey
+            return (
+              <div key={key} style={{ marginBottom: 18 }}>
+                <div style={{
+                  position: 'relative',
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  marginBottom: 8,
+                }}>
+                  <span style={{
+                    position: 'absolute', left: -23, top: 4,
+                    width: 12, height: 12, borderRadius: '50%',
+                    background: isCurrent ? 'var(--gold)' : isPast ? 'rgba(0,0,0,0.15)' : 'var(--apple-blue, #0071E3)',
+                    border: '2px solid #fff',
+                    boxShadow: '0 0 0 1px rgba(0,0,0,0.06)',
+                  }} />
+                  <span style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    color: isCurrent ? 'var(--gold-dk, #A6843F)' : isPast ? 'var(--t3)' : 'var(--t1)',
+                  }}>
+                    {groups[key].label}{isCurrent && ' · en cours'}
+                  </span>
+                </div>
+                <div style={{ paddingLeft: 4, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {groups[key].events.map((ev, i) => {
+                    const isStart = ev.type === 'start'
+                    return (
+                      <div key={i} style={{
+                        display: 'flex', alignItems: 'baseline', gap: 10,
+                        padding: '8px 12px',
+                        background: isPast ? 'transparent' : 'rgba(0,0,0,0.02)',
+                        border: '0.5px solid var(--bd)',
+                        borderRadius: 10,
+                        opacity: isPast ? 0.65 : 1,
+                      }}>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '2px 8px', fontSize: 10, fontWeight: 700,
+                          borderRadius: 999, letterSpacing: '0.04em',
+                          background: isStart ? 'rgba(52,199,89,0.12)' : 'rgba(255,59,48,0.10)',
+                          color: isStart ? '#1F8B3B' : 'var(--cancelled, #FF3B30)',
+                          textTransform: 'uppercase',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {isStart ? 'Embauche' : 'Fin'}
+                        </span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t1)' }}>
+                          {ev.contrat.full_name}
+                        </span>
+                        <span style={{ fontSize: 12, color: 'var(--t3)', flex: 1 }}>
+                          {ev.sub}
+                        </span>
+                        <span style={{ fontSize: 12, color: 'var(--t2)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                          {ev.date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
