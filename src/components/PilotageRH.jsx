@@ -645,40 +645,71 @@ function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose,
 // regroupés par mois sur une fenêtre de M-2 à M+6.
 // ─────────────────────────────────────────────────────────────────────────
 function TimelineRH({ contrats }) {
-  const events = useMemo(() => {
+  const MOIS_AVANT = 2
+  const MOIS_APRES = 5    // → 8 mois affichés au total (M-2 → M+5)
+  const moisFr = ['Janv.', 'Févr.', 'Mars', 'Avril', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.']
+
+  const { events, mois, currentIdx } = useMemo(() => {
     const now = new Date()
-    const debut = new Date(now.getFullYear(), now.getMonth() - 2, 1)
-    const fin = new Date(now.getFullYear(), now.getMonth() + 7, 0)
+    const startMonth = new Date(now.getFullYear(), now.getMonth() - MOIS_AVANT, 1)
+    const endMonth = new Date(now.getFullYear(), now.getMonth() + MOIS_APRES + 1, 0)
+    const totalMois = MOIS_AVANT + 1 + MOIS_APRES
+    const mois = []
+    for (let i = 0; i < totalMois; i++) {
+      const d = new Date(startMonth.getFullYear(), startMonth.getMonth() + i, 1)
+      mois.push({
+        date: d,
+        key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+        label: moisFr[d.getMonth()],
+        annee: d.getFullYear(),
+      })
+    }
     const out = []
     for (const c of contrats) {
       if (!c.actif && !c.date_fin) continue
-      if (c.date_debut) {
-        const d = new Date(c.date_debut)
-        if (d >= debut && d <= fin) {
-          out.push({
-            date: d,
-            type: 'start',
-            contrat: c,
-            label: `Embauche · ${c.full_name}`,
-            sub: `${LIBELLE_TYPE_CONTRAT[c.type_contrat]}${c.matricule ? ` · mat. ${c.matricule}` : ''}`,
-          })
-        }
+      const pushEv = (dateStr, type) => {
+        if (!dateStr) return
+        const d = new Date(dateStr)
+        if (d < startMonth || d > endMonth) return
+        out.push({
+          date: d,
+          type,
+          contrat: c,
+          sub: `${LIBELLE_TYPE_CONTRAT[c.type_contrat]}${c.matricule ? ` · ${c.matricule}` : ''}`,
+        })
       }
-      if (c.date_fin) {
-        const d = new Date(c.date_fin)
-        if (d >= debut && d <= fin) {
-          out.push({
-            date: d,
-            type: 'end',
-            contrat: c,
-            label: `Fin de contrat · ${c.full_name}`,
-            sub: `${LIBELLE_TYPE_CONTRAT[c.type_contrat]}${c.matricule ? ` · mat. ${c.matricule}` : ''}`,
-          })
-        }
-      }
+      pushEv(c.date_debut, 'start')
+      pushEv(c.date_fin, 'end')
     }
-    return out.sort((a, b) => a.date - b.date)
+    out.sort((a, b) => a.date - b.date)
+    const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    const currentIdx = mois.findIndex(m => m.key === currentKey)
+    return { events: out, mois, currentIdx }
   }, [contrats])
+
+  // Position 0→100% sur la frise pour une date donnée
+  function dateToPercent(date) {
+    if (mois.length === 0) return 0
+    const start = mois[0].date.getTime()
+    const end = new Date(mois[mois.length - 1].date.getFullYear(), mois[mois.length - 1].date.getMonth() + 1, 0).getTime()
+    return Math.max(0, Math.min(100, ((date.getTime() - start) / (end - start)) * 100))
+  }
+
+  // Empilage vertical : on alterne haut/bas, et on évite que 2 events trop proches se chevauchent
+  const placed = useMemo(() => {
+    const arr = events.map((ev, i) => ({ ...ev, pct: dateToPercent(ev.date), i }))
+    const lanes = { top: [], bottom: [] }   // pct des events déjà posés
+    return arr.map((ev) => {
+      // Choisit le côté avec le moins d'events à proximité (<8% d'écart)
+      const proche = (side) => lanes[side].filter(p => Math.abs(p - ev.pct) < 8).length
+      const side = proche('top') <= proche('bottom') ? 'top' : 'bottom'
+      // Niveau d'empilage sur ce côté
+      const niveau = proche(side)
+      lanes[side].push(ev.pct)
+      return { ...ev, side, niveau }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events, mois])
 
   if (events.length === 0) {
     return (
@@ -688,107 +719,180 @@ function TimelineRH({ contrats }) {
     )
   }
 
-  // Groupage par mois pour l'affichage
-  const moisFr = ['Janv.', 'Févr.', 'Mars', 'Avril', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.']
-  const groups = {}
-  for (const ev of events) {
-    const key = `${ev.date.getFullYear()}-${String(ev.date.getMonth() + 1).padStart(2, '0')}`
-    if (!groups[key]) {
-      groups[key] = {
-        label: `${moisFr[ev.date.getMonth()]} ${ev.date.getFullYear()}`,
-        events: [],
-      }
-    }
-    groups[key].events.push(ev)
-  }
-  const sortedKeys = Object.keys(groups).sort()
-  const now = new Date()
-  const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const todayPct = dateToPercent(new Date())
+  const CARD_H = 56     // hauteur d'une carte d'événement
+  const CARD_GAP = 6    // espace entre 2 niveaux
+  const maxNiveauTop = Math.max(0, ...placed.filter(p => p.side === 'top').map(p => p.niveau))
+  const maxNiveauBottom = Math.max(0, ...placed.filter(p => p.side === 'bottom').map(p => p.niveau))
+  const hautTop = (maxNiveauTop + 1) * (CARD_H + CARD_GAP) + 18
+  const hautBottom = (maxNiveauBottom + 1) * (CARD_H + CARD_GAP) + 18
 
   return (
-    <div className="card mb-24">
+    <div className="card mb-24 timeline-rh">
       <div className="panel-head">
         <div>
           <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--gold)' }}>
             Frise chronologique
           </div>
           <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t1)', marginTop: 4 }}>
-            Échéances RH · {events.length} événement{events.length !== 1 ? 's' : ''} sur 8 mois
+            Échéances RH · {events.length} événement{events.length !== 1 ? 's' : ''} sur {mois.length} mois
           </div>
           <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>
-            Embauches, fins de contrat et échéances autour du mois courant.
+            Embauches et fins de contrat — survol pour les détails.
           </div>
         </div>
       </div>
-      <div className="panel-body" style={{ padding: '8px 20px 20px' }}>
-        <div style={{ position: 'relative', paddingLeft: 28 }}>
-          {/* Ligne verticale de la frise */}
+      <div className="panel-body" style={{ padding: '28px 36px 20px' }}>
+        <div className="timeline-wrap" style={{
+          position: 'relative',
+          height: hautTop + 28 + hautBottom,
+        }}>
+          {/* Ligne horizontale principale */}
           <div style={{
-            position: 'absolute', left: 11, top: 8, bottom: 8,
-            width: 2, background: 'rgba(0,0,0,0.06)', borderRadius: 1,
+            position: 'absolute',
+            left: 0, right: 0,
+            top: hautTop + 14,
+            height: 2,
+            background: 'linear-gradient(90deg, rgba(0,0,0,0.04) 0%, rgba(201,169,97,0.25) 50%, rgba(0,0,0,0.04) 100%)',
+            borderRadius: 1,
           }} />
-          {sortedKeys.map(key => {
-            const isCurrent = key === currentKey
-            const isPast = key < currentKey
+          {/* Marqueur "aujourd'hui" — petit triangle + halo */}
+          <div className="timeline-today" style={{
+            position: 'absolute',
+            left: `${todayPct}%`,
+            top: hautTop - 4,
+            transform: 'translateX(-50%)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+          }}>
+            <div style={{
+              fontSize: 9, fontWeight: 700, letterSpacing: '0.1em',
+              color: 'var(--gold-dk)', textTransform: 'uppercase',
+              marginBottom: 4,
+            }}>aujourd'hui</div>
+            <div style={{
+              width: 0, height: 0,
+              borderLeft: '5px solid transparent',
+              borderRight: '5px solid transparent',
+              borderTop: '6px solid var(--gold)',
+            }} />
+          </div>
+          {/* Marqueurs des mois (ronds + label) */}
+          {mois.map((m, i) => {
+            const pct = (i + 0.5) / mois.length * 100
+            const isCurrent = i === currentIdx
+            const isPast = i < currentIdx
             return (
-              <div key={key} style={{ marginBottom: 18 }}>
+              <div key={m.key} style={{
+                position: 'absolute',
+                left: `${pct}%`,
+                top: hautTop + 8,
+                transform: 'translateX(-50%)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+              }}>
+                <div className={isCurrent ? 'timeline-dot-current' : ''} style={{
+                  width: isCurrent ? 14 : 10,
+                  height: isCurrent ? 14 : 10,
+                  borderRadius: '50%',
+                  background: isCurrent ? 'var(--gold)' : isPast ? '#D0D0D5' : '#fff',
+                  border: isCurrent ? '2px solid #fff' : `2px solid ${isPast ? '#D0D0D5' : 'var(--bd-strong)'}`,
+                  boxShadow: isCurrent
+                    ? '0 0 0 4px rgba(201,169,97,0.15), 0 2px 6px rgba(201,169,97,0.35)'
+                    : '0 1px 2px rgba(0,0,0,0.04)',
+                }} />
                 <div style={{
-                  position: 'relative',
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  marginBottom: 8,
+                  marginTop: 8,
+                  fontSize: 10,
+                  fontWeight: isCurrent ? 700 : 600,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: isCurrent ? 'var(--gold-dk)' : isPast ? 'var(--t3)' : 'var(--t2)',
+                  whiteSpace: 'nowrap',
                 }}>
-                  <span style={{
-                    position: 'absolute', left: -23, top: 4,
-                    width: 12, height: 12, borderRadius: '50%',
-                    background: isCurrent ? 'var(--gold)' : isPast ? 'rgba(0,0,0,0.15)' : 'var(--apple-blue, #0071E3)',
-                    border: '2px solid #fff',
-                    boxShadow: '0 0 0 1px rgba(0,0,0,0.06)',
-                  }} />
-                  <span style={{
-                    fontSize: 12,
-                    fontWeight: 700,
-                    letterSpacing: '0.06em',
-                    textTransform: 'uppercase',
-                    color: isCurrent ? 'var(--gold-dk, #A6843F)' : isPast ? 'var(--t3)' : 'var(--t1)',
-                  }}>
-                    {groups[key].label}{isCurrent && ' · en cours'}
-                  </span>
+                  {m.label}
                 </div>
-                <div style={{ paddingLeft: 4, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {groups[key].events.map((ev, i) => {
-                    const isStart = ev.type === 'start'
-                    return (
-                      <div key={i} style={{
-                        display: 'flex', alignItems: 'baseline', gap: 10,
-                        padding: '8px 12px',
-                        background: isPast ? 'transparent' : 'rgba(0,0,0,0.02)',
-                        border: '0.5px solid var(--bd)',
-                        borderRadius: 10,
-                        opacity: isPast ? 0.65 : 1,
-                      }}>
-                        <span style={{
-                          display: 'inline-block',
-                          padding: '2px 8px', fontSize: 10, fontWeight: 700,
-                          borderRadius: 999, letterSpacing: '0.04em',
-                          background: isStart ? 'rgba(52,199,89,0.12)' : 'rgba(255,59,48,0.10)',
-                          color: isStart ? '#1F8B3B' : 'var(--cancelled, #FF3B30)',
-                          textTransform: 'uppercase',
-                          whiteSpace: 'nowrap',
-                        }}>
-                          {isStart ? 'Embauche' : 'Fin'}
-                        </span>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t1)' }}>
-                          {ev.contrat.full_name}
-                        </span>
-                        <span style={{ fontSize: 12, color: 'var(--t3)', flex: 1 }}>
-                          {ev.sub}
-                        </span>
-                        <span style={{ fontSize: 12, color: 'var(--t2)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                          {ev.date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
-                        </span>
-                      </div>
-                    )
-                  })}
+                {(i === 0 || m.date.getMonth() === 0) && (
+                  <div style={{
+                    fontSize: 9, color: 'var(--t3)', marginTop: 1,
+                    fontVariantNumeric: 'tabular-nums',
+                  }}>{m.annee}</div>
+                )}
+              </div>
+            )
+          })}
+          {/* Événements — cartes flottantes */}
+          {placed.map((ev, i) => {
+            const isStart = ev.type === 'start'
+            const isPast = ev.date < new Date()
+            const lineColor = isStart ? '#34C759' : '#FF3B30'
+            const offset = ev.niveau * (CARD_H + CARD_GAP)
+            const top = ev.side === 'top'
+              ? hautTop - 18 - CARD_H - offset
+              : hautTop + 20 + offset
+            const lineTop = ev.side === 'top'
+              ? top + CARD_H
+              : hautTop + 16
+            const lineHeight = ev.side === 'top'
+              ? hautTop + 14 - lineTop
+              : top - lineTop
+            return (
+              <div
+                key={i}
+                className="timeline-event"
+                style={{
+                  position: 'absolute',
+                  left: `${ev.pct}%`,
+                  top,
+                  transform: 'translateX(-50%)',
+                  width: 180,
+                  animationDelay: `${i * 60}ms`,
+                  opacity: isPast ? 0.7 : 1,
+                }}
+              >
+                {/* Connecteur vertical vers la timeline */}
+                <div style={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: lineTop - top,
+                  width: 1.5,
+                  height: lineHeight,
+                  background: `linear-gradient(${ev.side === 'top' ? '180deg' : '0deg'}, ${lineColor}66 0%, ${lineColor}00 100%)`,
+                  transform: 'translateX(-50%)',
+                }} />
+                <div style={{
+                  background: '#fff',
+                  border: `0.5px solid var(--bd)`,
+                  borderLeft: `3px solid ${lineColor}`,
+                  borderRadius: 10,
+                  padding: '8px 12px',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03)',
+                  height: CARD_H,
+                  overflow: 'hidden',
+                }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    fontSize: 9, fontWeight: 700,
+                    letterSpacing: '0.06em', textTransform: 'uppercase',
+                    color: lineColor,
+                    marginBottom: 2,
+                  }}>
+                    <span>{isStart ? 'Embauche' : 'Fin'}</span>
+                    <span style={{ color: 'var(--t3)', fontWeight: 600 }}>·</span>
+                    <span style={{ color: 'var(--t2)', fontWeight: 600, letterSpacing: '0.02em', textTransform: 'none' }}>
+                      {ev.date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                    </span>
+                  </div>
+                  <div style={{
+                    fontSize: 13, fontWeight: 600, color: 'var(--t1)',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
+                    {ev.contrat.full_name}
+                  </div>
+                  <div style={{
+                    fontSize: 11, color: 'var(--t3)',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
+                    {ev.sub}
+                  </div>
                 </div>
               </div>
             )
