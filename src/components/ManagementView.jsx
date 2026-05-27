@@ -67,8 +67,13 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
     return () => { cancelled = true }
   }, [])
 
+  // Liste des conseillers à suivre : actifs, avec advisor_code, et PAS manager
+  // (les managers se pilotent eux-mêmes, pas besoin de les voir dans leur
+  // propre vue Management).
   const activeAdvisors = useMemo(
-    () => (teamProfiles || []).filter(p => p?.is_active && p?.advisor_code),
+    () => (teamProfiles || []).filter(p =>
+      p?.is_active && p?.advisor_code && p?.role !== 'manager'
+    ),
     [teamProfiles]
   )
 
