@@ -263,7 +263,7 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
                 <SortableTh label="Pipeline" col="pipeline" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" />
                 <th style={{ textAlign: 'center' }} title="RDV Lead Room : joints / no-shows / refus">RDV LR</th>
                 <th style={{ textAlign: 'center' }} title="Valeur cabinet cumulée depuis embauche vs salaire à rembourser">Rentable ?</th>
-                <SortableTh label="Δ vs M-1" col="delta" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" />
+                <SortableTh label="Δ PP vs M-1" col="delta" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" />
                 <th>Statut</th>
               </tr>
             </thead>
@@ -523,9 +523,16 @@ function AdvisorDetailModal({ row, deals, month, rdv, onClose }) {
             <MiniKpi label="PU signée" value={fmtEur(row.m.puSigned)} color="#0071E3" />
             <MiniKpi label="Pipeline" value={fmtEur(row.m.ppPipeline)} color="#F59E0B" hint={`${row.m.pipelineCount} dossiers`} />
             <MiniKpi
-              label="Δ vs M-1"
+              label="Δ PP vs M-1"
               value={`${row.dPp >= 0 ? '+' : ''}${fmtEur(row.dPp)}`}
               color={row.dPp >= 0 ? '#10B981' : '#EF4444'}
+              hint="Variation PP signée"
+            />
+            <MiniKpi
+              label="Δ PU vs M-1"
+              value={`${row.dPu >= 0 ? '+' : ''}${fmtEur(row.dPu)}`}
+              color={row.dPu >= 0 ? '#10B981' : '#EF4444'}
+              hint="Variation PU signée"
             />
           </div>
 
