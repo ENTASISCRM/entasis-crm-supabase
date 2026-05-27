@@ -17,6 +17,7 @@ import {
   MONTHS,
   annualize,
   dealMatchesAdvisor,
+  isPipeline,
 } from '../lib/metrics'
 import * as contratsService from '../services/conseillerContrats'
 import { evaluerRentabilite, codesContrat, dealsDuConseiller } from '../lib/calcul-commission'
@@ -115,16 +116,24 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
 
   const targets = objectifs?.[month] || { pp_target: 0, pu_target: 0 }
 
-  // Totaux cabinet (basés sur les rows calculés)
+  // Totaux cabinet — calculés DIRECTEMENT sur les deals du mois (pas en
+  // sommant les rows). Sinon on perd la part 50/50 des co-conseillers qui
+  // sont des managers exclus de la liste (ex: Louis co-conseiller d'Alexis
+  // → la moitié du deal disparaissait du total cabinet).
   const cabinet = useMemo(() => {
-    const ppSigned = rows.reduce((s, r) => s + r.m.ppSigned, 0)
-    const puSigned = rows.reduce((s, r) => s + r.m.puSigned, 0)
-    const ppProj = rows.reduce((s, r) => s + r.m.ppProjected, 0)
-    const puProj = rows.reduce((s, r) => s + r.m.puProjected, 0)
-    const totalSigned = rows.reduce((s, r) => s + r.m.signedCount, 0)
-    const totalPipeline = rows.reduce((s, r) => s + r.m.pipelineCount, 0)
-    return { ppSigned, puSigned, ppProj, puProj, totalSigned, totalPipeline }
-  }, [rows])
+    const ofMonth = (deals || []).filter(d => d.month === month)
+    const signed = ofMonth.filter(d => d.status === 'Signé')
+    const pipeline = ofMonth.filter(d => isPipeline(d.status))
+    const ppSigned = signed.reduce((s, d) => s + annualize(d.pp_m), 0)
+    const puSigned = signed.reduce((s, d) => s + Number(d.pu || 0), 0)
+    const ppProj = ppSigned + pipeline.reduce((s, d) => s + annualize(d.pp_m), 0)
+    const puProj = puSigned + pipeline.reduce((s, d) => s + Number(d.pu || 0), 0)
+    return {
+      ppSigned, puSigned, ppProj, puProj,
+      totalSigned: signed.length,
+      totalPipeline: pipeline.length,
+    }
+  }, [deals, month])
 
   // Top performeurs : trie d'abord par NOMBRE de dossiers signés (le plus
   // d'activité), puis par PP signée en cas d'égalité. La PU brute ne sert
