@@ -442,42 +442,35 @@ export function commissionsMois(dealsMois = [], contrat, rentabilise, profile = 
     }
   }
 
-  // 3. PHASE 2 : rentabilisé → application normale du barème CDI
-  const palierPpAtteint = palierPp <= 0 || ppRealisee >= palierPp
-  const palierPuAtteint = palierPu <= 0 || puRealisee >= palierPu
-  const ratioPp = (palierPpAtteint && ppRealisee > palierPp)
-    ? (palierPp > 0 ? (ppRealisee - palierPp) / ppRealisee : 1)
-    : 0
-  const ratioPu = (palierPuAtteint && puRealisee > palierPu)
-    ? (palierPu > 0 ? (puRealisee - palierPu) / puRealisee : 1)
-    : 0
-
+  // 3. PHASE 2 : rentabilisé → application normale du barème
+  //
+  // Décision Louis 27/05 : il n'y a qu'UN SEUL seuil de déclenchement du
+  // variable, c'est le salaire mensuel à rembourser (cumul depuis embauche
+  // vs valeur cabinet cumulée). Une fois ce seuil passé, TOUTES les
+  // commissions sont versées intégralement à leur taux propre — pas de
+  // palier mensuel PP/PU séparé qui viendrait amputer le variable.
+  //
+  // (Les paliers mensuels PP/PU restent stockés dans contrat.palier_pp_mensuel
+  // et palier_pu_mensuel pour info / objectifs / dashboard, mais ne servent
+  // plus à filtrer le variable versé.)
   let variablePp = 0
   let variablePu = 0
   let variableHorsPalier = 0
 
   for (const d of detail) {
     const produit = BAREME_PRODUITS[d.produitKey]
+    // Une fois rentabilisé : 100% de la commission versée, peu importe
+    // l'assiette ou le produit. Chaque ligne reste différenciée dans le
+    // détail (taux propre PP / PU / SCPI / UCS / etc.).
+    d.montantEffectif = d.montant
+    d.sousPalier = false
+    d.remboursementSalaire = false
     if (produit.horsPalier) {
-      // SCPI, MH, Girardin, PE, UCS, Prév., Mutuelle → dès le 1er €
-      d.montantEffectif = d.montant
-      d.sousPalier = false
-      d.remboursementSalaire = false
       variableHorsPalier += d.montant
     } else if (produit.assiette === 'pp') {
-      d.montantEffectif = d.montant * ratioPp
-      d.sousPalier = !palierPpAtteint
-      d.remboursementSalaire = false
-      variablePp += d.montantEffectif
+      variablePp += d.montant
     } else if (produit.assiette === 'pu') {
-      d.montantEffectif = d.montant * ratioPu
-      d.sousPalier = !palierPuAtteint
-      d.remboursementSalaire = false
-      variablePu += d.montantEffectif
-    } else {
-      d.montantEffectif = d.montant
-      d.sousPalier = false
-      d.remboursementSalaire = false
+      variablePu += d.montant
     }
   }
 
@@ -488,8 +481,8 @@ export function commissionsMois(dealsMois = [], contrat, rentabilise, profile = 
     total: variablePp + variablePu + variableHorsPalier,
     ppRealisee,
     puRealisee,
-    palierPpAtteint,
-    palierPuAtteint,
+    palierPpAtteint: true,    // déprécié : conservé pour compat UI, toujours true en phase 2
+    palierPuAtteint: true,    // idem
     rentabilise: true,
     detail,
   }

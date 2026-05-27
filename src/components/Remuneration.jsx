@@ -236,36 +236,10 @@ function VueConseiller({ contrat, profile, deals, month, isManager }) {
         />
       )}
 
-      {/* PHASE 2 — Paliers PP / PU (une fois rentabilisé) */}
-      {rentab.rentabilise && palierPp > 0 && (
-        <PalierCard
-          titre="Palier PP du mois"
-          realise={comm.ppRealisee}
-          cible={palierPp}
-          pct={pctPalierPp}
-          reste={resteAvantPalierPp}
-          atteint={comm.palierPpAtteint}
-          variable={comm.variablePp}
-          hint={comm.palierPpAtteint
-            ? 'Tu débloques le variable sur la production additionnelle.'
-            : `Plus que ${fmtEur(resteAvantPalierPp)} de PP avant de débloquer ton variable PP.`}
-        />
-      )}
-
-      {rentab.rentabilise && palierPu > 0 && (
-        <PalierCard
-          titre="Palier PU du mois"
-          realise={comm.puRealisee}
-          cible={palierPu}
-          pct={pctPalierPu}
-          reste={resteAvantPalierPu}
-          atteint={comm.palierPuAtteint}
-          variable={comm.variablePu}
-          hint={comm.palierPuAtteint
-            ? 'Tu débloques le variable PU sur la production additionnelle.'
-            : `Plus que ${fmtEur(resteAvantPalierPu)} de PU avant de débloquer ton variable PU.`}
-        />
-      )}
+      {/* PHASE 2 — pas de palier mensuel : une fois le seuil cumulatif
+          passé, toutes les commissions sont versées intégralement à leur
+          taux propre. Le détail des deals ci-dessous montre la ventilation
+          par produit (PP, PU, SCPI, UCS, MH, Girardin, PE, Prév., Mutuelle). */}
 
       {/* Détail des deals du mois */}
       <SectionDetail comm={comm} month={month} />
