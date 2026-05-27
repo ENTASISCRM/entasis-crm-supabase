@@ -39,6 +39,67 @@ export async function findByNameAndAdvisor(nom, advisorCode) {
 }
 
 /**
+ * Recherche un client existant par email (case-insensitive).
+ * Plus fiable que le nom car l'email est unique par personne.
+ */
+export async function findByEmail(email) {
+  const e = (email || '').trim().toLowerCase()
+  if (!e) return null
+  const { data } = await supabase
+    .from('clients')
+    .select('id, nom, prenom, email')
+    .ilike('email', e)
+    .limit(1)
+    .maybeSingle()
+  return data || null
+}
+
+/**
+ * Recherche un client existant par téléphone (tolérant aux formatages).
+ * Compare les 9 derniers chiffres (= numéro local sans préfixe pays).
+ */
+export async function findByPhone(phone) {
+  const digits = (phone || '').replace(/\D/g, '')
+  if (digits.length < 9) return null
+  const tail = digits.slice(-9)
+  // On charge un échantillon de clients avec téléphone et on filtre côté JS
+  // (PostgREST ne fait pas de regex sur les colonnes en ilike facilement).
+  const { data } = await supabase
+    .from('clients')
+    .select('id, nom, prenom, telephone')
+    .not('telephone', 'is', null)
+    .limit(2000)
+  if (!data) return null
+  return data.find(c => {
+    const t = (c.telephone || '').replace(/\D/g, '')
+    return t.length >= 9 && t.slice(-9) === tail
+  }) || null
+}
+
+/**
+ * Cherche un client existant en cascade : email > téléphone > nom+advisor.
+ * Retourne le 1er match trouvé ou null.
+ */
+export async function findExisting({ email, telephone, nom, advisor_code }) {
+  // 1. Email (le plus fiable)
+  if (email) {
+    const byEmail = await findByEmail(email)
+    if (byEmail) return { ...byEmail, matchedBy: 'email' }
+  }
+  // 2. Téléphone (tolérant aux formats)
+  if (telephone) {
+    const byPhone = await findByPhone(telephone)
+    if (byPhone) return { ...byPhone, matchedBy: 'phone' }
+  }
+  // 3. Nom + advisor_code (dernier recours, exact)
+  if (nom && advisor_code) {
+    const byName = await findByNameAndAdvisor(nom, advisor_code)
+    if (byName) return { ...byName, matchedBy: 'name' }
+  }
+  return null
+}
+
+/**
  * Crée un nouveau client. Retourne l'id du nouveau client.
  */
 export async function create(clientData, userId) {
@@ -70,15 +131,25 @@ export async function findOrCreate(clientData, userId) {
   const nom = (clientData.nom || clientData.client || '').trim()
   if (!nom) return null
 
-  const existing = await findByNameAndAdvisor(nom, clientData.advisor_code)
+  const email = clientData.email || clientData.client_email || null
+  const telephone = clientData.telephone || clientData.client_phone || null
+
+  // Recherche multi-critères (email > phone > nom+advisor) pour éviter les
+  // doublons de clients. Si on trouve un match, on le réutilise.
+  const existing = await findExisting({
+    email,
+    telephone,
+    nom,
+    advisor_code: clientData.advisor_code,
+  })
   if (existing) return existing.id
 
   try {
     return await create(
       {
         nom,
-        email: clientData.email || clientData.client_email,
-        telephone: clientData.telephone || clientData.client_phone,
+        email,
+        telephone,
         age: clientData.age || clientData.client_age,
         advisor_code: clientData.advisor_code,
       },
