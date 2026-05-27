@@ -279,7 +279,18 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
                 <SortableTh label="PP signée" col="pp" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" />
                 <SortableTh label="PU signée" col="pu" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" />
                 <SortableTh label="Pipeline" col="pipeline" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <th style={{ textAlign: 'center' }} title="RDV Lead Room : joints / no-shows / refus">RDV LR</th>
+                <th style={{ textAlign: 'center', minWidth: 150 }}>
+                  <div>RDV Lead Room</div>
+                  <div style={{ fontSize: 9, fontWeight: 500, color: 'var(--t3)', marginTop: 2, letterSpacing: '0.02em', textTransform: 'none' }}>
+                    <span style={{ color: '#10B981' }}>✓ joints</span>
+                    {' · '}
+                    <span style={{ color: '#EF4444' }}>✗ no-show</span>
+                    {' · '}
+                    <span>refus</span>
+                    {' · '}
+                    <span style={{ color: '#0071E3' }}>+à venir</span>
+                  </div>
+                </th>
                 <th style={{ textAlign: 'center' }} title="Valeur cabinet cumulée depuis embauche vs salaire à rembourser">Rentable ?</th>
                 <SortableTh label="Δ PP vs M-1" col="delta" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" />
                 <th>Statut</th>
@@ -780,14 +791,13 @@ function RowConseiller({ r, rdv, rdvLoading, onSelect }) {
         {rdvLoading ? (
           <span style={{ color: 'var(--t3)' }}>…</span>
         ) : rdv ? (
-          <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center', flexWrap: 'nowrap' }}>
-            <span title="Joints" style={{ color: '#10B981', fontWeight: 700 }}>{rdv.joined}</span>
-            <span style={{ color: 'var(--t3)' }}>·</span>
-            <span title="No-shows" style={{ color: '#EF4444', fontWeight: 700 }}>{rdv.no_show}</span>
-            <span style={{ color: 'var(--t3)' }}>·</span>
-            <span title="Refus" style={{ color: 'var(--t3)', fontWeight: 600 }}>{rdv.refused}</span>
+          <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center', flexWrap: 'nowrap' }}
+               title={`${rdv.joined} joints · ${rdv.no_show} no-shows · ${rdv.refused} refus${rdv.upcoming > 0 ? ` · ${rdv.upcoming} à venir` : ''}`}>
+            <span style={{ color: '#10B981', fontWeight: 700 }}>✓{rdv.joined}</span>
+            <span style={{ color: '#EF4444', fontWeight: 700 }}>✗{rdv.no_show}</span>
+            <span style={{ color: 'var(--t3)', fontWeight: 600 }}>·{rdv.refused}</span>
             {rdv.upcoming > 0 && (
-              <span title={`${rdv.upcoming} RDV à venir`} style={{ marginLeft: 4, padding: '1px 5px', borderRadius: 3, background: 'rgba(0,113,227,0.10)', color: '#0071E3', fontWeight: 600, fontSize: 10 }}>
+              <span style={{ marginLeft: 2, padding: '1px 5px', borderRadius: 3, background: 'rgba(0,113,227,0.10)', color: '#0071E3', fontWeight: 600, fontSize: 10 }}>
                 +{rdv.upcoming}
               </span>
             )}
