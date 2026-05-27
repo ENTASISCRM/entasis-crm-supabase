@@ -65,7 +65,9 @@ export const BAREME_PRODUITS = {
   },
   swisslife_prev: {
     libelle: 'SwissLife (Prévoyance)', categorie: 'prevoyance', assiette: 'pp', horsPalier: true,
-    cdi: () => 5.5, mandataire: () => 11.0,
+    // Louis 27/05 : prévoyance = 13 % mandataire / 6,5 % CDI peu importe la
+    // compagnie. Aligné sur April / Spvie pour cohérence.
+    cdi: () => 6.5, mandataire: () => 13.0,
   },
   spvie: {
     libelle: 'Spvie', categorie: 'protection_sociale', assiette: 'pp', horsPalier: true,
@@ -90,13 +92,15 @@ export const BAREME_PRODUITS = {
   },
 
   // PU (Prime Unique) — palier PU séparé
-  // Décision Louis 27/05 : on divise les frais par 2 (CDI touche la moitié
-  // du frais d'entrée, mandataire touche tout le frais). Plus simple que
-  // l'ancienne formule frais/4+0.5 / frais/2+1.
+  // Louis 27/05 (révision après calcul à la main) :
+  //   • Mandataire (pour valeur cabinet / remboursement salaire) : frais/2
+  //     → sur 1 % frais = 0,5 % (au lieu de 1 % comme dans la 1re version)
+  //   • CDI (variable une fois rentabilisé) : mandataire ÷ 2 = frais/4
+  //     → sur 1 % frais = 0,25 %
   pu_versement_libre: {
     libelle: 'PU Versement libre', categorie: 'pu', assiette: 'pu', horsPalier: false,
-    cdi: (frais) => frais / 2,
-    mandataire: (frais) => frais,
+    cdi: (frais) => frais / 4,
+    mandataire: (frais) => frais / 2,
   },
   pu_transfert: {
     libelle: 'PU Transfert', categorie: 'pu', assiette: 'pu', horsPalier: false,
