@@ -20,6 +20,7 @@ import {
   isPipeline,
 } from '../lib/metrics'
 import * as contratsService from '../services/conseillerContrats'
+import * as profilesService from '../services/profiles'
 import { evaluerRentabilite, codesContrat, dealsDuConseiller } from '../lib/calcul-commission'
 
 const fmtEur = (v) => Number(v || 0).toLocaleString('fr-FR', {
@@ -68,14 +69,32 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
     return () => { cancelled = true }
   }, [])
 
+  // Re-fetch les profils à chaque mount, indépendamment du cache parent.
+  // Sans ça, si un conseiller est ajouté/modifié dans Pilotage RH après le
+  // chargement initial de l'app, il n'apparaît jamais dans Management
+  // tant qu'on n'a pas hard-refresh. C'était le cas Arthur Follezou
+  // (advisor_code set après l'init, donc absent jusqu'au Ctrl+Shift+R).
+  const [freshProfiles, setFreshProfiles] = useState(null)
+  useEffect(() => {
+    let alive = true
+    profilesService.listTeam().catch(() => null).then(list => {
+      if (alive && Array.isArray(list)) setFreshProfiles(list)
+    })
+    return () => { alive = false }
+  }, [])
+
+  // Source des profils, freshProfiles si disponible (re-fetch), sinon le
+  // teamProfiles passé en props (fallback pendant le 1er render).
+  const sourceProfiles = freshProfiles || teamProfiles || []
+
   // Liste des conseillers à suivre : actifs, avec advisor_code, et PAS manager
   // (les managers se pilotent eux-mêmes, pas besoin de les voir dans leur
   // propre vue Management).
   const activeAdvisors = useMemo(
-    () => (teamProfiles || []).filter(p =>
+    () => sourceProfiles.filter(p =>
       p?.is_active && p?.advisor_code && p?.role !== 'manager'
     ),
-    [teamProfiles]
+    [sourceProfiles]
   )
 
   // Calcule les stats du mois courant + delta vs mois précédent + rentabilité
