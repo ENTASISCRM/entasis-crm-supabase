@@ -131,13 +131,13 @@ export function commissionBruteDeal(deal, contrat, part = 1) {
   if (!produitKey) {
     return { produitKey: null, assiette: 0, taux: 0, montantPlein: 0, montant: 0, horsPalier: false, part }
   }
-  // Ordre de placement / replacement : pas de commission (le client ramène
-  // son contrat existant en gestion chez nous, pas de frais d'entrée). On
-  // garde le produitKey pour que la ligne reste visible dans le détail, mais
-  // taux = 0 et montant = 0.
   const produit = BAREME_PRODUITS[produitKey]
   const assiette = assietteDeal(deal, produitKey)
-  if (deal?.is_ordre_placement) {
+  // Ordre de placement / replacement : annule uniquement la commission sur
+  // la PARTIE PU (versement unique transféré chez nous, pas de nouveaux
+  // frais d'entrée). La PP (versement mensuel programmé) reste commissionnée
+  // normalement car c'est un engagement nouveau du client.
+  if (deal?.is_ordre_placement && produit.assiette === 'pu') {
     return {
       produitKey, assiette, taux: 0,
       tauxMandataire: true,
@@ -220,7 +220,21 @@ export function commissionsDeal(deal, contrat, part = 1) {
   const puMontant = Number(deal.pu || 0)
   if (mainProduit?.assiette === 'pp' && puMontant > 0) {
     const puProduit = BAREME_PRODUITS['pu_versement_libre']
-    if (puProduit) {
+    if (puProduit && deal?.is_ordre_placement) {
+      // Ordre de placement : PU non commissionnée (le client a transféré son
+      // contrat existant en gestion chez nous, pas de nouveaux frais).
+      out.push({
+        produitKey: 'pu_versement_libre',
+        assiette: puMontant,
+        taux: 0,
+        tauxMandataire: true,
+        montantPlein: 0,
+        montant: 0,
+        horsPalier: puProduit.horsPalier,
+        part,
+        ordrePlacement: true,
+      })
+    } else if (puProduit) {
       const frais = fraisPourProduit(deal, puProduit)   // utilise frais_entree_pu_pct
       const taux = tauxPourProduit(puProduit, contrat, frais)
       // Détermine si on est au taux mandataire ou CDI (même logique que
@@ -296,26 +310,30 @@ export function codesContrat(contrat, profile) {
  * pour évaluer la contribution réelle d'un conseiller donné.
  */
 export function valeurCabinetDeal(deal, part = 1) {
-  // Ordre de placement / replacement : pas de frais d'entrée touchés par
-  // Entasis → ne compte pas dans la valeur cabinet du conseiller (et donc
-  // pas dans le seuil de rentabilité).
-  if (deal?.is_ordre_placement) return 0
   const produitKey = mapProduitDeal(deal)
   if (!produitKey) return 0
   const produit = BAREME_PRODUITS[produitKey]
   const assiette = assietteDeal(deal, produitKey)
-  const frais = fraisPourProduit(deal, produit)   // bon frais selon assiette PP/PU
-  const taux = produit.mandataire(frais)
-  let total = (assiette * taux * part) / 100
+  // Ordre de placement : annule UNIQUEMENT la partie PU (pas la PP).
+  // - Si le produit principal est PU (ex: deal "PU Versement libre") → 0
+  // - Si le produit principal est PP → on garde la PP mais on annule le
+  //   bonus PU additionnel ci-dessous
+  const isOP = !!deal?.is_ordre_placement
+  let total = 0
+  if (!(isOP && produit.assiette === 'pu')) {
+    const frais = fraisPourProduit(deal, produit)
+    const taux = produit.mandataire(frais)
+    total = (assiette * taux * part) / 100
+  }
 
   // Si le produit principal est PP (PER, AV) et que le deal a aussi une PU,
   // ajouter la valeur cabinet du versement unique via pu_versement_libre
-  // (sinon le seuil de rentabilité ignorerait des sommes parfois importantes).
+  // (sauf si is_ordre_placement → on annule cette partie).
   const puMontant = Number(deal.pu || 0)
-  if (produit.assiette === 'pp' && puMontant > 0) {
+  if (!isOP && produit.assiette === 'pp' && puMontant > 0) {
     const puProduit = BAREME_PRODUITS['pu_versement_libre']
     if (puProduit) {
-      const fraisPu = fraisPourProduit(deal, puProduit)   // utilise frais_entree_pu_pct
+      const fraisPu = fraisPourProduit(deal, puProduit)
       const tauxPu = puProduit.mandataire(fraisPu)
       total += (puMontant * tauxPu * part) / 100
     }

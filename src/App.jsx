@@ -3688,7 +3688,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                         Ordre de placement / replacement
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--t2)', marginTop: 1 }}>
-                        Le client transfère un contrat existant chez nous (gestion) → <strong>pas de commission</strong>, ne compte pas dans le seuil de rentabilité.
+                        Le client transfère un contrat existant en gestion chez nous (versement unique uniquement) → <strong>la PU n'est pas commissionnée</strong>, mais la PP mensuelle reste commissionnée normalement.
                       </div>
                     </div>
                   </label>
