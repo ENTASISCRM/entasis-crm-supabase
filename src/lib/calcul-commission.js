@@ -516,44 +516,81 @@ export function commissionsMois(dealsMois = [], contrat, rentab, profile = null)
     return da - db
   })
 
-  let cumulCourant = valeurAvantCeMois   // évolue au fur et à mesure
+  let cumulCourant = valeurAvantCeMois   // valeur cabinet cumulée, évolue ligne par ligne
   for (const deal of dealsTries) {
     const part = partDeal(deal, codes)
     if (!part) continue
-    // Le seuil est-il déjà franchi AVANT ce deal ?
-    const aRembourse = sansSeuil || cumulCourant >= brutCumule
-    // Recalcule les commissions avec le bon contexte (rentabilise = aRembourse)
-    const ctxDeal = { ...contrat, rentabilise: aRembourse }
-    const calcs = commissionsDeal(deal, ctxDeal, part)
-    for (const calc of calcs) {
-      if (!calc.produitKey) continue
-      const produit = BAREME_PRODUITS[calc.produitKey]
-      const assietteEffective = calc.assiette * part
-      if (produit.assiette === 'pp' && !produit.horsPalier) {
-        ppRealisee += assietteEffective
-      } else if (produit.assiette === 'pu' && !produit.horsPalier) {
-        puRealisee += assietteEffective
+    // On calcule à la fois la version mandataire (référence pour seuil) et CDI
+    // (qui s'appliquera pour les deals strictement après franchissement).
+    const calcsMandataire = commissionsDeal(deal, { ...contrat, rentabilise: false }, part)
+    const calcsCDI = commissionsDeal(deal, { ...contrat, rentabilise: true }, part)
+    for (let i = 0; i < calcsMandataire.length; i++) {
+      const calcMand = calcsMandataire[i]
+      const calcCDI = calcsCDI[i] || calcMand
+      if (!calcMand.produitKey) continue
+      const produit = BAREME_PRODUITS[calcMand.produitKey]
+      // Valeur cabinet de cette ligne = commission au taux mandataire (× part déjà inclus).
+      const valeurLigne = calcMand.montant
+      const cumulAvant = cumulCourant
+      const cumulApres = cumulCourant + valeurLigne
+      const assietteEffective = calcMand.assiette * part
+      if (produit.assiette === 'pp' && !produit.horsPalier) ppRealisee += assietteEffective
+      else if (produit.assiette === 'pu' && !produit.horsPalier) puRealisee += assietteEffective
+
+      let montantEffectif, taux, tauxMandataire, montantBrut, remboursementSalaire
+      if (sansSeuil) {
+        // Mandataire/gérant : pas de seuil → toujours 100% au taux mandataire
+        montantEffectif = calcMand.montant
+        taux = calcMand.taux
+        tauxMandataire = true
+        montantBrut = calcMand.montant
+        remboursementSalaire = false
+      } else if (cumulApres <= brutCumule) {
+        // Cas A — ce deal sert encore à rembourser le salaire (sous seuil)
+        montantEffectif = 0
+        taux = calcMand.taux
+        tauxMandataire = true
+        montantBrut = calcMand.montant
+        remboursementSalaire = true
+      } else if (cumulAvant >= brutCumule) {
+        // Cas C — seuil déjà franchi → CDI, commission versée intégralement
+        montantEffectif = calcCDI.montant
+        taux = calcCDI.taux
+        tauxMandataire = false
+        montantBrut = calcCDI.montant
+        remboursementSalaire = false
+      } else {
+        // Cas B — CE deal franchit le seuil → variable = excédent au-dessus du seuil
+        // (différence entre cumul après et le seuil), pas un % de l'assiette.
+        montantEffectif = cumulApres - brutCumule
+        taux = calcMand.taux
+        tauxMandataire = true
+        montantBrut = calcMand.montant
+        remboursementSalaire = false
       }
-      // Si seuil pas encore franchi → commission non versée (sert au remboursement)
-      // Si franchi → commission versée 100% au taux CDI (ou mandataire si sans seuil)
-      const montantEffectif = aRembourse ? calc.montant : 0
-      const d = {
+
+      detail.push({
         deal,
-        ...calc,
+        produitKey: calcMand.produitKey,
+        assiette: calcMand.assiette,
+        taux,
+        tauxMandataire,
+        montantPlein: calcMand.montantPlein,
+        montant: montantBrut,
+        horsPalier: produit.horsPalier,
+        part,
         assietteEffective,
         montantEffectif,
-        sousPalier: false,                        // déprécié, plus de notion partielle
-        remboursementSalaire: !aRembourse,        // flag UI : "ce deal rembourse le salaire"
-      }
-      detail.push(d)
-      if (aRembourse) {
-        if (produit.horsPalier) variableHorsPalier += calc.montant
-        else if (produit.assiette === 'pp') variablePp += calc.montant
-        else if (produit.assiette === 'pu') variablePu += calc.montant
-      }
+        sousPalier: false,
+        remboursementSalaire,
+      })
+
+      if (produit.horsPalier) variableHorsPalier += montantEffectif
+      else if (produit.assiette === 'pp') variablePp += montantEffectif
+      else if (produit.assiette === 'pu') variablePu += montantEffectif
+
+      cumulCourant = cumulApres
     }
-    // Ce deal a contribué au cumul (au taux mandataire = valeur cabinet)
-    cumulCourant += valeurCabinetDeal(deal, part)
   }
 
   return {
