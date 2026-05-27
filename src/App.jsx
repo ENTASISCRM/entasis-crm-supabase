@@ -3645,9 +3645,9 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                   <div className="form-group"><label className="form-label">PU (€)</label><input className="form-input" type="number" min="0" value={deal.pu === 0 ? '' : deal.pu} onChange={e=>set('pu', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()}/></div>
                   <div className="form-group"><label className="form-label">Statut</label><select className="form-select" value={deal.status} onChange={e=>set('status',e.target.value)}>{STATUS_OPTIONS.map(s=><option key={s}>{s}</option>)}</select></div>
                 </div>
-                <div className="form-row form-row-3 mt-16">
+                <div className="form-row form-row-2 mt-16">
                   <div className="form-group">
-                    <label className="form-label">Frais d'entrée (%)</label>
+                    <label className="form-label">Frais d'entrée PP (%)</label>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <input
                         className="form-input"
@@ -3655,16 +3655,37 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                         min="1"
                         max="4"
                         step="0.25"
-                        value={Number(deal.frais_entree_pct ?? 1)}
-                        onChange={e => set('frais_entree_pct', parseFloat(e.target.value))}
+                        value={Number(deal.frais_entree_pp_pct ?? deal.frais_entree_pct ?? 1)}
+                        onChange={e => set('frais_entree_pp_pct', parseFloat(e.target.value))}
                         style={{ flex: 1, accentColor: 'var(--gold)' }}
                       />
-                      <div style={{ minWidth: 60, fontFamily: 'var(--font-mono, monospace)', fontWeight: 700, fontSize: 16, color: 'var(--t1)', textAlign: 'right' }}>
-                        {Number(deal.frais_entree_pct ?? 1).toFixed(2)} %
+                      <div style={{ minWidth: 60, fontFamily: 'var(--font-mono, monospace)', fontWeight: 700, fontSize: 15, color: 'var(--t1)', textAlign: 'right' }}>
+                        {Number(deal.frais_entree_pp_pct ?? deal.frais_entree_pct ?? 1).toFixed(2)} %
                       </div>
                     </div>
                     <div className="form-hint">
-                      Frais saisis au client (1 % à 4 %). Sert au calcul de la commission sur PP et PU.
+                      Frais sur la PP mensuelle (typique 1-4 %).
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Frais d'entrée PU (%)</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <input
+                        className="form-input"
+                        type="range"
+                        min="1"
+                        max="4"
+                        step="0.25"
+                        value={Number(deal.frais_entree_pu_pct ?? deal.frais_entree_pct ?? 1)}
+                        onChange={e => set('frais_entree_pu_pct', parseFloat(e.target.value))}
+                        style={{ flex: 1, accentColor: 'var(--gold)' }}
+                      />
+                      <div style={{ minWidth: 60, fontFamily: 'var(--font-mono, monospace)', fontWeight: 700, fontSize: 15, color: 'var(--t1)', textAlign: 'right' }}>
+                        {Number(deal.frais_entree_pu_pct ?? deal.frais_entree_pct ?? 1).toFixed(2)} %
+                      </div>
+                    </div>
+                    <div className="form-hint">
+                      Frais sur le versement unique (typique 1-4 %).
                     </div>
                   </div>
                 </div>

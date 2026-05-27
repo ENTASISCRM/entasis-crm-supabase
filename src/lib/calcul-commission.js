@@ -114,6 +114,18 @@ export function assietteDeal(deal, produitKey) {
  * @param {number} part     - 0.5 si co-conseiller, 1 sinon (default: 1)
  * @returns {{ produitKey, assiette, taux, montantPlein, montant, horsPalier, part }}
  */
+// Helper : choisit le bon taux de frais d'entrée selon l'assiette du produit.
+// Permet aux conseillers de saisir des frais différents pour la PP (versement
+// mensuel) et la PU (versement unique) sur le même contrat. Fallback sur
+// l'ancienne colonne frais_entree_pct pour les deals créés avant la
+// séparation.
+function fraisPourProduit(deal, produit) {
+  const f = produit?.assiette === 'pu'
+    ? deal.frais_entree_pu_pct ?? deal.frais_entree_pct
+    : deal.frais_entree_pp_pct ?? deal.frais_entree_pct
+  return Number(f ?? FRAIS_ENTREE_DEFAUT_PCT)
+}
+
 export function commissionBruteDeal(deal, contrat, part = 1) {
   const produitKey = mapProduitDeal(deal)
   if (!produitKey) {
@@ -121,7 +133,7 @@ export function commissionBruteDeal(deal, contrat, part = 1) {
   }
   const produit = BAREME_PRODUITS[produitKey]
   const assiette = assietteDeal(deal, produitKey)
-  const frais = Number(deal.frais_entree_pct ?? FRAIS_ENTREE_DEFAUT_PCT)
+  const frais = fraisPourProduit(deal, produit)
 
   // Mandataire / Gérant : toujours taux mandataire
   // CDI/CDD/Alternant/Stagiaire rentabilisé : taux CDI
@@ -196,7 +208,7 @@ export function commissionsDeal(deal, contrat, part = 1) {
   if (mainProduit?.assiette === 'pp' && puMontant > 0) {
     const puProduit = BAREME_PRODUITS['pu_versement_libre']
     if (puProduit) {
-      const frais = Number(deal.frais_entree_pct ?? FRAIS_ENTREE_DEFAUT_PCT)
+      const frais = fraisPourProduit(deal, puProduit)   // utilise frais_entree_pu_pct
       const taux = tauxPourProduit(puProduit, contrat, frais)
       // Détermine si on est au taux mandataire ou CDI (même logique que
       // commissionBruteDeal — gardés en sync).
@@ -275,7 +287,7 @@ export function valeurCabinetDeal(deal, part = 1) {
   if (!produitKey) return 0
   const produit = BAREME_PRODUITS[produitKey]
   const assiette = assietteDeal(deal, produitKey)
-  const frais = Number(deal.frais_entree_pct ?? FRAIS_ENTREE_DEFAUT_PCT)
+  const frais = fraisPourProduit(deal, produit)   // bon frais selon assiette PP/PU
   const taux = produit.mandataire(frais)
   let total = (assiette * taux * part) / 100
 
@@ -286,7 +298,8 @@ export function valeurCabinetDeal(deal, part = 1) {
   if (produit.assiette === 'pp' && puMontant > 0) {
     const puProduit = BAREME_PRODUITS['pu_versement_libre']
     if (puProduit) {
-      const tauxPu = puProduit.mandataire(frais)
+      const fraisPu = fraisPourProduit(deal, puProduit)   // utilise frais_entree_pu_pct
+      const tauxPu = puProduit.mandataire(fraisPu)
       total += (puMontant * tauxPu * part) / 100
     }
   }

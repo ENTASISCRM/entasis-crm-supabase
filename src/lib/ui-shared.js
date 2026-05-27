@@ -51,7 +51,8 @@ export function emptyDeal(code = '') {
     product: 'PER Individuel',
     pp_m: 0,
     pu: 0,
-    frais_entree_pct: 1.0,    // % de frais d'entrée saisi par le conseiller (1-4 %)
+    frais_entree_pp_pct: 1.0,  // % frais d'entrée saisi pour la PP (1-4 %)
+    frais_entree_pu_pct: 1.0,  // % frais d'entrée saisi pour la PU (1-4 %)
     advisor_code: code || '',
     co_advisor_code: '',
     source: 'Téléprospection',
@@ -73,7 +74,14 @@ export function normalizeDeal(d) {
     ...d,
     pp_m: Number(d.pp_m || 0),
     pu: Number(d.pu || 0),
-    frais_entree_pct: d.frais_entree_pct == null ? 1.0 : Number(d.frais_entree_pct),
+    // Normalise les 2 frais. Fallback sur l'ancienne colonne frais_entree_pct
+    // pour les deals créés avant la séparation PP/PU.
+    frais_entree_pp_pct: d.frais_entree_pp_pct != null
+      ? Number(d.frais_entree_pp_pct)
+      : (d.frais_entree_pct != null ? Number(d.frais_entree_pct) : 1.0),
+    frais_entree_pu_pct: d.frais_entree_pu_pct != null
+      ? Number(d.frais_entree_pu_pct)
+      : (d.frais_entree_pct != null ? Number(d.frais_entree_pct) : 1.0),
     client_age: d.client_age === '' || d.client_age == null ? null : Number(d.client_age),
   };
 }
