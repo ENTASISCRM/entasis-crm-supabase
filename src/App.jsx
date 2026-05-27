@@ -4461,9 +4461,47 @@ export default function App(){
         created_by: user.id
       }))
 
-      // Insérer ou mettre à jour
+      // Insérer ou mettre à jour — avec garde-fou anti-doublon sur les
+      // deals signés (Louis 27/05) : on alerte si le même client + même
+      // produit a déjà un dossier signé par un AUTRE conseiller, pour
+      // éviter de payer la commission 2 fois quand on oublie de se
+      // mettre en co-conseiller.
       for (const deal of dealsWithClientId) {
-        const isExisting = deal.created_at && deals.some(existingDeal => existingDeal.id === deal.id)
+        const isExisting = deal.created_at && deals.some(d => d.id === deal.id)
+
+        // Vérification doublon (uniquement pour les deals signés rattachés
+        // à un client)
+        if (deal.client_id && deal.status === 'Signé') {
+          const doublons = deals.filter(d => {
+            if (d.id === deal.id) return false
+            if (d.status !== 'Signé') return false
+            if (d.client_id !== deal.client_id) return false
+            if ((d.product || '') !== (deal.product || '')) return false
+            // L'autre deal a-t-il un advisor différent qui n'est pas déjà
+            // co-conseiller sur le nôtre (ou inversement) ?
+            const myAdvisors = [deal.advisor_code, deal.co_advisor_code].filter(Boolean)
+            const otherAdvisors = [d.advisor_code, d.co_advisor_code].filter(Boolean)
+            const shared = myAdvisors.some(a => otherAdvisors.includes(a))
+            return !shared
+          })
+          if (doublons.length > 0) {
+            const dub = doublons[0]
+            const dateSign = dub.date_signed ? new Date(dub.date_signed).toLocaleDateString('fr-FR') : 'date inconnue'
+            const clientNomAffiche = deal.client || cleanDeals[0]?.client || 'ce client'
+            const msg = `⚠ DOUBLON POTENTIEL DÉTECTÉ\n\n`
+              + `Le client "${clientNomAffiche}" a déjà un dossier "${dub.product}" `
+              + `signé par ${dub.advisor_code} (${dateSign}).\n\n`
+              + `Si vous travaillez à 2 sur ce dossier, ${dub.advisor_code} devrait `
+              + `te mettre en co-conseiller sur SON dossier — sinon la commission `
+              + `sera payée 2 fois.\n\n`
+              + `Continuer quand même ? (Cliquer Annuler si tu dois plutôt te mettre `
+              + `en co-conseiller sur le dossier existant)`
+            if (!window.confirm(msg)) {
+              toast('Save annulé. Demande à ' + dub.advisor_code + ' de t\'ajouter en co-conseiller sur son dossier.', { icon: 'ℹ️' })
+              return
+            }
+          }
+        }
 
         try {
           if (isExisting) {
