@@ -3293,6 +3293,21 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
   if(!open||!deal)return null
   const set=(k,v)=>setDeal(p=>({...p,[k]:v}))
   const isManager=profile?.role==='manager'
+  // Validation des dates (Louis 27/05) : un deal signé DOIT avoir une date
+  // de signature (sinon le mois n'est pas aligné, la valeur cabinet n'est
+  // pas comptée correctement, etc.). Un deal en cours/prévu doit avoir une
+  // date prévue. Un deal annulé : pas de contrainte.
+  function validateDealDates(d) {
+    const status = d.status
+    if (status === 'Signé' && !d.date_signed) {
+      return 'Date de signature effective obligatoire pour un dossier signé.'
+    }
+    if ((status === 'En cours' || status === 'Prévu') && !d.date_expected) {
+      return `Date de signature prévue obligatoire pour un dossier ${status === 'En cours' ? 'en cours' : 'prévu'}.`
+    }
+    return null
+  }
+
   async function submit(e) {
     e.preventDefault();
 
@@ -3321,10 +3336,25 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
         return normalizeDeal(newDeal);
       });
 
+      // Validation des dates pour chaque produit
+      for (let i = 0; i < deals.length; i++) {
+        const err = validateDealDates(deals[i])
+        if (err) {
+          toast.error(`Produit ${i + 1} (${deals[i].product}) : ${err}`)
+          return
+        }
+      }
+
       await onSave(deals); // Passer le tableau de deals
     } else {
       // Mode classique : un seul deal
-      await onSave(normalizeDeal(deal));
+      const normalized = normalizeDeal(deal)
+      const err = validateDealDates(normalized)
+      if (err) {
+        toast.error(err)
+        return
+      }
+      await onSave(normalized);
     }
   }
 
@@ -3710,8 +3740,40 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
               </div>
             )}
             <div className="form-row form-row-2">
-              <div className="form-group"><label className="form-label">Date de signature prévue</label><input className="form-input" type="date" value={deal.date_expected||''} onChange={e=>set('date_expected',e.target.value)}/></div>
-              <div className="form-group"><label className="form-label">Date de signature effective</label><input className="form-input" type="date" value={deal.date_signed||''} onChange={e=>set('date_signed',e.target.value)}/></div>
+              <div className="form-group">
+                <label className="form-label">
+                  Date de signature prévue
+                  {(deal.status === 'En cours' || deal.status === 'Prévu') && (
+                    <span style={{ color: '#EF4444', marginLeft: 4, fontWeight: 700 }} title="Obligatoire pour ce statut">*</span>
+                  )}
+                </label>
+                <input
+                  className="form-input"
+                  type="date"
+                  value={deal.date_expected || ''}
+                  onChange={e => set('date_expected', e.target.value)}
+                  style={(deal.status === 'En cours' || deal.status === 'Prévu') && !deal.date_expected
+                    ? { background: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.30)' }
+                    : undefined}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">
+                  Date de signature effective
+                  {deal.status === 'Signé' && (
+                    <span style={{ color: '#EF4444', marginLeft: 4, fontWeight: 700 }} title="Obligatoire pour un dossier signé">*</span>
+                  )}
+                </label>
+                <input
+                  className="form-input"
+                  type="date"
+                  value={deal.date_signed || ''}
+                  onChange={e => set('date_signed', e.target.value)}
+                  style={deal.status === 'Signé' && !deal.date_signed
+                    ? { background: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.30)' }
+                    : undefined}
+                />
+              </div>
             </div>
             <div>
               <div className="form-section-title mb-16">Équipe & suivi</div>
