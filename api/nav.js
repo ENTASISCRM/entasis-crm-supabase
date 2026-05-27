@@ -35,12 +35,20 @@ export default async function handler(req, res) {
       const msRes = await fetch(msUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } })
       const msData = await msRes.json()
 
-      const series = msData?.TimeSeries?.Security?.[0]?.CurrencyData?.[0]?.Returns?.[0]?.Return || []
+      // L'API Morningstar retourne 2 formats possibles selon les fonds :
+      //   • HistoryDetail (format actuel, le plus courant) : [{EndDate, Value}, ...]
+      //   • CurrencyData[0].Returns[0].Return (ancien) : [{Date, Value}, ...]
+      // On essaie d'abord HistoryDetail, fallback sur l'ancien chemin.
+      const security = msData?.TimeSeries?.Security?.[0]
+      let series = security?.HistoryDetail || []
+      if (series.length === 0) {
+        series = security?.CurrencyData?.[0]?.Returns?.[0]?.Return || []
+      }
 
       if (series.length > 2) {
         const valid = series
           .filter(x => x.Value != null)
-          .map(x => ({ c: parseFloat(x.Value), t: new Date(x.Date).getTime() / 1000 }))
+          .map(x => ({ c: parseFloat(x.Value), t: new Date(x.EndDate || x.Date).getTime() / 1000 }))
           .sort((a, b) => a.t - b.t)
 
         if (valid.length > 2) {
