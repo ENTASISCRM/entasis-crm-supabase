@@ -387,8 +387,21 @@ function SectionDetail({ comm, month }) {
                     {d.tauxMandataire ? 'mandataire' : 'cdi'}
                   </div>
                 </td>
-                <td className="cell-mono" style={{ textAlign: 'right', fontWeight: 600, color: masqueValeurs ? 'var(--t3)' : 'var(--t1)' }}>
-                  {masqueValeurs ? '—' : fmtEurPrecis(d.montantEffectif ?? d.montant)}
+                <td className="cell-mono" style={{ textAlign: 'right', fontWeight: 600 }}>
+                  {masqueValeurs ? (
+                    <>
+                      <div style={{ color: 'var(--t3)', textDecoration: 'line-through', textDecorationThickness: 1 }}>
+                        {fmtEurPrecis(d.montant)}
+                      </div>
+                      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--t3)' }}>
+                        compté pour le seuil
+                      </div>
+                    </>
+                  ) : (
+                    <span style={{ color: 'var(--t1)' }}>
+                      {fmtEurPrecis(d.montantEffectif ?? d.montant)}
+                    </span>
+                  )}
                 </td>
                 <td>
                   {phase1 ? (
