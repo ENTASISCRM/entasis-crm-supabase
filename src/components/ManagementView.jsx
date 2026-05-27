@@ -126,16 +126,25 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
     return { ppSigned, puSigned, ppProj, puProj, totalSigned, totalPipeline }
   }, [rows])
 
-  // Top performeurs (par variable estimé = ppSigned + puSigned / 10) — simple ranking
+  // Top performeurs : trie d'abord par NOMBRE de dossiers signés (le plus
+  // d'activité), puis par PP signée en cas d'égalité. La PU brute ne sert
+  // pas au tri car elle peut être gonflée par 1 seul gros versement (ou
+  // un ordre de placement non commissionné).
   const topPerformeurs = useMemo(
-    () => [...rows].sort((a, b) => b.totalBrut - a.totalBrut).slice(0, 3),
+    () => [...rows]
+      .filter(r => r.m.signedCount > 0)
+      .sort((a, b) => {
+        if (b.m.signedCount !== a.m.signedCount) return b.m.signedCount - a.m.signedCount
+        return b.m.ppSigned - a.m.ppSigned
+      })
+      .slice(0, 3),
     [rows]
   )
   // À booster : ceux qui ont 0 signature ce mois OU une chute > 50 % vs M-1
   const aBooster = useMemo(
     () => [...rows]
       .filter(r => r.m.signedCount === 0 || (r.prev && r.prev.signedCount > 0 && r.dSigned < 0))
-      .sort((a, b) => a.totalBrut - b.totalBrut)
+      .sort((a, b) => a.m.signedCount - b.m.signedCount || a.m.ppSigned - b.m.ppSigned)
       .slice(0, 3),
     [rows]
   )
