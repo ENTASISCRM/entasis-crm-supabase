@@ -131,8 +131,21 @@ export function commissionBruteDeal(deal, contrat, part = 1) {
   if (!produitKey) {
     return { produitKey: null, assiette: 0, taux: 0, montantPlein: 0, montant: 0, horsPalier: false, part }
   }
+  // Ordre de placement / replacement : pas de commission (le client ramène
+  // son contrat existant en gestion chez nous, pas de frais d'entrée). On
+  // garde le produitKey pour que la ligne reste visible dans le détail, mais
+  // taux = 0 et montant = 0.
   const produit = BAREME_PRODUITS[produitKey]
   const assiette = assietteDeal(deal, produitKey)
+  if (deal?.is_ordre_placement) {
+    return {
+      produitKey, assiette, taux: 0,
+      tauxMandataire: true,
+      montantPlein: 0, montant: 0,
+      horsPalier: produit.horsPalier, part,
+      ordrePlacement: true,
+    }
+  }
   const frais = fraisPourProduit(deal, produit)
 
   // Mandataire / Gérant : toujours taux mandataire
@@ -283,6 +296,10 @@ export function codesContrat(contrat, profile) {
  * pour évaluer la contribution réelle d'un conseiller donné.
  */
 export function valeurCabinetDeal(deal, part = 1) {
+  // Ordre de placement / replacement : pas de frais d'entrée touchés par
+  // Entasis → ne compte pas dans la valeur cabinet du conseiller (et donc
+  // pas dans le seuil de rentabilité).
+  if (deal?.is_ordre_placement) return 0
   const produitKey = mapProduitDeal(deal)
   if (!produitKey) return 0
   const produit = BAREME_PRODUITS[produitKey]

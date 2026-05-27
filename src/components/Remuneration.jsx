@@ -391,7 +391,12 @@ function SectionDetail({ comm, month }) {
                   {fmtEurPrecis(masqueValeurs ? d.montant : (d.montantEffectif ?? d.montant))}
                 </td>
                 <td>
-                  {phase1 ? (
+                  {d.deal?.is_ordre_placement ? (
+                    <span className="badge" style={{ background: 'rgba(201,169,97,0.15)', color: 'var(--gold-dk, #A6843F)' }}
+                      title="Ordre de placement / replacement — pas de commission, ne compte pas dans le seuil">
+                      Ordre de placement
+                    </span>
+                  ) : phase1 ? (
                     <span className="badge badge-progress" title="Sous le seuil de déclenchement du variable — taux mandataire utilisé pour calculer la valeur cabinet (= ce qui rembourse le salaire)">
                       Sous seuil
                     </span>

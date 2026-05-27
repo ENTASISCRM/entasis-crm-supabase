@@ -53,6 +53,7 @@ export function emptyDeal(code = '') {
     pu: 0,
     frais_entree_pp_pct: 1.0,  // % frais d'entrée saisi pour la PP (1-4 %)
     frais_entree_pu_pct: 1.0,  // % frais d'entrée saisi pour la PU (1-4 %)
+    is_ordre_placement: false, // true = transfert / replacement → pas de commission
     advisor_code: code || '',
     co_advisor_code: '',
     source: 'Téléprospection',
@@ -82,6 +83,7 @@ export function normalizeDeal(d) {
     frais_entree_pu_pct: d.frais_entree_pu_pct != null
       ? Number(d.frais_entree_pu_pct)
       : (d.frais_entree_pct != null ? Number(d.frais_entree_pct) : 1.0),
+    is_ordre_placement: !!d.is_ordre_placement,
     client_age: d.client_age === '' || d.client_age == null ? null : Number(d.client_age),
   };
 }

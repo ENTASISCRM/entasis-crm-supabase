@@ -3645,6 +3645,24 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                   <div className="form-group"><label className="form-label">PU (€)</label><input className="form-input" type="number" min="0" value={deal.pu === 0 ? '' : deal.pu} onChange={e=>set('pu', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()}/></div>
                   <div className="form-group"><label className="form-label">Statut</label><select className="form-select" value={deal.status} onChange={e=>set('status',e.target.value)}>{STATUS_OPTIONS.map(s=><option key={s}>{s}</option>)}</select></div>
                 </div>
+                <div className="form-group mt-16" style={{ background: 'var(--gold-subtle, #FBF6EC)', border: '1px solid var(--gold-line, rgba(201,169,97,0.30))', borderRadius: 'var(--rad)', padding: '10px 14px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', margin: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={!!deal.is_ordre_placement}
+                      onChange={e => set('is_ordre_placement', e.target.checked)}
+                      style={{ width: 18, height: 18, accentColor: 'var(--gold)', cursor: 'pointer' }}
+                    />
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--t1)' }}>
+                        Ordre de placement / replacement
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--t2)', marginTop: 1 }}>
+                        Le client transfère un contrat existant chez nous (gestion) → <strong>pas de commission</strong>, ne compte pas dans le seuil de rentabilité.
+                      </div>
+                    </div>
+                  </label>
+                </div>
                 <div className="form-row form-row-2 mt-16">
                   <div className="form-group">
                     <label className="form-label">Frais d'entrée PP (%)</label>
