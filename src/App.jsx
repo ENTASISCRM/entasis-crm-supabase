@@ -2280,6 +2280,7 @@ function RelanceModal({open,onClose,deals,defaultDate}){
 
 
 const FUNDS_DEFAULT=[
+    // ─── Fonds historiques ──────────────────────────────────────────────
     {name:'Lazard Japon AC H EUR',        isin:'FR0014008M81', cat:'Actions Japon',        refSymbol:'INDEX:NKY',        refLabel:'Nikkei 225', color:'#EF4444'},
     {name:'AXA Or et Matières Premières', isin:'FR0010011171', cat:'Matières premières',   refSymbol:'TVC:GOLD',       refLabel:'Or',         color:'#F59E0B'},
     {name:'AP Meeschaert Gl. Convictions',isin:'FR001400CSI0', cat:'Actions Monde Value',  refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',    color:'#10B981'},
@@ -2290,145 +2291,26 @@ const FUNDS_DEFAULT=[
     {name:'First Eagle Amundi Intl',      isin:'LU0068578508', yahooTicker:'0P0000RXYQ.F', cat:'Actions Monde Flex.',  refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',    color:'#84CC16'},
     {name:'Groupama Global Disruption',   isin:'LU1897556517', cat:'Actions Innovation',   refSymbol:'NASDAQ:QQQ',       refLabel:'Nasdaq QQQ', color:'#EC4899'},
     {name:'Claresco USA',                 isin:'LU1379103812', cat:'Actions USA',          refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',    color:'#6366F1'},
+    // ─── Fonds ajoutés 27/05 (contrats clients Louis) ───────────────────
+    // ISIN best-effort — si la VL ne remonte pas pour un fonds, vérifier
+    // l'ISIN et corriger ci-dessous (le bouton "Modifier" du tableau le
+    // permet aussi en direct).
+    {name:'Carmignac Patrimoine A EUR',        isin:'FR0010135103', cat:'Allocation flexible',     refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',     color:'#14B8A6'},
+    {name:'CPR Actions USA Responsable P',     isin:'FR0010512365', cat:'Actions USA ISR',         refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',     color:'#8B5CF6'},
+    {name:'DNCA Alpha Bonds B EUR',            isin:'LU1694789535', cat:'Obligataire absolu',      refSymbol:'NASDAQ:AGG',       refLabel:'AGG ETF',     color:'#F43F5E'},
+    {name:'Echiquier Agenor SRI Mid Cap Eur',  isin:'FR0010321810', cat:'Actions Mid Cap Europe',  refSymbol:'INDEX:CAC40',      refLabel:'CAC 40',      color:'#22C55E'},
+    {name:'BDL Rempart C',                     isin:'FR0010547036', cat:'Actions Europe Long/Short',refSymbol:'INDEX:CAC40',     refLabel:'CAC 40',      color:'#3B82F6'},
+    {name:'Eurose C',                          isin:'FR0007051040', cat:'Allocation prudent',      refSymbol:'INDEX:CAC40',      refLabel:'CAC 40',      color:'#EAB308'},
+    {name:'Carmignac Pf Asia Discovery',       isin:'LU0336083810', cat:'Actions Asie',            refSymbol:'INDEX:HSI',        refLabel:'Hang Seng',   color:'#DC2626'},
+    {name:'BGF World Healthscience A2',        isin:'LU0827889337', cat:'Actions Santé',           refSymbol:'AMEX:XLV',         refLabel:'XLV ETF',     color:'#0891B2'},
+    {name:'Pictet Security P EUR',             isin:'LU0270904781', cat:'Actions Sécurité',        refSymbol:'NASDAQ:QQQ',       refLabel:'Nasdaq QQQ',  color:'#7E22CE'},
+    {name:'Echiquier Space B',                 isin:'FR0014001PT7', cat:'Actions Espace/Tech',     refSymbol:'NASDAQ:QQQ',       refLabel:'Nasdaq QQQ',  color:'#1D4ED8'},
+    {name:'BGF World Energy A2',               isin:'LU0252965963', cat:'Actions Énergie',         refSymbol:'AMEX:XLE',         refLabel:'XLE ETF',     color:'#B45309'},
+    {name:'Lazard Actions Emergentes R',       isin:'FR0010235168', cat:'Actions Émergents',       refSymbol:'AMEX:EEM',         refLabel:'EEM ETF',     color:'#DB2777'},
+    {name:'Pictet Water P EUR',                isin:'LU0104884860', cat:'Actions Eau',             refSymbol:'NASDAQ:PHO',       refLabel:'PHO ETF',     color:'#0EA5E9'},
   ]
 
 const FUND_COLORS=['#EF4444','#F59E0B','#10B981','#F97316','#7C3AED','#0EA5E9','#06B6D4','#84CC16','#EC4899','#6366F1','#14B8A6','#8B5CF6','#F43F5E','#22C55E','#3B82F6']
-
-// Allocations clients par contrat (saisies par Louis 27/05). Pour éditer :
-// modifie ce tableau, push, c'est en ligne. Plus tard on pourra le mettre
-// en BDD si la liste s'allonge.
-const ALLOCATIONS_CONTRATS = [
-  {
-    nom: 'Contrat n°1',
-    montant: 30000,
-    horizon: '1 à 3 ans',
-    profil: 'Équilibré dynamique',
-    cible: '7 à 9 % / an',
-    color: '#0EA5E9',  // bleu
-    allocations: [
-      { fonds: 'First Eagle Amundi International',        pct: 18 },
-      { fonds: 'Carmignac Patrimoine',                    pct: 12 },
-      { fonds: 'AP Meeschaert Global Convictions',        pct: 10 },
-      { fonds: 'CPR Actions USA Responsable P',           pct: 10 },
-      { fonds: 'DNCA Alpha Bonds B EUR',                  pct: 10 },
-      { fonds: 'Lazard Japon',                            pct: 8 },
-      { fonds: 'Groupama Global Disruption',              pct: 8 },
-      { fonds: 'Echiquier Agenor SRI Mid Cap Europe',     pct: 5 },
-      { fonds: 'Fidelity Global Technology',              pct: 5 },
-      { fonds: 'BDL Rempart C',                           pct: 5 },
-      { fonds: 'AXA Or et Matières Premières',            pct: 5 },
-      { fonds: 'Eurose C',                                pct: 4 },
-    ],
-  },
-  {
-    nom: 'Contrat n°2',
-    montant: 20000,
-    horizon: '3 à 8 ans',
-    profil: 'Offensif diversifié',
-    cible: '10 à 12 % / an',
-    color: '#EC4899',  // rose (offensif)
-    allocations: [
-      { fonds: 'AP Meeschaert Global Convictions',        pct: 10 },
-      { fonds: 'CPR Actions USA Responsable P',           pct: 10 },
-      { fonds: 'First Eagle Amundi International',        pct: 8 },
-      { fonds: 'Groupama Global Disruption',              pct: 8 },
-      { fonds: 'Carmignac Pf Asia Discovery',             pct: 8 },
-      { fonds: 'BGF World Healthscience',                 pct: 7 },
-      { fonds: 'Pictet Security',                         pct: 7 },
-      { fonds: 'Echiquier Space B',                       pct: 7 },
-      { fonds: 'BGF World Energy',                        pct: 7 },
-      { fonds: 'Lazard Japon',                            pct: 6 },
-      { fonds: 'Lazard Actions Emergentes R',             pct: 6 },
-      { fonds: 'AXA Or et Matières Premières',            pct: 6 },
-      { fonds: 'Pictet Water',                            pct: 5 },
-      { fonds: 'Pictet Clean Energy Transition',          pct: 5 },
-      { fonds: 'Fidelity Global Technology',              pct: 5 },
-    ],
-  },
-]
-
-// Affiche les contrats clients avec leurs allocations détaillées.
-// Style Cupertino, compact, responsive (empilage sur mobile via flex-wrap).
-function AllocationsContrats({ contrats }) {
-  if (!contrats || contrats.length === 0) return null
-  const eur = (v) => Number(v || 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
-  return (
-    <div style={{ marginBottom: 24 }}>
-      <div className="section-header" style={{ marginBottom: 12 }}>
-        <div>
-          <div className="section-kicker">Allocations clients</div>
-          <div className="section-title">Répartition par contrat</div>
-          <div className="section-sub">Profil patrimonial, cible de performance et détail des fonds par allocation.</div>
-        </div>
-      </div>
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        {contrats.map((c, i) => {
-          const total = c.allocations.reduce((s, a) => s + Number(a.pct || 0), 0)
-          const isOk = Math.abs(total - 100) < 0.01
-          return (
-            <div key={i} style={{
-              flex: '1 1 360px',
-              background: 'white',
-              border: '1px solid var(--bd)',
-              borderTop: `3px solid ${c.color || 'var(--gold)'}`,
-              borderRadius: 'var(--rad-lg)',
-              overflow: 'hidden',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-            }}>
-              <div style={{ padding: '16px 18px 12px', borderBottom: '1px solid var(--bd)' }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--t1)' }}>{c.nom}</div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: c.color || 'var(--gold)', fontVariantNumeric: 'tabular-nums' }}>{eur(c.montant)}</div>
-                </div>
-                <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  <span style={{ fontSize: 10.5, fontWeight: 600, padding: '3px 8px', background: 'var(--bg)', color: 'var(--t2)', borderRadius: 4, letterSpacing: '0.02em' }}>
-                    Horizon · {c.horizon}
-                  </span>
-                  <span style={{ fontSize: 10.5, fontWeight: 600, padding: '3px 8px', background: 'var(--bg)', color: 'var(--t2)', borderRadius: 4 }}>
-                    {c.profil}
-                  </span>
-                  <span style={{ fontSize: 10.5, fontWeight: 700, padding: '3px 8px', background: `${c.color}1A`, color: c.color, borderRadius: 4 }}>
-                    Cible · {c.cible}
-                  </span>
-                </div>
-              </div>
-              <div style={{ padding: '8px 18px 14px' }}>
-                {c.allocations.map((a, j) => (
-                  <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 0', borderBottom: j < c.allocations.length - 1 ? '1px solid var(--bd-soft)' : 'none' }}>
-                    <div style={{ flex: 1, fontSize: 12.5, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={a.fonds}>
-                      {a.fonds}
-                    </div>
-                    <div style={{ width: 80, height: 5, background: 'var(--bd-soft)', borderRadius: 3, overflow: 'hidden' }}>
-                      <div style={{ width: `${Math.min(100, (a.pct / 20) * 100)}%`, height: '100%', background: c.color || 'var(--gold)', borderRadius: 3 }} />
-                    </div>
-                    <div style={{ width: 44, fontSize: 12.5, fontWeight: 700, color: 'var(--t1)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                      {a.pct} %
-                    </div>
-                  </div>
-                ))}
-                <div style={{
-                  marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--bd)',
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                    Total
-                  </span>
-                  <span style={{
-                    fontSize: 14, fontWeight: 700,
-                    color: isOk ? '#10B981' : '#EF4444',
-                    fontVariantNumeric: 'tabular-nums',
-                  }}>
-                    {total.toFixed(0)} %{!isOk && ' ⚠'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
 
 function MarketView(){
   const [funds,setFunds]=useState(FUNDS_DEFAULT)
@@ -2556,9 +2438,6 @@ function MarketView(){
           <div className="tradingview-widget-container__widget"></div>
         </div>
       </div>
-
-      {/* Allocations clients par contrat */}
-      <AllocationsContrats contrats={ALLOCATIONS_CONTRATS} />
 
       {/* Table */}
       <div style={{border:'1px solid var(--bd)',borderRadius:'var(--rad-lg)',overflow:'hidden',marginBottom:selectedFund?20:0,background:'white'}}>
