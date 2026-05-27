@@ -375,7 +375,13 @@ export function evaluerRentabilite(contrat, dealsHistoriques = [], profile = nul
  *             ppRealisee, puRealisee, palierPpAtteint, palierPuAtteint,
  *             rentabilise, detail }}
  */
-export function commissionsMois(dealsMois = [], contrat, rentabilise, profile = null) {
+export function commissionsMois(dealsMois = [], contrat, rentab, profile = null) {
+  // Rétrocompatibilité : si on reçoit un booléen, on le promote en objet
+  // { rentabilise } sans ecart (vieux signature). Sinon on attend l'objet
+  // complet retourné par evaluerRentabilite() : { rentabilise, brutCumule,
+  // valeurCumulee, ecart }.
+  const rentabObj = typeof rentab === 'boolean' ? { rentabilise: rentab, ecart: 0 } : (rentab || { rentabilise: false, ecart: 0 })
+  const rentabilise = !!rentabObj.rentabilise
   if (!contrat) {
     return {
       variablePp: 0, variablePu: 0, variableHorsPalier: 0, total: 0,
@@ -442,35 +448,44 @@ export function commissionsMois(dealsMois = [], contrat, rentabilise, profile = 
     }
   }
 
-  // 3. PHASE 2 : rentabilisé → application normale du barème
+  // 3. PHASE 2 : rentabilisé → seule la production AU-DESSUS du seuil
+  //    cumulé est commissionnée. Les premiers euros de valeur cabinet du
+  //    mois qui ont servi à rattraper / rembourser le salaire ne le sont
+  //    pas. Décision Louis 27/05.
   //
-  // Décision Louis 27/05 : il n'y a qu'UN SEUL seuil de déclenchement du
-  // variable, c'est le salaire mensuel à rembourser (cumul depuis embauche
-  // vs valeur cabinet cumulée). Une fois ce seuil passé, TOUTES les
-  // commissions sont versées intégralement à leur taux propre — pas de
-  // palier mensuel PP/PU séparé qui viendrait amputer le variable.
+  // Calcul du ratio :
+  //   - valeurMoisTotale = somme(deals du mois : valeur cabinet × part)
+  //   - ecart            = excédent valeur cumulée - salaire cumulé
+  //                         (inclut déjà la valeur du mois)
+  //   - ratio = min(1, ecart / valeurMoisTotale)
   //
-  // (Les paliers mensuels PP/PU restent stockés dans contrat.palier_pp_mensuel
-  // et palier_pu_mensuel pour info / objectifs / dashboard, mais ne servent
-  // plus à filtrer le variable versé.)
+  // Si l'ecart >= valeurMoisTotale (le conseiller était déjà largement
+  // rentabilisé avant ce mois) → ratio = 1 → 100% du variable versé.
+  // Si l'ecart < valeurMoisTotale (le conseiller vient de passer le
+  // seuil ce mois) → seule la fraction excédentaire est commissionnée.
+  const valeurMoisTotale = dealsMois.reduce((sum, deal) => {
+    const part = partDeal(deal, codes)
+    if (!part) return sum
+    return sum + valeurCabinetDeal(deal, part)
+  }, 0)
+  const ecart = Math.max(0, Number(rentabObj.ecart || 0))
+  const ratio = valeurMoisTotale > 0 ? Math.min(1, ecart / valeurMoisTotale) : 0
+
   let variablePp = 0
   let variablePu = 0
   let variableHorsPalier = 0
 
   for (const d of detail) {
     const produit = BAREME_PRODUITS[d.produitKey]
-    // Une fois rentabilisé : 100% de la commission versée, peu importe
-    // l'assiette ou le produit. Chaque ligne reste différenciée dans le
-    // détail (taux propre PP / PU / SCPI / UCS / etc.).
-    d.montantEffectif = d.montant
-    d.sousPalier = false
+    d.montantEffectif = d.montant * ratio
+    d.sousPalier = ratio < 1   // flag UI : ligne "sous seuil" si commission amputée
     d.remboursementSalaire = false
     if (produit.horsPalier) {
-      variableHorsPalier += d.montant
+      variableHorsPalier += d.montantEffectif
     } else if (produit.assiette === 'pp') {
-      variablePp += d.montant
+      variablePp += d.montantEffectif
     } else if (produit.assiette === 'pu') {
-      variablePu += d.montant
+      variablePu += d.montantEffectif
     }
   }
 

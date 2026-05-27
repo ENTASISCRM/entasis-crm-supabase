@@ -161,8 +161,10 @@ function VueConseiller({ contrat, profile, deals, month, isManager }) {
   )
 
   const comm = useMemo(
-    () => commissionsMois(dealsMois, contrat, rentab.rentabilise, profile),
-    [dealsMois, contrat, rentab.rentabilise, profile]
+    // On passe rentab complet (avec ecart) pour que commissionsMois puisse
+    // calculer le ratio « seule la part au-dessus du seuil est versée ».
+    () => commissionsMois(dealsMois, contrat, rentab, profile),
+    [dealsMois, contrat, rentab, profile]
   )
 
   const salaireFixe = Number(contrat.salaire_brut_mensuel || 0)
@@ -395,7 +397,7 @@ function VueManager({ contrats, deals, month }) {
         const dealsConseiller = dealsDuConseiller(deals, codes)
         const dealsMois = dealsDuMois(dealsConseiller, month)
         const rentab = evaluerRentabilite(c, dealsConseiller, profileLie)
-        const comm = commissionsMois(dealsMois, c, rentab.rentabilise, profileLie)
+        const comm = commissionsMois(dealsMois, c, rentab, profileLie)
         return {
           contrat: c,
           rentab,
