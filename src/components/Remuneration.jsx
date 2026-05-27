@@ -354,19 +354,24 @@ function SectionDetail({ comm, month }) {
                   <div className="cell-sub">{d.deal.company || d.deal.compagnie || ''}</div>
                 </td>
                 <td className="cell-mono" style={{ textAlign: 'right' }}>{fmtEur(d.assiette)}</td>
-                <td className="cell-mono" style={{ textAlign: 'right', color: masqueValeurs ? 'var(--t3)' : 'var(--t1)' }}>
-                  {masqueValeurs ? '—' : fmtPct(d.taux)}
+                <td className="cell-mono" style={{ textAlign: 'right' }}>
+                  <div style={{ color: 'var(--t1)', fontWeight: 600 }}>{fmtPct(d.taux)}</div>
+                  <div className="cell-sub" style={{ color: 'var(--t3)', fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                    {d.tauxMandataire ? 'mandataire' : 'cdi'}
+                  </div>
                 </td>
                 <td className="cell-mono" style={{ textAlign: 'right', fontWeight: 600, color: masqueValeurs ? 'var(--t3)' : 'var(--t1)' }}>
                   {masqueValeurs ? '—' : fmtEurPrecis(d.montantEffectif ?? d.montant)}
                 </td>
                 <td>
                   {phase1 ? (
-                    <span className="badge badge-progress" title="Sous le seuil mensuel de déclenchement du variable">
+                    <span className="badge badge-progress" title="Sous le seuil de déclenchement du variable — taux mandataire utilisé pour calculer la valeur cabinet (= ce qui rembourse le salaire)">
                       Sous seuil
                     </span>
                   ) : sousPalier ? (
-                    <span style={{ color: 'var(--t3)' }}>—</span>
+                    <span className="badge badge-progress" title="Le seuil vient d'être franchi — seule la part excédentaire est commissionnée">
+                      Au-dessus du seuil
+                    </span>
                   ) : d.horsPalier ? (
                     <span className="badge badge-forecast">Hors palier</span>
                   ) : (

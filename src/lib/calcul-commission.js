@@ -127,12 +127,16 @@ export function commissionBruteDeal(deal, contrat, part = 1) {
   // CDI/CDD/Alternant/Stagiaire rentabilisé : taux CDI
   // CDI/CDD/Alternant/Stagiaire NON rentabilisé : taux mandataire (booster)
   let taux
+  let tauxMandataire   // true si on applique le taux mandataire (mandataire ou CDI sous seuil)
   if (!TYPES_AVEC_SEUIL_RENTABILITE.includes(contrat?.type_contrat)) {
     taux = produit.mandataire(frais)
+    tauxMandataire = true
   } else if (contrat?.rentabilise) {
     taux = produit.cdi(frais)
+    tauxMandataire = false
   } else {
     taux = produit.mandataire(frais)
+    tauxMandataire = true
   }
 
   const montantPlein = (assiette * taux) / 100
@@ -142,6 +146,7 @@ export function commissionBruteDeal(deal, contrat, part = 1) {
     produitKey,
     assiette,
     taux,
+    tauxMandataire,          // flag UI : true = taux mandataire, false = taux CDI
     montantPlein,            // commission qu'aurait reçu un seul conseiller
     montant,                 // commission effective après split co-conseiller
     horsPalier: produit.horsPalier,
@@ -193,11 +198,22 @@ export function commissionsDeal(deal, contrat, part = 1) {
     if (puProduit) {
       const frais = Number(deal.frais_entree_pct ?? FRAIS_ENTREE_DEFAUT_PCT)
       const taux = tauxPourProduit(puProduit, contrat, frais)
+      // Détermine si on est au taux mandataire ou CDI (même logique que
+      // commissionBruteDeal — gardés en sync).
+      let tauxMandataire
+      if (!TYPES_AVEC_SEUIL_RENTABILITE.includes(contrat?.type_contrat)) {
+        tauxMandataire = true
+      } else if (contrat?.rentabilise) {
+        tauxMandataire = false
+      } else {
+        tauxMandataire = true
+      }
       const montantPlein = (puMontant * taux) / 100
       out.push({
         produitKey: 'pu_versement_libre',
         assiette: puMontant,
         taux,
+        tauxMandataire,
         montantPlein,
         montant: montantPlein * part,
         horsPalier: puProduit.horsPalier,
