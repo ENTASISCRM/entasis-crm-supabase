@@ -301,9 +301,9 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
                 <th style={{ textAlign: 'center', minWidth: 150 }}>
                   <div>RDV Lead Room</div>
                   <div style={{ fontSize: 9, fontWeight: 500, color: 'var(--t3)', marginTop: 2, letterSpacing: '0.02em', textTransform: 'none' }}>
-                    <span style={{ color: '#10B981' }}>✓ joints</span>
+                    <span style={{ color: '#10B981' }}>✓ tenus</span>
                     {' · '}
-                    <span style={{ color: '#EF4444' }}>✗ no-show</span>
+                    <span style={{ color: '#EF4444' }}>✗ absents</span>
                     {' · '}
                     <span>refus</span>
                     {' · '}
@@ -626,8 +626,8 @@ function AdvisorDetailModal({ row, deals, month, rdv, onClose }) {
                 </div>
               </div>
               <div style={{ padding: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 10 }}>
-                <MiniKpi label="Joints" value={rdv.joined} color="#10B981" />
-                <MiniKpi label="No-shows" value={rdv.no_show} color="#EF4444" />
+                <MiniKpi label="RDV tenus" value={rdv.joined} color="#10B981" />
+                <MiniKpi label="Absents" value={rdv.no_show} color="#EF4444" />
                 <MiniKpi label="Refus" value={rdv.refused} color="var(--t2)" />
                 <MiniKpi label="Signés" value={rdv.signed} color="var(--gold)" />
                 <MiniKpi label="À venir" value={rdv.upcoming} color="#0071E3" />
@@ -752,11 +752,12 @@ function RentabiliteBadge({ contrat, rentab }) {
 function RdvOutcomeBadge({ outcome }) {
   const o = (outcome || '').toLowerCase()
   const map = {
-    joined: { label: 'Joint', bg: 'rgba(16,185,129,0.12)', color: '#10B981' },
-    joint: { label: 'Joint', bg: 'rgba(16,185,129,0.12)', color: '#10B981' },
-    no_show: { label: 'No-show', bg: 'rgba(239,68,68,0.12)', color: '#EF4444' },
-    noshow: { label: 'No-show', bg: 'rgba(239,68,68,0.12)', color: '#EF4444' },
-    'no-show': { label: 'No-show', bg: 'rgba(239,68,68,0.12)', color: '#EF4444' },
+    joined: { label: 'RDV tenu', bg: 'rgba(16,185,129,0.12)', color: '#10B981' },
+    joint: { label: 'RDV tenu', bg: 'rgba(16,185,129,0.12)', color: '#10B981' },
+    no_show: { label: 'Absent', bg: 'rgba(239,68,68,0.12)', color: '#EF4444' },
+    noshow: { label: 'Absent', bg: 'rgba(239,68,68,0.12)', color: '#EF4444' },
+    'no-show': { label: 'Absent', bg: 'rgba(239,68,68,0.12)', color: '#EF4444' },
+    not_joined: { label: 'Absent', bg: 'rgba(239,68,68,0.12)', color: '#EF4444' },
     refused: { label: 'Refus', bg: 'rgba(0,0,0,0.06)', color: 'var(--t2)' },
     refus: { label: 'Refus', bg: 'rgba(0,0,0,0.06)', color: 'var(--t2)' },
     signed: { label: 'Signé', bg: 'rgba(201,169,97,0.15)', color: 'var(--gold-dk)' },
@@ -811,7 +812,7 @@ function RowConseiller({ r, rdv, rdvLoading, onSelect }) {
           <span style={{ color: 'var(--t3)' }}>…</span>
         ) : rdv ? (
           <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center', flexWrap: 'nowrap' }}
-               title={`${rdv.joined} joints · ${rdv.no_show} no-shows · ${rdv.refused} refus${rdv.upcoming > 0 ? ` · ${rdv.upcoming} à venir` : ''}`}>
+               title={`${rdv.joined} RDV tenus · ${rdv.no_show} absents · ${rdv.refused} refus${rdv.upcoming > 0 ? ` · ${rdv.upcoming} à venir` : ''}`}>
             <span style={{ color: '#10B981', fontWeight: 700 }}>✓{rdv.joined}</span>
             <span style={{ color: '#EF4444', fontWeight: 700 }}>✗{rdv.no_show}</span>
             <span style={{ color: 'var(--t3)', fontWeight: 600 }}>·{rdv.refused}</span>
