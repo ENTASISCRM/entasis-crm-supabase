@@ -341,9 +341,17 @@ function SectionDetail({ comm, month }) {
         </thead>
         <tbody>
           {comm.detail.map((d, i) => {
-            const clientName = d.deal.clients
-              ? `${d.deal.clients.prenom || ''} ${d.deal.clients.nom || ''}`.trim()
-              : (d.deal.client_id || '—')
+            // Résolution du nom client :
+            // 1. Si la jointure clients est chargée → prenom + nom
+            // 2. Sinon, fallback sur deal.client (champ string saisi à la création du deal)
+            // 3. Surtout PAS deal.client_id (= UUID brut, illisible — c'était le bug)
+            const clientName = (() => {
+              if (d.deal.clients) {
+                const fromJoin = `${d.deal.clients.prenom || ''} ${d.deal.clients.nom || ''}`.trim()
+                if (fromJoin) return fromJoin
+              }
+              return d.deal.client || d.deal.client_nom || '—'
+            })()
             // Phase 1 (avant seuil) : aucun variable versé tant que le
             //   seuil mensuel de déclenchement n'est pas franchi.
             // Sous palier : pareil pour les produits soumis au palier.
