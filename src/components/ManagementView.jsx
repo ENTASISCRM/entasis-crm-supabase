@@ -901,7 +901,7 @@ function RdvLeadRoomSection({ rdvStats, activeAdvisors, onSelectAdvisor }) {
 
   // KPIs cabinet (somme de tous les conseillers actifs visibles)
   const cabinet = useMemo(() => {
-    const agg = { past: 0, tenus: 0, absents: 0, refus: 0, signes: 0, aNoter: 0, futur: 0 }
+    const agg = { past: 0, tenus: 0, absents: 0, refus: 0, signes: 0, aNoter: 0, futur: 0, absentsCovered: 0, absentsUncovered: 0 }
     for (const r of rdvRows) {
       agg.past += r.total
       agg.tenus += r.stats.joined || 0
@@ -910,6 +910,8 @@ function RdvLeadRoomSection({ rdvStats, activeAdvisors, onSelectAdvisor }) {
       agg.signes += r.stats.signed || 0
       agg.aNoter += r.stats.to_note || 0
       agg.futur += r.stats.upcoming || 0
+      agg.absentsCovered += r.stats.no_show_with_callback || 0
+      agg.absentsUncovered += r.stats.no_show_without_callback || 0
     }
     const noted = agg.tenus + agg.absents + agg.refus + agg.signes
     return {
@@ -917,6 +919,7 @@ function RdvLeadRoomSection({ rdvStats, activeAdvisors, onSelectAdvisor }) {
       pctNoted: agg.past > 0 ? Math.round((noted / agg.past) * 100) : 0,
       pctAbsent: agg.past > 0 ? Math.round((agg.absents / agg.past) * 100) : 0,
       pctConv: agg.tenus > 0 ? Math.round((agg.signes / agg.tenus) * 100) : 0,
+      pctRecovery: agg.absents > 0 ? Math.round((agg.absentsCovered / agg.absents) * 100) : 0,
     }
   }, [rdvRows])
 
@@ -969,6 +972,12 @@ function RdvLeadRoomSection({ rdvStats, activeAdvisors, onSelectAdvisor }) {
         <RdvMiniKpi label="% Notation" value={`${cabinet.pctNoted}%`}
           color={cabinet.pctNoted === 100 ? '#10B981' : cabinet.pctNoted >= 80 ? '#F59E0B' : '#EF4444'}
           hint={cabinet.pctNoted < 100 ? 'Objectif 100 %' : 'Parfait'} />
+        <RdvMiniKpi label="📞 Pipe rappel" value={cabinet.absentsCovered}
+          color="#0071E3"
+          hint={cabinet.absentsUncovered > 0
+            ? `${cabinet.absentsUncovered} perdu${cabinet.absentsUncovered > 1 ? 's' : ''} sans rappel`
+            : `${cabinet.pctRecovery}% des absents`}
+          alert={cabinet.absentsUncovered > 0} />
       </div>
 
       {/* ─── Tableau par conseiller ───────────────────────── */}
@@ -983,6 +992,7 @@ function RdvLeadRoomSection({ rdvStats, activeAdvisors, onSelectAdvisor }) {
               <th style={{ textAlign: 'right' }} title="Refus client">Refus</th>
               <th style={{ textAlign: 'right', color: 'var(--gold-dk, #A6843F)' }} title="Contrat signé suite au RDV">💎 Signés</th>
               <th style={{ textAlign: 'right', color: '#F59E0B' }} title="RDV passés non notés (saisie manquante)">⚠ À noter</th>
+              <th style={{ textAlign: 'right', color: '#0071E3' }} title="Absents avec rappel programmé / total absents — protection contre la perte de lead">📞 Pipe rappel</th>
               <th style={{ textAlign: 'right' }} title="Saisie correcte / total — Objectif 100 %">% Not.</th>
               <th style={{ textAlign: 'right' }} title="Taux de présence client (tenus / passés)">% Prés.</th>
               <th style={{ textAlign: 'right' }} title="Conversion Signés / Tenus">% Conv.</th>
@@ -1018,6 +1028,19 @@ function RdvLeadRoomSection({ rdvStats, activeAdvisors, onSelectAdvisor }) {
                       </span>
                     ) : (
                       <span style={{ color: 'var(--t3)' }}>0</span>
+                    )}
+                  </td>
+                  <td className="cell-mono" style={{ textAlign: 'right', fontSize: 11 }}>
+                    {(r.stats.no_show || 0) === 0 ? (
+                      <span style={{ color: 'var(--t3)' }}>—</span>
+                    ) : (
+                      <span title={`${r.stats.no_show_with_callback || 0} avec rappel programmé / ${r.stats.no_show_without_callback || 0} sans rappel`}>
+                        <span style={{ color: '#0071E3', fontWeight: 700 }}>{r.stats.no_show_with_callback || 0}</span>
+                        <span style={{ color: 'var(--t3)' }}> / </span>
+                        <span style={{ color: (r.stats.no_show_without_callback || 0) > 0 ? '#EF4444' : 'var(--t3)', fontWeight: (r.stats.no_show_without_callback || 0) > 0 ? 700 : 400 }}>
+                          {r.stats.no_show_without_callback || 0}
+                        </span>
+                      </span>
                     )}
                   </td>
                   <td className="cell-mono" style={{ textAlign: 'right' }}>
