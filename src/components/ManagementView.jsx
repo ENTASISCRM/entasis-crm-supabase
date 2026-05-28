@@ -270,6 +270,12 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
         }}
       />
 
+      {/* ─── HEATMAP CRÉNEAUX RDV ────────────────────────────────────── */}
+      <RdvHeatmapSection />
+
+      {/* ─── MODULE RECYCLAGE REFUSÉS ────────────────────────────────── */}
+      <RecyclageRefusesSection />
+
       {/* ─── Top performeurs + À booster ───────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 16, marginBottom: 24 }}>
         <PodiumCard
@@ -1136,6 +1142,339 @@ function PctBadge({ value, reverseColor = false }) {
     }}>
       {v}%
     </span>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// HEATMAP CRÉNEAUX RDV — Identifie les meilleurs et pires créneaux
+// (jour de la semaine × heure) selon le taux de tenue / no-show.
+// Source, /api/admin/rdv-heatmap (90 derniers jours).
+// Demandé par Louis 28/05/2026 (#7 dans la liste des 7 améliorations).
+// ─────────────────────────────────────────────────────────────────────────
+const DAYS_LABELS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
+const BIZ_HOURS = Array.from({ length: 13 }, (_, i) => i + 7) // 7h à 19h
+
+function RdvHeatmapSection() {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [metric, setMetric] = useState('tenue') // 'tenue' | 'no_show'
+
+  useEffect(() => {
+    fetch(`${LEADROOM_API}/api/admin/rdv-heatmap?days=90`)
+      .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+      .then(json => setData(json))
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  // Index par day-hour
+  const byKey = useMemo(() => {
+    const m = new Map()
+    for (const b of (data?.buckets || [])) m.set(`${b.day}-${b.hour}`, b)
+    return m
+  }, [data])
+
+  // Stats globales pour les top/flop
+  const insights = useMemo(() => {
+    if (!data?.buckets?.length) return null
+    const significant = data.buckets.filter(b => b.total >= 3) // au moins 3 RDV pour être statistiquement valide
+    if (significant.length === 0) return null
+    const sortedByTenue = [...significant].sort((a, b) => b.pct_tenue - a.pct_tenue)
+    const sortedByNoShow = [...significant].sort((a, b) => b.pct_no_show - a.pct_no_show)
+    return {
+      bestSlots: sortedByTenue.slice(0, 3),
+      worstSlots: sortedByNoShow.slice(0, 3),
+    }
+  }, [data])
+
+  // Couleur d'une cellule selon le score
+  function cellColor(b) {
+    if (!b || b.total === 0) return { bg: 'rgba(0,0,0,0.02)', txt: 'var(--t3)' }
+    const score = metric === 'tenue' ? b.pct_tenue : 100 - b.pct_no_show
+    // 0 = rouge, 50 = jaune, 100 = vert
+    if (score >= 70) return { bg: 'rgba(16,185,129,0.35)', txt: '#065F46' }
+    if (score >= 50) return { bg: 'rgba(245,158,11,0.30)', txt: '#92400E' }
+    if (score >= 30) return { bg: 'rgba(239,68,68,0.20)', txt: '#7F1D1D' }
+    return { bg: 'rgba(239,68,68,0.40)', txt: '#7F1D1D' }
+  }
+
+  return (
+    <div className="card mb-24" style={{ overflow: 'hidden', borderTop: '3px solid #8B5CF6' }}>
+      <div className="panel-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <div className="section-kicker" style={{ color: '#8B5CF6' }}>📅 Heatmap créneaux RDV</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t1)' }}>
+            Meilleurs créneaux par jour × heure (90 derniers jours)
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>
+            {loading ? 'Chargement…' : data ? `${data.total_rdv} RDV analysés` : 'Pas de données'}
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button onClick={() => setMetric('tenue')} className={`btn btn-sm ${metric === 'tenue' ? 'btn-primary' : 'btn-ghost'}`}>
+            Taux tenue
+          </button>
+          <button onClick={() => setMetric('no_show')} className={`btn btn-sm ${metric === 'no_show' ? 'btn-primary' : 'btn-ghost'}`}>
+            Taux no-show
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div style={{ padding: 16, background: 'rgba(239,68,68,0.1)', color: '#EF4444', textAlign: 'center' }}>
+          Erreur, {error}
+        </div>
+      )}
+
+      {!loading && data && (
+        <>
+          {/* Insights top 3 / flop 3 */}
+          {insights && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, padding: '12px 20px', borderBottom: '1px solid var(--bd)' }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#10B981', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  🏆 Meilleurs créneaux
+                </div>
+                <div style={{ fontSize: 12, marginTop: 6 }}>
+                  {insights.bestSlots.map((s, i) => (
+                    <div key={i} style={{ marginTop: 4 }}>
+                      <strong>{DAYS_LABELS[s.day]} {s.hour}h</strong> · {s.pct_tenue}% de tenue ({s.total} RDV)
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#EF4444', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  ⚠ Créneaux à éviter (no-show)
+                </div>
+                <div style={{ fontSize: 12, marginTop: 6 }}>
+                  {insights.worstSlots.map((s, i) => (
+                    <div key={i} style={{ marginTop: 4 }}>
+                      <strong>{DAYS_LABELS[s.day]} {s.hour}h</strong> · {s.pct_no_show}% d'absent ({s.total} RDV)
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Heatmap grid */}
+          <div style={{ padding: 16, overflowX: 'auto' }}>
+            <table style={{ borderCollapse: 'separate', borderSpacing: 3, margin: '0 auto' }}>
+              <thead>
+                <tr>
+                  <th style={{ width: 36 }}></th>
+                  {BIZ_HOURS.map(h => (
+                    <th key={h} style={{ fontSize: 10, color: 'var(--t3)', fontWeight: 600, padding: '2px 0', textAlign: 'center', width: 40 }}>
+                      {h}h
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[1, 2, 3, 4, 5, 6].map(day => ( // Lundi à Samedi (skip Dimanche, peu de data)
+                  <tr key={day}>
+                    <td style={{ fontSize: 11, fontWeight: 600, color: 'var(--t2)', padding: '0 6px 0 0', textAlign: 'right' }}>
+                      {DAYS_LABELS[day]}
+                    </td>
+                    {BIZ_HOURS.map(h => {
+                      const b = byKey.get(`${day}-${h}`)
+                      const c = cellColor(b)
+                      const score = b ? (metric === 'tenue' ? b.pct_tenue : b.pct_no_show) : null
+                      return (
+                        <td key={h} title={b
+                          ? `${DAYS_LABELS[day]} ${h}h · ${b.total} RDV · ${b.joined} tenus · ${b.not_joined} absents · ${b.refused} refus · ${b.signed} signés`
+                          : `${DAYS_LABELS[day]} ${h}h · 0 RDV`
+                        }
+                        style={{
+                          width: 40, height: 28, textAlign: 'center', fontSize: 10, fontWeight: 700,
+                          background: c.bg, color: c.txt, borderRadius: 4,
+                        }}>
+                          {b && b.total > 0 ? (
+                            <div>
+                              <div>{score}%</div>
+                              <div style={{ fontSize: 8, fontWeight: 400, opacity: 0.7 }}>{b.total}</div>
+                            </div>
+                          ) : '—'}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ marginTop: 12, fontSize: 11, color: 'var(--t3)', textAlign: 'center' }}>
+              {metric === 'tenue'
+                ? "Vert = bon taux de tenue · Rouge = beaucoup d'absents. Le petit chiffre = nombre de RDV total sur ce créneau."
+                : "Vert = peu de no-show · Rouge = beaucoup de no-show."}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// RECYCLAGE REFUSÉS — Pipe gratuit, recontacter les leads qui ont refusé
+// il y a >60 jours (peut-être un "pas maintenant" et pas un "jamais").
+// Demandé par Louis 28/05/2026 (#4 dans la liste des 7 améliorations).
+// ─────────────────────────────────────────────────────────────────────────
+function RecyclageRefusesSection() {
+  const [data, setData] = useState({ count: 0, leads: [], by_campaign: {}, min_days: 60 })
+  const [loading, setLoading] = useState(false)
+  const [minDays, setMinDays] = useState(60)
+  const [campaignFilter, setCampaignFilter] = useState(null)
+  const [selectedIds, setSelectedIds] = useState(new Set())
+  const [working, setWorking] = useState(false)
+
+  async function refresh() {
+    setLoading(true)
+    setSelectedIds(new Set())
+    try {
+      const params = new URLSearchParams({ minDays: String(minDays) })
+      if (campaignFilter) params.set('campaign', campaignFilter)
+      const r = await fetch(`${LEADROOM_API}/api/admin/refused-recyclables?${params}`)
+      const json = await r.json()
+      if (r.ok) setData(json)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoading(false)
+    }
+  }
+  useEffect(() => { refresh() }, [minDays, campaignFilter])
+
+  function toggle(id) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+  function toggleAll() {
+    if (selectedIds.size === data.leads.length) setSelectedIds(new Set())
+    else setSelectedIds(new Set(data.leads.map(l => l.id)))
+  }
+
+  async function doAction(action) {
+    if (selectedIds.size === 0) return
+    const label = action === 'recontact' ? 'recontacter' : 'archiver'
+    if (!confirm(`Confirmer, ${label} ${selectedIds.size} lead(s) ?`)) return
+    setWorking(true)
+    try {
+      const r = await fetch(`${LEADROOM_API}/api/admin/recycle-lead`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadIds: Array.from(selectedIds), action }),
+      })
+      const json = await r.json()
+      if (!r.ok) throw new Error(json.error || 'échec')
+      const did = action === 'recontact' ? json.recycled : json.archived
+      alert(`${did} lead(s) ${action === 'recontact' ? 'remis dans le pool' : 'archivés'}.`)
+      refresh()
+    } catch (e) {
+      alert(`Erreur, ${e.message}`)
+    } finally {
+      setWorking(false)
+    }
+  }
+
+  return (
+    <div className="card mb-24" style={{ overflow: 'hidden', borderTop: '3px solid #F59E0B' }}>
+      <div className="panel-head">
+        <div>
+          <div className="section-kicker" style={{ color: '#F59E0B' }}>♻ Recyclage refusés</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t1)' }}>
+            Pipe gratuit · {data.count} lead(s) refusés depuis ≥{minDays}j
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>
+            Sélectionne les leads à recontacter (réinjection dans le pool Lead Room en mode shotgun).
+          </div>
+        </div>
+      </div>
+
+      <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--bd)', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <label style={{ fontSize: 12, color: 'var(--t2)' }}>Ancienneté min,</label>
+        <select value={minDays} onChange={e => setMinDays(parseInt(e.target.value, 10))} className="form-input" style={{ width: 130, fontSize: 12 }}>
+          <option value={30}>30 jours</option>
+          <option value={60}>60 jours</option>
+          <option value={90}>90 jours</option>
+          <option value={180}>6 mois</option>
+        </select>
+        <label style={{ fontSize: 12, color: 'var(--t2)', marginLeft: 8 }}>Campagne,</label>
+        <select value={campaignFilter || ''} onChange={e => setCampaignFilter(e.target.value || null)} className="form-input" style={{ width: 180, fontSize: 12 }}>
+          <option value="">Toutes ({data.count})</option>
+          {Object.entries(data.by_campaign || {}).map(([k, v]) => (
+            <option key={k} value={k}>{k} ({v})</option>
+          ))}
+        </select>
+        <div style={{ flex: 1 }} />
+        <button className="btn btn-ghost btn-sm" onClick={refresh} disabled={loading}>
+          {loading ? '…' : '⟳'} Refresh
+        </button>
+        <button className="btn btn-sm" style={{ background: '#F59E0B', color: 'white' }}
+          disabled={selectedIds.size === 0 || working}
+          onClick={() => doAction('recontact')}>
+          📞 Recontacter ({selectedIds.size})
+        </button>
+        <button className="btn btn-ghost btn-sm"
+          disabled={selectedIds.size === 0 || working}
+          onClick={() => doAction('archive')}>
+          🗑 Archiver ({selectedIds.size})
+        </button>
+      </div>
+
+      <div style={{ maxHeight: 480, overflowY: 'auto' }}>
+        {data.leads.length === 0 && !loading ? (
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--t3)' }}>
+            Aucun lead refusé depuis ≥{minDays}j
+            {campaignFilter ? ` pour la campagne ${campaignFilter}` : ''}.
+          </div>
+        ) : (
+          <table className="data-table" style={{ width: '100%' }}>
+            <thead>
+              <tr>
+                <th style={{ width: 32 }}>
+                  <input type="checkbox"
+                    checked={selectedIds.size > 0 && selectedIds.size === data.leads.length}
+                    onChange={toggleAll} />
+                </th>
+                <th>Nom</th>
+                <th>Campagne</th>
+                <th>Conseiller</th>
+                <th style={{ textAlign: 'right' }}>Refusé il y a</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.leads.map(l => (
+                <tr key={l.id} style={{ background: selectedIds.has(l.id) ? 'rgba(245,158,11,0.05)' : undefined, cursor: 'pointer' }}
+                    onClick={() => toggle(l.id)}>
+                  <td><input type="checkbox" checked={selectedIds.has(l.id)} onChange={() => toggle(l.id)} onClick={e => e.stopPropagation()} /></td>
+                  <td>
+                    <div className="cell-primary">{l.name}</div>
+                    <div className="cell-sub" style={{ fontSize: 11 }}>
+                      {l.email || ''} {l.phone ? `· ${l.phone}` : ''}
+                    </div>
+                    {l.notes_excerpt && (
+                      <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--t3)', marginTop: 4 }}>
+                        "{l.notes_excerpt.slice(0, 80)}{l.notes_excerpt.length > 80 ? '…' : ''}"
+                      </div>
+                    )}
+                  </td>
+                  <td style={{ fontSize: 12 }}>{l.campaign_slug || '∅'}</td>
+                  <td style={{ fontSize: 12 }}>{l.last_advisor_name || '∅'}</td>
+                  <td className="cell-mono" style={{ textAlign: 'right', fontSize: 12, color: 'var(--t2)' }}>
+                    {l.days_ago != null ? `${l.days_ago}j` : '?'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
   )
 }
 

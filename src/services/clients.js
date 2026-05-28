@@ -96,7 +96,136 @@ export async function findExisting({ email, telephone, nom, advisor_code }) {
     const byName = await findByNameAndAdvisor(nom, advisor_code)
     if (byName) return { ...byName, matchedBy: 'name' }
   }
+  // 4. Anti-doublon par fuzzy match nom (Levenshtein normalisé) — seuil
+  //    0.85 = quasi-certain qu'il s'agit du même client malgré une faute
+  //    de frappe (ex Vox Protega vs Vox Protego, score ≈ 0.91).
+  //    Plus prudent que le fuzzy d'autocomplete car ici on FUSIONNE.
+  if (nom) {
+    const dups = await findPotentialDuplicates({ nom })
+    if (dups.length > 0 && dups[0].score >= 0.85) {
+      return { ...dups[0], matchedBy: 'fuzzy_name' }
+    }
+  }
   return null
+}
+
+// ─── Anti-doublons fuzzy ────────────────────────────────────────────────
+// Levenshtein simple, O(n*m). Suffit pour les noms courts (<40 char).
+function levenshtein(a, b) {
+  if (a === b) return 0
+  if (!a || !b) return Math.max((a || '').length, (b || '').length)
+  const m = a.length, n = b.length
+  const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)])
+  for (let j = 0; j <= n; j++) dp[0][j] = j
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,         // deletion
+        dp[i][j - 1] + 1,         // insertion
+        dp[i - 1][j - 1] + cost,  // substitution
+      )
+    }
+  }
+  return dp[m][n]
+}
+
+// Normalise un nom : lowercase, trim, sans accents, espaces simples.
+function normalizeName(s) {
+  return String(s || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+// Score de similarité 0..1 entre 2 noms.
+function nameSimilarity(a, b) {
+  const na = normalizeName(a), nb = normalizeName(b)
+  if (!na || !nb) return 0
+  if (na === nb) return 1
+  const maxLen = Math.max(na.length, nb.length)
+  const dist = levenshtein(na, nb)
+  return Math.max(0, 1 - dist / maxLen)
+}
+
+/**
+ * Cherche les doublons POTENTIELS d'un client par fuzzy match nom + email
+ * partial. Utilisé pour alerter au save deal "ce nom ressemble à un client
+ * déjà existant — fusionner ?".
+ *
+ * @returns Array<{ id, nom, prenom, email, telephone, score, matchedBy }>
+ *          triés par score décroissant. Score ∈ [0, 1].
+ */
+export async function findPotentialDuplicates({ nom, email, telephone }) {
+  const candidates = new Map() // id → { client, scores, matchedBy[] }
+
+  // 1. Match email exact (case-insensitive) → score 1.0
+  if (email) {
+    const e = String(email).trim().toLowerCase()
+    if (e) {
+      const { data } = await supabase
+        .from('clients')
+        .select('id, nom, prenom, email, telephone')
+        .ilike('email', e)
+        .limit(5)
+      for (const c of (data || [])) {
+        candidates.set(c.id, { client: c, score: 1.0, matchedBy: ['email'] })
+      }
+    }
+  }
+  // 2. Match téléphone 9 derniers digits → score 0.95
+  if (telephone) {
+    const tail = String(telephone).replace(/\D/g, '').slice(-9)
+    if (tail.length === 9) {
+      const { data } = await supabase
+        .from('clients')
+        .select('id, nom, prenom, email, telephone')
+        .not('telephone', 'is', null)
+        .limit(2000)
+      for (const c of (data || [])) {
+        const t = String(c.telephone || '').replace(/\D/g, '').slice(-9)
+        if (t === tail) {
+          const existing = candidates.get(c.id)
+          if (!existing || existing.score < 0.95) {
+            candidates.set(c.id, { client: c, score: Math.max(0.95, existing?.score || 0), matchedBy: [...(existing?.matchedBy || []), 'phone'] })
+          }
+        }
+      }
+    }
+  }
+  // 3. Match fuzzy nom (Levenshtein normalisé). Seuil 0.75 minimum.
+  if (nom) {
+    const normalized = normalizeName(nom)
+    if (normalized.length >= 3) {
+      // On charge un échantillon par début de nom (tri par nom asc serait mieux mais Supabase ne supporte pas la pagination fine)
+      const firstWord = normalized.split(' ')[0]
+      const { data } = await supabase
+        .from('clients')
+        .select('id, nom, prenom, email, telephone')
+        .ilike('nom', `%${firstWord}%`)
+        .limit(50)
+      for (const c of (data || [])) {
+        const sim = nameSimilarity(nom, c.nom)
+        if (sim >= 0.75) {
+          const existing = candidates.get(c.id)
+          if (!existing || existing.score < sim) {
+            candidates.set(c.id, {
+              client: c,
+              score: Math.max(sim, existing?.score || 0),
+              matchedBy: [...(existing?.matchedBy || []), `nom_fuzzy_${Math.round(sim * 100)}%`],
+            })
+          }
+        }
+      }
+    }
+  }
+
+  // Sort by score desc
+  return Array.from(candidates.values())
+    .sort((a, b) => b.score - a.score)
+    .map(({ client, score, matchedBy }) => ({ ...client, score, matchedBy: matchedBy.join('+') }))
 }
 
 /**
