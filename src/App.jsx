@@ -1933,6 +1933,7 @@ function PipelineBoard({deals,month,profile,onEdit}){
     return m
   },[visible])
   const ppByStatus=useMemo(()=>{const m={};PIPELINE_COLS.forEach(c=>m[c.id]=sumAnnualPp(byStatus[c.id]||[]));return m},[byStatus])
+  const puByStatus=useMemo(()=>{const m={};PIPELINE_COLS.forEach(c=>m[c.id]=sumPu(byStatus[c.id]||[]));return m},[byStatus])
 
   return (
     <div>
@@ -1947,7 +1948,23 @@ function PipelineBoard({deals,month,profile,onEdit}){
           return (
             <div key={col.id} className={`pipeline-col ${col.cls}`}>
               <div className="pipeline-col-head">
-                <div><div className="pipeline-col-title">{col.label}</div>{ppByStatus[col.id]>0&&<div style={{fontSize:11,color:'var(--t3)',marginTop:2}}>{euro(ppByStatus[col.id])} PP</div>}</div>
+                <div>
+                  <div className="pipeline-col-title">{col.label}</div>
+                  {(ppByStatus[col.id]>0||puByStatus[col.id]>0)&&(
+                    <div style={{display:'flex',gap:8,marginTop:4,flexWrap:'wrap'}}>
+                      {ppByStatus[col.id]>0&&(
+                        <span style={{fontSize:10,fontWeight:700,padding:'1px 5px',borderRadius:3,background:'rgba(201,169,97,0.15)',color:'var(--gold-dk, #A6843F)',fontVariantNumeric:'tabular-nums'}}>
+                          PP {euro(ppByStatus[col.id])}
+                        </span>
+                      )}
+                      {puByStatus[col.id]>0&&(
+                        <span style={{fontSize:10,fontWeight:700,padding:'1px 5px',borderRadius:3,background:'rgba(0,113,227,0.12)',color:'#0071E3',fontVariantNumeric:'tabular-nums'}}>
+                          PU {euro(puByStatus[col.id])}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <span className="pipeline-col-count">{items.length}</span>
               </div>
               <div className="pipeline-cards">
@@ -1955,9 +1972,33 @@ function PipelineBoard({deals,month,profile,onEdit}){
                   <div key={deal.id} className="pipeline-deal-card" onClick={()=>onEdit(deal)}>
                     <div className="pipeline-deal-client">{getClientName(deal)}</div>
                     <div className="pipeline-deal-product">{deal.product} · {deal.company||'—'}</div>
-                    <div className="pipeline-deal-amounts">
-                      {deal.pp_m>0&&<div className="pipeline-amount">PP <strong>{euro(annualize(deal.pp_m))}</strong></div>}
-                      {deal.pu>0&&<div className="pipeline-amount">PU <strong>{euro(deal.pu)}</strong></div>}
+                    {/* Badges PP/PU colorés pour reporting compta — PP en or
+                        (récurrent annuel) vs PU en bleu (versement unique) */}
+                    <div style={{display:'flex',flexDirection:'column',gap:4,margin:'8px 0'}}>
+                      {deal.pp_m>0&&(
+                        <div style={{
+                          display:'flex',alignItems:'center',gap:6,
+                          padding:'3px 8px',borderRadius:6,
+                          background:'rgba(201,169,97,0.12)',
+                          border:'1px solid rgba(201,169,97,0.30)',
+                        }}>
+                          <span style={{fontSize:9,fontWeight:800,color:'var(--gold-dk, #A6843F)',letterSpacing:'0.10em'}}>PP</span>
+                          <strong style={{fontSize:13,color:'var(--gold-dk, #A6843F)',flex:1,fontVariantNumeric:'tabular-nums'}}>{euro(annualize(deal.pp_m))}</strong>
+                          <span style={{fontSize:9,color:'var(--t3)',fontWeight:600}}>/an</span>
+                        </div>
+                      )}
+                      {deal.pu>0&&(
+                        <div style={{
+                          display:'flex',alignItems:'center',gap:6,
+                          padding:'3px 8px',borderRadius:6,
+                          background:'rgba(0,113,227,0.10)',
+                          border:'1px solid rgba(0,113,227,0.25)',
+                        }}>
+                          <span style={{fontSize:9,fontWeight:800,color:'#0071E3',letterSpacing:'0.10em'}}>PU</span>
+                          <strong style={{fontSize:13,color:'#0071E3',flex:1,fontVariantNumeric:'tabular-nums'}}>{euro(deal.pu)}</strong>
+                          <span style={{fontSize:9,color:'var(--t3)',fontWeight:600}}>unique</span>
+                        </div>
+                      )}
                     </div>
                     <div className="pipeline-deal-footer">
                       <span className={PRIORITY_CLASS[deal.priority]||'badge'}>{deal.priority}</span>
