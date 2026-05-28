@@ -20,6 +20,7 @@ import LinkedInPro from './components/LinkedInPro'
 import PilotageRH from './components/PilotageRH'
 import Remuneration from './components/Remuneration'
 import ManagementView from './components/ManagementView'
+import MissionDuMois from './components/MissionDuMois'
 import UcsStructures from './components/UcsStructures'
 import Structureurs from './components/Structureurs'
 import ClientsView from './components/clients/ClientsView'
@@ -1742,6 +1743,17 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
 
   return (
     <div>
+      {/* Bloc Mission du mois (top of dashboard) — engagement émotionnel
+          + leads chauds Lead Room. Affichage conditionnel : si pas
+          d'objectif et pas de leads chauds, ne s'affiche pas. */}
+      <MissionDuMois
+        profile={profile}
+        ppTarget={ppTarget}
+        ppSigned={m.ppSigned}
+        ppProjected={m.ppProjected}
+        month={month}
+      />
+
       <div className="advisor-hero">
         <div className="advisor-hero-eyebrow">Tableau de bord · {month}</div>
         <div className="advisor-hero-name">{profile?.full_name||code||'Mon mois'}</div>
