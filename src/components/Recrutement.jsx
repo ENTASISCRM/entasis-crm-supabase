@@ -679,6 +679,11 @@ function CandidateDetailModal({ candidate: initial, onClose, onUpdated, onDelete
             </div>
           </div>
 
+          {/* Réponses Tally — si le candidat vient d'un form Tally */}
+          {candidate.submission_payload && (
+            <TallyResponsesSection payload={candidate.submission_payload} />
+          )}
+
           {/* Timeline */}
           <div className="card">
             <div className="panel-head">
@@ -720,6 +725,98 @@ function EditField({ label, value, onChange, type = 'text' }) {
     <div>
       <label className="form-label" style={{ fontSize: 10 }}>{label}</label>
       <input className="form-input" type={type} value={value || ''} onChange={e => onChange(e.target.value)} style={{ fontSize: 13 }} />
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// TallyResponsesSection — affiche les réponses au questionnaire Tally
+// pour ne pas avoir à retourner sur tally.so pour les lire.
+// Demandé par Jean Decamps 01/06/2026 ("avoir accès au questionnaire afin
+// qu'on puisse filtrer depuis la plateforme et non à devoir retourner sur
+// tally afin de gagner du temps").
+// ─────────────────────────────────────────────────────────────────────────
+function TallyResponsesSection({ payload }) {
+  const event = payload?.data || payload || {}
+  const fields = event?.fields || event?.responses || []
+  const formName = event?.formName || event?.formTitle || null
+
+  if (!Array.isArray(fields) || fields.length === 0) return null
+
+  // Formate une value Tally pour l'affichage
+  function fmtValue(f) {
+    const v = f.value
+    if (v === null || v === undefined || v === '') return <span style={{ color: 'var(--t3)', fontStyle: 'italic' }}>— vide —</span>
+    const type = String(f.type || '').toLowerCase()
+    // File upload
+    if (type.includes('file') && Array.isArray(v) && v[0]?.url) {
+      return (
+        <div>
+          {v.map((file, i) => (
+            <a key={i} href={file.url} target="_blank" rel="noreferrer"
+               style={{ display: 'inline-block', padding: '4px 10px', borderRadius: 6, background: 'rgba(99,102,241,0.10)', color: '#4F46E5', fontSize: 12, fontWeight: 600, textDecoration: 'none', marginRight: 6, marginBottom: 4 }}>
+              📎 {file.name || `Fichier ${i + 1}`}
+            </a>
+          ))}
+        </div>
+      )
+    }
+    // URL
+    if (typeof v === 'string' && /^https?:\/\//i.test(v)) {
+      return <a href={v} target="_blank" rel="noreferrer" style={{ color: '#4F46E5', textDecoration: 'underline' }}>{v}</a>
+    }
+    // Email / tel
+    if (type === 'input_email') return <a href={`mailto:${v}`} style={{ color: 'var(--gold-dk, #A6843F)' }}>{v}</a>
+    if (type === 'input_phone_number') return <a href={`tel:${v}`} style={{ color: 'var(--gold-dk, #A6843F)' }}>{v}</a>
+    // Array (multi-choice)
+    if (Array.isArray(v)) {
+      return (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+          {v.map((x, i) => (
+            <span key={i} style={{ padding: '2px 8px', borderRadius: 4, background: 'rgba(0,0,0,0.05)', fontSize: 12, fontWeight: 500 }}>
+              {String(x)}
+            </span>
+          ))}
+        </div>
+      )
+    }
+    // Object
+    if (typeof v === 'object') {
+      return <pre style={{ fontSize: 11, margin: 0, color: 'var(--t2)', whiteSpace: 'pre-wrap' }}>{JSON.stringify(v, null, 2)}</pre>
+    }
+    // Texte long → render avec wrap
+    const text = String(v)
+    if (text.length > 100) {
+      return <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{text}</div>
+    }
+    return text
+  }
+
+  return (
+    <div className="card" style={{ marginBottom: 20, borderTop: '3px solid #6366F1' }}>
+      <div className="panel-head">
+        <div>
+          <div className="section-kicker" style={{ color: '#6366F1' }}>📋 Réponses au questionnaire</div>
+          <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>
+            {formName || 'Questionnaire Tally'} · {fields.length} question{fields.length > 1 ? 's' : ''}
+          </div>
+        </div>
+      </div>
+      <div style={{ padding: '8px 0' }}>
+        {fields.map((f, i) => (
+          <div key={f.key || i} style={{
+            padding: '10px 20px',
+            borderBottom: i < fields.length - 1 ? '1px solid var(--bd)' : 'none',
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--t3)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 4 }}>
+              {f.label || f.title || f.key || `Question ${i + 1}`}
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--t1)', lineHeight: 1.5 }}>
+              {fmtValue(f)}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
