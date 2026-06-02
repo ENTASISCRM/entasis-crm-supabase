@@ -3234,7 +3234,7 @@ function TeamView({deals,objectifs,teamProfiles,month,profile}){
 /* ─────────────────────────────────────────────────────────────────────────────
    DEAL MODAL
 ───────────────────────────────────────────────────────────────────────────── */
-function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,onSave}){
+function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,onSave,onDelete}){
   const [deal,setDeal]=useState(initialDeal)
   const [clientSearch,setClientSearch]=useState('')
   const [clientResults,setClientResults]=useState([])
@@ -3803,7 +3803,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                       <input
                         className="form-input"
                         type="range"
-                        min="1"
+                        min="0"
                         max="4"
                         step="0.25"
                         value={Number(deal.frais_entree_pp_pct ?? deal.frais_entree_pct ?? 1)}
@@ -3815,7 +3815,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                       </div>
                     </div>
                     <div className="form-hint">
-                      Frais sur la PP mensuelle (typique 1-4 %).
+                      Frais sur la PP mensuelle (0 à 4 %, défaut 1 %).
                     </div>
                   </div>
                   <div className="form-group">
@@ -3824,7 +3824,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                       <input
                         className="form-input"
                         type="range"
-                        min="1"
+                        min="0"
                         max="4"
                         step="0.25"
                         value={Number(deal.frais_entree_pu_pct ?? deal.frais_entree_pct ?? 1)}
@@ -3836,7 +3836,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                       </div>
                     </div>
                     <div className="form-hint">
-                      Frais sur le versement unique (typique 1-4 %).
+                      Frais sur le versement unique (0 à 4 %, défaut 1 %).
                     </div>
                   </div>
                 </div>
@@ -3943,11 +3943,33 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
             </div>
             <div className="form-group"><label className="form-label">Notes</label><textarea className="form-textarea" rows={4} value={deal.notes||''} onChange={e=>set('notes',e.target.value)} placeholder="Contexte client, objections, prochaine étape, pièces manquantes…"/></div>
           </div>
-          <div className="modal-foot">
-            <button type="button" className="btn btn-outline" onClick={onClose} disabled={isSaving}>Annuler</button>
-            <button type="submit" className="btn btn-gold" disabled={isSaving}>
-              {isSaving ? 'Enregistrement…' : 'Enregistrer'}
-            </button>
+          <div className="modal-foot" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+            {/* Bouton Supprimer à gauche, visible uniquement en édition
+                (pas pour les nouveaux dossiers, rien à supprimer). */}
+            <div>
+              {!isNew && onDelete && (
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  disabled={isSaving}
+                  onClick={() => {
+                    if (window.confirm(`Supprimer définitivement le dossier de ${getClientName(deal)} ? Cette action est irréversible.`)) {
+                      onDelete(deal);
+                      onClose();
+                    }
+                  }}
+                  title="Supprimer ce dossier"
+                >
+                  🗑 Supprimer
+                </button>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" className="btn btn-outline" onClick={onClose} disabled={isSaving}>Annuler</button>
+              <button type="submit" className="btn btn-gold" disabled={isSaving}>
+                {isSaving ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -4839,6 +4861,7 @@ export default function App(){
         teamProfiles={teamProfiles}
         onClose={()=>{setModalOpen(false);setEditingDeal(null)}}
         onSave={saveDeal}
+        onDelete={deleteDeal}
       />
       <Toaster position="top-right" toastOptions={{style:{background:'rgba(255,255,255,0.95)',color:'#1D1D1F',border:'0.5px solid rgba(60,60,67,0.14)',borderRadius:16,fontSize:13,fontFamily:"'Inter Tight', -apple-system, sans-serif",boxShadow:'0 0.5px 0 rgba(255,255,255,0.95) inset, 0 8px 24px rgba(0,0,0,0.10)',backdropFilter:'blur(20px) saturate(160%)',WebkitBackdropFilter:'blur(20px) saturate(160%)',letterSpacing:'-0.005em'}}}/>
     </div>
