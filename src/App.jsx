@@ -3240,6 +3240,9 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
   const [clientResults,setClientResults]=useState([])
   const [selectedClient,setSelectedClient]=useState(null)
   const [showClientSearch,setShowClientSearch]=useState(false)
+  // Garde anti-double-clic, bouton Enregistrer disabled pendant le save.
+  // Bug Jean 01/06/2026, doublon Celine Merle créé par double-clic rapide.
+  const [isSaving,setIsSaving]=useState(false)
 
   // Multi-produits pour création de nouveaux deals
   const isNew=!initialDeal?.created_at
@@ -3390,7 +3393,17 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
 
   async function submit(e) {
     e.preventDefault();
+    // Anti-réentrance, si un save est déjà en cours, on ignore le 2e clic.
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      await submitInner(e);
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
+  async function submitInner(e) {
     if (showMultiProducts || isClientLocked) {
       // Mode multi-produits ou ajout depuis fiche client
       const validProducts = products.filter(p => p.product.trim());
@@ -3931,8 +3944,10 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
             <div className="form-group"><label className="form-label">Notes</label><textarea className="form-textarea" rows={4} value={deal.notes||''} onChange={e=>set('notes',e.target.value)} placeholder="Contexte client, objections, prochaine étape, pièces manquantes…"/></div>
           </div>
           <div className="modal-foot">
-            <button type="button" className="btn btn-outline" onClick={onClose}>Annuler</button>
-            <button type="submit" className="btn btn-gold">Enregistrer</button>
+            <button type="button" className="btn btn-outline" onClick={onClose} disabled={isSaving}>Annuler</button>
+            <button type="submit" className="btn btn-gold" disabled={isSaving}>
+              {isSaving ? 'Enregistrement…' : 'Enregistrer'}
+            </button>
           </div>
         </form>
       </div>
