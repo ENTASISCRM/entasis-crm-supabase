@@ -145,13 +145,16 @@ export default function UcsStructures({ profile, month }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id, profile?.advisor_code])
 
-  // Taux conseiller UCS — règle Louis (2026-05-25 finale) :
-  //   • Phase 1 (non rentabilisé) : taux mandataire 1,5 % — les com
-  //     calculées au taux mandataire servent à rembourser le salaire
-  //     cumulé, le conseiller ne touche rien tant qu'il n'a pas remboursé
-  //   • Phase 2 (rentabilisé) : taux CDI 0,75 % selon barème PDF
+  // Taux conseiller UCS — règle Louis (seuil MENSUEL, 2026-06-05) :
+  //   • Phase 1 (sous seuil du mois) : taux mandataire 1,5 %, les com
+  //     calculées au taux mandataire servent à rembourser le salaire du
+  //     mois, le conseiller ne touche rien tant qu'il n'a pas atteint
+  //     le seuil mensuel
+  //   • Phase 2 (seuil mensuel atteint) : taux CDI 0,75 % selon barème PDF
   //   • Mandataires / Gérants : 1,5 % toujours (rentabilisés par défaut)
   //   • Sans contrat connu : 1,5 % par défaut (cas legacy)
+  // dateRef implicite, mois courant. Le simulateur projette un UCS signé
+  // aujourd'hui en fonction du seuil mensuel en cours.
   const tauxConseillerUcs = useMemo(() => {
     try {
       if (!contratPerso) return 1.5

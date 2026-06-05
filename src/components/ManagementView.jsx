@@ -114,10 +114,15 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
           (c.profile?.advisor_code && c.profile.advisor_code === p.advisor_code)
         )
       ) || null
-      // Évalue la rentabilité depuis l'embauche (cumul valeur cabinet vs salaire cumulé)
+      // Évalue la rentabilité MENSUELLE (valeur cabinet du mois sélectionné
+      // vs salaire du mois). Décision Louis 2026-06-05, voir evaluerRentabilite.
       const dealsConseiller = contrat ? dealsDuConseiller(deals, codesContrat(contrat, p)) : []
+      const monthIdxRef = MONTHS.indexOf(month)
+      const dateRefMonth = monthIdxRef >= 0
+        ? new Date(new Date().getFullYear(), monthIdxRef, 15)
+        : new Date()
       const rentab = contrat
-        ? evaluerRentabilite(contrat, dealsConseiller, p)
+        ? evaluerRentabilite(contrat, dealsConseiller, p, dateRefMonth)
         : { rentabilise: true, brutCumule: 0, valeurCumulee: 0, ecart: 0 }
       return {
         profile: p,
@@ -548,12 +553,12 @@ function AdvisorDetailModal({ row, deals, month, rdv, onClose }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 12 }}>
                   <div>
                     <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: row.rentab.rentabilise ? '#10B981' : '#EF4444', textTransform: 'uppercase' }}>
-                      {row.rentabilise ? 'Rentabilité confirmée' : 'En cours de rentabilisation'}
+                      {row.rentab.rentabilise ? `Seuil mensuel atteint, ${month}` : `Sous seuil mensuel, ${month}`}
                     </div>
                     <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t1)', marginTop: 4 }}>
                       {row.rentab.rentabilise
-                        ? `✅ Conseiller rentable depuis son embauche`
-                        : `⏳ Manque ${fmtEur(Math.max(0, row.rentab.brutCumule - row.rentab.valeurCumulee))} avant de rentabiliser son salaire`}
+                        ? `✅ Variable débloqué ce mois (+${fmtEur(row.rentab.ecart)} au dessus du seuil)`
+                        : `⏳ Manque ${fmtEur(Math.max(0, row.rentab.brutCumule - row.rentab.valeurCumulee))} avant de débloquer le variable ce mois`}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
@@ -562,7 +567,7 @@ function AdvisorDetailModal({ row, deals, month, rdv, onClose }) {
                       <span style={{ fontSize: 14, color: 'var(--t3)', fontWeight: 500 }}> / {fmtEur(row.rentab.brutCumule)}</span>
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--t3)' }}>
-                      Valeur cabinet cumulée / Salaire à rembourser
+                      Valeur cabinet du mois / Salaire du mois
                     </div>
                   </div>
                 </div>
@@ -744,12 +749,12 @@ function RentabiliteBadge({ contrat, rentab }) {
   const pct = rentab.brutCumule > 0 ? Math.min(100, (rentab.valeurCumulee / rentab.brutCumule) * 100) : 0
   const isRentable = rentab.rentabilise
   const ecartLabel = isRentable
-    ? `✅ Rentable (+${Math.round((rentab.ecart / rentab.brutCumule) * 100) || 0}%)`
-    : `${Math.round(pct)}% du seuil`
+    ? `✅ Seuil mensuel atteint (+${Math.round((rentab.ecart / rentab.brutCumule) * 100) || 0}%)`
+    : `${Math.round(pct)}% du seuil mensuel`
   const fmt = (v) => Number(v || 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
   return (
     <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}
-      title={`Valeur cabinet cumulée : ${fmt(rentab.valeurCumulee)} / Salaire cumulé : ${fmt(rentab.brutCumule)}`}>
+      title={`Valeur cabinet du mois, ${fmt(rentab.valeurCumulee)} / Salaire du mois, ${fmt(rentab.brutCumule)}`}>
       <span style={{
         fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
         background: isRentable ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.12)',

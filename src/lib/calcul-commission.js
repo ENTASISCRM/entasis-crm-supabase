@@ -345,11 +345,12 @@ export function valeurCabinetDeal(deal, part = 1) {
 }
 
 /**
- * Calcule si un conseiller est "rentabilisé" à une date donnée.
+ * Calcule si un conseiller est "rentabilisé" sur le mois de référence.
  *
- * Règle Louis : un CDI/CDD/Alternant/Stagiaire est rentabilisé si la
- * valeur cumulée de sa production (au taux mandataire) depuis son embauche
- * dépasse le brut cumulé qu'il a touché sur la même période.
+ * Règle Louis (2026-06-05), seuil MENSUEL avec reset chaque 1er du mois.
+ * Le conseiller doit rembourser son salaire du mois en cours via la valeur
+ * cabinet qu'il génère ce mois ci. Pas de cumul depuis l'embauche (qui
+ * pénalisait injustement les conseillers anciens et brouillait la lecture).
  *
  * Les mandataires et gérants sont toujours considérés "rentabilisés"
  * (ils n'ont pas de seuil applicable).
@@ -359,10 +360,15 @@ export function valeurCabinetDeal(deal, part = 1) {
  *
  * @param {Object} contrat
  * @param {Array}  dealsHistoriques  - Deals signés où le conseiller est
- *                                     principal OU co
+ *                                     principal OU co (filtrés ensuite sur
+ *                                     le mois de référence)
  * @param {Object} profile           - Profile Supabase (pour advisor_code)
- * @param {Date}   dateRef           - Date de référence (default: maintenant)
+ * @param {Date}   dateRef           - Date de référence (default: maintenant).
+ *                                     Le mois et l'année de cette date
+ *                                     définissent la fenêtre du seuil.
  * @returns {{ rentabilise: boolean, brutCumule, valeurCumulee, ecart }}
+ *          brutCumule garde son nom pour rétrocompat mais représente
+ *          maintenant le seuil MENSUEL (salaire du mois).
  */
 export function evaluerRentabilite(contrat, dealsHistoriques = [], profile = null, dateRef = new Date()) {
   if (!contrat) {
@@ -376,18 +382,30 @@ export function evaluerRentabilite(contrat, dealsHistoriques = [], profile = nul
     return { rentabilise: true, brutCumule: 0, valeurCumulee: 0, ecart: 0 }
   }
 
-  const brut = brutCumule(contrat, dateRef)
-  // Point de départ effectif = max(date_debut, DATE_REMISE_A_ZERO_RENTABILITE)
-  // Cohérent avec brutCumule : on ne compte que la prod signée à partir
-  // de cette date.
-  const debutContrat = new Date(contrat.date_debut)
-  const remiseZero = new Date(DATE_REMISE_A_ZERO_RENTABILITE)
-  const debut = debutContrat > remiseZero ? debutContrat : remiseZero
+  // Seuil MENSUEL : salaire brut du mois courant. Reset implicite chaque
+  // 1er du mois puisqu'on filtre les deals sur le mois de référence.
+  const seuilMensuel = Number(contrat.salaire_brut_mensuel || 0)
+  const moisRef = dateRef.getMonth()
+  const anneeRef = dateRef.getFullYear()
+  // Si le contrat n'a pas encore commencé au mois de référence, on
+  // considère le conseiller non rentabilisé (et brut = 0 pour éviter
+  // d'afficher un seuil illusoire).
+  if (contrat.date_debut) {
+    const debutContrat = new Date(contrat.date_debut)
+    const debutContratMois = debutContrat.getFullYear() * 12 + debutContrat.getMonth()
+    const refMois = anneeRef * 12 + moisRef
+    if (debutContratMois > refMois) {
+      return { rentabilise: false, brutCumule: 0, valeurCumulee: 0, ecart: 0 }
+    }
+  }
+
   const codes = codesContrat(contrat, profile)
   const valeur = dealsHistoriques.reduce((sum, deal) => {
     if (!deal.date_signed) return sum
     const ds = new Date(deal.date_signed)
-    if (ds < debut || ds > dateRef) return sum
+    // Filtre mensuel strict, on ne compte que les deals signés dans le mois
+    // de référence (année + mois identiques).
+    if (ds.getFullYear() !== anneeRef || ds.getMonth() !== moisRef) return sum
     if (deal.status !== 'Signé') return sum
     const part = partDeal(deal, codes)
     if (!part) return sum
@@ -395,10 +413,10 @@ export function evaluerRentabilite(contrat, dealsHistoriques = [], profile = nul
   }, 0)
 
   return {
-    rentabilise: valeur >= brut,
-    brutCumule: brut,
-    valeurCumulee: valeur,
-    ecart: valeur - brut,                // positif si rentabilisé, négatif si pas
+    rentabilise: valeur >= seuilMensuel,
+    brutCumule: seuilMensuel,            // nom legacy, contient le seuil mensuel
+    valeurCumulee: valeur,               // valeur cabinet du mois uniquement
+    ecart: valeur - seuilMensuel,        // positif si rentabilisé ce mois, négatif sinon
   }
 }
 
@@ -503,10 +521,11 @@ export function commissionsMois(dealsMois = [], contrat, rentab, profile = null)
     }
   }
 
-  // 3. PHASE 2 : rentabilisé → seule la production AU-DESSUS du seuil
-  //    cumulé est commissionnée. Les premiers euros de valeur cabinet du
-  //    mois qui ont servi à rattraper / rembourser le salaire ne le sont
-  //    pas. Décision Louis 27/05.
+  // 3. PHASE 2 : seuil mensuel atteint → seule la production AU-DESSUS du
+  //    seuil mensuel est commissionnée. Les premiers euros de valeur
+  //    cabinet du mois qui ont servi à rembourser le salaire du mois ne le
+  //    sont pas. Décision Louis 27/05 (seuil cumulé), revue 05/06 (seuil
+  //    désormais mensuel, voir evaluerRentabilite).
   //
   // Calcul du ratio :
   //   - valeurMoisTotale = somme(deals du mois : valeur cabinet × part)

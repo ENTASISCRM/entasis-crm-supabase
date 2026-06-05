@@ -19,6 +19,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import * as contratsService from '../services/conseillerContrats'
 import { LIBELLE_TYPE_CONTRAT } from '../lib/bareme-entasis'
+import { MONTHS } from '../lib/ui-shared'
 import {
   commissionsMois,
   evaluerRentabilite,
@@ -26,6 +27,16 @@ import {
   dealsDuConseiller,
   codesContrat,
 } from '../lib/calcul-commission'
+
+// Construit une Date au milieu du mois sélectionné (année courante).
+// Sert de dateRef pour evaluerRentabilite qui calcule un seuil MENSUEL,
+// la dateRef doit donc être positionnée dans le bon mois.
+function monthStrToDate(monthStr) {
+  if (!monthStr) return new Date()
+  const idx = MONTHS.indexOf(monthStr)
+  if (idx < 0) return new Date()
+  return new Date(new Date().getFullYear(), idx, 15)
+}
 
 const fmtEur = (v) => Number(v || 0).toLocaleString('fr-FR', {
   style: 'currency', currency: 'EUR', maximumFractionDigits: 0,
@@ -155,9 +166,11 @@ function VueConseiller({ contrat, profile, deals, month, isManager }) {
     [dealsConseiller, month]
   )
 
+  // dateRef sur le mois sélectionné, le seuil est désormais mensuel
+  // (décision Louis 2026-06-05). Voir evaluerRentabilite.
   const rentab = useMemo(
-    () => evaluerRentabilite(contrat, dealsConseiller, profile),
-    [contrat, dealsConseiller, profile]
+    () => evaluerRentabilite(contrat, dealsConseiller, profile, monthStrToDate(month)),
+    [contrat, dealsConseiller, profile, month]
   )
 
   const comm = useMemo(
@@ -222,12 +235,14 @@ function VueConseiller({ contrat, profile, deals, month, isManager }) {
         )}
       </div>
 
-      {/* Seuil de déclenchement (toujours visible si salarié) — affiche la
-          progression cumulée et reste visible en phase 2 pour suivi continu */}
+      {/* Seuil de déclenchement MENSUEL (toujours visible si salarié). Reset
+          chaque 1er du mois, le conseiller doit rembourser son salaire du
+          mois en cours via la valeur cabinet générée ce mois (décision Louis
+          2026-06-05). */}
       {salaireFixe > 0 && (
         <>
           <PalierCard
-            titre="Seuil de déclenchement du variable"
+            titre={`Seuil mensuel, ${month}`}
             realise={rentab.valeurCumulee}
             cible={rentab.brutCumule}
             pct={rentab.brutCumule > 0
@@ -237,19 +252,19 @@ function VueConseiller({ contrat, profile, deals, month, isManager }) {
             atteint={rentab.rentabilise}
             variable={comm.total}
             hint={rentab.rentabilise
-              ? `✅ Seuil atteint — tu touches ${fmtEur(comm.total)} de variable ce mois sur la production excédentaire. Tous les produits comptent : PP, PU, SCPI, UCS, MH, Girardin, PE, Prévoyance, Mutuelle.`
-              : `Plus que ${fmtEur(Math.max(0, rentab.brutCumule - rentab.valeurCumulee))} avant le déclenchement de ton variable. Tous les produits comptent dans ce seuil : PP, PU, SCPI, UCS, MH, Girardin, PE, Prévoyance, Mutuelle.`}
+              ? `✅ Seuil du mois atteint, tu touches ${fmtEur(comm.total)} de variable sur la production excédentaire. Tous les produits comptent, PP, PU, SCPI, UCS, MH, Girardin, PE, Prévoyance, Mutuelle.`
+              : `Plus que ${fmtEur(Math.max(0, rentab.brutCumule - rentab.valeurCumulee))} de valeur cabinet à générer ce mois pour débloquer ton variable. Tous les produits comptent, PP, PU, SCPI, UCS, MH, Girardin, PE, Prévoyance, Mutuelle.`}
           />
-          {/* Bloc pédagogique : explique le mécanisme mandataire → CDI ÷ 2 */}
+          {/* Bloc pédagogique, mécanisme mandataire → CDI ÷ 2 */}
           <div className="card card-p mb-24" style={{ background: 'var(--gold-subtle, #FBF6EC)', border: '1px solid var(--gold-line, rgba(201,169,97,0.30))', padding: '14px 18px' }}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
               <div style={{ fontSize: 20, lineHeight: 1, marginTop: 2 }}>💡</div>
               <div style={{ fontSize: 13, color: 'var(--t2)', lineHeight: 1.55 }}>
                 <strong style={{ color: 'var(--t1)' }}>Comment ça marche :</strong>{' '}
-                Tant que tu n'as pas remboursé ton salaire, tes dossiers comptent au{' '}
-                <strong style={{ color: 'var(--t1)' }}>taux mandataire</strong> (= taux plein) pour évaluer ce qui rembourse ton salaire.
-                Une fois le seuil atteint, ton variable est calculé sur la production excédentaire au{' '}
-                <strong style={{ color: 'var(--t1)' }}>taux CDI = mandataire ÷ 2</strong>.
+                Chaque mois, le compteur repart à zéro. Tant que tu n'as pas remboursé ton salaire du mois, tes dossiers comptent au{' '}
+                <strong style={{ color: 'var(--t1)' }}>taux mandataire</strong> (taux plein) pour évaluer ce qui rembourse ton salaire.
+                Une fois le seuil du mois atteint, ton variable est calculé sur la production excédentaire au{' '}
+                <strong style={{ color: 'var(--t1)' }}>taux CDI (mandataire ÷ 2)</strong>.
               </div>
             </div>
           </div>
@@ -448,7 +463,7 @@ function VueManager({ contrats, deals, month }) {
         const codes = codesContrat(c, profileLie)
         const dealsConseiller = dealsDuConseiller(deals, codes)
         const dealsMois = dealsDuMois(dealsConseiller, month)
-        const rentab = evaluerRentabilite(c, dealsConseiller, profileLie)
+        const rentab = evaluerRentabilite(c, dealsConseiller, profileLie, monthStrToDate(month))
         const comm = commissionsMois(dealsMois, c, rentab, profileLie)
         return {
           contrat: c,
