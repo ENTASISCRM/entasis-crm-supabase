@@ -5,6 +5,7 @@ import {
   isPipeline,
   dealMatchesAdvisor,
   sumAnnualPp,
+  sumAnnualPpMutuelle,
   sumPu,
   advisorMetrics,
   monthFromDate,
@@ -71,6 +72,23 @@ describe('sumAnnualPp', () => {
   it('renvoie 0 pour liste vide', () => {
     expect(sumAnnualPp([], 'LH')).toBe(0);
   });
+
+  // Séparation PP financière / Mutuelle (décision Louis 2026-06-08)
+  it('exclut les deals Mutuelle Santé du compteur PP financière', () => {
+    const deals = [
+      { pp_m: 100, product: 'PER Individuel' },
+      { pp_m: 50, product: 'Mutuelle Santé' },
+    ];
+    expect(sumAnnualPp(deals)).toBe(100 * 12);
+  });
+
+  it('exclut les deals Prévoyance TNS du compteur PP financière', () => {
+    const deals = [
+      { pp_m: 100, product: 'Assurance Vie Française' },
+      { pp_m: 80, product: 'Prévoyance TNS' },
+    ];
+    expect(sumAnnualPp(deals)).toBe(100 * 12);
+  });
 });
 
 describe('sumPu', () => {
@@ -79,6 +97,25 @@ describe('sumPu', () => {
   });
   it('50/50 si co-conseil', () => {
     expect(sumPu([{ pu: 1000, advisor_code: 'LH', co_advisor_code: 'JD' }], 'LH')).toBe(500);
+  });
+});
+
+describe('sumAnnualPpMutuelle', () => {
+  it('ne somme que les deals Mutuelle Santé et Prévoyance TNS', () => {
+    const deals = [
+      { pp_m: 100, product: 'PER Individuel' },       // exclu (financier)
+      { pp_m: 50, product: 'Mutuelle Santé' },        // inclus
+      { pp_m: 80, product: 'Prévoyance TNS' },        // inclus
+      { pp_m: 30, product: 'SCPI' },                  // exclu
+    ];
+    expect(sumAnnualPpMutuelle(deals)).toBe((50 + 80) * 12);
+  });
+
+  it('applique la règle 50/50 en co-conseil', () => {
+    const deals = [
+      { pp_m: 100, product: 'Mutuelle Santé', advisor_code: 'LH', co_advisor_code: 'JD' },
+    ];
+    expect(sumAnnualPpMutuelle(deals, 'LH')).toBe(100 * 12 * 0.5);
   });
 });
 

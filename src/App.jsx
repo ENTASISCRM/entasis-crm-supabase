@@ -32,6 +32,7 @@ import {
   isPipeline,
   dealMatchesAdvisor,
   sumAnnualPp,
+  sumAnnualPpMutuelle,
   sumPu,
   advisorMetrics,
   monthFromDate,
@@ -1614,8 +1615,10 @@ function AreaChart({actual,projected,target,title,subtitle}){
    ANNUAL BAR CHART — 12 mois
 ───────────────────────────────────────────────────────────────────────────── */
 function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle,metric='pp'}){
-  // metric, pp pour la PP annualisée seule, pu pour les versements uniques,
-  // total pour la consolidation PP+PU (demande Louis 2026-06-08, vue Direction).
+  // metric, pp pour la PP financière (PER, AV, SCPI, PS, PE), pu pour les
+  // versements uniques, mutuelle pour la PP Mutuelle Santé + Prévoyance TNS
+  // (assurance personnes), total pour la consolidation PP+PU+Mutuelle.
+  // Décision Louis 2026-06-08, séparation PP patrimoine vs assurance.
   const data=MONTHS.map(m=>{
     const scope=advisorCode?deals.filter(d=>d.month===m&&dealMatchesAdvisor(d,advisorCode)):deals.filter(d=>d.month===m)
     const signed=scope.filter(d=>d.status==='Signé')
@@ -1624,9 +1627,13 @@ function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle,me
     if(metric==='pu'){
       signedVal=sumPu(signed);pipelineVal=sumPu(pipeline)
       target=Number(objectifs?.[m]?.pu_target||0)
+    }else if(metric==='mutuelle'){
+      signedVal=sumAnnualPpMutuelle(signed);pipelineVal=sumAnnualPpMutuelle(pipeline)
+      // Pas d'objectif dédié mutuelle pour l'instant, on l'omet (target=0).
+      target=0
     }else if(metric==='total'){
-      signedVal=sumAnnualPp(signed)+sumPu(signed)
-      pipelineVal=sumAnnualPp(pipeline)+sumPu(pipeline)
+      signedVal=sumAnnualPp(signed)+sumPu(signed)+sumAnnualPpMutuelle(signed)
+      pipelineVal=sumAnnualPp(pipeline)+sumPu(pipeline)+sumAnnualPpMutuelle(pipeline)
       target=Number(objectifs?.[m]?.pp_target||0)+Number(objectifs?.[m]?.pu_target||0)
     }else{
       signedVal=sumAnnualPp(signed);pipelineVal=sumAnnualPp(pipeline)
@@ -1634,7 +1641,7 @@ function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle,me
     }
     return {month:m,ppSigned:signedVal,ppPipeline:pipelineVal,ppTotal:signedVal+pipelineVal,target}
   })
-  const metricLabel=metric==='pu'?'PU':metric==='total'?'Total (PP+PU)':'PP'
+  const metricLabel=metric==='pu'?'PU':metric==='mutuelle'?'Mutuelle/Prév':metric==='total'?'Total':'PP'
 
   const maxVal=Math.max(...data.map(d=>Math.max(d.ppTotal,d.target)),1)*1.12
   const W=680,H=180,PB=36,PT=12,PL=4,PR=4
@@ -1856,29 +1863,48 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
    MANAGER DASHBOARD
 ───────────────────────────────────────────────────────────────────────────── */
 function ManagerDashboard({deals,objectifs,month,teamProfiles}){
-  // Switch metric pour la vue annuelle, PP par défaut, PU et Total dispo via
-  // mini tabs (demande Louis 2026-06-08, vue Direction).
+  // Switch metric pour la vue annuelle, PP financiere par défaut, PU,
+  // Mutuelle/Prevoyance et Total dispo via mini tabs (demande Louis
+  // 2026-06-08, vue Direction).
   const [annualMetric,setAnnualMetric]=useState('pp')
   const monthDeals=deals.filter(d=>d.month===month)
   const signed=monthDeals.filter(d=>d.status==='Signé'),pipeline=monthDeals.filter(d=>isPipeline(d.status))
-  // Total cabinet : compter chaque deal une seule fois (pas de 50/50 ici)
-  // car on veut le CA total du cabinet, pas par conseiller
-  const ppS = signed.reduce((s, d) => s + annualize(d.pp_m), 0)
+  // Total cabinet, on compte chaque deal une seule fois (pas de 50/50 ici)
+  // car on veut le CA total du cabinet, pas par conseiller. Separation PP
+  // financiere (epargne, SCPI, PS, PE) vs PP Mutuelle/Prevoyance, decision
+  // Louis 2026-06-08 (deux metiers distincts, agreges separement).
+  const isMut = d => {
+    const p = (d.product || d.produit || '').trim()
+    return p === 'Mutuelle Santé' || p === 'Mutuelle Sante' || p === 'Prévoyance TNS' || p === 'Prevoyance TNS'
+  }
+  const signedFin = signed.filter(d => !isMut(d))
+  const pipelineFin = pipeline.filter(d => !isMut(d))
+  const signedMut = signed.filter(isMut)
+  const pipelineMut = pipeline.filter(isMut)
+  const ppS = signedFin.reduce((s, d) => s + annualize(d.pp_m), 0)
   const puS = signed.reduce((s, d) => s + Number(d.pu || 0), 0)
-  const ppP = pipeline.reduce((s, d) => s + annualize(d.pp_m), 0)
+  const ppP = pipelineFin.reduce((s, d) => s + annualize(d.pp_m), 0)
   const puP = pipeline.reduce((s, d) => s + Number(d.pu || 0), 0)
+  const ppMutS = signedMut.reduce((s, d) => s + annualize(d.pp_m), 0)
+  const ppMutP = pipelineMut.reduce((s, d) => s + annualize(d.pp_m), 0)
   const targets=objectifs[month]||{pp_target:0,pu_target:0}
   const ppTarget=Number(targets.pp_target||0),puTarget=Number(targets.pu_target||0)
   const activeAdvisors=teamProfiles.filter(p=>p.is_active&&p.advisor_code)
   const prevIdx=MONTHS.indexOf(month)-1,prevMonth=prevIdx>=0?MONTHS[prevIdx]:null
   const prevDeals=prevMonth?deals.filter(d=>d.month===prevMonth):[]
   const prevSigned=prevDeals.filter(d=>d.status==='Signé'),prevPipeline=prevDeals.filter(d=>isPipeline(d.status))
-  const prevPpS = prevSigned.reduce((s, d) => s + annualize(d.pp_m), 0)
+  // Même filtre financier/mutuelle pour le mois precedent (delta coherent).
+  const prevSignedFin = prevSigned.filter(d => !isMut(d))
+  const prevPipelineFin = prevPipeline.filter(d => !isMut(d))
+  const prevSignedMut = prevSigned.filter(isMut)
+  const prevPpS = prevSignedFin.reduce((s, d) => s + annualize(d.pp_m), 0)
   const prevPuS = prevSigned.reduce((s, d) => s + Number(d.pu || 0), 0)
-  const prevPpP = prevPipeline.reduce((s, d) => s + annualize(d.pp_m), 0)
+  const prevPpP = prevPipelineFin.reduce((s, d) => s + annualize(d.pp_m), 0)
+  const prevPpMutS = prevSignedMut.reduce((s, d) => s + annualize(d.pp_m), 0)
   const dPpS={raw:ppS-prevPpS,label:euro(Math.abs(ppS-prevPpS))}
   const dPuS={raw:puS-prevPuS,label:euro(Math.abs(puS-prevPuS))}
   const dPpProj={raw:(ppS+ppP)-(prevPpS+prevPpP),label:euro(Math.abs((ppS+ppP)-(prevPpS+prevPpP)))}
+  const dPpMutS={raw:ppMutS-prevPpMutS,label:euro(Math.abs(ppMutS-prevPpMutS))}
 
   const advisorRows=useMemo(()=>activeAdvisors.map(p=>{
     const m=advisorMetrics(deals,month,p.advisor_code)
@@ -1893,10 +1919,11 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles}){
     <div>
       <div className="section-header"><div><div className="section-kicker">Vue direction · {month}</div><div className="section-title">Tableau de bord cabinet</div><div className="section-sub">{monthDeals.length} dossiers · {signed.length} signés · {pipeline.length} en pipeline{prevMonth&&<span style={{color:'var(--t3)'}}> · vs {prevMonth}</span>}</div></div></div>
       <div className="kpi-grid mb-24">
-        <KpiCard label="PP signée cabinet" value={euro(ppS)} hint="Réalisé consolidé" accent="gold" progressValue={pct(ppS,ppTarget)} delta={prevMonth?dPpS:null}/>
-        <KpiCard label="PP prévisionnelle" value={euro(ppS+ppP)} hint="Atterrissage projeté" accent="amber" delta={prevMonth?dPpProj:null}/>
+        <KpiCard label="PP financière signée" value={euro(ppS)} hint="PER, AV, SCPI, PS, PE" accent="gold" progressValue={pct(ppS,ppTarget)} delta={prevMonth?dPpS:null}/>
+        <KpiCard label="PP financière prévisionnelle" value={euro(ppS+ppP)} hint="Atterrissage projeté" accent="amber" delta={prevMonth?dPpProj:null}/>
         <KpiCard label="PU signée" value={euro(puS)} hint="Versements uniques" accent="green" progressValue={pct(puS,puTarget)} delta={prevMonth?dPuS:null}/>
         <KpiCard label="PU prévisionnelle" value={euro(puS+puP)} hint="Atterrissage projeté" accent="blue"/>
+        <KpiCard label="PP Mutuelle/Prévoyance" value={euro(ppMutS)} hint="Mutuelle Santé + Prévoyance TNS" accent="gold" delta={prevMonth?dPpMutS:null}/>
       </div>
       <div className="grid-2 gap-16 mb-24">
         <AreaChart title="PP cabinet annualisée" subtitle="Réalisé + pipeline → objectif" actual={ppS} projected={ppS+ppP} target={ppTarget}/>
@@ -1907,10 +1934,10 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles}){
           <div>
             <div className="section-kicker">Vue annuelle</div>
             <div className="section-title">Saisonnalité cabinet — 12 mois</div>
-            <div className="section-sub">{annualMetric==='pu'?'PU signée':annualMetric==='total'?'Total (PP+PU) signé':'PP annualisée signée'} + pipeline · ligne objectif cabinet · mois courant mis en valeur</div>
+            <div className="section-sub">{annualMetric==='pu'?'PU signée':annualMetric==='mutuelle'?'PP Mutuelle/Prévoyance signée':annualMetric==='total'?'Total (PP+PU+Mutuelle) signé':'PP financière signée'} + pipeline · ligne objectif cabinet · mois courant mis en valeur</div>
           </div>
           <div style={{display:'inline-flex',background:'var(--bg-soft, rgba(0,0,0,0.04))',borderRadius:8,padding:3,gap:2}}>
-            {[{k:'pp',l:'PP'},{k:'pu',l:'PU'},{k:'total',l:'Total'}].map(opt=>(
+            {[{k:'pp',l:'PP'},{k:'pu',l:'PU'},{k:'mutuelle',l:'Mutuelle'},{k:'total',l:'Total'}].map(opt=>(
               <button key={opt.k} onClick={()=>setAnnualMetric(opt.k)}
                 style={{
                   padding:'6px 14px',borderRadius:6,border:'none',cursor:'pointer',
@@ -1925,18 +1952,19 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles}){
         <AnnualChart
           deals={deals} objectifs={objectifs} currentMonth={month} advisorCode={null}
           metric={annualMetric}
-          title={annualMetric==='pu'?'PU cabinet — vue annuelle':annualMetric==='total'?'Total cabinet (PP+PU) — vue annuelle':'PP cabinet — vue annuelle'}
+          title={annualMetric==='pu'?'PU cabinet — vue annuelle':annualMetric==='mutuelle'?'PP Mutuelle/Prévoyance cabinet — vue annuelle':annualMetric==='total'?'Total cabinet (PP financière + PU + Mutuelle) — vue annuelle':'PP financière cabinet — vue annuelle'}
           subtitle="Tous conseillers confondus · barres : signée (plein) + pipeline (transparent)"/>
       </div>
       <div className="mb-24">
         <div className="section-header"><div><div className="section-kicker">Performance équipe</div><div className="section-title">Classement conseillers</div></div></div>
         <div className="table-wrap">
-          <div className="team-row header"><span>Conseiller</span><span>PP signée</span><span>PU signée</span><span>PP projetée</span><span>PU projetée</span><span>Dossiers</span><span>Taux sign.</span></div>
+          <div className="team-row header"><span>Conseiller</span><span>PP fin. signée</span><span>PU signée</span><span>PP Mut.</span><span>PP projetée</span><span>PU projetée</span><span>Dossiers</span><span>Taux sign.</span></div>
           {advisorRows.map((row,i)=>(
             <div key={row.id} className="team-row">
               <div><div className="team-advisor-name">{i===0&&<span style={{color:'var(--gold)',marginRight:6}}>★</span>}{row.full_name||row.advisor_code}</div><div className="team-advisor-code">{row.advisor_code}</div></div>
               <div className="team-bar-wrap"><div className="team-bar-track"><div className="team-bar-fill signed" style={{width:`${pct(row.ppSigned,topPp)}%`}}/></div><span className="team-amount">{euro(row.ppSigned)}</span></div>
               <div className="team-bar-wrap"><div className="team-bar-track"><div className="team-bar-fill signed" style={{width:`${pct(row.puSigned,topPu)}%`}}/></div><span className="team-amount">{euro(row.puSigned)}</span></div>
+              <div className="team-amount" title="PP Mutuelle Sante + Prevoyance TNS">{euro(row.ppMutuelleSigned||0)}</div>
               <div className="team-bar-wrap"><div className="team-bar-track"><div className="team-bar-fill" style={{width:`${pct(row.ppProjected,topPp)}%`}}/></div><span className="team-amount">{euro(row.ppProjected)}</span></div>
               <div className="team-bar-wrap"><div className="team-bar-track"><div className="team-bar-fill" style={{width:`${pct(row.puProjected,topPu)}%`}}/></div><span className="team-amount">{euro(row.puProjected)}</span></div>
               <div className="team-amount" style={{textAlign:'center'}}>{row.total}</div>

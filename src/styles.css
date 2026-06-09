@@ -987,7 +987,8 @@ a { color: inherit; text-decoration: none; }
 .team-table { width: 100%; }
 .team-row {
   display: grid;
-  grid-template-columns: 160px 1fr 1fr 1fr 1fr 70px 70px;
+  /* 8 colonnes depuis 2026-06-08 (séparation PP financière vs Mutuelle, ajout colonne PP Mut.). */
+  grid-template-columns: 160px 1fr 1fr 90px 1fr 1fr 70px 70px;
   align-items: center;
   gap: 10px;
   padding: 14px 18px;
