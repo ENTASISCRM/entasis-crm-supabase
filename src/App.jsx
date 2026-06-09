@@ -1613,15 +1613,28 @@ function AreaChart({actual,projected,target,title,subtitle}){
 /* ─────────────────────────────────────────────────────────────────────────────
    ANNUAL BAR CHART — 12 mois
 ───────────────────────────────────────────────────────────────────────────── */
-function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle}){
+function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle,metric='pp'}){
+  // metric, pp pour la PP annualisée seule, pu pour les versements uniques,
+  // total pour la consolidation PP+PU (demande Louis 2026-06-08, vue Direction).
   const data=MONTHS.map(m=>{
     const scope=advisorCode?deals.filter(d=>d.month===m&&dealMatchesAdvisor(d,advisorCode)):deals.filter(d=>d.month===m)
     const signed=scope.filter(d=>d.status==='Signé')
     const pipeline=scope.filter(d=>isPipeline(d.status))
-    const ppS=sumAnnualPp(signed),ppP=sumAnnualPp(pipeline)
-    const target=Number(objectifs?.[m]?.pp_target||0)
-    return {month:m,ppSigned:ppS,ppPipeline:ppP,ppTotal:ppS+ppP,target}
+    let signedVal,pipelineVal,target
+    if(metric==='pu'){
+      signedVal=sumPu(signed);pipelineVal=sumPu(pipeline)
+      target=Number(objectifs?.[m]?.pu_target||0)
+    }else if(metric==='total'){
+      signedVal=sumAnnualPp(signed)+sumPu(signed)
+      pipelineVal=sumAnnualPp(pipeline)+sumPu(pipeline)
+      target=Number(objectifs?.[m]?.pp_target||0)+Number(objectifs?.[m]?.pu_target||0)
+    }else{
+      signedVal=sumAnnualPp(signed);pipelineVal=sumAnnualPp(pipeline)
+      target=Number(objectifs?.[m]?.pp_target||0)
+    }
+    return {month:m,ppSigned:signedVal,ppPipeline:pipelineVal,ppTotal:signedVal+pipelineVal,target}
   })
+  const metricLabel=metric==='pu'?'PU':metric==='total'?'Total (PP+PU)':'PP'
 
   const maxVal=Math.max(...data.map(d=>Math.max(d.ppTotal,d.target)),1)*1.12
   const W=680,H=180,PB=36,PT=12,PL=4,PR=4
@@ -1677,8 +1690,8 @@ function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle}){
           })}
         </svg>
         <div className="chart-legend">
-          <div className="chart-legend-item"><div className="legend-dot" style={{background:'var(--gold)'}}/>PP signée : {euro(data.reduce((s,d)=>s+d.ppSigned,0))}</div>
-          <div className="chart-legend-item"><div className="legend-dot" style={{background:'rgba(192,155,90,0.35)',border:'1px solid var(--gold)'}}/>PP pipeline : {euro(data.reduce((s,d)=>s+d.ppPipeline,0))}</div>
+          <div className="chart-legend-item"><div className="legend-dot" style={{background:'var(--gold)'}}/>{metricLabel} signée : {euro(data.reduce((s,d)=>s+d.ppSigned,0))}</div>
+          <div className="chart-legend-item"><div className="legend-dot" style={{background:'rgba(192,155,90,0.35)',border:'1px solid var(--gold)'}}/>{metricLabel} pipeline : {euro(data.reduce((s,d)=>s+d.ppPipeline,0))}</div>
           <div className="chart-legend-item"><div className="legend-dot" style={{background:'var(--gold)',opacity:0.4}}/>Ligne objectif cabinet</div>
           <div className="chart-legend-item" style={{marginLeft:'auto'}}><div className="legend-dot" style={{background:'var(--gold)',outline:'1.5px solid var(--gold)',outlineOffset:1}}/>Mois en cours : <strong style={{color:'var(--t1)'}}>{currentMonth}</strong></div>
         </div>
@@ -1843,6 +1856,9 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
    MANAGER DASHBOARD
 ───────────────────────────────────────────────────────────────────────────── */
 function ManagerDashboard({deals,objectifs,month,teamProfiles}){
+  // Switch metric pour la vue annuelle, PP par défaut, PU et Total dispo via
+  // mini tabs (demande Louis 2026-06-08, vue Direction).
+  const [annualMetric,setAnnualMetric]=useState('pp')
   const monthDeals=deals.filter(d=>d.month===month)
   const signed=monthDeals.filter(d=>d.status==='Signé'),pipeline=monthDeals.filter(d=>isPipeline(d.status))
   // Total cabinet : compter chaque deal une seule fois (pas de 50/50 ici)
@@ -1887,8 +1903,30 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles}){
         <AreaChart title="PU cabinet" subtitle="Versements uniques consolidés" actual={puS} projected={puS+puP} target={puTarget}/>
       </div>
       <div className="mb-24">
-        <div className="section-header"><div><div className="section-kicker">Vue annuelle</div><div className="section-title">Saisonnalité cabinet — 12 mois</div><div className="section-sub">PP annualisée signée + pipeline · ligne objectif cabinet · mois courant mis en valeur</div></div></div>
-        <AnnualChart deals={deals} objectifs={objectifs} currentMonth={month} advisorCode={null} title="PP cabinet — vue annuelle" subtitle="Tous conseillers confondus · barres : signée (plein) + pipeline (transparent)"/>
+        <div className="section-header" style={{display:'flex',alignItems:'flex-end',justifyContent:'space-between',gap:16}}>
+          <div>
+            <div className="section-kicker">Vue annuelle</div>
+            <div className="section-title">Saisonnalité cabinet — 12 mois</div>
+            <div className="section-sub">{annualMetric==='pu'?'PU signée':annualMetric==='total'?'Total (PP+PU) signé':'PP annualisée signée'} + pipeline · ligne objectif cabinet · mois courant mis en valeur</div>
+          </div>
+          <div style={{display:'inline-flex',background:'var(--bg-soft, rgba(0,0,0,0.04))',borderRadius:8,padding:3,gap:2}}>
+            {[{k:'pp',l:'PP'},{k:'pu',l:'PU'},{k:'total',l:'Total'}].map(opt=>(
+              <button key={opt.k} onClick={()=>setAnnualMetric(opt.k)}
+                style={{
+                  padding:'6px 14px',borderRadius:6,border:'none',cursor:'pointer',
+                  fontSize:12,fontWeight:600,letterSpacing:'0.02em',
+                  background:annualMetric===opt.k?'var(--gold)':'transparent',
+                  color:annualMetric===opt.k?'#fff':'var(--t2)',
+                  transition:'background 0.15s, color 0.15s',
+                }}>{opt.l}</button>
+            ))}
+          </div>
+        </div>
+        <AnnualChart
+          deals={deals} objectifs={objectifs} currentMonth={month} advisorCode={null}
+          metric={annualMetric}
+          title={annualMetric==='pu'?'PU cabinet — vue annuelle':annualMetric==='total'?'Total cabinet (PP+PU) — vue annuelle':'PP cabinet — vue annuelle'}
+          subtitle="Tous conseillers confondus · barres : signée (plein) + pipeline (transparent)"/>
       </div>
       <div className="mb-24">
         <div className="section-header"><div><div className="section-kicker">Performance équipe</div><div className="section-title">Classement conseillers</div></div></div>
