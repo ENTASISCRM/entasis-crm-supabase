@@ -19,6 +19,7 @@ import {
   dealMatchesAdvisor,
   isPipeline,
 } from '../lib/metrics'
+import { supabase } from '../lib/supabase'
 import * as contratsService from '../services/conseillerContrats'
 import * as profilesService from '../services/profiles'
 import { evaluerRentabilite, codesContrat, dealsDuConseiller } from '../lib/calcul-commission'
@@ -280,6 +281,9 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
 
       {/* ─── MODULE RECYCLAGE REFUSÉS ────────────────────────────────── */}
       <RecyclageRefusesSection />
+
+      {/* ─── JOURNAL DE CONNEXIONS ───────────────────────────────────── */}
+      <LoginAuditSection />
 
       {/* ─── Top performeurs + À booster ───────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 16, marginBottom: 24 }}>
@@ -1361,6 +1365,166 @@ function RdvHeatmapSection() {
 // il y a >60 jours (peut-être un "pas maintenant" et pas un "jamais").
 // Demandé par Louis 28/05/2026 (#4 dans la liste des 7 améliorations).
 // ─────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────
+// JOURNAL DE CONNEXIONS (CRM)
+// Lit login_audit via la RPC admin_login_audit (reservee aux managers).
+// Affiche une synthese par personne (derniere connexion, nb, IPs distinctes)
+// et un detail chronologique. Securite et audits, ou se connectent les
+// utilisateurs du CRM.
+// ─────────────────────────────────────────────────────────────────────────
+function shortUserAgentCrm(ua) {
+  if (!ua) return '—'
+  let browser = 'Navigateur'
+  if (/Edg\//.test(ua)) browser = 'Edge'
+  else if (/OPR\/|Opera/.test(ua)) browser = 'Opera'
+  else if (/Chrome\//.test(ua)) browser = 'Chrome'
+  else if (/Firefox\//.test(ua)) browser = 'Firefox'
+  else if (/Safari\//.test(ua)) browser = 'Safari'
+  let os = ''
+  if (/iPhone|iPad|iPod/.test(ua)) os = 'iOS'
+  else if (/Android/.test(ua)) os = 'Android'
+  else if (/Mac OS X|Macintosh/.test(ua)) os = 'Mac'
+  else if (/Windows/.test(ua)) os = 'Windows'
+  else if (/Linux/.test(ua)) os = 'Linux'
+  return os ? `${browser} · ${os}` : browser
+}
+
+function LoginAuditSection() {
+  const [logs, setLogs] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [open, setOpen] = useState(false)
+  const [view, setView] = useState('people')
+  const [search, setSearch] = useState('')
+
+  async function refresh() {
+    setLoading(true)
+    setError(null)
+    try {
+      const { data, error } = await supabase.rpc('admin_login_audit', { p_email: null, p_limit: 500 })
+      if (error) throw error
+      setLogs(data || [])
+    } catch (e) {
+      setError(e.message || 'Erreur de chargement')
+    } finally {
+      setLoading(false)
+    }
+  }
+  useEffect(() => { if (open && logs.length === 0) refresh() }, [open])
+
+  const fmtDate = (iso) => new Date(iso).toLocaleString('fr-FR', {
+    day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit',
+  })
+
+  const q = search.trim().toLowerCase()
+  const filtered = useMemo(() => logs.filter(l =>
+    !q || (l.email || '').toLowerCase().includes(q) || (l.ip || '').toLowerCase().includes(q)
+  ), [logs, q])
+
+  const people = useMemo(() => {
+    const byEmail = new Map()
+    for (const l of filtered) {
+      const key = (l.email || 'inconnu').toLowerCase()
+      let p = byEmail.get(key)
+      if (!p) { p = { email: l.email || 'inconnu', count: 0, ips: new Set(), last: l.created_at }; byEmail.set(key, p) }
+      p.count += 1
+      if (l.ip) p.ips.add(l.ip)
+      if (new Date(l.created_at).getTime() > new Date(p.last).getTime()) p.last = l.created_at
+    }
+    return Array.from(byEmail.values()).sort((a, b) => new Date(b.last).getTime() - new Date(a.last).getTime())
+  }, [filtered])
+
+  return (
+    <div className="card" style={{ marginBottom: 24 }}>
+      <div style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+        onClick={() => setOpen(o => !o)}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: 'var(--t3)', textTransform: 'uppercase' }}>Sécurité</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--t1)', marginTop: 2 }}>Journal de connexions</div>
+          <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>Qui se connecte au CRM, quand, depuis quelle IP. Pour la sécurité et les audits.</div>
+        </div>
+        <span style={{ fontSize: 13, color: 'var(--t3)' }}>{open ? '▲ Masquer' : '▼ Afficher'}</span>
+      </div>
+
+      {open && (
+        <div style={{ padding: '0 20px 18px' }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
+            <div style={{ display: 'inline-flex', background: 'rgba(0,0,0,0.05)', borderRadius: 8, padding: 3 }}>
+              {[{ k: 'people', l: 'Par personne' }, { k: 'detail', l: 'Détail' }].map(opt => (
+                <button key={opt.k} onClick={() => setView(opt.k)}
+                  style={{ padding: '5px 12px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                    background: view === opt.k ? 'var(--gold)' : 'transparent', color: view === opt.k ? '#fff' : 'var(--t2)' }}>{opt.l}</button>
+              ))}
+            </div>
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Filtrer par email ou IP…"
+              style={{ flex: 1, minWidth: 180, padding: '7px 10px', fontSize: 13, border: '1px solid var(--bd)', borderRadius: 8 }} />
+            <button onClick={refresh} style={{ padding: '7px 12px', fontSize: 12, fontWeight: 600, border: '1px solid var(--bd)', borderRadius: 8, background: '#fff', cursor: 'pointer' }}>↻ Rafraîchir</button>
+          </div>
+
+          {loading ? (
+            <div style={{ textAlign: 'center', color: 'var(--t3)', fontSize: 13, padding: 24 }}>Chargement…</div>
+          ) : error ? (
+            <div style={{ textAlign: 'center', color: '#EF4444', fontSize: 13, padding: 24 }}>{error}</div>
+          ) : filtered.length === 0 ? (
+            <div style={{ textAlign: 'center', color: 'var(--t3)', fontSize: 13, padding: 24 }}>Aucune connexion enregistrée pour l'instant. Les connexions apparaîtront ici dès la prochaine ouverture de session.</div>
+          ) : view === 'people' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {people.map(p => {
+                const ips = Array.from(p.ips)
+                return (
+                  <div key={p.email} style={{ border: '1px solid var(--bd)', borderRadius: 10, padding: '10px 14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t1)' }}>{p.email}</div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 12, color: 'var(--t2)', fontWeight: 500 }}>Dernière, {fmtDate(p.last)}</div>
+                        <div style={{ fontSize: 11, color: 'var(--t3)' }}>{p.count} connexion{p.count > 1 ? 's' : ''}</div>
+                      </div>
+                    </div>
+                    {ips.length > 0 && (
+                      <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {ips.slice(0, 10).map(ip => (
+                          <span key={ip} style={{ fontSize: 11, fontFamily: 'monospace', padding: '2px 7px', background: 'rgba(0,0,0,0.05)', color: 'var(--t2)', borderRadius: 6 }}>{ip}</span>
+                        ))}
+                        {ips.length > 10 && <span style={{ fontSize: 11, color: 'var(--t3)' }}>+{ips.length - 10}</span>}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ textAlign: 'left', color: 'var(--t3)', borderBottom: '1px solid var(--bd)' }}>
+                    <th style={{ padding: '8px 10px 8px 0', fontWeight: 600 }}>Quand</th>
+                    <th style={{ padding: '8px 10px 8px 0', fontWeight: 600 }}>Email</th>
+                    <th style={{ padding: '8px 10px 8px 0', fontWeight: 600 }}>IP</th>
+                    <th style={{ padding: '8px 10px 8px 0', fontWeight: 600 }}>Appareil</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(l => (
+                    <tr key={l.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                      <td style={{ padding: '7px 10px 7px 0', color: 'var(--t2)', whiteSpace: 'nowrap' }}>{fmtDate(l.created_at)}</td>
+                      <td style={{ padding: '7px 10px 7px 0', color: 'var(--t1)', fontWeight: 500 }}>{l.email || '—'}</td>
+                      <td style={{ padding: '7px 10px 7px 0', color: 'var(--t2)', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{l.ip || '—'}{l.ip_source === 'client' ? <span style={{ fontSize: 9, color: 'var(--t3)', marginLeft: 4 }}>(client)</span> : null}</td>
+                      <td style={{ padding: '7px 10px 7px 0', color: 'var(--t3)' }} title={l.user_agent || ''}>{shortUserAgentCrm(l.user_agent)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 12, textAlign: 'center' }}>
+            Une IP indique le réseau d'accès (opérateur, bureau), pas une position exacte. Donnée à usage interne sécurité.
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function RecyclageRefusesSection() {
   const [data, setData] = useState({ count: 0, leads: [], by_campaign: {}, min_days: 60 })
   const [loading, setLoading] = useState(false)

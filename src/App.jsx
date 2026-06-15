@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from 'react'
 import { Toaster, toast } from 'react-hot-toast'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import { logger } from './lib/logger'
+import { recordLogin } from './lib/record-login'
 import * as leadsService from './services/leads'
 import * as dealsService from './services/deals'
 import * as clientsService from './services/clients'
@@ -4512,6 +4513,10 @@ export default function App(){
             console.warn('[GCal] Erreur localStorage:', e)
           }
         }
+
+        // Journal de connexions, fire and forget (ne bloque pas loadAll).
+        // Sur SIGNED_IN uniquement, TOKEN_REFRESHED et INITIAL_SESSION ignores.
+        recordLogin()
 
         loadAll(s)
         return
