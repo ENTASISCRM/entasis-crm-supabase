@@ -4920,7 +4920,7 @@ export default function App(){
           {activeTab==='immo-pipeline'&&<PipelineVEFA profile={profile} teamProfiles={teamProfiles}/>}
           {activeTab==='linkedin-pro'&&<LinkedInPro profile={profile}/>}
           {activeTab==='remuneration'&&<Remuneration profile={profile} deals={deals} month={month}/>}
-          {activeTab==='outils'&&<OutilsCGP/>}
+          {activeTab==='outils'&&<OutilsCGP profile={profile}/>}
         </div>
       </div>
 

@@ -657,7 +657,7 @@ const MODES_SORTIE_PER = [
   { value: 'capital_fractionne', label: 'Capital fractionné (10 ans)' },
 ]
 
-function SimulateurPER() {
+function SimulateurPER({ profile }) {
   const chartRef = useRef(null)
   const [revenu, setRevenu] = useState(80000)
   const [nbParts, setNbParts] = useState(2)
@@ -1009,8 +1009,8 @@ function SimulateurPER() {
         <ExportPDFButton onExport={async clientName => {
           const dt = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
           const doc = new jsPDF()
-          const conseiller = 'Louis Music'
-          const email = 'louis@entasis-conseil.fr'
+          const conseiller = profile?.full_name || profile?.email || 'Entasis Conseil'
+          const email = profile?.email || ''
 
           // Page 1: Cover
           pdfCoverPage(doc, 'PER', clientName, conseiller, email, dt)
@@ -1088,7 +1088,7 @@ const AV_OBJECTIFS = [
   { value: 'retraite', label: 'Retraite' },
 ]
 
-function SimulateurAssuranceVie() {
+function SimulateurAssuranceVie({ profile }) {
   const chartRef = useRef(null)
   const [capitalInitial, setCapitalInitial] = useState(10000)
   const [versementMensuel, setVersementMensuel] = useState(200)
@@ -1348,8 +1348,8 @@ function SimulateurAssuranceVie() {
         <ExportPDFButton onExport={async clientName => {
           const dt = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
           const doc = new jsPDF()
-          const conseiller = 'Louis Music'
-          const email = 'louis@entasis-conseil.fr'
+          const conseiller = profile?.full_name || profile?.email || 'Entasis Conseil'
+          const email = profile?.email || ''
 
           // Page 1: Cover
           pdfCoverPage(doc, 'Assurance Vie', clientName, conseiller, email, dt)
@@ -1447,7 +1447,7 @@ const WEMO = {
   actifCommerce: 0.739, actifLogistique: 0.151, actifEducation: 0.073, actifBureaux: 0.038,
 }
 
-function SimulateurSCPI() {
+function SimulateurSCPI({ profile }) {
   const chartRef = useRef(null)
   const [montant, setMontant] = useState(50000)
   const [structure, setStructure] = useState('IR')
@@ -1777,8 +1777,8 @@ Simulation indicative — Entasis Conseil`
         <ExportPDFButton onExport={async clientName => {
           const dt = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
           const doc = new jsPDF()
-          const conseiller = 'Louis Music'
-          const emailC = 'louis@entasis-conseil.fr'
+          const conseiller = profile?.full_name || profile?.email || 'Entasis Conseil'
+          const emailC = profile?.email || ''
 
           pdfCoverPage(doc, 'SCPI Wemo One', clientName, conseiller, emailC, dt)
           doc.addPage()
@@ -1844,7 +1844,7 @@ const DISPOSITIFS_IMMO = [
   { value: 'PTZ', label: 'PTZ', desc: 'Primo-accédant, prêt à taux zéro' },
 ]
 
-function SimulateurImmoNeuf() {
+function SimulateurImmoNeuf({ profile }) {
   const chartRef = useRef(null)
   const [prixBien, setPrixBien] = useState(280000)
   const [surface, setSurface] = useState(55)
@@ -2122,8 +2122,8 @@ function SimulateurImmoNeuf() {
         <ExportPDFButton onExport={async clientName => {
           const dt = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
           const doc = new jsPDF()
-          const conseiller = 'Louis Music'
-          const emailC = 'louis@entasis-conseil.fr'
+          const conseiller = profile?.full_name || profile?.email || 'Entasis Conseil'
+          const emailC = profile?.email || ''
 
           pdfCoverPage(doc, 'Achat Immobilier Neuf', clientName, conseiller, emailC, dt)
           doc.addPage()
@@ -2565,7 +2565,7 @@ const TAB_COMPONENTS = {
   lettre: GenerateurLettre,
 }
 
-export default function OutilsCGP() {
+export default function OutilsCGP({ profile }) {
   const [activeTab, setActiveTab] = useState('per')
   const ActiveComp = TAB_COMPONENTS[activeTab]
 
@@ -2643,7 +2643,7 @@ export default function OutilsCGP() {
       </div>
 
       <div className="ocgp-body">
-        <ActiveComp />
+        <ActiveComp profile={profile} />
       </div>
     </div>
   )
