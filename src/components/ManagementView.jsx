@@ -276,6 +276,9 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
         }}
       />
 
+      {/* ─── FUNNEL PAR SOURCE + COÛT/SIGNATURE (direction) ──────────── */}
+      <FunnelBySourceSection deals={deals} />
+
       {/* ─── HEATMAP CRÉNEAUX RDV ────────────────────────────────────── */}
       <RdvHeatmapSection />
 
@@ -1365,6 +1368,123 @@ function RdvHeatmapSection() {
 // il y a >60 jours (peut-être un "pas maintenant" et pas un "jamais").
 // Demandé par Louis 28/05/2026 (#4 dans la liste des 7 améliorations).
 // ─────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────
+// FUNNEL PAR SOURCE + COÛT/SIGNATURE (direction)
+// Croise le funnel Lead Room (leads, RDV, cout par lead via l endpoint
+// funnel-by-source) avec les VRAIES signatures du CRM (deals signes, attribues
+// a leur campagne via lead_id). Reserve direction, aucun chiffre de remuneration.
+// ─────────────────────────────────────────────────────────────────────────
+function FunnelBySourceSection({ deals }) {
+  const [state, setState] = useState({ loading: true, campaigns: [], leadCampaigns: {}, error: null })
+  useEffect(() => {
+    let cancelled = false
+    fetch(`${LEADROOM_API}/api/admin/funnel-by-source`)
+      .then(r => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then(j => { if (!cancelled) setState({ loading: false, campaigns: j.campaigns || [], leadCampaigns: j.lead_campaigns || {}, error: null }) })
+      .catch(e => { if (!cancelled) setState({ loading: false, campaigns: [], leadCampaigns: {}, error: e.message }) })
+    return () => { cancelled = true }
+  }, [])
+
+  const rows = useMemo(() => {
+    // Attribution des vraies signatures, deal signe (CRM) -> lead_id -> campagne.
+    const sig = {} // slug -> { signatures, pp }
+    for (const d of deals || []) {
+      if (d.status !== 'Signé') continue
+      const slug = d.lead_id ? (state.leadCampaigns[d.lead_id] || '(direct)') : '(direct)'
+      if (!sig[slug]) sig[slug] = { signatures: 0, pp: 0 }
+      sig[slug].signatures += 1
+      sig[slug].pp += annualize(d.pp_m)
+    }
+    const base = state.campaigns.map(c => {
+      const s = sig[c.slug] || { signatures: 0, pp: 0 }
+      const cost = (c.leads || 0) * (c.cost_per_lead || 0)
+      return {
+        slug: c.slug, name: c.name, source: c.source, leads: c.leads, rdv: c.rdv,
+        cost, signatures: s.signatures, ppSigned: s.pp,
+        rdvRate: c.leads ? (c.rdv / c.leads) * 100 : 0,
+        rdvToSign: c.rdv ? (s.signatures / c.rdv) * 100 : 0,
+        costPerRdv: c.rdv ? cost / c.rdv : 0,
+        costPerSign: s.signatures ? cost / s.signatures : null,
+      }
+    })
+    // Signatures hors campagne connue (deals manuels, cold call signé, etc).
+    const known = new Set(state.campaigns.map(c => c.slug))
+    for (const slug of Object.keys(sig)) {
+      if (known.has(slug)) continue
+      base.push({
+        slug, name: slug === '(direct)' ? 'Direct / hors Lead Room' : slug, source: 'crm',
+        leads: 0, rdv: 0, cost: 0, signatures: sig[slug].signatures, ppSigned: sig[slug].pp,
+        rdvRate: 0, rdvToSign: 0, costPerRdv: 0, costPerSign: null,
+      })
+    }
+    return base
+  }, [state, deals])
+
+  const totals = useMemo(() => rows.reduce((t, r) => ({
+    leads: t.leads + r.leads, rdv: t.rdv + r.rdv, cost: t.cost + r.cost,
+    signatures: t.signatures + r.signatures, pp: t.pp + r.ppSigned,
+  }), { leads: 0, rdv: 0, cost: 0, signatures: 0, pp: 0 }), [rows])
+
+  return (
+    <div className="card" style={{ marginBottom: 24 }}>
+      <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--bd)' }}>
+        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: 'var(--t3)', textTransform: 'uppercase' }}>Acquisition · direction</div>
+        <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--t1)', marginTop: 2 }}>Funnel par source, coût et rendement</div>
+        <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>Quel canal rapporte vraiment. Signatures attribuées au lead d origine. Coûts internes, à ne pas diffuser.</div>
+      </div>
+      <div style={{ padding: '8px 20px 18px', overflowX: 'auto' }}>
+        {state.loading ? (
+          <div style={{ textAlign: 'center', color: 'var(--t3)', fontSize: 13, padding: 24 }}>Chargement…</div>
+        ) : state.error ? (
+          <div style={{ textAlign: 'center', color: '#EF4444', fontSize: 13, padding: 24 }}>Erreur, {state.error}</div>
+        ) : (
+          <table style={{ width: '100%', fontSize: 12.5, borderCollapse: 'collapse', minWidth: 760 }}>
+            <thead>
+              <tr style={{ textAlign: 'right', color: 'var(--t3)', borderBottom: '1px solid var(--bd)' }}>
+                <th style={{ textAlign: 'left', padding: '8px 8px 8px 0', fontWeight: 600 }}>Source</th>
+                <th style={{ padding: '8px', fontWeight: 600 }}>Leads</th>
+                <th style={{ padding: '8px', fontWeight: 600 }}>RDV calés</th>
+                <th style={{ padding: '8px', fontWeight: 600 }}>Signatures</th>
+                <th style={{ padding: '8px', fontWeight: 600 }}>Coût total</th>
+                <th style={{ padding: '8px', fontWeight: 600 }}>Coût / RDV</th>
+                <th style={{ padding: '8px', fontWeight: 600 }}>Coût / signature</th>
+                <th style={{ padding: '8px 0 8px 8px', fontWeight: 600 }}>PP signée</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(r => (
+                <tr key={r.slug} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)', textAlign: 'right' }}>
+                  <td style={{ textAlign: 'left', padding: '9px 8px 9px 0', fontWeight: 600, color: 'var(--t1)' }}>{r.name}</td>
+                  <td style={{ padding: '9px 8px', color: 'var(--t2)' }}>{r.leads || '—'}</td>
+                  <td style={{ padding: '9px 8px', color: 'var(--t2)' }}>{r.rdv || 0}{r.leads ? <span style={{ color: 'var(--t3)', fontSize: 11 }}> ({Math.round(r.rdvRate)}%)</span> : null}</td>
+                  <td style={{ padding: '9px 8px', fontWeight: 600, color: r.signatures > 0 ? '#10B981' : 'var(--t3)' }}>{r.signatures}{r.rdv ? <span style={{ color: 'var(--t3)', fontSize: 11, fontWeight: 400 }}> ({Math.round(r.rdvToSign)}%)</span> : null}</td>
+                  <td style={{ padding: '9px 8px', color: 'var(--t2)' }}>{r.cost ? fmtEur(r.cost) : '—'}</td>
+                  <td style={{ padding: '9px 8px', color: 'var(--t2)' }}>{r.rdv && r.cost ? fmtEur(r.costPerRdv) : '—'}</td>
+                  <td style={{ padding: '9px 8px', fontWeight: 600, color: r.costPerSign == null ? 'var(--t3)' : (r.costPerSign > 300 ? '#EF4444' : 'var(--t1)') }}>{r.costPerSign == null ? '—' : fmtEur(r.costPerSign)}</td>
+                  <td style={{ padding: '9px 0 9px 8px', color: 'var(--t1)' }}>{r.ppSigned ? fmtEur(r.ppSigned) : '—'}</td>
+                </tr>
+              ))}
+              <tr style={{ borderTop: '2px solid var(--bd)', textAlign: 'right', fontWeight: 700 }}>
+                <td style={{ textAlign: 'left', padding: '10px 8px 10px 0', color: 'var(--t1)' }}>Total</td>
+                <td style={{ padding: '10px 8px' }}>{totals.leads}</td>
+                <td style={{ padding: '10px 8px' }}>{totals.rdv}</td>
+                <td style={{ padding: '10px 8px', color: '#10B981' }}>{totals.signatures}</td>
+                <td style={{ padding: '10px 8px' }}>{fmtEur(totals.cost)}</td>
+                <td style={{ padding: '10px 8px' }}>{totals.rdv ? fmtEur(totals.cost / totals.rdv) : '—'}</td>
+                <td style={{ padding: '10px 8px' }}>{totals.signatures ? fmtEur(totals.cost / totals.signatures) : '—'}</td>
+                <td style={{ padding: '10px 0 10px 8px' }}>{fmtEur(totals.pp)}</td>
+              </tr>
+            </tbody>
+          </table>
+        )}
+        <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 10 }}>
+          Coût/signature en rouge au dessus de 300 €. « Direct / hors Lead Room » = signatures sans lead d acquisition (dossiers manuels, cold call). Les coûts sont internes, ne pas diffuser aux conseillers.
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // JOURNAL DE CONNEXIONS (CRM)
 // Lit login_audit via la RPC admin_login_audit (reservee aux managers).
