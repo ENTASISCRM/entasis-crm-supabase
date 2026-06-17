@@ -1423,16 +1423,29 @@ function FunnelBySourceSection({ deals }) {
     const sig = {} // slug -> { signatures, pp }
     for (const d of deals || []) {
       if (d.status !== 'Signé') continue
+      // Le tel/email du client signataire vit soit sur les colonnes du deal
+      // (client_phone/client_email, recopiees par le bridge), soit sur le client
+      // joint (d.clients.telephone / d.clients.email) quand le conseiller a
+      // rattache un client existant sans recopier ses coordonnees. On essaie les
+      // deux, sinon des centaines de signatures rattachees a un client mais sans
+      // colonne deal tombent a tort en (direct).
+      const dealPhone = d.client_phone || (d.clients && d.clients.telephone)
+      const dealEmail = d.client_email || (d.clients && d.clients.email)
       const li = (d.lead_id && leadIndex.get(d.lead_id))
-        || byPhone.get(last9(d.client_phone || d.client?.phone))
-        || byEmail.get(String(d.client_email || d.client?.email || '').trim().toLowerCase())
+        || byPhone.get(last9(dealPhone))
+        || byEmail.get(String(dealEmail || '').trim().toLowerCase())
         || null
-      let slug = '(direct)'
+      let slug
       if (li) {
         if (!all && li.created < fromMs) continue
         slug = li.slug
-      } else if (!all) {
-        continue
+      } else {
+        // Pas rattache a un lead connu. On separe les vrais directs (hors Lead
+        // Room) des deals marques source = lead_room dont le lien lead a ete
+        // perdu (lead_id null et coordonnees qui ne matchent plus aucun lead).
+        // Un deal lead_room ne doit jamais compter comme (direct).
+        slug = d.source === 'lead_room' ? '(leadroom_inconnu)' : '(direct)'
+        if (!all) continue
       }
       if (!sig[slug]) sig[slug] = { signatures: 0, pp: 0 }
       sig[slug].signatures++
@@ -1447,7 +1460,9 @@ function FunnelBySourceSection({ deals }) {
       const cost = p.leads * cpl
       out.push({
         slug,
-        name: slug === '(direct)' ? 'Direct / hors Lead Room' : ((state.meta[slug] && state.meta[slug].name) || slug),
+        name: slug === '(direct)' ? 'Direct / hors Lead Room'
+          : slug === '(leadroom_inconnu)' ? 'Lead Room (campagne non identifiee)'
+          : ((state.meta[slug] && state.meta[slug].name) || slug),
         leads: p.leads, rdv: p.rdv, cost, signatures: s.signatures, ppSigned: s.pp,
         rdvRate: p.leads ? (p.rdv / p.leads) * 100 : 0,
         rdvToSign: p.rdv ? (s.signatures / p.rdv) * 100 : 0,
