@@ -1397,25 +1397,37 @@ function FunnelBySourceSection({ deals }) {
 
   const rows = useMemo(() => {
     const all = period === 'all'
-    // Index lead -> { slug, created }, et agregat leads/RDV de la periode.
+    const last9 = (p) => { const d = String(p || '').replace(/\D/g, ''); return d.length >= 9 ? d.slice(-9) : '' }
+    // Index lead par id, telephone (9 derniers chiffres) et email, plus
+    // agregat leads/RDV de la periode. Les index tel/email servent a attribuer
+    // une signature meme si le deal a perdu le lead_id (dossier signe cree a la
+    // main apres coup, frequent en patrimoine vu le delai RDV -> signature).
     const leadIndex = new Map()
+    const byPhone = new Map()
+    const byEmail = new Map()
     const per = {} // slug -> { leads, rdv }
     for (const l of state.leads) {
       const created = l.created_at ? new Date(l.created_at).getTime() : 0
-      leadIndex.set(l.id, { slug: l.slug, created })
+      const info = { slug: l.slug, created }
+      leadIndex.set(l.id, info)
+      if (l.phone9) byPhone.set(l.phone9, info)
+      if (l.email) byEmail.set(l.email, info)
       if (!all && created < fromMs) continue
       if (!per[l.slug]) per[l.slug] = { leads: 0, rdv: 0 }
       per[l.slug].leads++
       if (l.rdv) per[l.slug].rdv++
     }
-    // Signatures, deal signe (CRM) -> lead_id -> campagne, filtre periode sur
-    // la date de creation du lead (cohorte). Deals sans lead = (direct), comptes
-    // uniquement en cumul (pas de date de lead pour les situer).
+    // Signatures, deal signe (CRM) attribue a sa campagne via lead_id, sinon
+    // telephone, sinon email. Filtre periode sur la date de creation du lead
+    // (cohorte). Deals non rattaches = (direct), comptes uniquement en cumul.
     const sig = {} // slug -> { signatures, pp }
     for (const d of deals || []) {
       if (d.status !== 'Signé') continue
+      const li = (d.lead_id && leadIndex.get(d.lead_id))
+        || byPhone.get(last9(d.client_phone || d.client?.phone))
+        || byEmail.get(String(d.client_email || d.client?.email || '').trim().toLowerCase())
+        || null
       let slug = '(direct)'
-      const li = d.lead_id ? leadIndex.get(d.lead_id) : null
       if (li) {
         if (!all && li.created < fromMs) continue
         slug = li.slug
