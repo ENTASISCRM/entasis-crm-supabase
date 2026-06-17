@@ -1403,6 +1403,7 @@ function FunnelBySourceSection({ deals }) {
         cost, signatures: s.signatures, ppSigned: s.pp,
         rdvRate: c.leads ? (c.rdv / c.leads) * 100 : 0,
         rdvToSign: c.rdv ? (s.signatures / c.rdv) * 100 : 0,
+        conversion: c.leads ? (s.signatures / c.leads) * 100 : null, // lead -> signé
         costPerRdv: c.rdv ? cost / c.rdv : 0,
         costPerSign: s.signatures ? cost / s.signatures : null,
       }
@@ -1414,7 +1415,7 @@ function FunnelBySourceSection({ deals }) {
       base.push({
         slug, name: slug === '(direct)' ? 'Direct / hors Lead Room' : slug, source: 'crm',
         leads: 0, rdv: 0, cost: 0, signatures: sig[slug].signatures, ppSigned: sig[slug].pp,
-        rdvRate: 0, rdvToSign: 0, costPerRdv: 0, costPerSign: null,
+        rdvRate: 0, rdvToSign: 0, conversion: null, costPerRdv: 0, costPerSign: null,
       })
     }
     return base
@@ -1445,6 +1446,7 @@ function FunnelBySourceSection({ deals }) {
                 <th style={{ padding: '8px', fontWeight: 600 }}>Leads</th>
                 <th style={{ padding: '8px', fontWeight: 600 }}>RDV calés</th>
                 <th style={{ padding: '8px', fontWeight: 600 }}>Signatures</th>
+                <th style={{ padding: '8px', fontWeight: 600 }}>Conversion</th>
                 <th style={{ padding: '8px', fontWeight: 600 }}>Coût total</th>
                 <th style={{ padding: '8px', fontWeight: 600 }}>Coût / RDV</th>
                 <th style={{ padding: '8px', fontWeight: 600 }}>Coût / signature</th>
@@ -1458,6 +1460,7 @@ function FunnelBySourceSection({ deals }) {
                   <td style={{ padding: '9px 8px', color: 'var(--t2)' }}>{r.leads || '—'}</td>
                   <td style={{ padding: '9px 8px', color: 'var(--t2)' }}>{r.rdv || 0}{r.leads ? <span style={{ color: 'var(--t3)', fontSize: 11 }}> ({Math.round(r.rdvRate)}%)</span> : null}</td>
                   <td style={{ padding: '9px 8px', fontWeight: 600, color: r.signatures > 0 ? '#10B981' : 'var(--t3)' }}>{r.signatures}{r.rdv ? <span style={{ color: 'var(--t3)', fontSize: 11, fontWeight: 400 }}> ({Math.round(r.rdvToSign)}%)</span> : null}</td>
+                  <td style={{ padding: '9px 8px', fontWeight: 600, color: r.conversion == null ? 'var(--t3)' : (r.conversion >= 1.5 ? '#10B981' : 'var(--t1)') }}>{r.conversion == null ? '—' : (r.conversion < 10 ? r.conversion.toFixed(1) : Math.round(r.conversion)) + '%'}</td>
                   <td style={{ padding: '9px 8px', color: 'var(--t2)' }}>{r.cost ? fmtEur(r.cost) : '—'}</td>
                   <td style={{ padding: '9px 8px', color: 'var(--t2)' }}>{r.rdv && r.cost ? fmtEur(r.costPerRdv) : '—'}</td>
                   <td style={{ padding: '9px 8px', fontWeight: 600, color: r.costPerSign == null ? 'var(--t3)' : (r.costPerSign > 300 ? '#EF4444' : 'var(--t1)') }}>{r.costPerSign == null ? '—' : fmtEur(r.costPerSign)}</td>
@@ -1469,6 +1472,7 @@ function FunnelBySourceSection({ deals }) {
                 <td style={{ padding: '10px 8px' }}>{totals.leads}</td>
                 <td style={{ padding: '10px 8px' }}>{totals.rdv}</td>
                 <td style={{ padding: '10px 8px', color: '#10B981' }}>{totals.signatures}</td>
+                <td style={{ padding: '10px 8px' }}>{totals.leads ? ((totals.signatures / totals.leads) * 100 < 10 ? ((totals.signatures / totals.leads) * 100).toFixed(1) : Math.round((totals.signatures / totals.leads) * 100)) + '%' : '—'}</td>
                 <td style={{ padding: '10px 8px' }}>{fmtEur(totals.cost)}</td>
                 <td style={{ padding: '10px 8px' }}>{totals.rdv ? fmtEur(totals.cost / totals.rdv) : '—'}</td>
                 <td style={{ padding: '10px 8px' }}>{totals.signatures ? fmtEur(totals.cost / totals.signatures) : '—'}</td>
