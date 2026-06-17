@@ -1375,51 +1375,77 @@ function RdvHeatmapSection() {
 // a leur campagne via lead_id). Reserve direction, aucun chiffre de remuneration.
 // ─────────────────────────────────────────────────────────────────────────
 function FunnelBySourceSection({ deals }) {
-  const [state, setState] = useState({ loading: true, campaigns: [], leadCampaigns: {}, error: null })
+  const [state, setState] = useState({ loading: true, meta: {}, leads: [], error: null })
+  const [period, setPeriod] = useState('all') // all | month | quarter | year
   useEffect(() => {
     let cancelled = false
     fetch(`${LEADROOM_API}/api/admin/funnel-by-source`)
       .then(r => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then(j => { if (!cancelled) setState({ loading: false, campaigns: j.campaigns || [], leadCampaigns: j.lead_campaigns || {}, error: null }) })
-      .catch(e => { if (!cancelled) setState({ loading: false, campaigns: [], leadCampaigns: {}, error: e.message }) })
+      .then(j => { if (!cancelled) setState({ loading: false, meta: j.campaigns_meta || {}, leads: j.leads || [], error: null }) })
+      .catch(e => { if (!cancelled) setState({ loading: false, meta: {}, leads: [], error: e.message }) })
     return () => { cancelled = true }
   }, [])
 
+  // Borne basse de la periode (par date de creation du lead, vue cohorte).
+  const fromMs = useMemo(() => {
+    const now = new Date()
+    if (period === 'month') return new Date(now.getFullYear(), now.getMonth(), 1).getTime()
+    if (period === 'quarter') return new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1).getTime()
+    if (period === 'year') return new Date(now.getFullYear(), 0, 1).getTime()
+    return 0
+  }, [period])
+
   const rows = useMemo(() => {
-    // Attribution des vraies signatures, deal signe (CRM) -> lead_id -> campagne.
+    const all = period === 'all'
+    // Index lead -> { slug, created }, et agregat leads/RDV de la periode.
+    const leadIndex = new Map()
+    const per = {} // slug -> { leads, rdv }
+    for (const l of state.leads) {
+      const created = l.created_at ? new Date(l.created_at).getTime() : 0
+      leadIndex.set(l.id, { slug: l.slug, created })
+      if (!all && created < fromMs) continue
+      if (!per[l.slug]) per[l.slug] = { leads: 0, rdv: 0 }
+      per[l.slug].leads++
+      if (l.rdv) per[l.slug].rdv++
+    }
+    // Signatures, deal signe (CRM) -> lead_id -> campagne, filtre periode sur
+    // la date de creation du lead (cohorte). Deals sans lead = (direct), comptes
+    // uniquement en cumul (pas de date de lead pour les situer).
     const sig = {} // slug -> { signatures, pp }
     for (const d of deals || []) {
       if (d.status !== 'Signé') continue
-      const slug = d.lead_id ? (state.leadCampaigns[d.lead_id] || '(direct)') : '(direct)'
+      let slug = '(direct)'
+      const li = d.lead_id ? leadIndex.get(d.lead_id) : null
+      if (li) {
+        if (!all && li.created < fromMs) continue
+        slug = li.slug
+      } else if (!all) {
+        continue
+      }
       if (!sig[slug]) sig[slug] = { signatures: 0, pp: 0 }
-      sig[slug].signatures += 1
+      sig[slug].signatures++
       sig[slug].pp += annualize(d.pp_m)
     }
-    const base = state.campaigns.map(c => {
-      const s = sig[c.slug] || { signatures: 0, pp: 0 }
-      const cost = (c.leads || 0) * (c.cost_per_lead || 0)
-      return {
-        slug: c.slug, name: c.name, source: c.source, leads: c.leads, rdv: c.rdv,
-        cost, signatures: s.signatures, ppSigned: s.pp,
-        rdvRate: c.leads ? (c.rdv / c.leads) * 100 : 0,
-        rdvToSign: c.rdv ? (s.signatures / c.rdv) * 100 : 0,
-        conversion: c.leads ? (s.signatures / c.leads) * 100 : null, // lead -> signé
-        costPerRdv: c.rdv ? cost / c.rdv : 0,
+    const slugs = new Set([...Object.keys(per), ...Object.keys(sig)])
+    const out = []
+    for (const slug of slugs) {
+      const p = per[slug] || { leads: 0, rdv: 0 }
+      const s = sig[slug] || { signatures: 0, pp: 0 }
+      const cpl = (state.meta[slug] && state.meta[slug].cost_per_lead) || 0
+      const cost = p.leads * cpl
+      out.push({
+        slug,
+        name: slug === '(direct)' ? 'Direct / hors Lead Room' : ((state.meta[slug] && state.meta[slug].name) || slug),
+        leads: p.leads, rdv: p.rdv, cost, signatures: s.signatures, ppSigned: s.pp,
+        rdvRate: p.leads ? (p.rdv / p.leads) * 100 : 0,
+        rdvToSign: p.rdv ? (s.signatures / p.rdv) * 100 : 0,
+        conversion: p.leads ? (s.signatures / p.leads) * 100 : null,
+        costPerRdv: p.rdv ? cost / p.rdv : 0,
         costPerSign: s.signatures ? cost / s.signatures : null,
-      }
-    })
-    // Signatures hors campagne connue (deals manuels, cold call signé, etc).
-    const known = new Set(state.campaigns.map(c => c.slug))
-    for (const slug of Object.keys(sig)) {
-      if (known.has(slug)) continue
-      base.push({
-        slug, name: slug === '(direct)' ? 'Direct / hors Lead Room' : slug, source: 'crm',
-        leads: 0, rdv: 0, cost: 0, signatures: sig[slug].signatures, ppSigned: sig[slug].pp,
-        rdvRate: 0, rdvToSign: 0, conversion: null, costPerRdv: 0, costPerSign: null,
       })
     }
-    return base
-  }, [state, deals])
+    return out.sort((a, b) => (b.leads - a.leads) || (b.signatures - a.signatures))
+  }, [state, deals, period, fromMs])
 
   const totals = useMemo(() => rows.reduce((t, r) => ({
     leads: t.leads + r.leads, rdv: t.rdv + r.rdv, cost: t.cost + r.cost,
@@ -1428,10 +1454,19 @@ function FunnelBySourceSection({ deals }) {
 
   return (
     <div className="card" style={{ marginBottom: 24 }}>
-      <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--bd)' }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: 'var(--t3)', textTransform: 'uppercase' }}>Acquisition · direction</div>
-        <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--t1)', marginTop: 2 }}>Funnel par source, coût et rendement</div>
-        <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>Quel canal rapporte vraiment. Signatures attribuées au lead d origine. Coûts internes, à ne pas diffuser.</div>
+      <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--bd)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: 'var(--t3)', textTransform: 'uppercase' }}>Acquisition · direction</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--t1)', marginTop: 2 }}>Funnel par source, coût et rendement</div>
+          <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>Quel canal rapporte vraiment. Signatures attribuées au lead d origine. Coûts internes, à ne pas diffuser.</div>
+        </div>
+        <div style={{ display: 'inline-flex', background: 'rgba(0,0,0,0.05)', borderRadius: 8, padding: 3, flexShrink: 0 }}>
+          {[{ k: 'all', l: 'Tout' }, { k: 'year', l: 'Année' }, { k: 'quarter', l: 'Trimestre' }, { k: 'month', l: 'Mois' }].map(opt => (
+            <button key={opt.k} onClick={() => setPeriod(opt.k)}
+              style={{ padding: '5px 12px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                background: period === opt.k ? 'var(--gold)' : 'transparent', color: period === opt.k ? '#fff' : 'var(--t2)' }}>{opt.l}</button>
+          ))}
+        </div>
       </div>
       <div style={{ padding: '8px 20px 18px', overflowX: 'auto' }}>
         {state.loading ? (
@@ -1482,7 +1517,7 @@ function FunnelBySourceSection({ deals }) {
           </table>
         )}
         <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 10 }}>
-          Coût/signature en rouge au dessus de 300 €. « Direct / hors Lead Room » = signatures sans lead d acquisition (dossiers manuels, cold call). Les coûts sont internes, ne pas diffuser aux conseillers.
+          Période par date de création du lead (vue cohorte). En cumul (Tout), la ligne « Direct / hors Lead Room » montre les signatures sans lead d acquisition (dossiers manuels, cold call, clients pré Lead Room) ; elle est masquée sur les périodes (pas de date de lead pour les situer). Coût/signature en rouge au dessus de 300 €. Coûts internes, ne pas diffuser aux conseillers.
         </div>
       </div>
     </div>
