@@ -276,6 +276,9 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
         }}
       />
 
+      {/* ─── PRÉVISION DE PRODUCTION DU MOIS (direction) ─────────────── */}
+      <CaForecastSection />
+
       {/* ─── FUNNEL PAR SOURCE + COÛT/SIGNATURE (direction) ──────────── */}
       <FunnelBySourceSection deals={deals} />
 
@@ -1374,6 +1377,76 @@ function RdvHeatmapSection() {
 // funnel-by-source) avec les VRAIES signatures du CRM (deals signes, attribues
 // a leur campagne via lead_id). Reserve direction, aucun chiffre de remuneration.
 // ─────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────
+// PRÉVISION DE PRODUCTION DU MOIS (direction). Croise le pipeline Lead Room
+// (RDV calés) et les signatures CRM pour projeter la PP annualisée + le nombre
+// de signatures de fin de mois. Production uniquement, aucune commission/marge.
+// ─────────────────────────────────────────────────────────────────────────
+function CaForecastSection() {
+  const [s, setS] = useState({ loading: true, data: null, error: null })
+  useEffect(() => {
+    let cancelled = false
+    fetch(`${LEADROOM_API}/api/admin/ca-forecast`)
+      .then(r => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then(j => { if (!cancelled) setS({ loading: false, data: j.error ? null : j, error: j.error || null }) })
+      .catch(e => { if (!cancelled) setS({ loading: false, data: null, error: e.message }) })
+    return () => { cancelled = true }
+  }, [])
+
+  const eur = (n) => new Intl.NumberFormat('fr-FR').format(Math.round(n || 0)) + ' €'
+
+  if (s.loading) {
+    return <div style={{ padding: 16, color: 'var(--t3)', fontSize: 13 }}>Chargement de la prévision…</div>
+  }
+  if (!s.data) {
+    return <div style={{ padding: 16, color: 'var(--t3)', fontSize: 13 }}>Prévision indisponible{s.error ? ` (${s.error})` : ''}.</div>
+  }
+  const d = s.data
+  const h = d.hypotheses || {}
+  const p = d.pipeline || {}
+
+  return (
+    <div style={{ background: 'var(--card, #fff)', border: '1px solid var(--bd)', borderRadius: 16, padding: 20, marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+        <div>
+          <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--t3)', fontWeight: 600 }}>Prévision de production</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--t1)', textTransform: 'capitalize' }}>{d.month}</div>
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--t3)' }}>PP annualisée, hors commission</div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 16 }}>
+        {/* Prévision fin de mois */}
+        <div style={{ background: '#0B1A2E', borderRadius: 12, padding: 16, color: '#fff' }}>
+          <div style={{ fontSize: 11, color: '#C5A55A', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700 }}>Prévision fin de mois</div>
+          <div style={{ fontSize: 28, fontWeight: 800, marginTop: 4 }}>{eur(d.forecast?.pp_annualisee)}</div>
+          <div style={{ fontSize: 12, color: '#8A95A8', marginTop: 2 }}>fourchette {eur(d.forecast?.pp_low)} – {eur(d.forecast?.pp_high)}</div>
+          <div style={{ fontSize: 12, color: '#8A95A8', marginTop: 4 }}>≈ {d.forecast?.signatures} signatures</div>
+        </div>
+        {/* Réalisé */}
+        <div style={{ background: 'var(--bg2, #f7f7f8)', borderRadius: 12, padding: 16 }}>
+          <div style={{ fontSize: 11, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700 }}>Déjà signé ce mois</div>
+          <div style={{ fontSize: 28, fontWeight: 800, marginTop: 4, color: '#059669' }}>{eur(d.realise?.pp_annualisee)}</div>
+          <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 4 }}>{d.realise?.signatures} signature{d.realise?.signatures > 1 ? 's' : ''}</div>
+        </div>
+        {/* Pipeline */}
+        <div style={{ background: 'var(--bg2, #f7f7f8)', borderRadius: 12, padding: 16 }}>
+          <div style={{ fontSize: 11, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700 }}>Pipeline</div>
+          <div style={{ fontSize: 13, color: 'var(--t1)', marginTop: 6 }}><b>{p.rdv_en_attente_ce_mois}</b> RDV qui devraient signer ce mois</div>
+          <div style={{ fontSize: 13, color: 'var(--t2)', marginTop: 2 }}><b>{p.rdv_a_venir}</b> RDV encore à tenir</div>
+          <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>{p.rdv_signature_apres_le_mois} pour les mois suivants</div>
+        </div>
+      </div>
+
+      <div style={{ fontSize: 11, color: 'var(--t3)', lineHeight: 1.6, borderTop: '1px solid var(--bd)', paddingTop: 10 }}>
+        Hypothèses (sur les 3 mois précédents) : conversion RDV → signature <b>{h.taux_conversion_rdv_signature}%</b>,
+        délai moyen <b>{h.delai_moyen_rdv_signature_jours} j</b>, PP moyenne par signature <b>{eur(h.pp_moyenne_par_signature)}</b>,
+        échantillon <b>{h.signatures_historique}/{h.echantillon_rdv_historique}</b> RDV. Estimation, pas un engagement.
+      </div>
+    </div>
+  )
+}
+
 function FunnelBySourceSection({ deals }) {
   const [state, setState] = useState({ loading: true, meta: {}, leads: [], error: null })
   const [period, setPeriod] = useState('all') // all | month | quarter | year
