@@ -1384,11 +1384,17 @@ function RdvHeatmapSection() {
 // ─────────────────────────────────────────────────────────────────────────
 function CaForecastSection() {
   const [s, setS] = useState({ loading: true, data: null, error: null })
+  const [convPct, setConvPct] = useState(null) // taux reglable (init depuis l API)
   useEffect(() => {
     let cancelled = false
     fetch(`${LEADROOM_API}/api/admin/ca-forecast`)
       .then(r => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then(j => { if (!cancelled) setS({ loading: false, data: j.error ? null : j, error: j.error || null }) })
+      .then(j => {
+        if (cancelled) return
+        if (j.error) { setS({ loading: false, data: null, error: j.error }); return }
+        setS({ loading: false, data: j, error: null })
+        setConvPct(typeof j.conversion_defaut_pct === 'number' ? j.conversion_defaut_pct : 25)
+      })
       .catch(e => { if (!cancelled) setS({ loading: false, data: null, error: e.message }) })
     return () => { cancelled = true }
   }, [])
@@ -1404,6 +1410,14 @@ function CaForecastSection() {
   const d = s.data
   const h = d.hypotheses || {}
   const p = d.pipeline || {}
+  // Forecast calcule en direct : realise (fiable) + RDV en attente ce mois x taux
+  // de conversion (reglable) x PP moyenne par signature.
+  const conv = (typeof convPct === 'number' ? convPct : (d.conversion_defaut_pct || 25)) / 100
+  const avgPP = d.pp_moyenne_par_signature || 0
+  const expectedSign = (p.rdv_en_attente_ce_mois || 0) * conv
+  const expectedPP = expectedSign * avgPP
+  const forecastPP = (d.realise?.pp_annualisee || 0) + expectedPP
+  const forecastSign = (d.realise?.signatures || 0) + expectedSign
 
   return (
     <div style={{ background: 'var(--card, #fff)', border: '1px solid var(--bd)', borderRadius: 16, padding: 20, marginBottom: 20 }}>
@@ -1419,9 +1433,8 @@ function CaForecastSection() {
         {/* Prévision fin de mois */}
         <div style={{ background: '#0B1A2E', borderRadius: 12, padding: 16, color: '#fff' }}>
           <div style={{ fontSize: 11, color: '#C5A55A', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700 }}>Prévision fin de mois</div>
-          <div style={{ fontSize: 28, fontWeight: 800, marginTop: 4 }}>{eur(d.forecast?.pp_annualisee)}</div>
-          <div style={{ fontSize: 12, color: '#8A95A8', marginTop: 2 }}>fourchette {eur(d.forecast?.pp_low)} – {eur(d.forecast?.pp_high)}</div>
-          <div style={{ fontSize: 12, color: '#8A95A8', marginTop: 4 }}>≈ {d.forecast?.signatures} signatures</div>
+          <div style={{ fontSize: 28, fontWeight: 800, marginTop: 4 }}>{eur(forecastPP)}</div>
+          <div style={{ fontSize: 12, color: '#8A95A8', marginTop: 4 }}>≈ {Math.round(forecastSign * 10) / 10} signatures ({d.realise?.signatures || 0} déjà signées + {Math.round(expectedSign * 10) / 10} attendues)</div>
         </div>
         {/* Réalisé */}
         <div style={{ background: 'var(--bg2, #f7f7f8)', borderRadius: 12, padding: 16 }}>
@@ -1431,17 +1444,35 @@ function CaForecastSection() {
         </div>
         {/* Pipeline */}
         <div style={{ background: 'var(--bg2, #f7f7f8)', borderRadius: 12, padding: 16 }}>
-          <div style={{ fontSize: 11, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700 }}>Pipeline</div>
-          <div style={{ fontSize: 13, color: 'var(--t1)', marginTop: 6 }}><b>{p.rdv_en_attente_ce_mois}</b> RDV qui devraient signer ce mois</div>
+          <div style={{ fontSize: 11, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700 }}>Pipeline Lead Room</div>
+          <div style={{ fontSize: 13, color: 'var(--t1)', marginTop: 6 }}><b>{p.rdv_en_attente_ce_mois}</b> RDV pris en compte ce mois</div>
           <div style={{ fontSize: 13, color: 'var(--t2)', marginTop: 2 }}><b>{p.rdv_a_venir}</b> RDV encore à tenir</div>
           <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>{p.rdv_signature_apres_le_mois} pour les mois suivants</div>
         </div>
       </div>
 
+      {/* Taux de conversion reglable */}
+      <div style={{ background: 'var(--bg2, #f7f7f8)', borderRadius: 12, padding: '12px 16px', marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+          <label style={{ fontSize: 13, color: 'var(--t1)', fontWeight: 600 }}>
+            Taux de conversion RDV → signature
+          </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <input type="range" min="5" max="80" step="1" value={convPct ?? 25}
+              onChange={e => setConvPct(Number(e.target.value))} style={{ width: 180 }} />
+            <span style={{ fontSize: 16, fontWeight: 800, color: '#0B1A2E', minWidth: 44, textAlign: 'right' }}>{convPct ?? 25}%</span>
+          </div>
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 6 }}>
+          {d.conversion_fiable
+            ? <>Valeur calculée sur ton historique (<b>{h.taux_conversion_calcule_pct}%</b>). Ajuste si besoin.</>
+            : <>Réglage manuel recommandé : l'historique RDV → signature est encore trop incomplet pour un calcul fiable (échantillon {h.signatures_historique}/{h.echantillon_rdv_historique}). Mets ton taux réel connu.</>}
+        </div>
+      </div>
+
       <div style={{ fontSize: 11, color: 'var(--t3)', lineHeight: 1.6, borderTop: '1px solid var(--bd)', paddingTop: 10 }}>
-        Hypothèses (sur les 3 mois précédents) : conversion RDV → signature <b>{h.taux_conversion_rdv_signature}%</b>,
-        délai moyen <b>{h.delai_moyen_rdv_signature_jours} j</b>, PP moyenne par signature <b>{eur(h.pp_moyenne_par_signature)}</b>,
-        échantillon <b>{h.signatures_historique}/{h.echantillon_rdv_historique}</b> RDV. Estimation, pas un engagement.
+        Modèle : <b>réalisé</b> (signatures CRM du mois) + <b>{p.rdv_en_attente_ce_mois} RDV</b> × <b>{convPct ?? 25}%</b> × PP moyenne <b>{eur(avgPP)}</b>.
+        Délai moyen RDV → signature <b>{d.delai_moyen_rdv_signature_jours} j</b>. Production uniquement, estimation et pas un engagement.
       </div>
     </div>
   )
