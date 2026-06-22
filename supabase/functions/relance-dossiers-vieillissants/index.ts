@@ -31,6 +31,10 @@ const COOLDOWN_AVIS_GOOGLE_DAYS = 90
 const MULTI_EQUIP_MIN_DAYS_SINCE_SIGN = 30
 const COOLDOWN_MULTI_EQUIP_DAYS = 30
 
+// Plafond anti-rafale : au plus N relances par conseiller et par jour, tous types
+// confondus. Etale le rattrapage d un backlog au lieu d envoyer un gros paquet.
+const MAX_RELANCES_PER_ADVISOR_PER_DAY = 2
+
 const fmtEuro = (n: number) =>
   new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
 
@@ -80,7 +84,8 @@ function firstName(p: Profile): string {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function processVieillissement(
-  supabase: SupabaseClient, cfg: BrevoConfig, profileByCode: Record<string, Profile>
+  supabase: SupabaseClient, cfg: BrevoConfig, profileByCode: Record<string, Profile>,
+  quota: Record<string, number>
 ) {
   const now = Date.now()
   const staleBefore = new Date(now - STALE_DAYS * 86400000).toISOString()
@@ -110,6 +115,7 @@ async function processVieillissement(
   for (const deal of toSend) {
     const profile = profileByCode[deal.advisor_code]
     if (!profile?.email) continue
+    if ((quota[profile.email] || 0) >= MAX_RELANCES_PER_ADVISOR_PER_DAY) continue // plafond 2/jour/conseiller
     const ageDays = Math.floor((now - new Date(deal.created_at).getTime()) / 86400000)
     const ppAnnual = Number(deal.pp_m || 0) * 12
     const pu = Number(deal.pu || 0)
@@ -134,6 +140,7 @@ async function processVieillissement(
       sent_to: profile.email, cc: cfg.cc.map(c => c.email).join(','),
       age_days: ageDays, status_at_send: deal.status,
     })
+    quota[profile.email] = (quota[profile.email] || 0) + 1
     sent++
   }
   return { sent, candidates: toSend.length, errors }
@@ -144,7 +151,8 @@ async function processVieillissement(
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function processAvisGoogle(
-  supabase: SupabaseClient, cfg: BrevoConfig, profileByCode: Record<string, Profile>
+  supabase: SupabaseClient, cfg: BrevoConfig, profileByCode: Record<string, Profile>,
+  quota: Record<string, number>
 ) {
   const now = Date.now()
   // Cible la fenêtre J+30 à J+30+window
@@ -177,6 +185,7 @@ async function processAvisGoogle(
   for (const deal of toSend) {
     const profile = profileByCode[deal.advisor_code]
     if (!profile?.email || !deal.date_signed) continue
+    if ((quota[profile.email] || 0) >= MAX_RELANCES_PER_ADVISOR_PER_DAY) continue // plafond 2/jour/conseiller
     const subject = `Avis Google · ${deal.client} a-t-il laissé un avis ?`
     const htmlContent = `
       <div style="font-family:-apple-system,Helvetica,Arial,sans-serif;color:#1a1a1a;max-width:560px">
@@ -198,6 +207,7 @@ async function processAvisGoogle(
       sent_to: profile.email, cc: cfg.cc.map(c => c.email).join(','),
       age_days: ageDays, status_at_send: deal.status,
     })
+    quota[profile.email] = (quota[profile.email] || 0) + 1
     sent++
   }
   return { sent, candidates: toSend.length, errors }
@@ -208,7 +218,8 @@ async function processAvisGoogle(
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function processMultiEquip(
-  supabase: SupabaseClient, cfg: BrevoConfig, profileByCode: Record<string, Profile>
+  supabase: SupabaseClient, cfg: BrevoConfig, profileByCode: Record<string, Profile>,
+  quota: Record<string, number>
 ) {
   const now = Date.now()
   const minSignedBefore = new Date(now - MULTI_EQUIP_MIN_DAYS_SINCE_SIGN * 86400000).toISOString().slice(0, 10)
@@ -263,6 +274,7 @@ async function processMultiEquip(
   for (const mono of toSend) {
     const profile = profileByCode[mono.deal.advisor_code]
     if (!profile?.email) continue
+    if ((quota[profile.email] || 0) >= MAX_RELANCES_PER_ADVISOR_PER_DAY) continue // plafond 2/jour/conseiller
 
     // Suggestions : tout sauf le produit déjà détenu, en priorisant Mutuelle / Prévoyance / SCPI.
     const priority = ['Mutuelle Santé', 'Prévoyance TNS', 'SCPI']
@@ -294,6 +306,7 @@ async function processMultiEquip(
       sent_to: profile.email, cc: cfg.cc.map(c => c.email).join(','),
       age_days: ageDays, status_at_send: mono.deal.status,
     })
+    quota[profile.email] = (quota[profile.email] || 0) + 1
     sent++
   }
   return { sent, candidates: toSend.length, errors }
@@ -345,10 +358,21 @@ serve(async (req) => {
   const profileByCode: Record<string, Profile> = {}
   for (const p of (profiles || [])) profileByCode[p.advisor_code] = p as any
 
+  // Quota du jour : amorce avec ce qui est deja parti aujourd hui (tous types
+  // confondus), pour respecter le plafond 2/conseiller/jour meme si la fonction
+  // est appelee plusieurs fois dans la journee. Partage entre les 3 types.
+  const startOfToday = new Date(); startOfToday.setUTCHours(0, 0, 0, 0)
+  const { data: todayLogs } = await supabase
+    .from('dossier_relance_log')
+    .select('sent_to')
+    .gte('sent_at', startOfToday.toISOString())
+  const quota: Record<string, number> = {}
+  for (const l of (todayLogs || [])) quota[l.sent_to] = (quota[l.sent_to] || 0) + 1
+
   const results: Record<string, { sent: number; candidates: number; errors: string[] }> = {}
-  if (requestedTypes.includes('vieillissement')) results.vieillissement = await processVieillissement(supabase, cfg, profileByCode)
-  if (requestedTypes.includes('avis_google'))    results.avis_google    = await processAvisGoogle(supabase, cfg, profileByCode)
-  if (requestedTypes.includes('multi_equip'))    results.multi_equip    = await processMultiEquip(supabase, cfg, profileByCode)
+  if (requestedTypes.includes('vieillissement')) results.vieillissement = await processVieillissement(supabase, cfg, profileByCode, quota)
+  if (requestedTypes.includes('avis_google'))    results.avis_google    = await processAvisGoogle(supabase, cfg, profileByCode, quota)
+  if (requestedTypes.includes('multi_equip'))    results.multi_equip    = await processMultiEquip(supabase, cfg, profileByCode, quota)
 
   const totalSent = Object.values(results).reduce((s, r) => s + r.sent, 0)
   return new Response(JSON.stringify({ ok: true, totalSent, results }), {
