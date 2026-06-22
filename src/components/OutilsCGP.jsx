@@ -320,7 +320,9 @@ P.cw = P.pw - P.m * 2
 P.right = P.pw - P.m
 
 const fmt = (n) => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' EUR'
-const pPct = (v) => (Number(v) || 0).toFixed(2) + ' %'
+// Recoit une FRACTION (ex. 0.0175) et l affiche en pourcentage (1.75 %). Aligne
+// sur pctFmt (ecran) ; sans le x100 les PDF montraient des taux 100x trop petits.
+const pPct = (v) => ((Number(v) || 0) * 100).toFixed(2) + ' %'
 const pNum = (v) => String(Math.round(Number(v) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
 
 const navy = [44, 62, 80]
@@ -645,12 +647,8 @@ const PARTS_OPTIONS = [
   { value: 2.5, label: '2.5' }, { value: 3, label: '3' }, { value: 3.5, label: '3.5' }, { value: 4, label: '4' },
 ]
 
-const PROFIL_RENDEMENTS = [
-  { value: 'prudent', label: 'Prudent 3%', taux: 0.03 },
-  { value: 'equilibre', label: 'Equilibre 5%', taux: 0.05 },
-  { value: 'dynamique', label: 'Dynamique 7%', taux: 0.07 },
-]
-
+// Profils de rendement PER : valeurs par defaut, desormais editables dans le
+// composant (etats tauxPrudent/Equilibre/Dynamique) pour coller au profil client.
 const MODES_SORTIE_PER = [
   { value: 'rente', label: 'Rente viagère' },
   { value: 'capital', label: 'Capital en une fois' },
@@ -670,6 +668,16 @@ function SimulateurPER({ profile }) {
   const [fraisGestion, setFraisGestion] = useState(1)
   const [showDetail, setShowDetail] = useState(false)
   const [modeSortie, setModeSortie] = useState('rente')
+  // Hypotheses de rendement editables (en %), defaut 3 / 5 / 7. Le conseiller
+  // peut les ajuster au profil reel du client.
+  const [tauxPrudent, setTauxPrudent] = useState(3)
+  const [tauxEquilibre, setTauxEquilibre] = useState(5)
+  const [tauxDynamique, setTauxDynamique] = useState(7)
+  const profilRendements = useMemo(() => [
+    { value: 'prudent', label: `Prudent ${tauxPrudent}%`, taux: (Number(tauxPrudent) || 0) / 100 },
+    { value: 'equilibre', label: `Equilibre ${tauxEquilibre}%`, taux: (Number(tauxEquilibre) || 0) / 100 },
+    { value: 'dynamique', label: `Dynamique ${tauxDynamique}%`, taux: (Number(tauxDynamique) || 0) / 100 },
+  ], [tauxPrudent, tauxEquilibre, tauxDynamique])
 
   const duree = Math.max(1, ageRetraite - age)
 
@@ -703,7 +711,7 @@ function SimulateurPER({ profile }) {
 
     // Long-term simulation — 3 scenarios
     const frais = fraisGestion / 100
-    const scenarios = PROFIL_RENDEMENTS.map(p => {
+    const scenarios = profilRendements.map(p => {
       const taux = p.taux
       let capital = versementInitial
       const yearly = []
@@ -808,7 +816,7 @@ function SimulateurPER({ profile }) {
     })
 
     return { impotSans, impotAvec, economieFiscale, effortReel, tmi, plafondTotal, scenarios }
-  }, [revenu, nbParts, versement2025, versementMensuel, versementInitial, age, ageRetraite, duree, fraisGestion, plafondReportable, plafondTotal, modeSortie])
+  }, [revenu, nbParts, versement2025, versementMensuel, versementInitial, age, ageRetraite, duree, fraisGestion, plafondReportable, plafondTotal, modeSortie, profilRendements])
 
   const selectedScenario = result.scenarios.find(s => s.value === profil) || result.scenarios[1]
 
@@ -821,17 +829,17 @@ function SimulateurPER({ profile }) {
         borderColor: '#999', borderDash: [5, 3], backgroundColor: 'transparent', fill: false, tension: 0.3, pointRadius: 0, borderWidth: 1.5,
       },
       {
-        label: 'Prudent (3%)',
+        label: `Prudent (${tauxPrudent}%)`,
         data: result.scenarios[0].yearly.map(y => y.capital),
         borderColor: C.info, backgroundColor: 'transparent', fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2.5,
       },
       {
-        label: 'Equilibre (5%)',
+        label: `Equilibre (${tauxEquilibre}%)`,
         data: result.scenarios[1].yearly.map(y => y.capital),
         borderColor: C.gold, backgroundColor: 'transparent', fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2.5,
       },
       {
-        label: 'Dynamique (7%)',
+        label: `Dynamique (${tauxDynamique}%)`,
         data: result.scenarios[2].yearly.map(y => y.capital),
         borderColor: C.success, backgroundColor: 'transparent', fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2.5,
       },
@@ -928,7 +936,16 @@ function SimulateurPER({ profile }) {
 
           <div style={{ marginBottom: 18 }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: C.ivoryMuted, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8, fontFamily: FONT_SANS }}>Hypothese de rendement</div>
-            <PillSelect options={PROFIL_RENDEMENTS} value={profil} onChange={setProfil} />
+            <PillSelect options={profilRendements} value={profil} onChange={setProfil} />
+          </div>
+
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.ivoryMuted, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8, fontFamily: FONT_SANS }}>Taux de rendement par profil (modifiables)</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+              <Field label="Prudent" value={tauxPrudent} onChange={setTauxPrudent} suffix="%" step="0.5" />
+              <Field label="Equilibre" value={tauxEquilibre} onChange={setTauxEquilibre} suffix="%" step="0.5" />
+              <Field label="Dynamique" value={tauxDynamique} onChange={setTauxDynamique} suffix="%" step="0.5" />
+            </div>
           </div>
 
           <div style={{ marginBottom: 18 }}>
@@ -1031,9 +1048,9 @@ function SimulateurPER({ profile }) {
           y += 5
           y = pdfSec(doc, y, 'Projection du capital a la retraite', dt)
           y = pdfKPIBlocks(doc, y, [
-            { label: 'Capital Prudent (3%)', value: fmt(result.scenarios[0].capital), accent: [96, 165, 250] },
-            { label: 'Capital Equilibre (5%)', value: fmt(result.scenarios[1].capital), accent: navy },
-            { label: 'Capital Dynamique (7%)', value: fmt(result.scenarios[2].capital), accent: green },
+            { label: `Capital Prudent (${tauxPrudent}%)`, value: fmt(result.scenarios[0].capital), accent: [96, 165, 250] },
+            { label: `Capital Equilibre (${tauxEquilibre}%)`, value: fmt(result.scenarios[1].capital), accent: navy },
+            { label: `Capital Dynamique (${tauxDynamique}%)`, value: fmt(result.scenarios[2].capital), accent: green },
             { label: 'Total verse brut', value: fmt(selectedScenario.totalVerse), accent: dark },
             { label: 'Eco. fiscale cumulee', value: fmt(selectedScenario.econFiscaleCumulee), accent: green },
             { label: 'Rente mensuelle (eq.)', value: fmt(result.scenarios[1].renteMensuelle), accent: navy },
