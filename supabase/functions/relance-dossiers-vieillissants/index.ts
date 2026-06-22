@@ -52,6 +52,7 @@ type Deal = {
   id: string; client: string; client_id: string | null
   product: string; pp_m: number; pu: number
   advisor_code: string; status: string; created_at: string
+  updated_at: string | null
   date_signed: string | null
 }
 
@@ -91,13 +92,31 @@ async function processVieillissement(
   const staleBefore = new Date(now - STALE_DAYS * 86400000).toISOString()
   const cooldownAfter = new Date(now - COOLDOWN_VIEILLISSEMENT_DAYS * 86400000).toISOString()
 
+  // "Sans mouvement" se mesure sur la derniere modif (updated_at), pas sur la
+  // creation : un dossier cree il y a 82j mais touche/signe ce mois n est PAS
+  // sans mouvement.
   const { data: deals } = await supabase
     .from('deals')
-    .select('id, client, client_id, product, pp_m, pu, advisor_code, status, created_at, date_signed')
+    .select('id, client, client_id, product, pp_m, pu, advisor_code, status, created_at, updated_at, date_signed')
     .in('status', ['En cours', 'Prévu'])
-    .lt('created_at', staleBefore)
+    .lt('updated_at', staleBefore)
 
   if (!deals?.length) return { sent: 0, candidates: 0, errors: [] as string[] }
+
+  // Croise les mois : on ne relance PAS un dossier dont le client a signe
+  // recemment (ce mois-ci ou dans les 31 derniers jours). Un client qui vient de
+  // signer est suivi, inutile de harceler le conseiller pour une vieille
+  // projection restee en Prevu/En cours.
+  const startOfMonth = new Date(now); startOfMonth.setUTCDate(1); startOfMonth.setUTCHours(0, 0, 0, 0)
+  const recentCutoff = new Date(Math.min(startOfMonth.getTime(), now - 31 * 86400000)).toISOString().slice(0, 10)
+  const { data: recentSigned } = await supabase
+    .from('deals')
+    .select('client_id, client, advisor_code')
+    .eq('status', 'Signé')
+    .gte('date_signed', recentCutoff)
+  const signedRecentlyKeys = new Set(
+    (recentSigned || []).map(d => d.client_id || `name:${d.client}__${d.advisor_code}`)
+  )
 
   const dealIds = deals.map(d => d.id)
   const { data: recentLogs } = await supabase
@@ -107,7 +126,10 @@ async function processVieillissement(
     .in('deal_id', dealIds)
     .gte('sent_at', cooldownAfter)
   const inCooldown = new Set((recentLogs || []).map(l => l.deal_id))
-  const toSend = deals.filter(d => !inCooldown.has(d.id))
+  const toSend = deals.filter(d =>
+    !inCooldown.has(d.id) &&
+    !signedRecentlyKeys.has(d.client_id || `name:${d.client}__${d.advisor_code}`)
+  )
 
   let sent = 0
   const errors: string[] = []
@@ -116,7 +138,7 @@ async function processVieillissement(
     const profile = profileByCode[deal.advisor_code]
     if (!profile?.email) continue
     if ((quota[profile.email] || 0) >= MAX_RELANCES_PER_ADVISOR_PER_DAY) continue // plafond 2/jour/conseiller
-    const ageDays = Math.floor((now - new Date(deal.created_at).getTime()) / 86400000)
+    const ageDays = Math.floor((now - new Date(deal.updated_at || deal.created_at).getTime()) / 86400000)
     const ppAnnual = Number(deal.pp_m || 0) * 12
     const pu = Number(deal.pu || 0)
     const subject = `Relance dossier ${deal.client} (${deal.product}) — ${ageDays}j sans mouvement`
@@ -225,11 +247,13 @@ async function processMultiEquip(
   const minSignedBefore = new Date(now - MULTI_EQUIP_MIN_DAYS_SINCE_SIGN * 86400000).toISOString().slice(0, 10)
   const cooldownAfter = new Date(now - COOLDOWN_MULTI_EQUIP_DAYS * 86400000).toISOString()
 
+  // Toutes les signatures (y compris recentes) : pour juger si un client est
+  // vraiment mono-equipe, un 2e produit signe CE MOIS doit compter (sinon on
+  // relance a tort un client qui vient justement de s equiper d un 2e contrat).
   const { data: signedDeals } = await supabase
     .from('deals')
     .select('id, client, client_id, product, advisor_code, status, date_signed')
     .eq('status', 'Signé')
-    .lte('date_signed', minSignedBefore)
 
   if (!signedDeals?.length) return { sent: 0, candidates: 0, errors: [] as string[] }
 
@@ -251,6 +275,9 @@ async function processMultiEquip(
       const deal = clientDeals.sort((a, b) =>
         (b.date_signed || '').localeCompare(a.date_signed || '')
       )[0]
+      // Eligible seulement si l unique produit a ete signe il y a plus de 30j. Un
+      // client qui vient de signer (ce mois) n est pas harcele (croise les mois).
+      if (!deal.date_signed || deal.date_signed > minSignedBefore) continue
       monos.push({ clientKey, deal, product: deal.product })
     }
   }
