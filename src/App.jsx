@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react'
+import React, { useEffect, useMemo, useState, useRef, lazy, Suspense } from 'react'
 import { Toaster, toast } from 'react-hot-toast'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import { logger } from './lib/logger'
@@ -12,22 +12,25 @@ import * as prospectsService from './services/prospects'
 import * as objectifsService from './services/objectifs'
 import * as conseillerContratsService from './services/conseillerContrats'
 import * as dossiersImmoService from './services/dossiersImmo'
-import VueImmobilier from './components/VueImmobilier'
-import CatalogueProgrammes from './components/CatalogueProgrammes'
-import MesDossiersImmo from './components/MesDossiersImmo'
-import PipelineVEFA from './components/PipelineVEFA'
-import OutilsCGP from './components/OutilsCGP'
-import LinkedInPro from './components/LinkedInPro'
-import PilotageRH from './components/PilotageRH'
-import Recrutement from './components/Recrutement'
-import Remuneration from './components/Remuneration'
-import ManagementView from './components/ManagementView'
 import MissionDuMois from './components/MissionDuMois'
-import UcsStructures from './components/UcsStructures'
-import Structureurs from './components/Structureurs'
-import ClientsView from './components/clients/ClientsView'
-import ClientView from './components/clients/ClientView'
-import WeeklyReview from './components/WeeklyReview.jsx'
+// Onglets lourds charges a la demande (code-splitting via React.lazy) : sortis du
+// bundle principal pour alleger le JS au login. jspdf/html2canvas (OutilsCGP) et
+// chart.js (ManagementView) ne se telechargent que quand l onglet s ouvre.
+const VueImmobilier = lazy(() => import('./components/VueImmobilier'))
+const CatalogueProgrammes = lazy(() => import('./components/CatalogueProgrammes'))
+const MesDossiersImmo = lazy(() => import('./components/MesDossiersImmo'))
+const PipelineVEFA = lazy(() => import('./components/PipelineVEFA'))
+const OutilsCGP = lazy(() => import('./components/OutilsCGP'))
+const LinkedInPro = lazy(() => import('./components/LinkedInPro'))
+const PilotageRH = lazy(() => import('./components/PilotageRH'))
+const Recrutement = lazy(() => import('./components/Recrutement'))
+const Remuneration = lazy(() => import('./components/Remuneration'))
+const ManagementView = lazy(() => import('./components/ManagementView'))
+const UcsStructures = lazy(() => import('./components/UcsStructures'))
+const Structureurs = lazy(() => import('./components/Structureurs'))
+const ClientsView = lazy(() => import('./components/clients/ClientsView'))
+const ClientView = lazy(() => import('./components/clients/ClientView'))
+const WeeklyReview = lazy(() => import('./components/WeeklyReview.jsx'))
 import {
   annualize,
   isPipeline,
@@ -1296,12 +1299,21 @@ function LeadRoom({leads,profile,onLeadsChange,onConvertDeal,onRefresh}){
   },[leads])
 
   async function takeLead(lead){
+    // Maj optimiste : on bascule le lead chez nous immediatement (sinon il ne
+    // change qu au retour Realtime, ce qui pousse au double-clic en course aux
+    // leads). Rollback si un autre conseiller l a pris avant nous.
+    const snapshot = lead
+    onLeadsChange(prev=>prev.map(l=>l.id===lead.id?{...l,status:'contacted',taken_by:profile.id,taken_at:new Date().toISOString()}:l))
     const ok = await leadsService.take(lead.id, profile.id)
-    if (!ok) alert("Ce lead vient d'être pris par un autre conseiller.")
+    if (!ok) {
+      onLeadsChange(prev=>prev.map(l=>l.id===lead.id?snapshot:l))
+      alert("Ce lead vient d'être pris par un autre conseiller.")
+    }
   }
 
   async function releaseLead(lead){
     if(!window.confirm("Libérer ce lead pour qu'un autre conseiller puisse le prendre ?"))return
+    onLeadsChange(prev=>prev.map(l=>l.id===lead.id?{...l,status:'released',taken_by:null,taken_at:null}:l))
     await leadsService.release(lead.id)
   }
   async function resetLead(lead){
@@ -2268,7 +2280,7 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
                       </td>
                     </tr>
                     {isExpanded && group.deals.map(deal => (
-                      <tr key={`${groupKey}-${deal.id}`} style={{ backgroundColor: '#F9F8F6' }}>
+                      <tr key={`${currentGroupKey}-${deal.id}`} style={{ backgroundColor: '#F9F8F6' }}>
                         <td style={{ paddingLeft: '40px' }}>
                           <div className="cell-sub">└─ {deal.product}</div>
                         </td>
@@ -4728,7 +4740,8 @@ export default function App(){
       }
 
       setModalOpen(false);setEditingDeal(null);
-      await loadAll()
+      // Pas de loadAll ici : le canal Realtime 'deals' met deja a jour la liste
+      // (INSERT/UPDATE) sans recharger les 5 tables.
 
       // Appeler le callback de rechargement si présent (pour ClientView)
       if (reloadCallback) {
@@ -4755,7 +4768,8 @@ export default function App(){
       alert(e.message)
       return
     }
-    await loadAll()
+    // Maj locale immediate (Realtime DELETE confirmera), au lieu de recharger tout.
+    setDeals(prev => prev.filter(d => d.id !== deal.id))
   }
 
   async function saveObjectif(row){
@@ -4765,7 +4779,8 @@ export default function App(){
       alert(e.message)
       return
     }
-    await loadAll()
+    // Maj locale ciblee (pas de Realtime sur objectifs), au lieu de recharger tout.
+    setObjectifs(prev => ({ ...prev, [row.month]: row }))
   }
 
   // Conversion lead → pré-remplissage modal dossier
@@ -4851,6 +4866,7 @@ export default function App(){
           {error&&<div className="notice notice-error">{error}</div>}
           {!profile&&error&&<div className="notice notice-warn">Profil introuvable dans <span className="code">public.profiles</span>. Vérifie la table et les policies.</div>}
 
+          <Suspense fallback={<div style={{padding:24,color:'var(--t3)',fontSize:13}}>Chargement…</div>}>
           {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile}/>)}
           {activeTab==='leads'&&<LeadRoomEmbed/>}
           {activeTab==='pilotage-rh'&&isManager&&<PilotageRH/>}
@@ -4926,6 +4942,7 @@ export default function App(){
           {activeTab==='linkedin-pro'&&<LinkedInPro profile={profile}/>}
           {activeTab==='remuneration'&&<Remuneration profile={profile} deals={deals} month={month}/>}
           {activeTab==='outils'&&<OutilsCGP profile={profile}/>}
+          </Suspense>
         </div>
       </div>
 

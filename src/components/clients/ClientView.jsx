@@ -59,40 +59,25 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
 
       setLoading(true)
       try {
-        // 1. Données du client
-        const { data: clientData, error: clientError } = await supabase
-          .from('clients')
-          .select('*')
-          .eq('id', clientId)
-          .single()
+        // 1-2-3 : client, deals et dossiers immo sont independants, on les charge
+        // en parallele (Promise.all) au lieu de 3 allers-retours serie.
+        const [clientRes, dealsRes, dossiersRes] = await Promise.all([
+          supabase.from('clients').select('*').eq('id', clientId).single(),
+          supabase.from('deals').select('*').eq('client_id', clientId).order('created_at', { ascending: false }),
+          supabase.from('dossiers_immo').select('*, programme:programmes(nom, ville)').eq('client_id', clientId).order('created_at', { ascending: false }),
+        ])
 
-        if (clientError) throw clientError
-        setClient(clientData)
+        if (clientRes.error) throw clientRes.error
+        setClient(clientRes.data)
 
-        // 2. Deals du client
-        const { data: dealsData, error: dealsError } = await supabase
-          .from('deals')
-          .select('*')
-          .eq('client_id', clientId)
-          .order('created_at', { ascending: false })
+        if (dealsRes.error) throw dealsRes.error
+        const dealsData = dealsRes.data || []
+        setClientDeals(dealsData)
 
-        if (dealsError) throw dealsError
-        setClientDeals(dealsData || [])
+        if (dossiersRes.error) throw dossiersRes.error
+        setClientDossiers(dossiersRes.data || [])
 
-        // 3. Dossiers immo du client
-        const { data: dossiersData, error: dossiersError } = await supabase
-          .from('dossiers_immo')
-          .select(`
-            *,
-            programme:programmes(nom, ville)
-          `)
-          .eq('client_id', clientId)
-          .order('created_at', { ascending: false })
-
-        if (dossiersError) throw dossiersError
-        setClientDossiers(dossiersData || [])
-
-        // 4. Historique des actions
+        // 4. Historique des actions (depend des dealIds, donc apres)
         if (dealsData?.length > 0) {
           const dealIds = dealsData.map(d => d.id)
           const { data: historyData, error: historyError } = await supabase

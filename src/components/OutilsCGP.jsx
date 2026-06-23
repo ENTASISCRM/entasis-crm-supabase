@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler } from 'chart.js'
 import { Line } from 'react-chartjs-2'
-import { jsPDF } from 'jspdf'
-import html2canvas from 'html2canvas'
+// jspdf et html2canvas (lourds, ~544 Ko) sont importes dynamiquement dans les
+// handlers d export, donc charges seulement au clic "exporter en PDF".
 import { supabase } from '../lib/supabase'
 import {
   calcRenteMensuelle,
@@ -554,6 +554,7 @@ function pdfCompTable(doc, y, headers, rows, date) {
 
 async function captureChartImage(chartRef) {
   if (!chartRef?.current) return null
+  const html2canvas = (await import('html2canvas')).default
   const canvas = await html2canvas(chartRef.current, { backgroundColor: '#FFFFFF', scale: 2 })
   return canvas.toDataURL('image/png')
 }
@@ -1025,6 +1026,7 @@ function SimulateurPER({ profile }) {
       <div style={{ marginTop: 16 }}>
         <ExportPDFButton onExport={async clientName => {
           const dt = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+          const { jsPDF } = await import('jspdf')
           const doc = new jsPDF()
           const conseiller = profile?.full_name || profile?.email || 'Entasis Conseil'
           const email = profile?.email || ''
@@ -1364,6 +1366,7 @@ function SimulateurAssuranceVie({ profile }) {
       <div style={{ marginTop: 16 }}>
         <ExportPDFButton onExport={async clientName => {
           const dt = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+          const { jsPDF } = await import('jspdf')
           const doc = new jsPDF()
           const conseiller = profile?.full_name || profile?.email || 'Entasis Conseil'
           const email = profile?.email || ''
@@ -1793,6 +1796,7 @@ Simulation indicative — Entasis Conseil`
         <Btn onClick={handleAINote} variant="outline" disabled={aiLoading}>{aiLoading ? 'Generation...' : 'Generer note IA'}</Btn>
         <ExportPDFButton onExport={async clientName => {
           const dt = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+          const { jsPDF } = await import('jspdf')
           const doc = new jsPDF()
           const conseiller = profile?.full_name || profile?.email || 'Entasis Conseil'
           const emailC = profile?.email || ''
@@ -2138,6 +2142,7 @@ function SimulateurImmoNeuf({ profile }) {
         <Btn onClick={handleAIEmail} variant="outline" disabled={aiLoading}>{aiLoading ? 'Generation...' : 'Generer email client (IA)'}</Btn>
         <ExportPDFButton onExport={async clientName => {
           const dt = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+          const { jsPDF } = await import('jspdf')
           const doc = new jsPDF()
           const conseiller = profile?.full_name || profile?.email || 'Entasis Conseil'
           const emailC = profile?.email || ''

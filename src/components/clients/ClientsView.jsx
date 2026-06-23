@@ -37,32 +37,21 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
 
       setLoading(true)
       try {
-        // Requête 1 : clients uniquement
-        const { data: clientsData, error: clientsError } = await supabase
-          .from('clients')
-          .select('*')
-          .order('created_at', { ascending: false })
-
-        if (clientsError) throw clientsError
-
-        // Requête 2 : deals liés
-        // advisor_code + co_advisor_code nécessaires pour le filtre "Mes clients"
-        // afin de prendre en compte les clients où l'utilisateur est co-conseiller
-        // sur un deal (cas signalé par Gianni Pichon — co-conseiller de Clément).
-        const { data: dealsData, error: dealsError } = await supabase
-          .from('deals')
-          .select('id, client_id, product, status, pp_m, pu, advisor_code, co_advisor_code')
-          .not('client_id', 'is', null)
-
-        if (dealsError) throw dealsError
-
-        // Requête 3 : dossiers immo liés
-        const { data: dossiersData, error: dossiersError } = await supabase
-          .from('dossiers_immo')
-          .select('id, client_id, statut_pipeline')
-          .not('client_id', 'is', null)
-
-        if (dossiersError) throw dossiersError
+        // Les 3 requetes sont independantes : on les lance en parallele
+        // (Promise.all) au lieu d enchainer 3 allers-retours serie.
+        // advisor_code + co_advisor_code necessaires pour le filtre "Mes clients"
+        // (co-conseiller, cas Gianni Pichon co-conseiller de Clement).
+        const [clientsRes, dealsRes, dossiersRes] = await Promise.all([
+          supabase.from('clients').select('*').order('created_at', { ascending: false }),
+          supabase.from('deals').select('id, client_id, product, status, pp_m, pu, advisor_code, co_advisor_code').not('client_id', 'is', null),
+          supabase.from('dossiers_immo').select('id, client_id, statut_pipeline').not('client_id', 'is', null),
+        ])
+        if (clientsRes.error) throw clientsRes.error
+        if (dealsRes.error) throw dealsRes.error
+        if (dossiersRes.error) throw dossiersRes.error
+        const clientsData = clientsRes.data
+        const dealsData = dealsRes.data
+        const dossiersData = dossiersRes.data
 
         // Assembler manuellement
         const clients = (clientsData || []).map(c => ({

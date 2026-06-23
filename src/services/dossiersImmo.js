@@ -12,10 +12,12 @@ import { supabase } from '../lib/supabase'
  */
 export async function countSafe() {
   try {
-    const { data } = await supabase
+    // head:true ne transfere aucune ligne, juste le compteur (au lieu de
+    // rapatrier toutes les lignes pour en faire un .length).
+    const { count } = await supabase
       .from('dossiers_immo')
-      .select('id', { count: 'exact', head: false })
-    return (data || []).length
+      .select('id', { count: 'exact', head: true })
+    return count || 0
   } catch {
     return 0
   }
