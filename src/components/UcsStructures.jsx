@@ -127,13 +127,18 @@ export default function UcsStructures({ profile, month }) {
         logger.warn('[UCS] fetch contrat', e)
       }
       try {
-        const allDeals = await dealsService.listAll().catch(err => {
-          logger.warn('[UCS] listAll deals échoue', err)
-          return []
-        })
-        if (!alive) return
         const codes = codesContrat(contratPerso, profile)
-        const hist = codes.length ? dealsDuConseiller(allDeals, codes) : []
+        // Filtre cote serveur par code conseiller (advisor/co), au lieu de charger
+        // TOUS les deals du cabinet pour n en garder qu un. dealsDuConseiller
+        // reste applique pour la logique exacte (resultat identique, moins de lignes).
+        const myDeals = codes.length
+          ? await dealsService.listByAdvisorCodes(codes).catch(err => {
+              logger.warn('[UCS] listByAdvisorCodes échoue', err)
+              return []
+            })
+          : []
+        if (!alive) return
+        const hist = codes.length ? dealsDuConseiller(myDeals, codes) : []
         setDealsHistorique(hist)
       } catch (e) {
         logger.warn('[UCS] fetch deals', e)

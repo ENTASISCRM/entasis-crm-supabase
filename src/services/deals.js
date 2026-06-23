@@ -30,6 +30,23 @@ export async function listAll() {
 }
 
 /**
+ * Charge uniquement les deals d'un conseiller (advisor_code OU co_advisor_code
+ * dans `codes`), avec le meme join clients que listAll. Evite de rapatrier tous
+ * les deals du cabinet quand un seul conseiller est concerne (UCS, etc.).
+ */
+export async function listByAdvisorCodes(codes) {
+  if (!codes || codes.length === 0) return []
+  const list = codes.join(',')
+  const { data, error } = await supabase
+    .from('deals')
+    .select(`*, clients(${CLIENT_JOIN_COLS})`)
+    .or(`advisor_code.in.(${list}),co_advisor_code.in.(${list})`)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data || []
+}
+
+/**
  * Met à jour un deal existant. Le caller passe l'objet complet.
  */
 export async function update(dealId, patch) {
