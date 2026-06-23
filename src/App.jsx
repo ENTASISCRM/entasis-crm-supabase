@@ -47,6 +47,7 @@ import {
   COMPANIES,
   SOURCES,
   STATUS_CLASS,
+  statusLabel,
   PRIORITY_CLASS,
   euro,
   pct,
@@ -1988,7 +1989,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles}){
                   <td className="cell-mono"><strong>{euro(annualize(deal.pp_m))}</strong></td>
                   <td className="cell-mono">{euro(deal.pu)}</td>
                   <td>{deal.advisor_code}{deal.co_advisor_code&&<span className="text-muted text-xs"> · {deal.co_advisor_code}</span>}</td>
-                  <td><span className={STATUS_CLASS[deal.status]||'badge'}>{deal.status}</span></td>
+                  <td><span className={STATUS_CLASS[deal.status]||'badge'}>{statusLabel(deal.status)}</span></td>
                   <td><span className={PRIORITY_CLASS[deal.priority]||'badge'}>{deal.priority}</span></td>
                 </tr>
               ))}
@@ -2005,7 +2006,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles}){
 ───────────────────────────────────────────────────────────────────────────── */
 const PIPELINE_COLS=[
   {id:'En cours', label:'En cours',  cls:'col-progress'},
-  {id:'Prévu',    label:'Prévu',     cls:'col-forecast'},
+  {id:'Prévu',    label:'RDV calé',  cls:'col-forecast'},
   {id:'Signé',    label:'Signé ✓',   cls:'col-signed'},
   {id:'Annulé',   label:'Annulé',    cls:'col-cancelled'},
 ]
@@ -2181,14 +2182,18 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
   }, [filtered])
   const ppTotal=sumAnnualPp(filtered.filter(d=>d.status==='Signé'))
   const puTotal=sumPu(filtered.filter(d=>d.status==='Signé'))
+  // Brouillons "RDV calé" non encore travailles (produit Autre + 0 EUR), a
+  // distinguer des dossiers reellement travailles, pour ne pas gonfler le compteur.
+  const aCompleter = filtered.filter(d => d.product==='Autre' && !(d.pp_m>0) && d.status!=='Signé' && d.status!=='Annulé').length
+  const travailles = filtered.length - aCompleter
 
   return (
     <div>
-      <div className="section-header"><div><div className="section-kicker">Référentiel</div><div className="section-title">Dossiers clients</div><div className="section-sub">{groupedDeals.length} client{groupedDeals.length!==1?'s':''} · {filtered.length} dossier{filtered.length!==1?'s':''} · PP signée {euro(ppTotal)} · PU signée {euro(puTotal)}</div></div></div>
+      <div className="section-header"><div><div className="section-kicker">Référentiel</div><div className="section-title">Dossiers clients</div><div className="section-sub">{groupedDeals.length} client{groupedDeals.length!==1?'s':''} · {travailles} dossier{travailles!==1?'s':''} travaillé{travailles!==1?'s':''}{aCompleter>0?` · ${aCompleter} RDV calé${aCompleter!==1?'s':''} à compléter`:''} · PP signée {euro(ppTotal)} · PU signée {euro(puTotal)}</div></div></div>
       <div className="card card-p mb-16">
         <div className="table-toolbar">
           <input className="search-input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Recherche client, produit, conseiller…"/>
-          <select className="filter-select" value={statusF} onChange={e=>setStatusF(e.target.value)}><option value="Tous">Tous statuts</option>{STATUS_OPTIONS.map(s=><option key={s}>{s}</option>)}</select>
+          <select className="filter-select" value={statusF} onChange={e=>setStatusF(e.target.value)}><option value="Tous">Tous statuts</option>{STATUS_OPTIONS.map(s=><option key={s} value={s}>{statusLabel(s)}</option>)}</select>
           <select className="filter-select" value={productF} onChange={e=>setProductF(e.target.value)}><option value="Tous">Tous produits</option>{PRODUCTS.map(p=><option key={p}>{p}</option>)}</select>
           <select className="filter-select" value={priorityF} onChange={e=>setPriorityF(e.target.value)}><option value="Tous">Toutes priorités</option>{PRIORITY_OPTIONS.map(p=><option key={p}>{p}</option>)}</select>
           <label className="flex items-center gap-8 text-sm text-muted" style={{cursor:'pointer',whiteSpace:'nowrap'}}>
@@ -2240,7 +2245,7 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
                         {group.co_advisor_code && <span className="cell-sub"> co: {group.co_advisor_code}</span>}
                       </td>
                       <td>{group.latestSignedDate ? <span style={{fontSize:14,fontWeight:600,color:'var(--t1)',fontVariantNumeric:'tabular-nums'}}>{new Date(group.latestSignedDate).toLocaleDateString('fr-FR')}</span> : <span style={{color:'var(--t3)'}}>—</span>}</td>
-                      <td><span className={STATUS_CLASS[group.globalStatus]||'badge'}>{group.globalStatus}</span></td>
+                      <td><span className={STATUS_CLASS[group.globalStatus]||'badge'}>{statusLabel(group.globalStatus)}</span></td>
                       <td>
                         <div className="table-actions">
                           {group.client_id && onSelectClient && (
@@ -2275,7 +2280,7 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
                         <td className="cell-mono">{deal.pu>0?euro(deal.pu):'—'}</td>
                         <td><span style={{fontSize:12,color:'var(--t3)'}}>{deal.company||'—'}</span></td>
                         <td>{deal.date_signed ? <span style={{fontSize:12,color:'var(--t2)',fontVariantNumeric:'tabular-nums'}}>{new Date(deal.date_signed).toLocaleDateString('fr-FR')}</span> : <span style={{color:'var(--t3)'}}>—</span>}</td>
-                        <td><span className={STATUS_CLASS[deal.status]||'badge'}>{deal.status}</span></td>
+                        <td><span className={STATUS_CLASS[deal.status]||'badge'}>{statusLabel(deal.status)}</span></td>
                         <td>
                           <div className="table-actions">
                             <button
@@ -3825,7 +3830,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                           onChange={e => setProductField(index, 'status', e.target.value)}
                         >
                           {STATUS_OPTIONS.map(s => (
-                            <option key={s} value={s}>{s}</option>
+                            <option key={s} value={s}>{statusLabel(s)}</option>
                           ))}
                         </select>
                       </div>
@@ -3843,7 +3848,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                 <div className="form-row form-row-3 mt-16">
                   <div className="form-group"><label className="form-label">PP mensuelle (€)</label><input className="form-input" type="number" min="0" value={deal.pp_m === 0 ? '' : deal.pp_m} onChange={e=>set('pp_m', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()}/><div className="form-hint">→ PP annualisée : <strong>{euro(annualize(deal.pp_m))}</strong></div></div>
                   <div className="form-group"><label className="form-label">PU (€)</label><input className="form-input" type="number" min="0" value={deal.pu === 0 ? '' : deal.pu} onChange={e=>set('pu', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()}/></div>
-                  <div className="form-group"><label className="form-label">Statut</label><select className="form-select" value={deal.status} onChange={e=>set('status',e.target.value)}>{STATUS_OPTIONS.map(s=><option key={s}>{s}</option>)}</select></div>
+                  <div className="form-group"><label className="form-label">Statut</label><select className="form-select" value={deal.status} onChange={e=>set('status',e.target.value)}>{STATUS_OPTIONS.map(s=><option key={s} value={s}>{statusLabel(s)}</option>)}</select></div>
                 </div>
                 <div className="form-group mt-16" style={{ background: 'var(--gold-subtle, #FBF6EC)', border: '1px solid var(--gold-line, rgba(201,169,97,0.30))', borderRadius: 'var(--rad)', padding: '10px 14px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', margin: 0 }}>

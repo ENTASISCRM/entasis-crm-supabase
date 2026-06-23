@@ -16,6 +16,14 @@ export const STATUS_CLASS = {
   'Prévu': 'badge badge-forecast',
   'Annulé': 'badge badge-cancelled',
 };
+
+// Libelle d'affichage des statuts (la valeur en base reste inchangee). "Prévu"
+// est en realite le brouillon cree automatiquement quand un RDV est cale en Lead
+// Room, d'ou le libelle plus clair "RDV calé" cote interface.
+export const STATUS_LABEL = {
+  'Prévu': 'RDV calé',
+};
+export const statusLabel = (s) => STATUS_LABEL[s] || s;
 export const PRIORITY_CLASS = {
   'Urgente': 'badge badge-urgent',
   'Haute': 'badge badge-high',
