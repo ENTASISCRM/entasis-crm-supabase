@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
+import { statusLabel } from '../../lib/ui-shared'
 import ClientModal from './ClientModal.jsx'
 
 // Helper pour formatage monétaire
@@ -203,7 +204,7 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
               </span>
             )}
             <span className={STATUS_CLASS[globalStatus] || 'badge'}>
-              {globalStatus}
+              {statusLabel(globalStatus)}
             </span>
           </div>
         </div>
@@ -410,7 +411,7 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <span className={STATUS_CLASS[deal.status]}>
-                          {deal.status}
+                          {statusLabel(deal.status)}
                         </span>
                         {deal.date_signed && (
                           <span style={{ fontSize: '12px', color: 'var(--t2)' }}>

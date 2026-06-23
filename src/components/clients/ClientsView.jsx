@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { toast } from 'react-hot-toast'
+import { statusLabel } from '../../lib/ui-shared'
 import ClientModal from './ClientModal.jsx'
 
 // Helper pour formatage monétaire
@@ -299,7 +300,7 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
                     </td>
                     <td style={{ padding: '16px 20px' }}>
                       <span className={`badge ${getStatusBadgeClass(client.globalStatus)}`}>
-                        {client.globalStatus}
+                        {statusLabel(client.globalStatus)}
                       </span>
                     </td>
                     <td style={{ padding: '16px 20px' }}>
