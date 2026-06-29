@@ -377,9 +377,14 @@ export function evaluerRentabilite(contrat, dealsHistoriques = [], profile = nul
   if (!TYPES_AVEC_SEUIL_RENTABILITE.includes(contrat.type_contrat)) {
     return { rentabilise: true, brutCumule: 0, valeurCumulee: 0, ecart: 0 }
   }
-  // Stagiaire à 0 € : aucun coût → toujours rentabilisé dès le 1er €
+  // Stagiaire gratuit (salaire 0 €) : pas de salaire a rembourser, donc PAS de
+  // seuil franchi -> NON rentabilise -> taux mandataire (booster). Decision Louis
+  // 24/06 (cas Arthur, stagiaire gratuit <2 mois) : un stagiaire non paye garde le
+  // taux mandataire tant qu il n est pas marque rentabilise. ATTENTION : un
+  // conseiller PAYE doit avoir son salaire_brut_mensuel renseigne, sinon il
+  // beneficierait a tort du taux mandataire.
   if (Number(contrat.salaire_brut_mensuel || 0) <= 0) {
-    return { rentabilise: true, brutCumule: 0, valeurCumulee: 0, ecart: 0 }
+    return { rentabilise: false, brutCumule: 0, valeurCumulee: 0, ecart: 0 }
   }
 
   // Seuil MENSUEL : salaire brut du mois courant. Reset implicite chaque
