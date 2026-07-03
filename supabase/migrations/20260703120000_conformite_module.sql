@@ -28,7 +28,9 @@ create extension if not exists pgcrypto;
 create table if not exists public.conformite_dossiers (
   id uuid primary key default gen_random_uuid(),
   client_id uuid references public.clients(id) on delete set null,
-  deal_id uuid references public.deals(id) on delete set null,
+  -- deals.id est du TEXTE dans ce CRM (ids applicatifs D-...), pas un uuid,
+  -- cf dossier_relance_log et leadroom_leads qui referencent pareil.
+  deal_id text references public.deals(id) on delete set null,
   advisor_code text not null,
   produit text not null default 'Plan Epargne Retraite Individuel (PER IN)',
   compagnie text not null default 'GENERALI',
