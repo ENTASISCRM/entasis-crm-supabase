@@ -20,11 +20,11 @@ import {
 } from './_lib/calcul-commission.js'
 import { TYPES_AVEC_SEUIL_RENTABILITE } from './_lib/bareme-entasis.js'
 
-// Le taux CDI (reduit) ne s applique qu aux contrats a seuil (CDI, CDD,
-// Alternant, Stagiaire) une fois rentabilises. Mandataire et Gerant sont
-// TOUJOURS au taux mandataire (plein), quel que soit rentabilise.
-function tauxCdiApplicable(contrat, rentab) {
-  return !!(contrat && TYPES_AVEC_SEUIL_RENTABILITE.includes(contrat.type_contrat) && rentab?.rentabilise)
+// Taux UCS (simulateur) fixe par TYPE de contrat, independant de la
+// rentabilite du mois : salaries (CDI, CDD, Alternant, Stagiaire) au taux CDI
+// (0,75 %), mandataires et gerants au taux mandataire (1,5 %, plein).
+function tauxCdiApplicable(contrat) {
+  return !!(contrat && TYPES_AVEC_SEUIL_RENTABILITE.includes(contrat.type_contrat))
 }
 
 const CLIENT_JOIN = 'id, nom, prenom, email, telephone, age, situation_familiale, nb_enfants, profession, revenus_annuels, patrimoine_estime, objectifs, notes, advisor_code, co_advisor_code'
@@ -110,7 +110,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ mode: 'perso', contrat: null, rentab: RENTAB_VIDE, comm: COMM_VIDE, dealsMoisCount: 0, tauxCdiApplicable: false })
     }
     const ligne = calcLigne(contrat, prof || null)
-    return res.status(200).json({ mode: 'perso', ...ligne, tauxCdiApplicable: tauxCdiApplicable(contrat, ligne.rentab) })
+    return res.status(200).json({ mode: 'perso', ...ligne, tauxCdiApplicable: tauxCdiApplicable(contrat) })
   } catch (e) {
     return res.status(500).json({ error: e?.message || 'Erreur calcul' })
   }
