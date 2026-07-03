@@ -10,6 +10,7 @@
 // Demandé par Louis 28/05/2026 (#2 dans la liste des 7 améliorations).
 
 import { useEffect, useMemo, useState } from 'react'
+import { leadroomAdmin } from '../lib/leadroom-api'
 
 const LEADROOM_API = import.meta.env.VITE_LEADROOM_URL || 'https://entasis-leadroom.vercel.app'
 
@@ -44,7 +45,7 @@ export default function MissionDuMois({ profile, ppTarget, ppSigned, ppProjected
     let cancelled = false
     Promise.all([
       // Tenus à suivre (>7j sans rappel, ce conseiller)
-      fetch(`${LEADROOM_API}/api/admin/joined-leads-detail?advisorEmail=${encodeURIComponent(profile.email)}`)
+      leadroomAdmin(`joined-leads-detail?advisorEmail=${encodeURIComponent(profile.email)}`)
         .then(r => r.ok ? r.json() : { leads: [] })
         .catch(() => ({ leads: [] })),
       // RDV à venir cette semaine — pas d'endpoint dédié mais on peut filtrer depuis joined-leads-detail

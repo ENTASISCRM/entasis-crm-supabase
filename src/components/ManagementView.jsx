@@ -12,6 +12,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { useEffect, useMemo, useState } from 'react'
+import { leadroomAdmin } from '../lib/leadroom-api'
 import {
   advisorMetrics,
   MONTHS,
@@ -56,7 +57,7 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
   const [rdvStats, setRdvStats] = useState({ loading: true, byEmail: {} })
   useEffect(() => {
     let cancelled = false
-    fetch(`${LEADROOM_API}/api/admin/advisor-rdv-stats`)
+    leadroomAdmin(`advisor-rdv-stats`)
       .then(r => r.ok ? r.json() : null)
       .then(json => {
         if (cancelled || !json) return
@@ -1211,7 +1212,7 @@ function RdvHeatmapSection() {
   const [metric, setMetric] = useState('tenue') // 'tenue' | 'no_show'
 
   useEffect(() => {
-    fetch(`${LEADROOM_API}/api/admin/rdv-heatmap?days=90`)
+    leadroomAdmin(`rdv-heatmap?days=90`)
       .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
       .then(json => setData(json))
       .catch(e => setError(e.message))
@@ -1387,7 +1388,7 @@ function CaForecastSection() {
   const [convPct, setConvPct] = useState(null) // taux reglable (init depuis l API)
   useEffect(() => {
     let cancelled = false
-    fetch(`${LEADROOM_API}/api/admin/ca-forecast`)
+    leadroomAdmin(`ca-forecast`)
       .then(r => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then(j => {
         if (cancelled) return
@@ -1483,7 +1484,7 @@ function FunnelBySourceSection({ deals }) {
   const [period, setPeriod] = useState('all') // all | month | quarter | year
   useEffect(() => {
     let cancelled = false
-    fetch(`${LEADROOM_API}/api/admin/funnel-by-source`)
+    leadroomAdmin(`funnel-by-source`)
       .then(r => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then(j => { if (!cancelled) setState({ loading: false, meta: j.campaigns_meta || {}, leads: j.leads || [], error: null }) })
       .catch(e => { if (!cancelled) setState({ loading: false, meta: {}, leads: [], error: e.message }) })
@@ -1829,7 +1830,7 @@ function RecyclageRefusesSection() {
     try {
       const params = new URLSearchParams({ minDays: String(minDays) })
       if (campaignFilter) params.set('campaign', campaignFilter)
-      const r = await fetch(`${LEADROOM_API}/api/admin/refused-recyclables?${params}`)
+      const r = await leadroomAdmin(`refused-recyclables?${params}`)
       const json = await r.json()
       if (r.ok) setData(json)
     } catch (e) {
@@ -1858,7 +1859,7 @@ function RecyclageRefusesSection() {
     if (!confirm(`Confirmer, ${label} ${selectedIds.size} lead(s) ?`)) return
     setWorking(true)
     try {
-      const r = await fetch(`${LEADROOM_API}/api/admin/recycle-lead`, {
+      const r = await leadroomAdmin(`recycle-lead`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ leadIds: Array.from(selectedIds), action }),
@@ -2013,7 +2014,7 @@ function RdvBucketDrilldownModal({ bucket, onClose }) {
   async function refresh() {
     setLoading(true)
     try {
-      const r = await fetch(`${LEADROOM_API}/api/admin/rdv-bucket-detail?bucket=${bucket}`)
+      const r = await leadroomAdmin(`rdv-bucket-detail?bucket=${bucket}`)
       const json = await r.json()
       if (r.ok) setLeads(json.leads || [])
       else setError(json.error || 'erreur')
@@ -2058,7 +2059,7 @@ function RdvBucketDrilldownModal({ bucket, onClose }) {
   async function doAction(leadId, action, callbackAtIso) {
     setBusy(b => ({ ...b, [leadId]: true }))
     try {
-      const r = await fetch(`${LEADROOM_API}/api/admin/lead-action`, {
+      const r = await leadroomAdmin(`lead-action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ leadId, action, callbackAtIso }),
