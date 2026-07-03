@@ -17,7 +17,7 @@ import {
   dealsDuMois,
   evaluerRentabilite,
   commissionsMois,
-} from '../src/lib/calcul-commission.js'
+} from './_lib/calcul-commission.js'
 
 const CLIENT_JOIN = 'id, nom, prenom, email, telephone, age, situation_familiale, nb_enfants, profession, revenus_annuels, patrimoine_estime, objectifs, notes, advisor_code, co_advisor_code'
 
