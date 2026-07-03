@@ -461,12 +461,33 @@ function ModaleCreation({ profile, onClose, onCreated }) {
   const [query, setQuery] = useState('')
   const [resultats, setResultats] = useState([])
   const [client, setClient] = useState(null)
+  // Mode nouveau client : usage au telephone, le prospect n est pas encore
+  // dans le CRM, on saisit son identite ici et la fiche client est creee
+  // en meme temps que le dossier de conformite (avec dedoublonnage).
+  const [modeNouveau, setModeNouveau] = useState(false)
+  const [nvPrenom, setNvPrenom] = useState('')
+  const [nvNom, setNvNom] = useState('')
+  const [nvTel, setNvTel] = useState('')
+  const [nvEmail, setNvEmail] = useState('')
   const [deals, setDeals] = useState([])
   const [dealId, setDealId] = useState('')
   const [produit, setProduit] = useState(PRODUIT_DEFAUT)
   const [compagnie, setCompagnie] = useState(COMPAGNIE_DEFAUT)
   const [nomProduit, setNomProduit] = useState('')
   const [saving, setSaving] = useState(false)
+
+  // Bascule en mode nouveau client, en recyclant la recherche deja tapee
+  const ouvrirNouveau = () => {
+    const q = query.trim()
+    if (/^[\d\s+().-]{6,}$/.test(q)) setNvTel(q)
+    else if (q.includes('@')) setNvEmail(q)
+    else if (q) {
+      const mots = q.split(/\s+/)
+      if (mots.length >= 2) { setNvPrenom(mots[0]); setNvNom(mots.slice(1).join(' ')) }
+      else setNvNom(q)
+    }
+    setModeNouveau(true)
+  }
 
   // Recherche client avec debounce 250 ms
   useEffect(() => {
@@ -499,22 +520,58 @@ function ModaleCreation({ profile, onClose, onCreated }) {
     return () => { alive = false }
   }, [client?.id])
 
+  // En mode nouveau client : reutilise une fiche existante si le
+  // dedoublonnage (email > telephone > nom) en trouve une, sinon cree la
+  // fiche clients a la volee. Retourne { id, nom, prenom, email, telephone }.
+  const resoudreClient = async () => {
+    if (client?.id) return client
+    const nom = nvNom.trim()
+    if (!nom) { toast.error('Nom du client requis'); return null }
+    const email = nvEmail.trim() || null
+    const telephone = nvTel.trim() || null
+    const existant = await clientsService
+      .findExisting({ email, telephone, nom, advisor_code: profile?.advisor_code })
+      .catch(() => null)
+    if (existant?.id) {
+      toast.success('Client déjà présent dans le CRM, fiche réutilisée')
+      return { id: existant.id, nom, prenom: nvPrenom.trim(), email, telephone }
+    }
+    const { data, error } = await supabase
+      .from('clients')
+      .insert({
+        nom,
+        prenom: nvPrenom.trim() || null,
+        email,
+        telephone,
+        advisor_code: profile?.advisor_code || null,
+        created_by: profile?.id || null,
+      })
+      .select('id')
+      .single()
+    if (error) throw error
+    return { id: data.id, nom, prenom: nvPrenom.trim(), email, telephone }
+  }
+
   const handleCreate = async () => {
-    if (!client?.id) return toast.error('Sélectionne un client')
+    if (!client?.id && !(modeNouveau && nvNom.trim())) {
+      return toast.error(modeNouveau ? 'Nom du client requis' : 'Sélectionne un client ou saisis un nouveau client')
+    }
     if (!produit.trim()) return toast.error('Produit requis')
     setSaving(true)
     try {
+      const c = await resoudreClient()
+      if (!c) { setSaving(false); return }
       // Seed du questionnaire, prérempli avec l'identité du client
       const seed = emptyReponses()
       seed[CLE_SITUATION] = {
         ...(seed[CLE_SITUATION] || {}),
-        nom: client.nom || '',
-        prenom: client.prenom || '',
-        email: client.email || '',
-        telephone: client.telephone || '',
+        nom: c.nom || '',
+        prenom: c.prenom || '',
+        email: c.email || '',
+        telephone: c.telephone || '',
       }
       const row = await conformiteService.create({
-        client_id: client.id,
+        client_id: c.id,
         deal_id: dealId || null,
         // La colonne est NOT NULL et un profil manager peut ne pas avoir de
         // code conseiller : repli DIRECTION (visible en vue manager).
@@ -565,6 +622,26 @@ function ModaleCreation({ profile, onClose, onCreated }) {
                 </div>
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setClient(null); setQuery('') }}>Changer</button>
               </div>
+            ) : modeNouveau ? (
+              <div style={{ padding: '12px 14px', borderRadius: 12, background: 'var(--panel)', border: '0.5px solid var(--bd)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--t2)' }}>
+                    Nouveau client (sa fiche CRM sera créée avec le recueil)
+                  </div>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => setModeNouveau(false)}>
+                    Revenir à la recherche
+                  </button>
+                </div>
+                <div className="form-row form-row-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px 12px' }}>
+                  <input className="form-input" placeholder="Prénom" value={nvPrenom} onChange={(e) => setNvPrenom(e.target.value)} autoFocus />
+                  <input className="form-input" placeholder="Nom *" value={nvNom} onChange={(e) => setNvNom(e.target.value)} />
+                  <input className="form-input" placeholder="Téléphone" value={nvTel} onChange={(e) => setNvTel(e.target.value)} />
+                  <input className="form-input" placeholder="Email" value={nvEmail} onChange={(e) => setNvEmail(e.target.value)} />
+                </div>
+                <div className="form-hint" style={{ marginTop: 8 }}>
+                  Seul le nom est obligatoire pour démarrer le questionnaire en ligne avec le client. Si une fiche existe déjà (même email, téléphone ou nom), elle est réutilisée, pas de doublon.
+                </div>
+              </div>
             ) : (
               <>
                 <input
@@ -596,8 +673,16 @@ function ModaleCreation({ profile, onClose, onCreated }) {
                   </div>
                 )}
                 {query.length >= 2 && resultats.length === 0 && (
-                  <div className="form-hint">Aucun client trouvé. Le client doit exister dans le CRM avant de créer le recueil.</div>
+                  <div className="form-hint">Aucun client trouvé.</div>
                 )}
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  style={{ marginTop: 8 }}
+                  onClick={ouvrirNouveau}
+                >
+                  + Nouveau client (pas encore dans le CRM)
+                </button>
               </>
             )}
           </div>
@@ -641,7 +726,12 @@ function ModaleCreation({ profile, onClose, onCreated }) {
 
         <div className="modal-foot">
           <button type="button" className="btn btn-ghost" onClick={onClose}>Annuler</button>
-          <button type="button" className="btn btn-primary" disabled={saving || !client} onClick={handleCreate}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={saving || (!client && !(modeNouveau && nvNom.trim()))}
+            onClick={handleCreate}
+          >
             {saving ? 'Création…' : 'Créer le dossier'}
           </button>
         </div>
