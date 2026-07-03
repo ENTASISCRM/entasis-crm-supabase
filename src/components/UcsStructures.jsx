@@ -120,9 +120,12 @@ export default function UcsStructures({ profile, month }) {
     setTauxLoading(true)
     setTauxError('')
     fetchRemuneration('perso', month)
-      .then(({ rentab }) => {
+      .then(({ tauxCdiApplicable }) => {
         if (!alive) return
-        setTauxConseillerUcs(rentab?.rentabilise ? 0.75 : 1.5)
+        // Le serveur applique la regle canonique : seuls les contrats a seuil
+        // (CDI, CDD, Alternant, Stagiaire) rentabilises passent a 0,75 %.
+        // Mandataire et Gerant restent TOUJOURS a 1,5 %.
+        setTauxConseillerUcs(tauxCdiApplicable ? 0.75 : 1.5)
       })
       .catch(e => {
         if (!alive) return
