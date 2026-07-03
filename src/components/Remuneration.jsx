@@ -552,7 +552,15 @@ function VueManager({ contrats, deals, month }) {
                       </div>
                     ) : <span style={{ color: 'var(--t3)', fontSize: 12 }}>—</span>}
                   </td>
-                  <td className="cell-mono" style={{ textAlign: 'right', fontWeight: 600, color: 'var(--t1)' }}>{fmtEur(l.comm.total)}</td>
+                  <td className="cell-mono" style={{ textAlign: 'right', fontWeight: 600, color: 'var(--t1)' }}>
+                    {fmtEur(l.comm.total)}
+                    {(Number(l.comm.variablePu || 0) + Number(l.comm.variableHorsPalier || 0)) > 0 && (
+                      <div style={{ fontSize: 10, fontWeight: 400, color: 'var(--t3)', fontVariantNumeric: 'tabular-nums' }}
+                           title="Commission sur produits hors prime periodique (versement unique, SCPI, UCS, Girardin, prevoyance, mutuelle), non comptee dans la colonne PP realisee">
+                        dont hors PP {fmtEur(Number(l.comm.variablePu || 0) + Number(l.comm.variableHorsPalier || 0))}
+                      </div>
+                    )}
+                  </td>
                 </tr>
               )
             })}
