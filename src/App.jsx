@@ -31,6 +31,8 @@ const Structureurs = lazy(() => import('./components/Structureurs'))
 const ClientsView = lazy(() => import('./components/clients/ClientsView'))
 const ClientView = lazy(() => import('./components/clients/ClientView'))
 const WeeklyReview = lazy(() => import('./components/WeeklyReview.jsx'))
+// Conformite embarque jspdf : lazy pour rester hors du bundle de login.
+const Conformite = lazy(() => import('./components/Conformite'))
 import {
   annualize,
   isPipeline,
@@ -711,6 +713,7 @@ function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,prospects
     {key:'pipeline',  label:'Pipeline',  Icon:Icon.Pipeline,  badge:isManager?pipelineCount:hotCount},
     {key:'dossiers',  label:'Dossiers',  Icon:Icon.Dossiers},
     {key:'clients',   label:'Clients',   Icon:Icon.Team},
+    {key:'conformite', label:'Conformité', Icon:Icon.Dossiers},
     {key:'forecast',  label:isManager?'Management':'Prévisionnel', Icon:Icon.Forecast},
     {key:'agenda',    label:'Agenda',    Icon:Icon.Calendar},
     {key:'market',    label:'Marchés',   Icon:Icon.Market},
@@ -806,7 +809,7 @@ function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,prospects
 /* ─────────────────────────────────────────────────────────────────────────────
    TOP BAR
 ───────────────────────────────────────────────────────────────────────────── */
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs',prospection:'Prospection LinkedIn','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA',remuneration:'Rémunération',outils:'Outils CGP','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯'}
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs',prospection:'Prospection LinkedIn','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA',remuneration:'Rémunération',outils:'Outils CGP','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu}){
   return (
@@ -4942,6 +4945,7 @@ export default function App(){
           {activeTab==='linkedin-pro'&&<LinkedInPro profile={profile}/>}
           {activeTab==='remuneration'&&<Remuneration profile={profile} deals={deals} month={month}/>}
           {activeTab==='outils'&&<OutilsCGP profile={profile}/>}
+          {activeTab==='conformite'&&<Conformite profile={profile}/>}
           </Suspense>
         </div>
       </div>
