@@ -222,9 +222,9 @@ export default function UcsStructures({ profile, month }) {
         tauxError={tauxError}
       />
 
-      {loading && <LoadingState />}
+      {(loading || tauxLoading) && <LoadingState />}
       {error && !loading && <ErrorState error={error} />}
-      {!loading && !error && ucs.length === 0 && (
+      {!loading && !tauxLoading && !error && ucs.length === 0 && (
         <EmptyState isManager={isManager} onAdminClick={() => setAdminMode(true)} />
       )}
 
@@ -233,7 +233,7 @@ export default function UcsStructures({ profile, month }) {
         <AdminPanel onReload={reload} />
       )}
 
-      {!loading && !error && ucs.length > 0 && (
+      {!loading && !tauxLoading && !error && ucs.length > 0 && (
         <div className="ucs-layout">
           <div className="ucs-catalogue">
             <FilterBar
@@ -305,9 +305,9 @@ function Header({ isManager, adminMode, onToggleAdmin, tauxConseiller = 1.5, tau
         <p style={{ fontSize: 13, color: 'var(--t3)', marginTop: 4 }}>
           Catalogue des produits structurés du groupement et simulateur de commission.
           {' '}<strong style={{ color: 'var(--gold)' }}>
-            Ta commission : {String(tauxConseiller).replace('.', ',')} %
+            Ta commission : {tauxLoading ? '…' : `${String(tauxConseiller).replace('.', ',')} %`}
           </strong>
-          {isManager && ` · Rétention cabinet = Upfront − ${String(tauxConseiller).replace('.', ',')} %`}
+          {isManager && !tauxLoading && ` · Rétention cabinet = Upfront − ${String(tauxConseiller).replace('.', ',')} %`}
           {tauxLoading && (
             <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--t3)', fontStyle: 'italic' }}>
               Calcul en cours…
