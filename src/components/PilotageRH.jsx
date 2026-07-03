@@ -16,7 +16,7 @@ import toast from 'react-hot-toast'
 import * as service from '../services/conseillerContrats'
 import * as profilesService from '../services/profiles'
 import { impersonate } from '../services/impersonation'
-import { TYPES_CONTRAT, LIBELLE_TYPE_CONTRAT } from '../lib/bareme-entasis'
+import { TYPES_CONTRAT, LIBELLE_TYPE_CONTRAT } from '../lib/contrat-enums'
 
 const fmtEur = (v) => Number(v || 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '—')

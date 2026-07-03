@@ -1,0 +1,108 @@
+// api/remuneration.js
+// Calcul des commissions cote SERVEUR. Le bareme (grille de taux, BAREME_PRODUITS)
+// et le moteur calcul-commission.js ne partent plus dans le bundle navigateur :
+// seule cette fonction les importe. Le navigateur envoie le mois, recoit les
+// resultats deja calcules, jamais la grille de taux.
+// Correctif audit securite 2026-07-03 (marge cabinet reservee a la direction).
+//
+// SECURITE : on cree un client Supabase avec le JWT de l APPELANT (pas le
+// service_role), donc la RLS s applique exactement comme dans le navigateur.
+// Un conseiller ne recoit que ses propres deals/contrat (pas d oracle de taux
+// via des deals fabriques), un manager voit l equipe.
+
+import { createClient } from '@supabase/supabase-js'
+import {
+  codesContrat,
+  dealsDuConseiller,
+  dealsDuMois,
+  evaluerRentabilite,
+  commissionsMois,
+} from '../src/lib/calcul-commission.js'
+
+const CLIENT_JOIN = 'id, nom, prenom, email, telephone, age, situation_familiale, nb_enfants, profession, revenus_annuels, patrimoine_estime, objectifs, notes, advisor_code, co_advisor_code'
+
+// Meme forme que le fallback contrat absent cote client (evaluerRentabilite).
+const RENTAB_VIDE = { rentabilise: true, brutCumule: 0, valeurCumulee: 0, ecart: 0 }
+const COMM_VIDE = {
+  variablePp: 0, variablePu: 0, variableHorsPalier: 0, total: 0,
+  ppRealisee: 0, puRealisee: 0,
+  palierPpAtteint: false, palierPuAtteint: false,
+  rentabilise: true, detail: [],
+}
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Methode non autorisee' })
+
+  const authHeader = req.headers.authorization || ''
+  if (!authHeader.startsWith('Bearer ')) return res.status(401).json({ error: 'Token manquant' })
+  const token = authHeader.slice(7)
+
+  const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+
+  const { data: { user }, error: uErr } = await sb.auth.getUser(token)
+  if (uErr || !user) return res.status(401).json({ error: 'Token invalide' })
+
+  const { mode = 'perso', month, dateRefYear, dateRefMonthIndex } = req.body || {}
+  // dateRef identique a monthStrToDate cote client : 15 du mois selectionne,
+  // annee courante du navigateur (transmise pour eviter toute derive de mois).
+  const dateRef = (Number.isInteger(dateRefYear) && Number.isInteger(dateRefMonthIndex))
+    ? new Date(dateRefYear, dateRefMonthIndex, 15)
+    : new Date()
+
+  const { data: prof } = await sb
+    .from('profiles').select('id, role, advisor_code, full_name').eq('id', user.id).maybeSingle()
+  const isManager = prof?.role === 'manager'
+
+  // Deals : la RLS cloisonne (conseiller = les siens, manager = tous).
+  const { data: deals, error: dErr } = await sb
+    .from('deals').select(`*, clients(${CLIENT_JOIN})`).order('created_at', { ascending: false })
+  if (dErr) return res.status(500).json({ error: 'Deals: ' + dErr.message })
+
+  // Calcule une ligne (rentab + comm) pour un contrat, moteur inchange.
+  const calcLigne = (contrat, profileLie) => {
+    const codes = codesContrat(contrat, profileLie)
+    const dealsConseiller = dealsDuConseiller(deals || [], codes)
+    const dealsMois = dealsDuMois(dealsConseiller, month)
+    const rentab = evaluerRentabilite(contrat, dealsConseiller, profileLie, dateRef)
+    const comm = commissionsMois(dealsMois, contrat, rentab, profileLie)
+    return {
+      contrat,
+      rentab,
+      comm,
+      dealsMoisCount: dealsMois.length,
+      totalBrut: Number(contrat.salaire_brut_mensuel || 0) + comm.total,
+    }
+  }
+
+  try {
+    if (mode === 'manager') {
+      if (!isManager) return res.status(403).json({ error: 'Reserve a la direction' })
+      const { data: contrats, error: cErr } = await sb
+        .from('conseiller_contrats')
+        .select('*, profile:profile_id(id, advisor_code, email, full_name)')
+      if (cErr) return res.status(500).json({ error: 'Contrats: ' + cErr.message })
+      const lignes = (contrats || [])
+        .filter(c => c.actif && c.type_contrat !== 'GERANT')
+        .map(c => calcLigne(c, c.profile || null))
+      const totals = {
+        fixe: lignes.reduce((s, l) => s + Number(l.contrat.salaire_brut_mensuel || 0), 0),
+        variable: lignes.reduce((s, l) => s + l.comm.total, 0),
+        total: lignes.reduce((s, l) => s + l.totalBrut, 0),
+      }
+      return res.status(200).json({ mode: 'manager', lignes, totals })
+    }
+
+    // perso : le contrat de l appelant (RLS restreint a sa propre ligne)
+    const { data: contrat } = await sb
+      .from('conseiller_contrats').select('*').eq('profile_id', user.id).eq('actif', true).maybeSingle()
+    if (!contrat) {
+      return res.status(200).json({ mode: 'perso', contrat: null, rentab: RENTAB_VIDE, comm: COMM_VIDE, dealsMoisCount: 0 })
+    }
+    return res.status(200).json({ mode: 'perso', ...calcLigne(contrat, prof || null) })
+  } catch (e) {
+    return res.status(500).json({ error: e?.message || 'Erreur calcul' })
+  }
+}

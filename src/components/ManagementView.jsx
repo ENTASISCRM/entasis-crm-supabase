@@ -21,9 +21,8 @@ import {
   isPipeline,
 } from '../lib/metrics'
 import { supabase } from '../lib/supabase'
-import * as contratsService from '../services/conseillerContrats'
 import * as profilesService from '../services/profiles'
-import { evaluerRentabilite, codesContrat, dealsDuConseiller } from '../lib/calcul-commission'
+import { fetchRemuneration } from '../lib/remuneration-api'
 
 const fmtEur = (v) => Number(v || 0).toLocaleString('fr-FR', {
   style: 'currency', currency: 'EUR', maximumFractionDigits: 0,
@@ -43,15 +42,41 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
     })
   }, [objectifs, month])
 
-  // Contrats des conseillers (pour calculer la rentabilité)
-  const [contrats, setContrats] = useState([])
+  // Rentabilité par conseiller, calculée cote SERVEUR (api/remuneration mode
+  // 'manager'). Le bareme (grille de taux) ne transite plus par le navigateur.
+  // On recoit lignes[], chaque ligne portant { contrat, rentab }. On construit
+  // deux maps de lecture (par advisor_code et par profile_id) pour retrouver le
+  // rentab du conseiller affiche. Etat de chargement + erreur scopes a la seule
+  // partie rentabilite (ne bloque pas le reste de la vue).
+  const [rentabState, setRentabState] = useState({
+    loading: true,
+    error: null,
+    byCode: {},
+    byProfileId: {},
+  })
   useEffect(() => {
     let alive = true
-    contratsService.list().catch(() => []).then(list => {
-      if (alive) setContrats(list || [])
-    })
+    setRentabState(s => ({ ...s, loading: true, error: null }))
+    fetchRemuneration('manager', month)
+      .then(json => {
+        if (!alive) return
+        const byCode = {}
+        const byProfileId = {}
+        for (const ligne of json?.lignes || []) {
+          const entry = { contrat: ligne.contrat, rentab: ligne.rentab }
+          const code = ligne.contrat?.profile?.advisor_code
+          const pid = ligne.contrat?.profile_id
+          if (code) byCode[code] = entry
+          if (pid) byProfileId[pid] = entry
+        }
+        setRentabState({ loading: false, error: null, byCode, byProfileId })
+      })
+      .catch(err => {
+        if (!alive) return
+        setRentabState({ loading: false, error: err?.message || 'Erreur calcul rentabilité', byCode: {}, byProfileId: {} })
+      })
     return () => { alive = false }
-  }, [])
+  }, [month])
 
   // Cross-référence Lead Room : stats RDV par conseiller (matchées par email)
   const [rdvStats, setRdvStats] = useState({ loading: true, byEmail: {} })
@@ -109,23 +134,14 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
       const dPp = prev ? m.ppSigned - prev.ppSigned : 0
       const dPu = prev ? m.puSigned - prev.puSigned : 0
       const dSigned = prev ? m.signedCount - prev.signedCount : 0
-      // Trouve le contrat lié au profile (via profile_id ou advisor_code)
-      const contrat = contrats.find(c =>
-        c.actif && (
-          c.profile_id === p.id ||
-          (c.profile?.advisor_code && c.profile.advisor_code === p.advisor_code)
-        )
-      ) || null
-      // Évalue la rentabilité MENSUELLE (valeur cabinet du mois sélectionné
-      // vs salaire du mois). Décision Louis 2026-06-05, voir evaluerRentabilite.
-      const dealsConseiller = contrat ? dealsDuConseiller(deals, codesContrat(contrat, p)) : []
-      const monthIdxRef = MONTHS.indexOf(month)
-      const dateRefMonth = monthIdxRef >= 0
-        ? new Date(new Date().getFullYear(), monthIdxRef, 15)
-        : new Date()
-      const rentab = contrat
-        ? evaluerRentabilite(contrat, dealsConseiller, p, dateRefMonth)
-        : { rentabilise: true, brutCumule: 0, valeurCumulee: 0, ecart: 0 }
+      // Rentabilité MENSUELLE lue dans la map serveur (par advisor_code, avec
+      // repli par profile_id). Le calcul se fait cote serveur (mode 'manager'),
+      // valeur cabinet du mois vs salaire du mois. Décision Louis 2026-06-05.
+      // Valeurs par defaut surs tant que le fetch n est pas revenu (memes formes
+      // qu avant : contrat null, rentab neutre).
+      const entry = rentabState.byCode[p.advisor_code] || rentabState.byProfileId[p.id] || null
+      const contrat = entry?.contrat || null
+      const rentab = entry?.rentab || { rentabilise: true, brutCumule: 0, valeurCumulee: 0, ecart: 0 }
       return {
         profile: p,
         contrat,
@@ -138,7 +154,7 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
         totalBrut: m.ppSigned + m.puSigned,
       }
     })
-  }, [deals, month, activeAdvisors, contrats])
+  }, [deals, month, activeAdvisors, rentabState])
 
   const targets = objectifs?.[month] || { pp_target: 0, pu_target: 0 }
 
@@ -342,7 +358,20 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
                     <span style={{ color: '#0071E3' }}>+à venir</span>
                   </div>
                 </th>
-                <th style={{ textAlign: 'center' }} title="Valeur cabinet cumulée depuis embauche vs salaire à rembourser">Rentable ?</th>
+                <th style={{ textAlign: 'center' }} title="Valeur cabinet cumulée depuis embauche vs salaire à rembourser">
+                  Rentable ?
+                  {rentabState.loading && (
+                    <div style={{ fontSize: 9, fontWeight: 500, color: 'var(--t3)', marginTop: 2, letterSpacing: '0.02em', textTransform: 'none' }}>
+                      Calcul en cours…
+                    </div>
+                  )}
+                  {rentabState.error && (
+                    <div style={{ fontSize: 9, fontWeight: 500, color: '#EF4444', marginTop: 2, letterSpacing: '0.02em', textTransform: 'none' }}
+                      title={rentabState.error}>
+                      Rentabilité indisponible
+                    </div>
+                  )}
+                </th>
                 <SortableTh label="Δ PP vs M-1" col="delta" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" />
                 <th>Statut</th>
               </tr>

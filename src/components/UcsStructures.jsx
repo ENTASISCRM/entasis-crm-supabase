@@ -12,13 +12,7 @@ import { logger } from '../lib/logger'
 import * as ucsService from '../services/ucsStructures'
 import * as clientsService from '../services/clients'
 import * as structureursService from '../services/structureurs'
-import * as contratsService from '../services/conseillerContrats'
-import * as dealsService from '../services/deals'
-import {
-  dealsDuConseiller,
-  codesContrat,
-  evaluerRentabilite,
-} from '../lib/calcul-commission'
+import { fetchRemuneration } from '../lib/remuneration-api'
 
 const ETATS = [
   { value: 'EN_COURS',   label: 'En cours',   color: '#15803d' },
@@ -103,53 +97,6 @@ export default function UcsStructures({ profile, month }) {
   // clic sur un chip structureur dans une ligne du tableau.
   const [structureurPanelId, setStructureurPanelId] = useState(null)
 
-  // Contrat du conseiller connecté + son historique de deals pour
-  // déterminer le taux de commission UCS à afficher (1,5 % si non
-  // rentabilisé ou mandataire, 0,75 % si rentabilisé CDI/Alternant…).
-  const [contratPerso, setContratPerso] = useState(null)
-  const [dealsHistorique, setDealsHistorique] = useState([])
-
-  useEffect(() => {
-    let alive = true
-    ;(async () => {
-      // Bloc 100 % défensif : aucune des deux requêtes ne doit jamais
-      // faire planter la page UCS. Si quelque chose foire (RLS, réseau,
-      // pas de contrat lié…), on log et on continue avec les valeurs
-      // par défaut (tauxConseillerUcs = 1,5 %).
-      try {
-        const own = await contratsService.getOwn().catch(err => {
-          logger.warn('[UCS] getOwn contrat échoue', err)
-          return null
-        })
-        if (!alive) return
-        setContratPerso(own)
-      } catch (e) {
-        logger.warn('[UCS] fetch contrat', e)
-      }
-      try {
-        const codes = codesContrat(contratPerso, profile)
-        // Filtre cote serveur par code conseiller (advisor/co), au lieu de charger
-        // TOUS les deals du cabinet pour n en garder qu un. dealsDuConseiller
-        // reste applique pour la logique exacte (resultat identique, moins de lignes).
-        const myDeals = codes.length
-          ? await dealsService.listByAdvisorCodes(codes).catch(err => {
-              logger.warn('[UCS] listByAdvisorCodes échoue', err)
-              return []
-            })
-          : []
-        if (!alive) return
-        const hist = codes.length ? dealsDuConseiller(myDeals, codes) : []
-        setDealsHistorique(hist)
-      } catch (e) {
-        logger.warn('[UCS] fetch deals', e)
-      }
-    })()
-    return () => { alive = false }
-    // contratPerso volontairement absent des deps pour éviter une boucle
-    // (on dépend juste du profil connecté)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.id, profile?.advisor_code])
-
   // Taux conseiller UCS — règle Louis (seuil MENSUEL, 2026-06-05) :
   //   • Phase 1 (sous seuil du mois) : taux mandataire 1,5 %, les com
   //     calculées au taux mandataire servent à rembourser le salaire du
@@ -158,18 +105,36 @@ export default function UcsStructures({ profile, month }) {
   //   • Phase 2 (seuil mensuel atteint) : taux CDI 0,75 % selon barème PDF
   //   • Mandataires / Gérants : 1,5 % toujours (rentabilisés par défaut)
   //   • Sans contrat connu : 1,5 % par défaut (cas legacy)
-  // dateRef implicite, mois courant. Le simulateur projette un UCS signé
-  // aujourd'hui en fonction du seuil mensuel en cours.
-  const tauxConseillerUcs = useMemo(() => {
-    try {
-      if (!contratPerso) return 1.5
-      const rentab = evaluerRentabilite(contratPerso, dealsHistorique, profile)
-      return rentab.rentabilise ? 0.75 : 1.5
-    } catch (e) {
-      logger.warn('[UCS] calcul taux', e)
-      return 1.5
-    }
-  }, [contratPerso, dealsHistorique, profile])
+  //
+  // La rentabilité est désormais calculée côté serveur (audit sécurité
+  // 2026-07-03, le barème ne transite plus par le navigateur). On appelle
+  // fetchRemuneration('perso', month) et on lit rentab.rentabilise, là où
+  // l ancien code appelait evaluerRentabilite en local. Valeur par défaut
+  // sûre : 1,5 % tant que le fetch n a pas répondu (ou en cas d erreur).
+  const [tauxConseillerUcs, setTauxConseillerUcs] = useState(1.5)
+  const [tauxLoading, setTauxLoading] = useState(true)
+  const [tauxError, setTauxError] = useState('')
+
+  useEffect(() => {
+    let alive = true
+    setTauxLoading(true)
+    setTauxError('')
+    fetchRemuneration('perso', month)
+      .then(({ rentab }) => {
+        if (!alive) return
+        setTauxConseillerUcs(rentab?.rentabilise ? 0.75 : 1.5)
+      })
+      .catch(e => {
+        if (!alive) return
+        logger.warn('[UCS] calcul taux', e)
+        // Valeur par défaut sûre (comme l ancien fallback local) et message
+        // d erreur affiché à côté du taux.
+        setTauxConseillerUcs(1.5)
+        setTauxError(e.message || 'Erreur de calcul du taux')
+      })
+      .finally(() => { if (alive) setTauxLoading(false) })
+    return () => { alive = false }
+  }, [month, profile?.id, profile?.role])
 
   // Charge le catalogue (refetch si on change de mode pour rafraîchir après édition admin)
   const reload = () => {
@@ -253,6 +218,8 @@ export default function UcsStructures({ profile, month }) {
         adminMode={adminMode}
         onToggleAdmin={() => setAdminMode(v => !v)}
         tauxConseiller={tauxConseillerUcs}
+        tauxLoading={tauxLoading}
+        tauxError={tauxError}
       />
 
       {loading && <LoadingState />}
@@ -314,7 +281,7 @@ export default function UcsStructures({ profile, month }) {
 // Sub-components
 // ─────────────────────────────────────────────────────────────────────────────
 
-function Header({ isManager, adminMode, onToggleAdmin, tauxConseiller = 1.5 }) {
+function Header({ isManager, adminMode, onToggleAdmin, tauxConseiller = 1.5, tauxLoading = false, tauxError = '' }) {
   return (
     <div style={{
       marginBottom: 24,
@@ -341,6 +308,16 @@ function Header({ isManager, adminMode, onToggleAdmin, tauxConseiller = 1.5 }) {
             Ta commission : {String(tauxConseiller).replace('.', ',')} %
           </strong>
           {isManager && ` · Rétention cabinet = Upfront − ${String(tauxConseiller).replace('.', ',')} %`}
+          {tauxLoading && (
+            <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--t3)', fontStyle: 'italic' }}>
+              Calcul en cours…
+            </span>
+          )}
+          {!tauxLoading && tauxError && (
+            <span style={{ marginLeft: 8, fontSize: 11, color: '#b91c1c' }}>
+              (taux par défaut, {tauxError})
+            </span>
+          )}
         </p>
       </div>
       {isManager && (

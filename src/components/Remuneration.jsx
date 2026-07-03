@@ -12,31 +12,15 @@
 //   • Pas de comparaison directe inter-conseillers : chaque ligne montre
 //     uniquement la situation du conseiller, pas la moyenne ou un classement
 //
-// Doc canonique : src/lib/bareme-entasis.js
-// Moteur calcul : src/lib/calcul-commission.js
+// Le calcul de commission passe cote serveur (api/remuneration.js) via
+// fetchRemuneration. Le bareme (grille de taux) ne transite plus par le
+// navigateur. Correctif audit securite 2026-07-03.
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import * as contratsService from '../services/conseillerContrats'
-import { LIBELLE_TYPE_CONTRAT } from '../lib/bareme-entasis'
-import { MONTHS } from '../lib/ui-shared'
-import {
-  commissionsMois,
-  evaluerRentabilite,
-  dealsDuMois,
-  dealsDuConseiller,
-  codesContrat,
-} from '../lib/calcul-commission'
-
-// Construit une Date au milieu du mois sélectionné (année courante).
-// Sert de dateRef pour evaluerRentabilite qui calcule un seuil MENSUEL,
-// la dateRef doit donc être positionnée dans le bon mois.
-function monthStrToDate(monthStr) {
-  if (!monthStr) return new Date()
-  const idx = MONTHS.indexOf(monthStr)
-  if (idx < 0) return new Date()
-  return new Date(new Date().getFullYear(), idx, 15)
-}
+import { LIBELLE_TYPE_CONTRAT } from '../lib/contrat-enums'
+import { fetchRemuneration } from '../lib/remuneration-api'
 
 const fmtEur = (v) => Number(v || 0).toLocaleString('fr-FR', {
   style: 'currency', currency: 'EUR', maximumFractionDigits: 0,
@@ -46,7 +30,7 @@ const fmtEurPrecis = (v) => Number(v || 0).toLocaleString('fr-FR', {
 })
 const fmtPct = (v) => `${(Number(v || 0)).toFixed(1)} %`
 
-export default function Remuneration({ profile, deals, month }) {
+export default function Remuneration({ profile, month }) {
   const isManager = profile?.role === 'manager'
   const [contrats, setContrats] = useState([])
   const [contratPerso, setContratPerso] = useState(null)
@@ -116,7 +100,6 @@ export default function Remuneration({ profile, deals, month }) {
         <VueConseiller
           contrat={contratPerso}
           profile={profile}
-          deals={deals}
           month={month}
           isManager={isManager}
         />
@@ -124,8 +107,6 @@ export default function Remuneration({ profile, deals, month }) {
 
       {vue === 'manager' && isManager && (
         <VueManager
-          contrats={contrats}
-          deals={deals}
           month={month}
         />
       )}
@@ -136,7 +117,45 @@ export default function Remuneration({ profile, deals, month }) {
 // ─────────────────────────────────────────────────────────────────────────
 // Vue conseiller : son propre suivi
 // ─────────────────────────────────────────────────────────────────────────
-function VueConseiller({ contrat, profile, deals, month, isManager }) {
+function VueConseiller({ contrat, profile, month, isManager }) {
+  // Le calcul (rentabilite + commissions) est desormais fait cote serveur.
+  // On appelle fetchRemuneration('perso', month) et on stocke le resultat.
+  // Valeurs par defaut sures tant que le fetch n a pas repondu, le rendu ne
+  // doit jamais casser (rentab a 0, comm.detail=[]).
+  // Les hooks sont declares AVANT le garde-fou "aucun contrat" pour respecter
+  // les regles des hooks React (ordre d appel stable a chaque rendu).
+  const [rentab, setRentab] = useState({ rentabilise: false, brutCumule: 0, valeurCumulee: 0, ecart: 0 })
+  const [comm, setComm] = useState({
+    variablePp: 0, variablePu: 0, variableHorsPalier: 0, total: 0,
+    ppRealisee: 0, puRealisee: 0, palierPpAtteint: false, palierPuAtteint: false,
+    rentabilise: false, detail: [],
+  })
+  const [dealsMoisCount, setDealsMoisCount] = useState(0)
+  const [calcLoading, setCalcLoading] = useState(true)
+  const [calcError, setCalcError] = useState(null)
+
+  useEffect(() => {
+    let alive = true
+    ;(async () => {
+      setCalcLoading(true)
+      setCalcError(null)
+      try {
+        const res = await fetchRemuneration('perso', month)
+        if (!alive) return
+        setRentab(res.rentab)
+        setComm(res.comm)
+        setDealsMoisCount(res.dealsMoisCount || 0)
+      } catch (e) {
+        if (!alive) return
+        console.error('[Remuneration] calcul perso', e)
+        setCalcError(e.message || 'Erreur de calcul')
+      } finally {
+        if (alive) setCalcLoading(false)
+      }
+    })()
+    return () => { alive = false }
+  }, [month, profile?.id, profile?.advisor_code])
+
   if (!contrat) {
     return (
       <div className="card card-p">
@@ -150,39 +169,9 @@ function VueConseiller({ contrat, profile, deals, month, isManager }) {
     )
   }
 
-  // Codes de matching : matricule + full_name + profile.advisor_code.
-  // Inclure profile.advisor_code est essentiel — c'est lui qui est
-  // stocké dans les deals (deal.advisor_code = 'AUTOP', 'PAULIN', etc.).
-  const codesConseiller = useMemo(() => codesContrat(contrat, profile), [contrat, profile])
-
-  // Deals où le conseiller intervient (principal OU co)
-  const dealsConseiller = useMemo(
-    () => dealsDuConseiller(deals, codesConseiller),
-    [deals, codesConseiller]
-  )
-
-  const dealsMois = useMemo(
-    () => dealsDuMois(dealsConseiller, month),
-    [dealsConseiller, month]
-  )
-
-  // dateRef sur le mois sélectionné, le seuil est désormais mensuel
-  // (décision Louis 2026-06-05). Voir evaluerRentabilite.
-  const rentab = useMemo(
-    () => evaluerRentabilite(contrat, dealsConseiller, profile, monthStrToDate(month)),
-    [contrat, dealsConseiller, profile, month]
-  )
-
-  const comm = useMemo(
-    // On passe rentab complet (avec ecart) pour que commissionsMois puisse
-    // calculer le ratio « seule la part au-dessus du seuil est versée ».
-    () => commissionsMois(dealsMois, contrat, rentab, profile),
-    [dealsMois, contrat, rentab, profile]
-  )
-
   const salaireFixe = Number(contrat.salaire_brut_mensuel || 0)
   const totalBrut = salaireFixe + comm.total
-  // Cohérent avec commissionsMois : pas de salaire → pas de palier (le
+  // Cohérent avec le calcul serveur : pas de salaire → pas de palier (le
   // variable se déclenche dès le 1er € puisqu'il n'y a rien à rembourser).
   const aucunSalaire = salaireFixe <= 0
   const palierPp = aucunSalaire ? 0 : Number(contrat.palier_pp_mensuel || 0)
@@ -199,6 +188,16 @@ function VueConseiller({ contrat, profile, deals, month, isManager }) {
 
   return (
     <div>
+      {calcError && (
+        <div className="card card-p mb-24" style={{ color: 'var(--danger, #C0392B)' }}>
+          {calcError}
+        </div>
+      )}
+      {calcLoading && !calcError && (
+        <div style={{ padding: '8px 0', fontSize: 12, color: 'var(--t3)' }}>
+          Calcul en cours…
+        </div>
+      )}
       <div className="kpi-grid mb-24">
         {isMandataire ? (
           <>
@@ -206,7 +205,7 @@ function VueConseiller({ contrat, profile, deals, month, isManager }) {
             <div className="kpi-card kpi-card-green">
               <div className="kpi-label">Commissions {month}</div>
               <div className="kpi-value">{fmtEur(comm.total)}</div>
-              <div className="kpi-hint">{dealsMois.length} dossier{dealsMois.length !== 1 ? 's' : ''} signé{dealsMois.length !== 1 ? 's' : ''}</div>
+              <div className="kpi-hint">{dealsMoisCount} dossier{dealsMoisCount !== 1 ? 's' : ''} signé{dealsMoisCount !== 1 ? 's' : ''}</div>
             </div>
             <div className="kpi-card kpi-card-blue">
               <div className="kpi-label">À facturer ce mois</div>
@@ -224,7 +223,7 @@ function VueConseiller({ contrat, profile, deals, month, isManager }) {
             <div className="kpi-card kpi-card-green">
               <div className="kpi-label">Variable {month}</div>
               <div className="kpi-value">{fmtEur(comm.total)}</div>
-              <div className="kpi-hint">{dealsMois.length} dossier{dealsMois.length !== 1 ? 's' : ''} signé{dealsMois.length !== 1 ? 's' : ''}</div>
+              <div className="kpi-hint">{dealsMoisCount} dossier{dealsMoisCount !== 1 ? 's' : ''} signé{dealsMoisCount !== 1 ? 's' : ''}</div>
             </div>
             <div className="kpi-card kpi-card-blue">
               <div className="kpi-label">Total brut estimé</div>
@@ -449,41 +448,50 @@ function SectionDetail({ comm, month }) {
 // ─────────────────────────────────────────────────────────────────────────
 // Vue manager : tableau équipe
 // ─────────────────────────────────────────────────────────────────────────
-function VueManager({ contrats, deals, month }) {
-  const lignes = useMemo(() => {
-    return contrats
-      .filter(c => c.actif && c.type_contrat !== 'GERANT')
-      .map(c => {
-        // Le service liste contrats joint maintenant le profile lié
-        // (c.profile = { id, advisor_code, email, full_name }) → on
-        // l'utilise pour que codesContrat inclue l'advisor_code, sans
-        // quoi le matching deal.advisor_code → contrat échoue côté
-        // manager et le tableau affiche 0 € partout.
-        const profileLie = c.profile || null
-        const codes = codesContrat(c, profileLie)
-        const dealsConseiller = dealsDuConseiller(deals, codes)
-        const dealsMois = dealsDuMois(dealsConseiller, month)
-        const rentab = evaluerRentabilite(c, dealsConseiller, profileLie, monthStrToDate(month))
-        const comm = commissionsMois(dealsMois, c, rentab, profileLie)
-        return {
-          contrat: c,
-          rentab,
-          comm,
-          totalBrut: Number(c.salaire_brut_mensuel || 0) + comm.total,
-        }
-      })
-  }, [contrats, deals, month])
+function VueManager({ month }) {
+  // Le calcul de chaque ligne conseiller (rentabilite + commissions) et les
+  // totaux sont desormais faits cote serveur. On appelle
+  // fetchRemuneration('manager', month) et on stocke lignes + totals.
+  // Valeurs par defaut sures tant que le fetch n a pas repondu, le rendu ne
+  // doit jamais casser (lignes=[], totals a 0).
+  const [lignes, setLignes] = useState([])
+  const [totals, setTotals] = useState({ fixe: 0, variable: 0, total: 0 })
+  const [calcLoading, setCalcLoading] = useState(true)
+  const [calcError, setCalcError] = useState(null)
 
-  const totals = useMemo(() => {
-    return {
-      fixe: lignes.reduce((s, l) => s + Number(l.contrat.salaire_brut_mensuel || 0), 0),
-      variable: lignes.reduce((s, l) => s + l.comm.total, 0),
-      total: lignes.reduce((s, l) => s + l.totalBrut, 0),
-    }
-  }, [lignes])
+  useEffect(() => {
+    let alive = true
+    ;(async () => {
+      setCalcLoading(true)
+      setCalcError(null)
+      try {
+        const res = await fetchRemuneration('manager', month)
+        if (!alive) return
+        setLignes(res.lignes || [])
+        setTotals(res.totals || { fixe: 0, variable: 0, total: 0 })
+      } catch (e) {
+        if (!alive) return
+        console.error('[Remuneration] calcul manager', e)
+        setCalcError(e.message || 'Erreur de calcul')
+      } finally {
+        if (alive) setCalcLoading(false)
+      }
+    })()
+    return () => { alive = false }
+  }, [month])
 
   return (
     <div>
+      {calcError && (
+        <div className="card card-p mb-24" style={{ color: 'var(--danger, #C0392B)' }}>
+          {calcError}
+        </div>
+      )}
+      {calcLoading && !calcError && (
+        <div style={{ padding: '8px 0', fontSize: 12, color: 'var(--t3)' }}>
+          Calcul en cours…
+        </div>
+      )}
       {/* KPIs équipe — 3 cartes (le statut rentabilité reste interne au moteur). */}
       <div className="kpi-grid mb-24">
         <div className="kpi-card kpi-card-gold">
