@@ -16,7 +16,7 @@ import {
   TYPES_AVEC_SEUIL_RENTABILITE,
   DATE_REMISE_A_ZERO_RENTABILITE,
   brutCumule,
-} from './bareme-entasis'
+} from './bareme-entasis.js'
 
 /**
  * Mappe un produit de l'UI (deal.product + deal.company) vers une clé
