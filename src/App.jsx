@@ -3491,6 +3491,18 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
   }
 
   async function submitInner(e) {
+    // Contact obligatoire a la creation d un NOUVEAU client : sans email ni
+    // telephone, impossible de rattacher plus tard la signature au lead de la
+    // Lead Room (trou d attribution). Si un client existant est selectionne,
+    // ses coordonnees viennent de sa fiche, on n exige rien de plus.
+    if (!selectedClient && !isClientLocked) {
+      const em = (deal.client_email || '').trim();
+      const tel = (deal.client_phone || '').trim();
+      if (!em || !tel) {
+        toast.error('Email et téléphone du client sont obligatoires.');
+        return;
+      }
+    }
     if (showMultiProducts || isClientLocked) {
       // Mode multi-produits ou ajout depuis fiche client
       const validProducts = products.filter(p => p.product.trim());
@@ -3702,7 +3714,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
               </div>
               <div className="form-row form-row-2 mt-16">
                 <div className="form-group">
-                  <label className="form-label">Email</label>
+                  <label className="form-label">Email {selectedClient ? '' : '*'}</label>
                   <input
                     className="form-input"
                     value={deal.client_email||''}
@@ -3710,16 +3722,18 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                     type="email"
                     placeholder="client@exemple.fr"
                     disabled={!!selectedClient}
+                    required={!selectedClient}
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Téléphone</label>
+                  <label className="form-label">Téléphone {selectedClient ? '' : '*'}</label>
                   <input
                     className="form-input"
                     value={deal.client_phone||''}
                     onChange={e=>set('client_phone',e.target.value)}
                     placeholder="06 00 00 00 00"
                     disabled={!!selectedClient}
+                    required={!selectedClient}
                   />
                 </div>
               </div>
