@@ -4698,6 +4698,30 @@ export default function App(){
       // produit a déjà un dossier signé par un AUTRE conseiller, pour
       // éviter de payer la commission 2 fois quand on oublie de se
       // mettre en co-conseiller.
+
+      // Rattachement Lead Room FIABLE : si le client a deja un brouillon de RDV
+      // (statut Prévu portant le lead_id, cree par la Lead Room), on COMPLETE ce
+      // brouillon au lieu de creer un doublon. Le lead_id (unique, 1 lead = 1
+      // dossier) reste ainsi sur le dossier signe, et le brouillon orphelin
+      // disparait (fini les fausses relances vieillissement). Reutilise pour UN
+      // seul des produits saisis.
+      let reusableDraft = null;
+      {
+        const first = dealsWithClientId[0];
+        const firstIsNew = first && !(first.created_at && deals.some(d => d.id === first.id));
+        if (firstIsNew) {
+          const t9 = (s) => { const x = String(s || '').replace(/\D/g, ''); return x.length >= 9 ? x.slice(-9) : '' };
+          const em = (first.client_email || '').trim().toLowerCase();
+          const tel = t9(first.client_phone);
+          reusableDraft = deals.find(d => d.status === 'Prévu' && d.lead_id && (
+            (first.client_id && d.client_id === first.client_id)
+            || (em && (d.client_email || '').trim().toLowerCase() === em)
+            || (tel && t9(d.client_phone) === tel)
+          )) || null;
+        }
+      }
+      let draftConsumed = false;
+
       for (const deal of dealsWithClientId) {
         const isExisting = deal.created_at && deals.some(d => d.id === deal.id)
 
@@ -4738,6 +4762,13 @@ export default function App(){
         try {
           if (isExisting) {
             await dealsService.update(deal.id, deal)
+          } else if (reusableDraft && !draftConsumed) {
+            // Complete le brouillon RDV : on garde son id + lead_id + created_at,
+            // on applique les infos du dossier saisi (produit, statut, montants,
+            // dates). Le brouillon Prévu devient le dossier signe.
+            draftConsumed = true
+            const { id, created_at, lead_id, ...fields } = deal
+            await dealsService.update(reusableDraft.id, fields)
           } else {
             await dealsService.create(deal)
           }
