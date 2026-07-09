@@ -2081,6 +2081,22 @@ function PipelineBoard({deals,month,profile,onEdit}){
                   <div key={deal.id} className="pipeline-deal-card" onClick={()=>onEdit(deal)}>
                     <div className="pipeline-deal-client">{getClientName(deal)}</div>
                     <div className="pipeline-deal-product">{deal.product} · {deal.company||'—'}</div>
+                    {/* Marqueur d'action de relance (mail 1 clic : Traité / RDV pris /
+                        À relancer). Remontée Gianni 09/07 : le clic ne laissait aucune
+                        trace visible sur le dossier. */}
+                    {deal.relance_action_at && (()=>{
+                      const m = {
+                        'Traité':    {e:'✅',c:'#059669',bg:'rgba(5,150,105,0.10)',bd:'rgba(5,150,105,0.28)'},
+                        'RDV pris':  {e:'📅',c:'#0071E3',bg:'rgba(0,113,227,0.10)',bd:'rgba(0,113,227,0.25)'},
+                        'À relancer':{e:'🔄',c:'#B45309',bg:'rgba(180,83,9,0.10)',bd:'rgba(180,83,9,0.28)'},
+                      }[deal.relance_action] || {e:'•',c:'var(--t2)',bg:'var(--bg2)',bd:'var(--border)'};
+                      const dt = new Date(deal.relance_action_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
+                      return (
+                        <div style={{display:'inline-flex',alignItems:'center',gap:5,marginTop:4,padding:'2px 8px',borderRadius:6,background:m.bg,border:`1px solid ${m.bd}`,fontSize:10,fontWeight:700,color:m.c}}>
+                          {m.e} {deal.relance_action} · {dt}
+                        </div>
+                      );
+                    })()}
                     {/* Badges PP/PU colorés pour reporting compta — PP en or
                         (récurrent annuel) vs PU en bleu (versement unique) */}
                     <div style={{display:'flex',flexDirection:'column',gap:4,margin:'8px 0'}}>
