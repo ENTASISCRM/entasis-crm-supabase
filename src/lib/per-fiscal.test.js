@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  PASS_2026,
+  PASS_REF_N1,
   calcIR,
   getTMI,
   plafondPerSalarie,
@@ -15,27 +15,33 @@ import {
   tri,
 } from './per-fiscal';
 
-describe('PASS_2026', () => {
-  it('vaut 48060 €', () => {
-    expect(PASS_2026).toBe(48060);
+describe('PASS_REF_N1', () => {
+  it('vaut 47100 € (PASS N-1 2025, référence des versements 2026)', () => {
+    expect(PASS_REF_N1).toBe(47100);
   });
 });
 
-describe('calcIR (barème 2026, 1 part)', () => {
+describe('calcIR (barème LF 2026, revenus 2025, 1 part)', () => {
   it('aucun impôt sous le seuil', () => {
-    expect(calcIR(11497, 1)).toBe(0);
+    expect(calcIR(11600, 1)).toBe(0);
   });
-  it('11% sur la tranche 11 497 - 29 315', () => {
-    // 20 000€ → impôt = (20000 - 11497) * 0.11 = 935.33 → 935
-    expect(calcIR(20000, 1)).toBe(Math.round((20000 - 11497) * 0.11));
+  it('11% sur la tranche 11 600 - 29 579', () => {
+    // 20 000€ → impôt = (20000 - 11600) * 0.11 = 924.00 → 924
+    expect(calcIR(20000, 1)).toBe(Math.round((20000 - 11600) * 0.11));
   });
-  it('30% sur la tranche 29 315 - 83 823', () => {
-    // 50 000€ → 17818*0.11 + (50000-29315)*0.30 = 1960 + 6205.5 = 8165
-    const expected = Math.round(17818 * 0.11 + (50000 - 29315) * 0.30);
+  it('exemple officiel Service Public : 30 000€ 1 part → 2 104€', () => {
+    // 17979*0.11 + (30000-29579)*0.30 = 1977.69 + 126.30 = 2103.99 → 2104
+    expect(calcIR(30000, 1)).toBe(2104);
+  });
+  it('30% sur la tranche 29 579 - 84 577', () => {
+    // 50 000€ → 17979*0.11 + (50000-29579)*0.30 = 1977.69 + 6126.30 = 8103.99 → 8104
+    const expected = Math.round(17979 * 0.11 + (50000 - 29579) * 0.30);
     expect(calcIR(50000, 1)).toBe(expected);
   });
-  it('41% sur la tranche 83 823 - 180 294', () => {
-    const expected = Math.round(17818 * 0.11 + 54508 * 0.30 + (120000 - 83823) * 0.41);
+  it('41% sur la tranche 84 577 - 181 917', () => {
+    // 120 000€ → 17979*0.11 + 54998*0.30 + (120000-84577)*0.41
+    //          = 1977.69 + 16499.40 + 14523.43 = 33000.52 → 33001
+    const expected = Math.round(17979 * 0.11 + 54998 * 0.30 + (120000 - 84577) * 0.41);
     expect(calcIR(120000, 1)).toBe(expected);
   });
   it('quotient familial, 80k 2 parts est moins taxé que 80k 1 part', () => {
@@ -60,20 +66,20 @@ describe('getTMI', () => {
   it('41% à 120k 1 part', () => {
     expect(getTMI(120000, 1)).toBe(0.41);
   });
-  it('45% au dessus de 180k', () => {
+  it('45% au dessus de 181 917', () => {
     expect(getTMI(250000, 1)).toBe(0.45);
   });
 });
 
 describe('plafondPerSalarie', () => {
   it('minimum = 10% du PASS quand revenu faible', () => {
-    expect(plafondPerSalarie(20000)).toBe(PASS_2026 * 0.10);
+    expect(plafondPerSalarie(20000)).toBe(PASS_REF_N1 * 0.10);
   });
   it('10% des revenus si dans la fourchette', () => {
     expect(plafondPerSalarie(80000)).toBe(8000);
   });
   it('plafonné à 8 PASS x 10% pour très hauts revenus', () => {
-    expect(plafondPerSalarie(500000)).toBe(PASS_2026 * 8 * 0.10);
+    expect(plafondPerSalarie(500000)).toBe(PASS_REF_N1 * 8 * 0.10);
   });
 });
 
@@ -125,8 +131,9 @@ describe('imposeCapitalUneFois', () => {
   it('versements taxés à l\'IR + plus-values au PFU', () => {
     // 100k versés, 50k plus-values, foyer sans autres revenus 1 part
     const r = imposeCapitalUneFois(100000, 50000, 1, 0);
-    // versements imposable = 100000 * 0.9 = 90000, IR sur 90k 1 part
-    const irAttendu = calcIR(90000, 1);
+    // abattement 10% plafonné : min(100000*0.10, 4439) = 4439
+    // versements imposables = 100000 - 4439 = 95561, IR sur 95 561 1 part
+    const irAttendu = calcIR(95561, 1);
     expect(r.impotVersements).toBe(irAttendu);
     // PFU 30% sur 50k = 15000
     expect(r.impotPlusValues).toBe(15000);
@@ -135,9 +142,17 @@ describe('imposeCapitalUneFois', () => {
 
   it('si autres revenus, le PER s\'ajoute au revenu imposable', () => {
     const r = imposeCapitalUneFois(50000, 20000, 1, 30000);
-    // base = 50000 * 0.9 = 45000. Impôt = IR(75000) - IR(30000)
-    const expected = calcIR(75000, 1) - calcIR(30000, 1);
+    // abattement = min(50000*0.10, 4439) = 4439 → base = 45561
+    // Impôt = IR(30000 + 45561) - IR(30000)
+    const expected = calcIR(75561, 1) - calcIR(30000, 1);
     expect(r.impotVersements).toBe(expected);
+  });
+
+  it('abattement 10% plafonné à 4 439 € pour une grosse sortie', () => {
+    // 600 000€ versés : abattement = min(60000, 4439) = 4439
+    // base imposable = 600000 - 4439 = 595561 (et non 540 000)
+    const r = imposeCapitalUneFois(600000, 0, 1, 0);
+    expect(r.impotVersements).toBe(calcIR(595561, 1));
   });
 });
 
@@ -250,12 +265,12 @@ describe('imposeCapitalFractionne (fix bug fiscal capital fractionné)', () => {
     expect(r.impotTotal).toBe(impotAn * 10);
   });
 
-  it('abattement 10% plafonné à 4123 €', () => {
+  it('abattement 10% plafonné à 4439 € (PLAFOND_ABATTEMENT_PENSIONS)', () => {
     // Versements 100k/an (gros PER) → abattement plafonné
     const r = imposeCapitalFractionne(1000000, 0, 1, 0, 10);
-    // chaque année 100k versements, abattement 10% = 10000 mais plafonné à 4123
-    // donc imposable = 100000 - 4123 = 95877
-    const expected = calcIR(95877, 1);
+    // chaque année 100k versements, abattement 10% = 10000 mais plafonné à 4439
+    // donc imposable = 100000 - 4439 = 95561
+    const expected = calcIR(95561, 1);
     expect(r.impotVersementsParAn).toBe(expected);
   });
 
