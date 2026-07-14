@@ -2513,7 +2513,9 @@ function MarketView(){
       const params=new URLSearchParams({isin})
       if(yahooTicker) params.set('ticker',yahooTicker)
       if(morningstarId) params.set('msId',morningstarId)
-      const r=await fetch(`/api/nav?${params}`)
+      const { data:{ session } }=await supabase.auth.getSession()
+      if(!session) return null
+      const r=await fetch(`/api/nav?${params}`,{headers:{Authorization:`Bearer ${session.access_token}`}})
       if(!r.ok)return null
       return await r.json()
     }catch{return null}

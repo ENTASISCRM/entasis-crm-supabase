@@ -1,4 +1,6 @@
 // api/nav.js — Vercel serverless function
+import { verifyAuth } from './_auth.js'
+
 export default async function handler(req, res) {
   const allowedOrigins = [
     'https://entasis-crm-supabase.vercel.app',
@@ -14,6 +16,14 @@ export default async function handler(req, res) {
       'https://entasis-crm-supabase.vercel.app')
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET')
+
+  // Auth : proxy réservé aux utilisateurs CRM authentifiés (cf. audit
+  // sécurité 2026-07-14). Empêche l'usage du endpoint comme proxy ouvert.
+  try {
+    await verifyAuth(req)
+  } catch {
+    return res.status(401).json({ error: 'Non autorisé' })
+  }
 
   const { isin, ticker, msId } = req.query
   if (!isin) return res.status(400).json({ error: 'isin required' })
