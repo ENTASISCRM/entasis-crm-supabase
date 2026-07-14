@@ -1,4 +1,6 @@
 import { createSign } from 'crypto'
+import { createClient } from '@supabase/supabase-js'
+import { verifyAuth } from './_auth.js'
 
 // Liste des conseillers avec leur email et advisor_code
 const TEAM = [
@@ -105,10 +107,36 @@ async function getCalendarEvents(accessToken, email, timeMin, timeMax) {
 }
 
 export default async function handler(req, res) {
-  // Vérifier auth JWT Supabase
-  const authHeader = req.headers.authorization
-  if (!authHeader?.startsWith('Bearer ')) {
+  // 1. Authentifier réellement l'appelant (vrai token Supabase, plus juste la
+  //    présence d'un header « Bearer * » — cf. audit sécurité 2026-07-14).
+  let caller
+  try {
+    caller = await verifyAuth(req)
+  } catch {
     return res.status(401).json({ error: 'Non autorisé' })
+  }
+
+  // 2. Cet endpoint expose les agendas Google des 11 conseillers (vue équipe
+  //    de la Revue hebdo, écran manager). Les données viennent d'un service
+  //    account Google, aucune RLS ne s'applique : on contrôle donc le rôle
+  //    nous-mêmes, via le client service_role, comme api/impersonate.js.
+  const adminKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!adminKey) {
+    return res.status(500).json({ error: 'SUPABASE_SERVICE_ROLE_KEY non configuré côté serveur' })
+  }
+  const admin = createClient(process.env.SUPABASE_URL, adminKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+  const { data: callerProfile, error: callerErr } = await admin
+    .from('profiles')
+    .select('role')
+    .eq('id', caller.id)
+    .single()
+  if (callerErr || !callerProfile) {
+    return res.status(403).json({ error: 'Profil appelant introuvable' })
+  }
+  if (callerProfile.role !== 'manager') {
+    return res.status(403).json({ error: 'Réservé aux managers' })
   }
 
   try {
