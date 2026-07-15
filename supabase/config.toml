@@ -1,0 +1,40 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Configuration Supabase CLI — projet CRM Entasis (tvgbblbceqvdtqnbeoik)
+#
+# RAISON D'ÊTRE DE CE FICHIER : verrouiller explicitement verify_jwt = true
+# pour les deux Edge Functions. Jusqu'ici config.toml n'était pas versionné :
+# la valeur de verify_jwt dépendait donc d'un réglage Dashboard implicite, et
+# une future commande `supabase functions deploy` sans config pouvait la
+# remettre à false sans que personne ne s'en aperçoive, ré-ouvrant les
+# fonctions à une invocation publique anonyme. Voir README-config.md.
+#
+# ⚠️ NE PAS DÉPLOYER SANS VALIDATION DE LOUIS. Ce fichier est un livrable
+# documentaire ; le déploiement effectif (`supabase link` + `supabase
+# functions deploy`) est laissé à sa main.
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Renseigné par Louis lors du `supabase link` (identifiant public de projet,
+# non secret). Laissé en commentaire pour éviter tout `supabase` accidentel
+# ciblant la prod depuis ce dépôt.
+# project_id = "tvgbblbceqvdtqnbeoik"
+
+# ── Edge Functions ───────────────────────────────────────────────────────────
+# verify_jwt = true : Supabase exige un JWT valide (signé par le projet) dans
+# l'en-tête Authorization pour invoquer la fonction. Compatibilité vérifiée le
+# 2026-07-14 avec les deux voies d'appel existantes :
+#   • relance-dossiers-vieillissants : appelée par pg_cron avec
+#     `Authorization: Bearer <service_role du vault>` (cf.
+#     migrations/20260508120100_cron_relance_dossiers.sql:45-48). Le service_role
+#     est un JWT valide → passe verify_jwt = true. Le cron n'est PAS cassé.
+#   • sync-programmes : appelée depuis le navigateur via
+#     supabase.functions.invoke() (src/components/CatalogueProgrammes.jsx:80),
+#     qui joint automatiquement le JWT de session de l'utilisateur connecté →
+#     passe verify_jwt = true. L'app n'est PAS cassée.
+# Ce que verify_jwt = true bloque : les appels SANS Authorization ou avec un JWT
+# forgé/invalide — c'est-à-dire l'invocation publique anonyme qu'on veut fermer.
+
+[functions.relance-dossiers-vieillissants]
+verify_jwt = true
+
+[functions.sync-programmes]
+verify_jwt = true
