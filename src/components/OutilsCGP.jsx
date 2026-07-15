@@ -746,7 +746,7 @@ function SimulateurPER({ profile }) {
 
       if (modeSortie === 'capital') {
         // Capital en une fois, le PER s'ajoute aux autres revenus l'année
-        // de sortie. Plus-values au PFU 30%.
+        // de sortie. Plus-values au PFU 31,4% (LFSS 2026).
         const r = imposeCapitalUneFois(totalVerse, plusValue, nbParts, 0)
         const capitalNet = capital - r.impotTotal
         sortieData = {
@@ -976,7 +976,7 @@ function SimulateurPER({ profile }) {
               <>
                 <ResultCard label="Capital brut" value={euro(selectedScenario.sortieData.capitalBrut)} accent={C.gold} />
                 <ResultCard label="Impôt sur versements" value={euro(selectedScenario.sortieData.impotVersements)} accent={C.danger} sub="Barème IR après abattement 10%" />
-                <ResultCard label="PFU sur plus-values" value={euro(selectedScenario.sortieData.impotPlusValues)} accent={C.danger} sub="30% (12.8% IR + 17.2% PS)" />
+                <ResultCard label="PFU sur plus-values" value={euro(selectedScenario.sortieData.impotPlusValues)} accent={C.danger} sub="31,4% (12,8% IR + 18,6% PS)" />
                 <ResultCard label="Capital net disponible" value={euro(selectedScenario.sortieData.capitalNet)} accent={C.success} />
               </>
             )}
@@ -1912,7 +1912,7 @@ function SimulateurImmoNeuf({ profile }) {
 
       // Micro-BIC
       const revenuImposableMicroBIC = loyersAnnuelsBruts * 0.50
-      const impotMicroBIC = revenuImposableMicroBIC * (tmiImmo / 100) + revenuImposableMicroBIC * 0.172
+      const impotMicroBIC = revenuImposableMicroBIC * (tmiImmo / 100) + revenuImposableMicroBIC * 0.186
 
       // Régime réel (estimation)
       const chargesReelles = loyersAnnuelsBruts * 0.20  // charges ~20%
@@ -1921,7 +1921,7 @@ function SimulateurImmoNeuf({ profile }) {
       const revenuImposableReel = Math.max(0,
         loyersAnnuelsBruts - chargesReelles - amortissementBien - amortissementMobilier
       )
-      const impotReel = revenuImposableReel * (tmiImmo / 100) + revenuImposableReel * 0.172
+      const impotReel = revenuImposableReel * (tmiImmo / 100) + revenuImposableReel * 0.186
 
       const cashflowNetMicroBIC = loyerMensuel - mensualiteTotale - impotMicroBIC / 12
       const cashflowNetReel = loyerMensuel - mensualiteTotale - impotReel / 12

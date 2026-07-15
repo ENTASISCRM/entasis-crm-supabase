@@ -135,9 +135,9 @@ describe('imposeCapitalUneFois', () => {
     // versements imposables = 100000 - 4439 = 95561, IR sur 95 561 1 part
     const irAttendu = calcIR(95561, 1);
     expect(r.impotVersements).toBe(irAttendu);
-    // PFU 30% sur 50k = 15000
+    // PFU 31,4% sur 50k = 15700 (LFSS 2026)
     expect(r.impotPlusValues).toBe(15000);
-    expect(r.impotTotal).toBe(irAttendu + 15000);
+    expect(r.impotTotal).toBe(irAttendu + 15700);
   });
 
   it('si autres revenus, le PER s\'ajoute au revenu imposable', () => {
@@ -260,7 +260,7 @@ describe('imposeCapitalFractionne (fix bug fiscal capital fractionné)', () => {
     const r = imposeCapitalFractionne(100000, 50000, 1, 0, 10);
     // chaque année, 10000€ versements + 5000€ PV
     // versements imposables après abattement 10% = 9000
-    const impotAn = calcIR(9000, 1) + Math.round(5000 * 0.30);
+    const impotAn = calcIR(9000, 1) + Math.round(5000 * 0.314);
     expect(r.impotAnnuel).toBe(impotAn);
     expect(r.impotTotal).toBe(impotAn * 10);
   });

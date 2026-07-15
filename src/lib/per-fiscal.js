@@ -115,7 +115,7 @@ export function imposeCapitalUneFois(totalVerse, plusValue, nbParts, autresReven
   const impotSans = calcIR(autresRevenus, nbParts);
   const impotAvec = calcIR(autresRevenus + baseVersementsImposable, nbParts);
   const impotVersements = Math.max(0, impotAvec - impotSans);
-  const impotPlusValues = Math.round(plusValue * 0.30); // PFU 30%
+  const impotPlusValues = Math.round(plusValue * 0.314); // PFU 31,4% (LFSS 2026 : 12,8% IR + 18,6% PS)
   return {
     impotVersements,
     impotPlusValues,
@@ -213,7 +213,7 @@ export function tri(versementInitial, versementAnnuel, dureeAns, capitalFinal, i
 // Chaque année, 1/N du capital sort. La fraction des versements de l'année
 // est imposée à l'IR comme un revenu (avec abattement 10% PLAFONNÉ,
 // équivalent du 10% pension, à confirmer avec le contrat).
-// La fraction des plus-values est PFU 30%.
+// La fraction des plus-values est PFU 31,4% (LFSS 2026).
 export function imposeCapitalFractionne(totalVerse, plusValue, nbParts, autresRevenus = 0, anneesFractionnement = 10) {
   const versementsParAn = totalVerse / anneesFractionnement;
   const plusValueParAn = plusValue / anneesFractionnement;
@@ -224,7 +224,7 @@ export function imposeCapitalFractionne(totalVerse, plusValue, nbParts, autresRe
   const impotSans = calcIR(autresRevenus, nbParts);
   const impotAvec = calcIR(autresRevenus + versementsImposables, nbParts);
   const impotVersementsParAn = Math.max(0, impotAvec - impotSans);
-  const impotPlusValuesParAn = Math.round(plusValueParAn * 0.30);
+  const impotPlusValuesParAn = Math.round(plusValueParAn * 0.314);
   return {
     impotVersementsParAn,
     impotPlusValuesParAn,
