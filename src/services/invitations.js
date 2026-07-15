@@ -11,18 +11,16 @@ import { supabase } from '../lib/supabase'
 
 /**
  * Valide un token d'invitation (non utilisé, non expiré).
- * @returns la row complète ou null si invalide
+ * Passe par la RPC SECURITY DEFINER validate_invitation_token : la table
+ * `invitations` n'est plus lisible par la clé anon (fuite de données fermée).
+ * @returns { role, advisor_code, email } ou null si invalide
  */
 export async function validateToken(token) {
-  const { data, error } = await supabase
-    .from('invitations')
-    .select('*')
-    .eq('token', token)
-    .is('used_at', null)
-    .gt('expires_at', new Date().toISOString())
-    .maybeSingle()
+  const { data, error } = await supabase.rpc('validate_invitation_token', {
+    p_token: token,
+  })
   if (error) return null
-  return data
+  return data ?? null
 }
 
 /**
@@ -72,12 +70,13 @@ export async function setTypeContrat(invitationId, typeContrat) {
 
 /**
  * Marque une invitation comme utilisée (après signup).
+ * Passe par la RPC SECURITY DEFINER mark_invitation_used : l'UPDATE anon direct
+ * sur la table (policy invitations_update_used) a été supprimé.
  */
 export async function markUsed(token) {
-  const { error } = await supabase
-    .from('invitations')
-    .update({ used_at: new Date().toISOString() })
-    .eq('token', token)
+  const { error } = await supabase.rpc('mark_invitation_used', {
+    p_token: token,
+  })
   if (error) throw error
 }
 
