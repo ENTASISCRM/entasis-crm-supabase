@@ -136,7 +136,7 @@ describe('imposeCapitalUneFois', () => {
     const irAttendu = calcIR(95561, 1);
     expect(r.impotVersements).toBe(irAttendu);
     // PFU 31,4% sur 50k = 15700 (LFSS 2026)
-    expect(r.impotPlusValues).toBe(15000);
+    expect(r.impotPlusValues).toBe(15700);
     expect(r.impotTotal).toBe(irAttendu + 15700);
   });
 
