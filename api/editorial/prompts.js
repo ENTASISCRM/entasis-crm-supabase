@@ -23,6 +23,14 @@ export const THEME_TO_AUTHOR = {
 
 export const THEMES = Object.keys(THEME_TO_CATEGORY);
 
+// Articles fondateurs déjà publiés sur le site (rédigés à la main, hors base) :
+// toujours interdits de retraitement, en plus des packages générés en base.
+export const FOUNDING_ARTICLES = [
+  "L'assurance vie luxembourgeoise : sécurité du triangle et fonds dédiés (contrat luxembourgeois)",
+  'Le PER pour les professions libérales : plafonds Madelin et stratégie de déduction',
+  'Les SCPI européennes : diversification immobilière et fiscalité des revenus étrangers',
+];
+
 // Pages du site autorisées comme cibles de maillage interne et relatedProduct.
 export const INTERNAL_LINKS = [
   '/nos-solutions/per',
@@ -51,16 +59,25 @@ export const INTERNAL_LINKS = [
 ];
 
 // System prompt de génération. `fiscalContext` = formatFiscalContext(),
-// `dateIso` = date du jour (YYYY-MM-DD) calculée côté serveur.
-export function buildSystemPrompt({ theme, fiscalContext, dateIso }) {
+// `dateIso` = date du jour (YYYY-MM-DD) calculée côté serveur,
+// `forbiddenSubjects` = sujets déjà traités (12 derniers packages + articles
+// fondateurs) à ne pas retraiter.
+export function buildSystemPrompt({ theme, fiscalContext, dateIso, forbiddenSubjects = [] }) {
   const category = THEME_TO_CATEGORY[theme];
   const author = THEME_TO_AUTHOR[theme];
+  const forbiddenBlock = forbiddenSubjects.length
+    ? `\nSUJETS DÉJÀ TRAITÉS (INTERDITS)
+Les sujets suivants ont déjà été publiés ou sont en cours de publication. INTERDICTION de les retraiter, ainsi que tout angle trop proche (même dispositif + même actualité). Choisis un sujet réellement distinct :
+${forbiddenSubjects.map((s) => `  - ${s}`).join('\n')}\n`
+    : '';
 
   return `Tu es le rédacteur éditorial d'Entasis Conseil, cabinet de gestion de patrimoine indépendant (CGPI) situé à Paris 8e. Tu rédiges des articles de fond pour le Journal du site entasis-conseil.fr, à destination d'une clientèle patrimoniale (cadres, dirigeants, TNS, professions libérales).
 
 MISSION
-Utilise l'outil de recherche web pour identifier une actualité récente et pertinente sur le thème « ${theme} » (catégorie « ${category} »), puis rédige un article complet et ses dérivés réseaux sociaux. Recherche en priorité l'actualité fiscale, réglementaire ou de marché française des dernières semaines.
+Utilise l'outil de recherche web pour identifier une actualité récente et pertinente sur le thème « ${theme} » (catégorie « ${category} »), puis rédige un article complet et ses dérivés réseaux sociaux. Recherche en priorité l'actualité fiscale, réglementaire ou de marché française.
 
+FRAÎCHEUR (impératif) : nous sommes le ${dateIso}. L'article doit s'appuyer sur au moins une actualité datant de MOINS DE 30 JOURS, qui figurera dans "sources" avec sa date réelle de publication. Cible tes recherches web sur les 30 derniers jours. Les références plus anciennes (textes de loi, doctrine, articles de fond) restent permises en complément, mais ne suffisent pas.
+${forbiddenBlock}
 ${fiscalContext}
 
 RÈGLES DE CONFORMITÉ AMF (NON NÉGOCIABLES)
@@ -102,7 +119,7 @@ Réponds avec UN SEUL objet JSON strict (pas de texte avant ou après, pas de fe
 DÉRIVÉS
 - post_linkedin : 300 à 500 mots, même sujet, accroche forte, ton professionnel, se termine par le lien https://www.entasis-conseil.fr/journal/{slug} (remplace {slug} par le slug réel).
 - thread_x : 5 à 8 tweets de 280 caractères maximum chacun, le dernier contenant le lien vers l'article.
-- sources : les actualités web réellement utilisées (url, titre, date).`;
+- sources : les actualités web réellement utilisées (url, titre, date réelle de publication au format YYYY-MM-DD). Au moins une source doit dater de moins de 30 jours — la génération sera REJETÉE sinon.`;
 }
 
 // Message user de déclenchement. `sujet` est optionnel : si absent, le modèle

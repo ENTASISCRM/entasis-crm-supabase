@@ -60,6 +60,24 @@ export const FISCAL_CONSTANTS = {
     plancherPass: 1,   // plancher : 10 % × 1 PASS
     plafondPass: 8,    // plafond : 10 % × 8 PASS (+ majoration 15 % entre 1 et 8 PASS)
   },
+
+  // ── Règle des années de référence (versements 2026) ──────────────────────
+  // Deux régimes DIFFÉRENTS, source d'erreurs fréquente :
+  //  - SALARIÉ (art. 163 quatervicies CGI) : revenus pros et PASS de N-1.
+  //    Versements 2026 → revenus 2025 et PASS 2025 (47 100 €).
+  //  - TNS (art. 154 bis CGI, « Madelin ») : bénéfice et PASS de l'ANNÉE EN
+  //    COURS. Versements 2026 → bénéfice 2026 et PASS 2026 (48 060 €,
+  //    arrêté du 22/12/2025).
+  PLAFOND_PER_SALARIE_2026: {
+    passReference: 47100,  // PASS 2025 (règle N-1)
+    plancher: 4710,        // 10 % × PASS 2025
+    max: 37680,            // 10 % × 8 × PASS 2025
+  },
+  PLAFOND_PER_TNS_2026: {
+    passReference: 48060,  // PASS 2026 (année en cours, arrêté du 22/12/2025)
+    plancher: 4806,        // 10 % × PASS 2026
+    max: 88911,            // 10 % × 8 PASS + 15 % × 7 PASS = 1,85 × PASS 2026
+  },
 };
 
 const pct = (x) => `${(x * 100).toFixed(1).replace('.', ',').replace(',0', '')} %`;
@@ -80,8 +98,8 @@ export function formatFiscalContext() {
 
 PASS (plafond annuel de la sécurité sociale) :
   - PASS 2024 : ${eur(C.PASS_2024)}
-  - PASS 2025 : ${eur(C.PASS_2025)} — référence des plafonds de versements PER 2026 (règle N-1)
-  - PASS 2026 : ${eur(C.PASS_2026)}
+  - PASS 2025 : ${eur(C.PASS_2025)}
+  - PASS 2026 : ${eur(C.PASS_2026)} (arrêté du 22/12/2025)
 
 Barème IR — LF 2026 du 19/02/2026, applicable aux revenus 2025 :
 ${tranches}
@@ -98,9 +116,12 @@ Assurance vie (PFU maintenu, PS restés à 17,2 %) :
   - Taux IR réduit après 8 ans : ${pct(C.AV_TAUX_REDUIT_8ANS)} (sous ${eur(C.AV_SEUIL_VERSEMENTS)} de versements, 12,8 % au-delà)
   - Abattements annuels après 8 ans : ${eur(C.AV_ABATTEMENT_CELIB)} (célibataire) / ${eur(C.AV_ABATTEMENT_COUPLE)} (couple)
 
-Plafond PER TNS (versements 2026) :
-  - 10 % du bénéfice imposable, plancher 10 % du PASS, plafond 10 % × 8 PASS
-  - + majoration de 15 % sur la fraction du bénéfice comprise entre 1 et 8 PASS
+Plafonds de déduction PER pour des versements 2026 — RÈGLE DES ANNÉES DE RÉFÉRENCE (deux régimes différents, ne JAMAIS les confondre) :
+  - SALARIÉ (art. 163 quatervicies CGI) : 10 % des revenus professionnels N-1, calculé sur le PASS N-1 (2025 = ${eur(C.PLAFOND_PER_SALARIE_2026.passReference)}).
+    Plancher ${eur(C.PLAFOND_PER_SALARIE_2026.plancher)}, maximum ${eur(C.PLAFOND_PER_SALARIE_2026.max)}.
+  - TNS / profession libérale (art. 154 bis CGI) : 10 % du bénéfice + majoration de 15 % sur la fraction du bénéfice entre 1 et 8 PASS, calculé sur le bénéfice et le PASS de l'ANNÉE EN COURS (2026 = ${eur(C.PLAFOND_PER_TNS_2026.passReference)}, arrêté du 22/12/2025).
+    Plancher ${eur(C.PLAFOND_PER_TNS_2026.plancher)}, maximum ${eur(C.PLAFOND_PER_TNS_2026.max)}.
+  - Si tu cites un plafond, précise TOUJOURS le PASS de référence correspondant au bon régime (47 100 € pour salarié, 48 060 € pour TNS).
 
 RÈGLE ABSOLUE : tout chiffre fiscal cité dans l'article DOIT provenir de ce bloc ou d'une source web explicitement citée dans "sources". N'invente JAMAIS un taux, un plafond ou un montant.`;
 }
