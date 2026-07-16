@@ -28,7 +28,18 @@ on:
         options: [generate, publish]
         required: true
       theme:
+        # Menu déroulant : évite les fautes de saisie (un run a échoué en
+        # BAD_THEME sur « fiscalité » avec accent). Vide = rotation automatique.
         description: 'Thème (generate uniquement ; vide = rotation automatique)'
+        type: choice
+        options:
+          - ''
+          - per-retraite
+          - assurance-vie
+          - immobilier
+          - fiscalite
+          - gestion-patrimoine
+          - protection-sociale
         required: false
         default: ''
 

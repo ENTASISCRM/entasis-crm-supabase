@@ -42,6 +42,18 @@ export const FISCAL_CONSTANTS = {
   // Explicitement EXCLUS de la hausse LFSS 2026 (restent à 17,2 %) :
   PS_IMMO_2026: 0.172,          // plus-values immobilières, revenus fonciers, SCPI
 
+  // ── PEA et épargne salariale (LFSS 2026, confirmé par recoupement) ────────
+  // Les gains du PEA sont soumis aux PS de 18,6 % au retrait pour les retraits
+  // effectués à compter du 01/01/2026 (quel que soit l'âge du plan) ; avant
+  // 5 ans de détention, PFU 31,4 % (12,8 % IR + 18,6 % PS). Les gains
+  // d'épargne salariale (PEE, participation, intéressement placé) subissent
+  // les PS de 18,6 % au déblocage. Rappel des EXCLUSIONS de la hausse déjà
+  // documentées : assurance vie (17,2 %), revenus fonciers et plus-values
+  // immobilières (17,2 %).
+  PEA_PS_2026: 0.186,           // PS sur gains PEA au retrait (retraits dès 01/01/2026)
+  PEA_PFU_AVANT_5_ANS: 0.314,   // avant 5 ans de détention : 12,8 % IR + 18,6 % PS
+  EPARGNE_SALARIALE_PS_2026: 0.186, // PS sur gains PEE/participation au déblocage
+
   // ── Assurance vie ─────────────────────────────────────────────────────────
   // PFU assurance vie MAINTENU à 30 % (PS restés à 17,2 % pour l'AV).
   AV_PFU: 0.30,                 // avant 8 ans : 12,8 % IR + 17,2 % PS
@@ -109,6 +121,8 @@ Plafond de l'abattement 10 % sur les pensions : ${eur(C.PLAFOND_ABATTEMENT_PENSI
 PFU et prélèvements sociaux — LFSS 2026 (loi n° 2025-1403 du 30/12/2025) :
   - Plus-values PER / CTO / dividendes : PFU ${pct(C.PFU_CAPITAL_2026)} (12,8 % IR + 18,6 % PS)
   - PS sur bénéfices BIC LMNP : ${pct(C.PS_BIC_LMNP_2026)}
+  - Gains du PEA : PS ${pct(C.PEA_PS_2026)} au retrait (retraits effectués dès le 01/01/2026) ; avant 5 ans de détention, PFU ${pct(C.PEA_PFU_AVANT_5_ANS)}
+  - Gains d'épargne salariale (PEE, participation) : PS ${pct(C.EPARGNE_SALARIALE_PS_2026)} au déblocage
   - Plus-values immobilières, revenus fonciers et SCPI : ${pct(C.PS_IMMO_2026)} (explicitement EXCLUS de la hausse LFSS 2026)
 
 Assurance vie (PFU maintenu, PS restés à 17,2 %) :
