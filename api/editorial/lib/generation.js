@@ -75,33 +75,246 @@ export async function fetchForbiddenSubjects(admin) {
   return [...FOUNDING_ARTICLES, ...fromDb]
 }
 
-// Appel Anthropic avec l'outil serveur web_search, en gérant le stop_reason
-// 'pause_turn' (boucle d'échantillonnage serveur interrompue : on renvoie la
-// conversation telle quelle et le serveur reprend où il en était).
-async function callAnthropic({ system, userPrompt }) {
-  const messages = [{ role: 'user', content: userPrompt }]
+// ── Couche d'appel Anthropic (streaming SSE + retry + logs) ─────────────────
+// Pourquoi le streaming : en mode non-streaming avec web search et max_tokens
+// élevé, la réponse HTTP n'arrive qu'une fois la génération COMPLÈTE — la
+// connexion reste silencieuse plusieurs minutes et finit en
+// UND_ERR_HEADERS_TIMEOUT (échec observé en prod à 15 min ; un test antérieur
+// avait réussi en 335 s, la durée est très variable). En streaming, les
+// premiers octets arrivent en secondes et chaque événement SSE réarme le
+// timeout d'inactivité. Les événements sont RECONSTRUITS en un objet réponse
+// identique au non-streaming (content blocks complets, stop_reason, usage) :
+// l'interface de callAnthropic est inchangée pour le reste du code.
 
-  for (let i = 0; i <= MAX_CONTINUATIONS; i++) {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
+const TURN_TIMEOUT_MS = 20 * 60 * 1000 // borne dure par tour (inatteignable en pratique)
+const INACTIVITY_TIMEOUT_MS = 120 * 1000 // silence max entre deux lectures du stream
+const RETRY_DELAY_MS = 10 * 1000 // délai avant le retry unique d'un tour
+const PROGRESS_LOG_MS = 30 * 1000 // battement des logs de progression
+
+// Logs de progression sur stderr (stdout reste réservé aux sorties utiles
+// des scripts, ex. HTML d'email en dry-run).
+const logProgress = (msg) => console.error(`[anthropic] ${msg}`)
+
+function retryableError(message) {
+  const err = new Error(message)
+  err.retryable = true
+  return err
+}
+
+// Applique un événement SSE au message en reconstruction. `state` porte le
+// message et les accumulateurs input_json_delta (un par index de bloc).
+function applySseEvent(state, ev) {
+  switch (ev.type) {
+    case 'message_start':
+      // Base du message (id, model, role, usage…) ; le contenu arrive bloc
+      // par bloc ensuite.
+      state.message = structuredClone(ev.message)
+      state.message.content = []
+      break
+    case 'content_block_start':
+      // Les blocs server_tool_use / web_search_tool_result arrivent ici avec
+      // leur structure ; l'input des tool_use est complété par les
+      // input_json_delta puis parsé au content_block_stop.
+      state.message.content[ev.index] = structuredClone(ev.content_block)
+      break
+    case 'content_block_delta': {
+      const block = state.message.content[ev.index]
+      const d = ev.delta
+      if (d.type === 'text_delta') {
+        block.text = (block.text || '') + d.text
+      } else if (d.type === 'input_json_delta') {
+        state.jsonBuffers.set(ev.index, (state.jsonBuffers.get(ev.index) || '') + d.partial_json)
+      } else if (d.type === 'thinking_delta') {
+        block.thinking = (block.thinking || '') + d.thinking
+      } else if (d.type === 'citations_delta') {
+        block.citations = block.citations || []
+        block.citations.push(d.citation)
+      }
+      break
+    }
+    case 'content_block_stop': {
+      const buf = state.jsonBuffers.get(ev.index)
+      if (buf !== undefined) {
+        state.jsonBuffers.delete(ev.index)
+        try {
+          state.message.content[ev.index].input = JSON.parse(buf)
+        } catch {
+          // input d'un tool serveur illisible : non bloquant, le bloc texte
+          // final reste exploitable
+        }
+      }
+      break
+    }
+    case 'message_delta':
+      if (ev.delta) {
+        if (ev.delta.stop_reason !== undefined) state.message.stop_reason = ev.delta.stop_reason
+        if (ev.delta.stop_sequence !== undefined) state.message.stop_sequence = ev.delta.stop_sequence
+      }
+      if (ev.usage) state.message.usage = { ...state.message.usage, ...ev.usage }
+      break
+    case 'message_stop':
+      state.done = true
+      break
+    case 'error':
+      // Erreur mid-stream (ex. overloaded) : le tour est rejouable
+      throw retryableError(
+        `API Anthropic (mid-stream) : ${ev.error?.message || ev.error?.type || 'erreur inconnue'}`
+      )
+    default:
+      break // ping et types futurs : ignorés
+  }
+}
+
+// Consomme le flux SSE d'une réponse streaming et reconstruit le message.
+async function readSseMessage(response, turnLabel) {
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  const state = { message: null, jsonBuffers: new Map(), done: false }
+  const started = Date.now()
+  let buffer = ''
+
+  // Battement de progression : logge même pendant les silences du stream.
+  const heartbeat = setInterval(() => {
+    const blocks = state.message ? state.message.content.filter(Boolean).length : 0
+    const out = state.message?.usage?.output_tokens
+    logProgress(
+      `${turnLabel} en cours : ${blocks} bloc(s) reçus` +
+      (out ? `, ~${out} tokens output` : '') +
+      `, ${Math.round((Date.now() - started) / 1000)}s écoulées`
+    )
+  }, PROGRESS_LOG_MS)
+
+  try {
+    while (!state.done) {
+      if (Date.now() - started > TURN_TIMEOUT_MS) {
+        throw retryableError(`tour interrompu : borne dure de ${TURN_TIMEOUT_MS / 60000} min atteinte`)
+      }
+
+      // Inactivité : si aucune donnée n'arrive pendant INACTIVITY_TIMEOUT_MS,
+      // le stream est considéré figé → erreur rejouable (le fetch sera abort
+      // par l'appelant).
+      let inactivityTimer
+      let chunk
+      try {
+        chunk = await Promise.race([
+          reader.read(),
+          new Promise((_, reject) => {
+            inactivityTimer = setTimeout(
+              () => reject(retryableError(`stream figé : aucune donnée depuis ${INACTIVITY_TIMEOUT_MS / 1000}s`)),
+              INACTIVITY_TIMEOUT_MS
+            )
+          }),
+        ])
+      } finally {
+        clearTimeout(inactivityTimer)
+      }
+
+      if (chunk.done) break // EOF sans message_stop → géré après la boucle
+      buffer = (buffer + decoder.decode(chunk.value, { stream: true })).replace(/\r\n/g, '\n')
+
+      // Découpage SSE : événements séparés par une ligne vide, payload sur
+      // les lignes "data:" (concaténées si multiples).
+      let sep
+      while ((sep = buffer.indexOf('\n\n')) !== -1) {
+        const rawEvent = buffer.slice(0, sep)
+        buffer = buffer.slice(sep + 2)
+        const data = rawEvent
+          .split('\n')
+          .filter((l) => l.startsWith('data:'))
+          .map((l) => l.slice(5).trim())
+          .join('\n')
+        if (!data) continue
+        applySseEvent(state, JSON.parse(data))
+        if (state.done) break
+      }
+    }
+  } finally {
+    clearInterval(heartbeat)
+  }
+
+  if (!state.done || !state.message) {
+    throw retryableError('stream terminé prématurément (message_stop jamais reçu)')
+  }
+  return state.message
+}
+
+// Un tour d'appel : POST streaming, statut HTTP contrôlé, reconstruction SSE.
+// Toute erreur réseau/timeout/5xx est marquée retryable ; les 4xx ne le sont pas.
+async function runTurn(payload, turnLabel) {
+  const controller = new AbortController()
+  try {
+    const response = await fetch(ANTHROPIC_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': process.env.ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01',
       },
-      body: JSON.stringify({
+      body: JSON.stringify({ ...payload, stream: true }),
+      signal: controller.signal,
+    })
+
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => ({}))
+      const err = new Error(
+        `API Anthropic : HTTP ${response.status} ${errBody.error?.message || errBody.error?.type || ''}`.trim()
+      )
+      err.retryable = response.status >= 500 // 5xx/529 rejouables, 4xx non
+      throw err
+    }
+
+    return await readSseMessage(response, turnLabel)
+  } catch (err) {
+    controller.abort() // libère la connexion sur toute sortie en erreur
+    if (err.retryable === undefined) err.retryable = true // erreurs réseau (fetch failed…)
+    throw err
+  }
+}
+
+// Retry : un (1) rejeu complet du tour après RETRY_DELAY_MS si l'erreur est
+// rejouable (réseau, 5xx, timeout, stream figé). Le second échec remonte.
+async function runTurnWithRetry(payload, turnLabel) {
+  try {
+    return await runTurn(payload, turnLabel)
+  } catch (err) {
+    if (!err.retryable) throw err
+    logProgress(`${turnLabel} en échec rejouable (${err.message}) — retry unique dans ${RETRY_DELAY_MS / 1000}s`)
+    await new Promise((r) => setTimeout(r, RETRY_DELAY_MS))
+    return runTurn(payload, turnLabel)
+  }
+}
+
+// Appel Anthropic avec l'outil serveur web_search, en gérant le stop_reason
+// 'pause_turn' (boucle d'échantillonnage serveur interrompue : on renvoie la
+// conversation telle quelle et le serveur reprend où il en était).
+// Interface inchangée : renvoie un objet réponse au format non-streaming
+// (content, stop_reason, usage). Exportée pour les tests de la couche d'appel.
+export async function callAnthropic({ system, userPrompt }) {
+  const messages = [{ role: 'user', content: userPrompt }]
+
+  for (let i = 0; i <= MAX_CONTINUATIONS; i++) {
+    const turnLabel = i === 0 ? 'tour 1' : `tour ${i + 1} (reprise pause_turn n°${i})`
+    logProgress(`${turnLabel} : démarrage (streaming)`)
+    const t0 = Date.now()
+
+    const data = await runTurnWithRetry(
+      {
         model: ANTHROPIC_MODEL,
         max_tokens: MAX_TOKENS,
         system,
         messages,
         tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 8 }],
-      }),
-    })
+      },
+      turnLabel
+    )
 
-    const data = await response.json()
-    if (data.error) {
-      throw new Error(`API Anthropic : ${data.error.message || 'erreur inconnue'}`)
-    }
+    logProgress(
+      `${turnLabel} : terminé en ${Math.round((Date.now() - t0) / 1000)}s — ` +
+      `stop_reason=${data.stop_reason}, ${data.content.filter(Boolean).length} bloc(s)` +
+      (data.usage?.output_tokens ? `, ${data.usage.output_tokens} tokens output` : '')
+    )
+
     if (data.stop_reason === 'pause_turn') {
       messages.push({ role: 'assistant', content: data.content })
       continue
