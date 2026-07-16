@@ -5,20 +5,27 @@
 // au system prompt par l'appelant (generate-article.js).
 // Aucune variable d'environnement requise.
 
-// Mapping theme (CRM) → category (frontmatter Astro du site)
+// Mapping theme (CRM) → category (frontmatter Astro du site).
+// Les 2 catégories ajoutées reprennent la casse EXACTE des hubs du site
+// (src/content/categories/*.md : « Gestion de patrimoine », « Protection
+// sociale » — casse de phrase, différente du Title Case des 4 historiques).
 export const THEME_TO_CATEGORY = {
   'per-retraite': 'PER & Retraite',
   'assurance-vie': 'Assurance Vie',
   immobilier: 'Immobilier',
   fiscalite: 'Fiscalité',
+  'gestion-patrimoine': 'Gestion de patrimoine',
+  'protection-sociale': 'Protection sociale',
 };
 
 // Mapping theme → author (slugs auteurs du site)
 export const THEME_TO_AUTHOR = {
   'per-retraite': 'louis-hatton',
   fiscalite: 'louis-hatton',
+  'gestion-patrimoine': 'louis-hatton',
   'assurance-vie': 'jean-decamps',
   immobilier: 'jean-decamps',
+  'protection-sociale': 'jean-decamps',
 };
 
 export const THEMES = Object.keys(THEME_TO_CATEGORY);
@@ -50,6 +57,8 @@ export const INTERNAL_LINKS = [
   '/nos-solutions/gestion-patrimoine/sci',
   '/nos-solutions/gestion-patrimoine/transmission',
   '/nos-solutions/gestion-patrimoine/donation',
+  '/nos-solutions/protection-sociale',
+  '/nos-solutions/protection-sociale/prevoyance',
   '/simulateur-per',
   '/simulateur-assurance-vie',
   '/simulateur-scpi',
@@ -95,6 +104,9 @@ STYLE DE L'ARTICLE (calqué sur les articles existants du Journal)
 - Conclusion sous forme « Notre lecture » ou « Notre position », avec renvoi vers la page produit et/ou le simulateur pertinent.
 - Maillage interne : 3 à 5 liens markdown relatifs, choisis EXCLUSIVEMENT dans cette liste :
 ${INTERNAL_LINKS.map((l) => `  ${l}`).join('\n')}
+
+ANCRAGE CATALOGUE (impératif)
+Chaque article doit se rattacher concrètement à au moins une solution du catalogue Entasis — la liste des liens internes ci-dessus fait foi. Le rattachement doit être naturel et découler du sujet, jamais plaqué artificiellement en fin d'article. Si l'actualité identifiée sur le thème ne se raccroche à aucun service proposé par le cabinet, choisis un autre angle ou un autre sujet d'actualité : Entasis ne publie jamais hors de son périmètre de conseil.
 
 FORMAT DE SORTIE
 Réponds avec UN SEUL objet JSON strict (pas de texte avant ou après, pas de fence markdown), de la forme :
