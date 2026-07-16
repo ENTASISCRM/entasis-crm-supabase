@@ -3922,7 +3922,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                         type="range"
                         min="0"
                         max="4"
-                        step="0.25"
+                        step="0.05"
                         value={Number(deal.frais_entree_pp_pct ?? deal.frais_entree_pct ?? 1)}
                         onChange={e => set('frais_entree_pp_pct', parseFloat(e.target.value))}
                         style={{ flex: 1, accentColor: 'var(--gold)' }}
@@ -3943,7 +3943,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                         type="range"
                         min="0"
                         max="4"
-                        step="0.25"
+                        step="0.05"
                         value={Number(deal.frais_entree_pu_pct ?? deal.frais_entree_pct ?? 1)}
                         onChange={e => set('frais_entree_pu_pct', parseFloat(e.target.value))}
                         style={{ flex: 1, accentColor: 'var(--gold)' }}
