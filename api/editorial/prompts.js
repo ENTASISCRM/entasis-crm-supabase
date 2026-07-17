@@ -131,8 +131,17 @@ Réponds avec UN SEUL objet JSON strict (pas de texte avant ou après, pas de fe
 DÉRIVÉS
 - post_linkedin : 300 à 500 mots, même sujet, accroche forte, ton professionnel, se termine par le lien https://www.entasis-conseil.fr/journal/{slug} (remplace {slug} par le slug réel).
 - thread_x : 5 à 8 tweets de 280 caractères maximum chacun, le dernier contenant le lien vers l'article.
-- sources : les actualités web réellement utilisées (url, titre, date réelle de publication au format YYYY-MM-DD). Au moins une source doit dater de moins de 30 jours — la génération sera REJETÉE sinon.`;
+- sources : les actualités web réellement utilisées (url, titre, date réelle de publication au format YYYY-MM-DD). Au moins une source doit dater de moins de 30 jours — la génération sera REJETÉE sinon.
+
+RÈGLE DE SORTIE FINALE (absolue)
+Ta réponse finale est UNIQUEMENT l'objet JSON : aucun texte avant, aucun texte après, aucun commentaire, aucune explication de ton choix d'angle. Ton raisonnement (recherches, arbitrages, sélection de l'angle, difficultés d'ancrage au catalogue) n'est JAMAIS exposé — il reste interne. Si l'actualité du thème est pauvre ou difficile à rattacher au catalogue, choisis le meilleur angle possible et livre quand même le JSON complet : une réponse sans objet JSON est un échec de génération.`;
 }
+
+// Rappel de format appairé au retry métier MODEL_OUTPUT (generation.js) :
+// concaténé au user prompt de la SECONDE génération uniquement.
+export const FORMAT_RETRY_REMINDER = `
+
+RAPPEL CRITIQUE DE FORMAT : ta précédente réponse n'était pas un objet JSON exploitable. Cette fois, réponds EXCLUSIVEMENT avec l'objet JSON demandé — il doit commencer par { et se terminer par }, sans aucun caractère avant ou après, sans fence markdown, sans commentaire. N'explique rien, ne t'excuse pas : livre l'objet JSON complet.`;
 
 // Message user de déclenchement. `sujet` est optionnel : si absent, le modèle
 // choisit l'angle à partir de l'actualité trouvée.
