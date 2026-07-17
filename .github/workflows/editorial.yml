@@ -1,0 +1,121 @@
+# Agent éditorial — génération (lundi + jeudi) et publication (toutes les 6 h).
+#
+# IMPORTANT : les déclencheurs `schedule` ne tournent que sur la branche par
+# défaut du repo (main). Ce fichier doit donc être mergé develop → main pour
+# que les crons s'activent. `workflow_dispatch` permet de tester chaque job à
+# la main (onglet Actions) sans attendre l'horaire.
+#
+# Secrets requis (Settings → Secrets and variables → Actions) :
+#   ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+#   EDITORIAL_SECRET, EDITORIAL_GH_TOKEN, BREVO_API_KEY,
+#   EDITORIAL_REVIEWER_EMAIL, CRM_URL, (optionnel) BREVO_SENDER_EMAIL
+
+name: Agent éditorial
+
+on:
+  schedule:
+    # generate : 05h00 UTC lundi et jeudi = 06h00 Paris en hiver (UTC+1) et
+    # 07h00 Paris en été (UTC+2). Les crons GitHub sont en UTC uniquement :
+    # la dérive d'une heure été/hiver est acceptée.
+    - cron: '0 5 * * 1,4'
+    # publish : toutes les 6 h (00h/06h/12h/18h UTC)
+    - cron: '0 */6 * * *'
+    # newsletter : le 1er du mois à 06h00 UTC — crée un BROUILLON Brevo,
+    # l'envoi reste manuel depuis Brevo.
+    - cron: '0 6 1 * *'
+  workflow_dispatch:
+    inputs:
+      job:
+        description: 'Job à lancer'
+        type: choice
+        options: [generate, publish, newsletter]
+        required: true
+      theme:
+        # Menu déroulant : évite les fautes de saisie (un run a échoué en
+        # BAD_THEME sur « fiscalité » avec accent). Vide = rotation automatique.
+        description: 'Thème (generate uniquement ; vide = rotation automatique)'
+        type: choice
+        options:
+          - ''
+          - per-retraite
+          - assurance-vie
+          - immobilier
+          - fiscalite
+          - gestion-patrimoine
+          - protection-sociale
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    if: >-
+      (github.event_name == 'schedule' && github.event.schedule == '0 5 * * 1,4') ||
+      (github.event_name == 'workflow_dispatch' && inputs.job == 'generate')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20 # génération observée ~6 min, marge large
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Générer le package éditorial et envoyer l'email de veto
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          EDITORIAL_SECRET: ${{ secrets.EDITORIAL_SECRET }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          BREVO_SENDER_EMAIL: ${{ secrets.BREVO_SENDER_EMAIL }}
+          EDITORIAL_REVIEWER_EMAIL: ${{ secrets.EDITORIAL_REVIEWER_EMAIL }}
+          CRM_URL: ${{ secrets.CRM_URL }}
+          THEME_INPUT: ${{ inputs.theme }}
+        run: node scripts/editorial/generate-and-notify.mjs $THEME_INPUT
+
+  publish:
+    if: >-
+      (github.event_name == 'schedule' && github.event.schedule == '0 */6 * * *') ||
+      (github.event_name == 'workflow_dispatch' && inputs.job == 'publish')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Publier les packages dont la deadline de veto est dépassée
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          EDITORIAL_GH_TOKEN: ${{ secrets.EDITORIAL_GH_TOKEN }}
+        run: node scripts/editorial/publish-due.mjs
+
+  newsletter:
+    if: >-
+      (github.event_name == 'schedule' && github.event.schedule == '0 6 1 * *') ||
+      (github.event_name == 'workflow_dispatch' && inputs.job == 'newsletter')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Assembler la newsletter mensuelle (brouillon Brevo)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          BREVO_SENDER_EMAIL: ${{ secrets.BREVO_SENDER_EMAIL }}
+          BREVO_LIST_ID: ${{ secrets.BREVO_LIST_ID }}
+          EDITORIAL_REVIEWER_EMAIL: ${{ secrets.EDITORIAL_REVIEWER_EMAIL }}
+        run: node scripts/editorial/newsletter-monthly.mjs

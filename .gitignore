@@ -34,3 +34,4 @@ supabase/.temp/
 data/*.csv
 data/*.xlsx
 data/*.xls
+.env*

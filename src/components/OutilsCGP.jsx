@@ -54,35 +54,36 @@ const FONT_SANS = "'Inter Tight', -apple-system, BlinkMacSystemFont, sans-serif"
 /* ─────────────────────────────────────────────────────────────────────────────
    TAX ENGINE (barème 2026 sur revenus 2025)
    Sources : loi de finances 2026 + service-public.fr (TRANCHES_IR_2026).
-   TODO : confirmer PASS_2026 = 48 060 € à publication officielle DGFiP
-   (PASS 2024 = 46 368 €, PASS 2025 = 47 100 €).
+   PASS N-1 (2025), référence légale du plafond épargne retraite pour des
+   versements 2026 (formule salarié) — ne pas "corriger" vers le PASS de
+   l'année en cours. Harmonisé avec entasis-site/src/lib/fiscal.ts.
 ───────────────────────────────────────────────────────────────────────────── */
-const PASS_2026 = 48060
+const PASS_REF_N1 = 47100
 
 const TRANCHES_IR = [
-  { min: 0, max: 11497, taux: 0 },
-  { min: 11497, max: 29315, taux: 0.11 },
-  { min: 29315, max: 83823, taux: 0.30 },
-  { min: 83823, max: 180294, taux: 0.41 },
-  { min: 180294, max: Infinity, taux: 0.45 },
+  { min: 0, max: 11600, taux: 0 },
+  { min: 11600, max: 29579, taux: 0.11 },
+  { min: 29579, max: 84577, taux: 0.30 },
+  { min: 84577, max: 181917, taux: 0.41 },
+  { min: 181917, max: Infinity, taux: 0.45 },
 ]
 
 function calcIR(revenuImposable, parts) {
   const revenuParPart = revenuImposable / parts
   let impotParPart = 0
 
-  // Barème 2026 officiel
-  if (revenuParPart <= 11497) impotParPart = 0
-  else if (revenuParPart <= 29315)
-    impotParPart = (revenuParPart - 11497) * 0.11
-  else if (revenuParPart <= 83823)
-    impotParPart = 17818 * 0.11 + (revenuParPart - 29315) * 0.30
-  else if (revenuParPart <= 180294)
-    impotParPart = 17818 * 0.11 + 54508 * 0.30 +
-                  (revenuParPart - 83823) * 0.41
+  // Barème LF 2026 officiel (revenus 2025)
+  if (revenuParPart <= 11600) impotParPart = 0
+  else if (revenuParPart <= 29579)
+    impotParPart = (revenuParPart - 11600) * 0.11
+  else if (revenuParPart <= 84577)
+    impotParPart = 17979 * 0.11 + (revenuParPart - 29579) * 0.30
+  else if (revenuParPart <= 181917)
+    impotParPart = 17979 * 0.11 + 54998 * 0.30 +
+                  (revenuParPart - 84577) * 0.41
   else
-    impotParPart = 17818 * 0.11 + 54508 * 0.30 +
-                  96471 * 0.41 + (revenuParPart - 180294) * 0.45
+    impotParPart = 17979 * 0.11 + 54998 * 0.30 +
+                  97340 * 0.41 + (revenuParPart - 181917) * 0.45
 
   return Math.round(impotParPart * parts)
 }
@@ -684,10 +685,10 @@ function SimulateurPER({ profile }) {
 
   // Plafond PER 2026
   const plafondBase = Math.max(
-    PASS_2026 * 0.10,           // minimum = 4 806€
+    PASS_REF_N1 * 0.10,           // minimum = 4 710€
     Math.min(
       revenu * 0.10,            // 10% des revenus
-      PASS_2026 * 8 * 0.10      // maximum = 38 448€
+      PASS_REF_N1 * 8 * 0.10      // maximum = 37 680€
     )
   )
   const plafondTotal = plafondBase + plafondReportable
@@ -745,7 +746,7 @@ function SimulateurPER({ profile }) {
 
       if (modeSortie === 'capital') {
         // Capital en une fois, le PER s'ajoute aux autres revenus l'année
-        // de sortie. Plus-values au PFU 30%.
+        // de sortie. Plus-values au PFU 31,4% (LFSS 2026).
         const r = imposeCapitalUneFois(totalVerse, plusValue, nbParts, 0)
         const capitalNet = capital - r.impotTotal
         sortieData = {
@@ -756,7 +757,8 @@ function SimulateurPER({ profile }) {
         }
       } else if (modeSortie === 'capital_fractionne') {
         // Capital fractionné sur 10 ans, chaque année 1/10 du capital sort
-        // et est imposé au barème IR avec abattement 10% plafonné à 4123 €.
+        // et est imposé au barème IR avec abattement 10% plafonné à 4 439 €
+        // (PLAFOND_ABATTEMENT_PENSIONS, cf lib/per-fiscal).
         const r = imposeCapitalFractionne(totalVerse, plusValue, nbParts, 0, 10)
         const capitalNet = capital - r.impotTotal
         sortieData = {
@@ -909,7 +911,7 @@ function SimulateurPER({ profile }) {
             </div>
             <Field label="Plafond PER reportable non utilise (3 annees precedentes)" value={plafondReportable} onChange={setPlafondReportable} suffix="EUR" />
             <div style={{ height: 14 }} />
-            <Slider label="Versements PER envisages en 2025" value={versement2025} onChange={setVersement2025} min={0} max={Math.max(1, plafondTotal)} step={100} suffix="EUR" formatValue={v => euro(v)} />
+            <Slider label="Versements PER envisages en 2026" value={versement2025} onChange={setVersement2025} min={0} max={Math.max(1, plafondTotal)} step={100} suffix="EUR" formatValue={v => euro(v)} />
           </div>
           <div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -918,7 +920,7 @@ function SimulateurPER({ profile }) {
               <ResultCard label="Economie d'impots" value={euro(result.economieFiscale)} accent={C.success} />
               <ResultCard label="Effort reel d'epargne" value={euro(result.effortReel)} accent={C.ivoryMuted} />
               <ResultCard label="TMI detectee" value={`${Math.round(result.tmi * 100)}%`} accent={C.gold} />
-              <ResultCard label="Plafond disponible 2025" value={euro(result.plafondTotal)} accent={C.gold} />
+              <ResultCard label="Plafond disponible 2026" value={euro(result.plafondTotal)} accent={C.gold} />
             </div>
           </div>
         </div>
@@ -974,7 +976,7 @@ function SimulateurPER({ profile }) {
               <>
                 <ResultCard label="Capital brut" value={euro(selectedScenario.sortieData.capitalBrut)} accent={C.gold} />
                 <ResultCard label="Impôt sur versements" value={euro(selectedScenario.sortieData.impotVersements)} accent={C.danger} sub="Barème IR après abattement 10%" />
-                <ResultCard label="PFU sur plus-values" value={euro(selectedScenario.sortieData.impotPlusValues)} accent={C.danger} sub="30% (12.8% IR + 17.2% PS)" />
+                <ResultCard label="PFU sur plus-values" value={euro(selectedScenario.sortieData.impotPlusValues)} accent={C.danger} sub="31,4% (12,8% IR + 18,6% PS)" />
                 <ResultCard label="Capital net disponible" value={euro(selectedScenario.sortieData.capitalNet)} accent={C.success} />
               </>
             )}
@@ -1044,7 +1046,7 @@ function SimulateurPER({ profile }) {
             { label: 'Impots avec PER', value: fmt(result.impotAvec), accent: navy },
             { label: 'Economie d\'impots', value: fmt(result.economieFiscale), accent: green },
             { label: 'TMI detectee', value: Math.round(result.tmi * 100) + ' %', accent: navy },
-            { label: 'Plafond PER 2025', value: fmt(result.plafondTotal), accent: navy },
+            { label: 'Plafond PER 2026', value: fmt(result.plafondTotal), accent: navy },
             { label: 'Effort reel', value: fmt(result.effortReel), accent: dark },
           ], dt)
           y += 5
@@ -1910,7 +1912,7 @@ function SimulateurImmoNeuf({ profile }) {
 
       // Micro-BIC
       const revenuImposableMicroBIC = loyersAnnuelsBruts * 0.50
-      const impotMicroBIC = revenuImposableMicroBIC * (tmiImmo / 100) + revenuImposableMicroBIC * 0.172
+      const impotMicroBIC = revenuImposableMicroBIC * (tmiImmo / 100) + revenuImposableMicroBIC * 0.186
 
       // Régime réel (estimation)
       const chargesReelles = loyersAnnuelsBruts * 0.20  // charges ~20%
@@ -1919,7 +1921,7 @@ function SimulateurImmoNeuf({ profile }) {
       const revenuImposableReel = Math.max(0,
         loyersAnnuelsBruts - chargesReelles - amortissementBien - amortissementMobilier
       )
-      const impotReel = revenuImposableReel * (tmiImmo / 100) + revenuImposableReel * 0.172
+      const impotReel = revenuImposableReel * (tmiImmo / 100) + revenuImposableReel * 0.186
 
       const cashflowNetMicroBIC = loyerMensuel - mensualiteTotale - impotMicroBIC / 12
       const cashflowNetReel = loyerMensuel - mensualiteTotale - impotReel / 12

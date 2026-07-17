@@ -22,6 +22,7 @@ const MesDossiersImmo = lazy(() => import('./components/MesDossiersImmo'))
 const PipelineVEFA = lazy(() => import('./components/PipelineVEFA'))
 const OutilsCGP = lazy(() => import('./components/OutilsCGP'))
 const LinkedInPro = lazy(() => import('./components/LinkedInPro'))
+const EditorialHub = lazy(() => import('./components/EditorialHub'))
 const PilotageRH = lazy(() => import('./components/PilotageRH'))
 const Recrutement = lazy(() => import('./components/Recrutement'))
 const Remuneration = lazy(() => import('./components/Remuneration'))
@@ -126,6 +127,7 @@ const Icon = {
   Catalogue: ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".8"/><rect x="11" y="3" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".6"/><rect x="3" y="11" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".6"/><rect x="11" y="11" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".4"/></svg>,
   ImmoFolder:()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><path d="M3 6a1 1 0 011-1h4l2 2h6a1 1 0 011 1v7a1 1 0 01-1 1H4a1 1 0 01-1-1V6z" fill="currentColor" opacity=".6"/><rect x="7" y="9" width="2" height="2" rx=".3" fill="currentColor" opacity=".9"/><rect x="10" y="9" width="2" height="2" rx=".3" fill="currentColor" opacity=".7"/></svg>,
   Kanban:    ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><rect x="2" y="3" width="4" height="14" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".8"/><rect x="8" y="3" width="4" height="10" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".6"/><rect x="14" y="3" width="4" height="12" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".5"/></svg>,
+  Editorial: ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><path d="M4.5 15.5l1-3.5 8-8a1.77 1.77 0 012.5 2.5l-8 8-3.5 1z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill="none" opacity=".85"/><path d="M11.5 6l2.5 2.5" stroke="currentColor" strokeWidth="1.2" opacity=".5"/><path d="M3.5 18.5h13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".4"/></svg>,
   Outils:    ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.4" fill="none" opacity=".8"/><path d="M10 2v3M10 15v3M2 10h3M15 10h3M4.2 4.2l2.1 2.1M13.7 13.7l2.1 2.1M4.2 15.8l2.1-2.1M13.7 6.3l2.1-2.1" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" opacity=".6"/></svg>,
   LinkedIn:  ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".8"/><path d="M7 9v4M7 7v.01" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" opacity=".7"/><path d="M10 13v-2.5c0-1 .5-1.5 1.5-1.5s1.5.5 1.5 1.5V13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity=".7"/></svg>,
   // Briefcase style pour l'onglet UCS Produits Structurés
@@ -163,6 +165,29 @@ function AgeBadge({deal,compact=false}){
 /* ─────────────────────────────────────────────────────────────────────────────
    STALE PIPELINE ALERT
 ───────────────────────────────────────────────────────────────────────────── */
+// Bannière « articles en attente de relecture » sur le dashboard manager,
+// même pattern visuel que StalePipelineAlert. Cliquable vers l'onglet Éditorial.
+function EditorialPendingBanner({count,nextDeadline,onOpen}){
+  if(!count)return null
+  const dl=nextDeadline?new Date(nextDeadline).toLocaleString('fr-FR',{timeZone:'Europe/Paris',weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}):null
+  return (
+    <div onClick={onOpen} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter')onOpen()}} style={{
+      background:'var(--progress-bg)',border:'1px solid var(--progress-bd)',
+      borderRadius:'var(--rad-lg)',padding:'14px 18px',marginBottom:20,cursor:'pointer',
+      display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,
+    }}>
+      <div>
+        <div className="section-kicker" style={{color:'var(--progress)',marginBottom:2}}>Agent éditorial</div>
+        <div style={{fontSize:13,fontWeight:600,color:'var(--t1)'}}>
+          {count} article{count>1?'s':''} en attente de relecture
+          {dl&&<span style={{color:'var(--t3)',fontWeight:500}}> — publication automatique {dl.includes(':')?`le ${dl}`:dl}</span>}
+        </div>
+      </div>
+      <span style={{fontSize:12.5,fontWeight:600,color:'var(--progress)',whiteSpace:'nowrap'}}>Relire →</span>
+    </div>
+  )
+}
+
 function StalePipelineAlert({deals,onEdit}){
   const stale=deals
     .filter(d=>isPipeline(d.status))
@@ -686,7 +711,7 @@ function AuthScreen() {
 /* ─────────────────────────────────────────────────────────────────────────────
    SIDEBAR
 ───────────────────────────────────────────────────────────────────────────── */
-function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,prospectsNew,dossiersImmoCount,mobileOpen,onCloseMobile}){
+function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,prospectsNew,dossiersImmoCount,editorialCount,mobileOpen,onCloseMobile}){
   // Au clic d'une entrée nav en mobile, on ferme le drawer après navigation
   const handleNavClick = (key) => {
     setActiveTab(key)
@@ -726,7 +751,10 @@ function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,prospects
       {key:'team', label:'Équipe', Icon:Icon.Team},
       {key:'weekly-review', label:'Revue hebdo', Icon:Icon.Forecast},
       {key:'pilotage-rh', label:'Pilotage RH', Icon:Icon.Team, manager:true},
-      {key:'recrutement', label:'Recrutement', Icon:Icon.Team, manager:true}
+      {key:'recrutement', label:'Recrutement', Icon:Icon.Team, manager:true},
+      // Éditorial : manager uniquement (double barrière avec le RLS
+      // manager-only de editorial_packages). Badge = packages en attente de veto.
+      {key:'editorial', label:'Éditorial', Icon:Icon.Editorial, manager:true, badge:editorialCount}
     ]:[]),
   ]
 
@@ -812,7 +840,7 @@ function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,prospects
 /* ─────────────────────────────────────────────────────────────────────────────
    TOP BAR
 ───────────────────────────────────────────────────────────────────────────── */
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs',prospection:'Prospection LinkedIn','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA',remuneration:'Rémunération',outils:'Outils CGP','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️'}
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs',prospection:'Prospection LinkedIn','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA',remuneration:'Rémunération',outils:'Outils CGP','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️',editorial:'Agent éditorial ✍️'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu}){
   return (
@@ -2516,7 +2544,9 @@ function MarketView(){
       const params=new URLSearchParams({isin})
       if(yahooTicker) params.set('ticker',yahooTicker)
       if(morningstarId) params.set('msId',morningstarId)
-      const r=await fetch(`/api/nav?${params}`)
+      const { data:{ session } }=await supabase.auth.getSession()
+      if(!session) return null
+      const r=await fetch(`/api/nav?${params}`,{headers:{Authorization:`Bearer ${session.access_token}`}})
       if(!r.ok)return null
       return await r.json()
     }catch{return null}
@@ -4510,6 +4540,7 @@ export default function App(){
   const [prospects,setProspects]=useState([])
   const [prospectsNew,setProspectsNew]=useState(0)
   const [dossiersImmoCount,setDossiersImmoCount]=useState(0)
+  const [editorialPending,setEditorialPending]=useState({count:0,nextDeadline:null})
   const [reloadCallback,setReloadCallback]=useState(null) // Callback après sauvegarde deal
 
   // Anti race condition : empêche les appels parallèles à loadAll() depuis
@@ -4523,6 +4554,25 @@ export default function App(){
     isMounted.current = true
     return () => { isMounted.current = false }
   }, [])
+
+  // Badge « Éditorial » + bannière dashboard (manager) : count des packages
+  // en attente de veto et prochaine deadline. Rafraîchi à chaque changement
+  // d'onglet (couvre quitter/revenir sur l'onglet) — pas de realtime,
+  // volontairement hors périmètre. EditorialHub resynchronise aussi le count
+  // via onPendingChange après une action publier/rejeter.
+  useEffect(() => {
+    if (profile?.role !== 'manager') return
+    supabase.from('editorial_packages')
+      .select('veto_deadline', { count: 'exact' })
+      .eq('statut', 'en_attente_veto')
+      .order('veto_deadline', { ascending: true })
+      .limit(1)
+      .then(({ data, count, error }) => {
+        if (!error && isMounted.current) {
+          setEditorialPending({ count: count || 0, nextDeadline: data?.[0]?.veto_deadline || null })
+        }
+      })
+  }, [profile, activeTab])
 
   const fetchProspects=()=>prospectsService.listAll().then(({ list, aContacter })=>{
     setProspects(list)
@@ -4987,6 +5037,7 @@ export default function App(){
         month={month}
         prospectsNew={prospectsNew}
         dossiersImmoCount={dossiersImmoCount}
+        editorialCount={editorialPending.count}
         mobileOpen={mobileMenuOpen}
         onCloseMobile={()=>setMobileMenuOpen(false)}
       />
@@ -4997,6 +5048,7 @@ export default function App(){
           {!profile&&error&&<div className="notice notice-warn">Profil introuvable dans <span className="code">public.profiles</span>. Vérifie la table et les policies.</div>}
 
           <Suspense fallback={<div style={{padding:24,color:'var(--t3)',fontSize:13}}>Chargement…</div>}>
+          {activeTab==='dashboard'&&isManager&&<EditorialPendingBanner count={editorialPending.count} nextDeadline={editorialPending.nextDeadline} onOpen={()=>setActiveTab('editorial')}/>}
           {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile}/>)}
           {activeTab==='leads'&&<LeadRoomEmbed/>}
           {activeTab==='pilotage-rh'&&isManager&&<PilotageRH/>}
@@ -5070,6 +5122,7 @@ export default function App(){
           {activeTab==='immo-dossiers'&&<MesDossiersImmo profile={profile} teamProfiles={teamProfiles} setActiveTab={setActiveTab}/>}
           {activeTab==='immo-pipeline'&&<PipelineVEFA profile={profile} teamProfiles={teamProfiles}/>}
           {activeTab==='linkedin-pro'&&<LinkedInPro profile={profile}/>}
+          {activeTab==='editorial'&&isManager&&<EditorialHub onPendingChange={(n)=>setEditorialPending(p=>({...p,count:n}))}/>}
           {activeTab==='remuneration'&&<Remuneration profile={profile} deals={deals} month={month}/>}
           {activeTab==='outils'&&<OutilsCGP profile={profile}/>}
           {activeTab==='conformite'&&<Conformite profile={profile}/>}

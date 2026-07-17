@@ -1,17 +1,26 @@
 // src/lib/per-fiscal.js
 // Helpers fiscaux et financiers utilisés par les simulateurs.
 // Fonctions extraites pour pouvoir être testées indépendamment.
-// Sources : barème IR 2026 (loi de finances), PASS 2026 = 48 060€,
+// Sources : barème IR 2026 (loi de finances), PASS de référence 47 100€,
 // tables de mortalité INSEE (taux de conversion en rente viagère).
 
-export const PASS_2026 = 48060;
+// PASS N-1 (2025), référence légale du plafond épargne retraite pour des
+// versements 2026 (formule salarié) — ne pas "corriger" vers le PASS de
+// l'année en cours. Harmonisé avec entasis-site/src/lib/fiscal.ts.
+export const PASS_REF_N1 = 47100;
 
+// Plafond abattement 10 % pensions, revenus 2025 / IR 2026 —
+// revalorisé chaque année à chaque loi de finances.
+export const PLAFOND_ABATTEMENT_PENSIONS = 4439;
+
+// Barème LF 2026 (promulguée le 19/02/2026), applicable aux revenus 2025
+// (tranches revalorisées de +0,9 %).
 export const TRANCHES_IR_2026 = [
-  { min: 0, max: 11497, taux: 0 },
-  { min: 11497, max: 29315, taux: 0.11 },
-  { min: 29315, max: 83823, taux: 0.30 },
-  { min: 83823, max: 180294, taux: 0.41 },
-  { min: 180294, max: Infinity, taux: 0.45 },
+  { min: 0, max: 11600, taux: 0 },
+  { min: 11600, max: 29579, taux: 0.11 },
+  { min: 29579, max: 84577, taux: 0.30 },
+  { min: 84577, max: 181917, taux: 0.41 },
+  { min: 181917, max: Infinity, taux: 0.45 },
 ];
 
 // Calcule l'impôt sur le revenu via le barème progressif (système du quotient
@@ -20,11 +29,11 @@ export function calcIR(revenuImposable, parts) {
   if (revenuImposable <= 0 || parts <= 0) return 0;
   const revenuParPart = revenuImposable / parts;
   let impotParPart = 0;
-  if (revenuParPart <= 11497) impotParPart = 0;
-  else if (revenuParPart <= 29315) impotParPart = (revenuParPart - 11497) * 0.11;
-  else if (revenuParPart <= 83823) impotParPart = 17818 * 0.11 + (revenuParPart - 29315) * 0.30;
-  else if (revenuParPart <= 180294) impotParPart = 17818 * 0.11 + 54508 * 0.30 + (revenuParPart - 83823) * 0.41;
-  else impotParPart = 17818 * 0.11 + 54508 * 0.30 + 96471 * 0.41 + (revenuParPart - 180294) * 0.45;
+  if (revenuParPart <= 11600) impotParPart = 0;
+  else if (revenuParPart <= 29579) impotParPart = (revenuParPart - 11600) * 0.11;
+  else if (revenuParPart <= 84577) impotParPart = 17979 * 0.11 + (revenuParPart - 29579) * 0.30;
+  else if (revenuParPart <= 181917) impotParPart = 17979 * 0.11 + 54998 * 0.30 + (revenuParPart - 84577) * 0.41;
+  else impotParPart = 17979 * 0.11 + 54998 * 0.30 + 97340 * 0.41 + (revenuParPart - 181917) * 0.45;
   return Math.round(impotParPart * parts);
 }
 
@@ -41,8 +50,8 @@ export function getTMI(revenuImposable, parts) {
 // Plafond de déduction PER d'un travailleur salarié pour l'année courante.
 // Min, 10% du PASS. Max, 10% × 8 PASS. Sinon, 10% des revenus pros.
 export function plafondPerSalarie(revenuImposable) {
-  const min = PASS_2026 * 0.10;
-  const max = PASS_2026 * 8 * 0.10;
+  const min = PASS_REF_N1 * 0.10;
+  const max = PASS_REF_N1 * 8 * 0.10;
   return Math.max(min, Math.min(revenuImposable * 0.10, max));
 }
 
@@ -95,15 +104,18 @@ export function calcRenteMensuelle(capital, ageRetraite) {
   return Math.round(capital * taux / 12);
 }
 
-// Imposition d'une sortie en capital en une fois, post abattement 10%.
+// Imposition d'une sortie en capital en une fois, post abattement 10%
+// plafonné (équivalent pensions).
 // Versements imposés au barème IR (revenu exceptionnel), plus-values au PFU.
 export function imposeCapitalUneFois(totalVerse, plusValue, nbParts, autresRevenus = 0) {
-  const baseVersementsImposable = totalVerse * 0.9; // abattement 10%
+  // La sortie a lieu sur une seule année : un seul plafond d'abattement.
+  const abattement = Math.min(totalVerse * 0.10, PLAFOND_ABATTEMENT_PENSIONS);
+  const baseVersementsImposable = totalVerse - abattement;
   // Le capital sort une seule année et s'ajoute aux autres revenus.
   const impotSans = calcIR(autresRevenus, nbParts);
   const impotAvec = calcIR(autresRevenus + baseVersementsImposable, nbParts);
   const impotVersements = Math.max(0, impotAvec - impotSans);
-  const impotPlusValues = Math.round(plusValue * 0.30); // PFU 30%
+  const impotPlusValues = Math.round(plusValue * 0.314); // PFU 31,4% (LFSS 2026 : 12,8% IR + 18,6% PS)
   return {
     impotVersements,
     impotPlusValues,
@@ -199,20 +211,20 @@ export function tri(versementInitial, versementAnnuel, dureeAns, capitalFinal, i
 
 // Imposition d'une sortie en capital fractionné sur N années.
 // Chaque année, 1/N du capital sort. La fraction des versements de l'année
-// est imposée à l'IR comme un revenu (avec abattement 10% PLAFONNÉ à 4 123€
-// en 2026, équivalent du 10% pension, à confirmer avec le contrat).
-// La fraction des plus-values est PFU 30%.
+// est imposée à l'IR comme un revenu (avec abattement 10% PLAFONNÉ,
+// équivalent du 10% pension, à confirmer avec le contrat).
+// La fraction des plus-values est PFU 31,4% (LFSS 2026).
 export function imposeCapitalFractionne(totalVerse, plusValue, nbParts, autresRevenus = 0, anneesFractionnement = 10) {
   const versementsParAn = totalVerse / anneesFractionnement;
   const plusValueParAn = plusValue / anneesFractionnement;
-  // Abattement 10% sur les versements, plafonné à 4 123€ (équivalent 10%
-  // pension max 2026)
-  const abattement = Math.min(versementsParAn * 0.10, 4123);
+  // Abattement 10% sur les versements de l'année, plafonné (équivalent 10%
+  // pension) — le plafond s'applique chaque année de fractionnement.
+  const abattement = Math.min(versementsParAn * 0.10, PLAFOND_ABATTEMENT_PENSIONS);
   const versementsImposables = versementsParAn - abattement;
   const impotSans = calcIR(autresRevenus, nbParts);
   const impotAvec = calcIR(autresRevenus + versementsImposables, nbParts);
   const impotVersementsParAn = Math.max(0, impotAvec - impotSans);
-  const impotPlusValuesParAn = Math.round(plusValueParAn * 0.30);
+  const impotPlusValuesParAn = Math.round(plusValueParAn * 0.314);
   return {
     impotVersementsParAn,
     impotPlusValuesParAn,
