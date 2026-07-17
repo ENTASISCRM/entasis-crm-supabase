@@ -7,6 +7,10 @@ export const MONTHS = ['JANVIER','FÉVRIER','MARS','AVRIL','MAI','JUIN','JUILLET
 export const STATUS_OPTIONS = ['Signé','En cours','Prévu','Annulé'];
 export const PRIORITY_OPTIONS = ['Normale','Haute','Urgente'];
 export const PRODUCTS = ['PER Individuel','PERO','Assurance Vie Française','SCPI','Produits Structurés','Private Equity','Prévoyance TNS','Mutuelle Santé','Autre'];
+// Statut professionnel du client (structuré, obligatoire a la signature).
+// Pilote les regles de cross-sell du module Multi-equipement (ex. TNS ou
+// profession liberale sans prevoyance = opportunite).
+export const STATUTS_PRO = ['Salarié','TNS','Chef d\'entreprise','Retraité','Profession libérale','Autre'];
 export const COMPANIES = ['SwissLife','Abeille Assurances','Generali','Cardif (BNP Paribas)','Spirica','Autre'];
 export const SOURCES = ['Téléprospection','Leads Facebook','Parrainage Client','Réseau Personnel','Site Web Entasis','LinkedIn','Autre'];
 

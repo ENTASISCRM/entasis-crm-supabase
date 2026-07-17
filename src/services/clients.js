@@ -15,13 +15,31 @@ export async function searchByQuery(query) {
   if (!query || query.length < 2) return []
   const { data, error } = await supabase
     .from('clients')
-    .select('id, nom, prenom, email, telephone')
+    .select('id, nom, prenom, email, telephone, profession, statut_pro, revenus_annuels, patrimoine_estime')
     .or(
       `nom.ilike.%${query}%,email.ilike.%${query}%,telephone.ilike.%${query}%`
     )
     .limit(5)
   if (error) return []
   return data || []
+}
+
+/**
+ * Met à jour la data structurée d'un client (statut, profession, revenus,
+ * patrimoine) UNIQUEMENT pour les champs fournis (non vides). Sert à compléter
+ * une fiche au passage d'un deal en « Signé » sans écraser l'existant.
+ */
+export async function updateInfoIfProvided(clientId, fields) {
+  if (!clientId || !fields) return
+  const patch = {}
+  if (fields.statut_pro != null && String(fields.statut_pro).trim() !== '') patch.statut_pro = fields.statut_pro
+  if (fields.profession != null && String(fields.profession).trim() !== '') patch.profession = fields.profession
+  if (fields.revenus_annuels != null && String(fields.revenus_annuels).trim() !== '') patch.revenus_annuels = Number(fields.revenus_annuels)
+  if (fields.patrimoine_estime != null && String(fields.patrimoine_estime).trim() !== '') patch.patrimoine_estime = Number(fields.patrimoine_estime)
+  if (Object.keys(patch).length === 0) return
+  patch.updated_at = new Date().toISOString()
+  const { error } = await supabase.from('clients').update(patch).eq('id', clientId)
+  if (error) console.error('[clients.updateInfoIfProvided] failed:', error.message)
 }
 
 /**

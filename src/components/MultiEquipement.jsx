@@ -11,7 +11,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { listEquipment, listFamilies } from '../services/equipment'
-import { suggestionPour, estFortPotentiel, estTns } from '../config/multiEquipementRules'
+import { suggestionPour, estFortPotentiel, estTnsOuLiberal } from '../config/multiEquipementRules'
 
 const fmtEur = (v) =>
   Number(v || 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
@@ -51,6 +51,7 @@ export default function MultiEquipement({ profile }) {
             client_id: c.client_id,
             nom: nomClient(c),
             profession: c.profession || '',
+            statut: c.statut_pro || '',
             advisor_code: c.advisor_code || '—',
             revenus: Number(c.revenus_annuels || 0),
             patrimoine: Number(c.patrimoine_estime || 0),
@@ -231,7 +232,7 @@ export default function MultiEquipement({ profile }) {
                     const sug = suggestionPour(r)
                     return (
                       <tr key={r.client_id}>
-                        <td className="cli">{r.nom}{estTns(r.profession) && <small>TNS / libéral</small>}</td>
+                        <td className="cli">{r.nom}{estTnsOuLiberal(r) && <small>{r.statut || 'TNS / libéral'}</small>}</td>
                         <td><span className="cadre">{r.advisor_code}</span></td>
                         <td className="prof">{r.profession || '—'}</td>
                         <td className="rev">{r.revenus ? fmtEur(r.revenus) : '—'}</td>

@@ -49,8 +49,19 @@ export async function listByAdvisorCodes(codes) {
 /**
  * Met à jour un deal existant. Le caller passe l'objet complet.
  */
+// Champs UI transitoires portés par l'objet deal pour saisir/compléter la fiche
+// CLIENT (statut, profession, revenus, patrimoine). Ils ne sont PAS des colonnes
+// de `deals` : on les retire avant tout write pour éviter un 400 PostgREST. La
+// persistance de ces infos se fait sur la table `clients` (updateInfoIfProvided).
+const CLIENT_UI_ONLY = ['client_statut_pro', 'client_profession', 'client_revenus', 'client_patrimoine']
+function stripClientUiOnly(obj) {
+  const out = { ...obj }
+  for (const k of CLIENT_UI_ONLY) delete out[k]
+  return out
+}
+
 export async function update(dealId, patch) {
-  const { error } = await supabase.from('deals').update(patch).eq('id', dealId)
+  const { error } = await supabase.from('deals').update(stripClientUiOnly(patch)).eq('id', dealId)
   if (error) throw error
 }
 
@@ -59,7 +70,7 @@ export async function update(dealId, patch) {
  */
 export async function create(deal) {
   const newId = deal.id || `D-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-  const { error } = await supabase.from('deals').insert({ ...deal, id: newId })
+  const { error } = await supabase.from('deals').insert({ ...stripClientUiOnly(deal), id: newId })
   if (error) throw error
   return newId
 }

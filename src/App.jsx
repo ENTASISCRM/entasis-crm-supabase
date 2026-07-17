@@ -63,6 +63,7 @@ import {
   getClientName,
   emptyDeal,
   normalizeDeal,
+  STATUTS_PRO,
 } from './lib/ui-shared'
 
 const EMPTY_OBJECTIFS = MONTHS.reduce((a,m)=>{a[m]={pp_target:0,pu_target:0};return a},{})
@@ -3466,7 +3467,12 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
       client_id: client.id,
       client: `${client.prenom || ''} ${client.nom}`.trim(),
       client_email: client.email || '',
-      client_phone: client.telephone || ''
+      client_phone: client.telephone || '',
+      // Préremplit la data structurée depuis la fiche (éditable pour la compléter).
+      client_statut_pro: client.statut_pro || '',
+      client_profession: client.profession || '',
+      client_revenus: client.revenus_annuels ?? '',
+      client_patrimoine: client.patrimoine_estime ?? '',
     }))
   }
 
@@ -3518,6 +3524,24 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
       const tel = (deal.client_phone || '').trim();
       if (!em || !tel) {
         toast.error('Email et téléphone du client sont obligatoires.');
+        return;
+      }
+    }
+    // Data client OBLIGATOIRE au passage en « Signé » (Louis 13/07) : statut,
+    // profession, revenus, patrimoine, en plus de email + téléphone. Vaut pour
+    // un nouveau client comme pour un existant (compléter la fiche avant signature).
+    if (deal.status === 'Signé') {
+      const em2 = (deal.client_email || selectedClient?.email || '').trim();
+      const tel2 = (deal.client_phone || selectedClient?.telephone || '').trim();
+      const manquants = [];
+      if (!em2) manquants.push('email');
+      if (!tel2) manquants.push('téléphone');
+      if (!String(deal.client_statut_pro || '').trim()) manquants.push('statut');
+      if (!String(deal.client_profession || '').trim()) manquants.push('profession');
+      if (deal.client_revenus == null || String(deal.client_revenus).trim() === '') manquants.push('revenus annuels');
+      if (deal.client_patrimoine == null || String(deal.client_patrimoine).trim() === '') manquants.push('patrimoine estimé');
+      if (manquants.length) {
+        toast.error(`Pour signer, complétez la fiche client : ${manquants.join(', ')}.`);
         return;
       }
     }
@@ -3755,6 +3779,34 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                   />
                 </div>
               </div>
+              {/* Data client structurée (Louis 13/07) : obligatoire au passage
+                  en « Signé ». Éditable même pour un client existant, pour
+                  compléter sa fiche avant la signature. Alimente le module
+                  Multi-équipement (statut = clé des règles de cross-sell). */}
+              <div className="form-row form-row-2 mt-16">
+                <div className="form-group">
+                  <label className="form-label">Statut {deal.status==='Signé' ? '*' : ''}</label>
+                  <select className="form-select" value={deal.client_statut_pro||''} onChange={e=>set('client_statut_pro',e.target.value)}>
+                    <option value="">— à préciser —</option>
+                    {STATUTS_PRO.map(s=><option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Profession {deal.status==='Signé' ? '*' : ''}</label>
+                  <input className="form-input" value={deal.client_profession||''} onChange={e=>set('client_profession',e.target.value)} placeholder="Ex. avocat, mandataire immobilier…" />
+                </div>
+              </div>
+              <div className="form-row form-row-2 mt-16">
+                <div className="form-group">
+                  <label className="form-label">Revenus annuels (€) {deal.status==='Signé' ? '*' : ''}</label>
+                  <input className="form-input" type="number" min="0" value={deal.client_revenus??''} onChange={e=>set('client_revenus',e.target.value)} placeholder="Ex. 80000" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Patrimoine estimé (€) {deal.status==='Signé' ? '*' : ''}</label>
+                  <input className="form-input" type="number" min="0" value={deal.client_patrimoine??''} onChange={e=>set('client_patrimoine',e.target.value)} placeholder="Ex. 300000" />
+                </div>
+              </div>
+              <div className="form-hint" style={{marginTop:8}}>Ces informations client deviennent obligatoires au passage en « Signé » (data patrimoniale et cross-sell).</div>
             </div>
 {showMultiProducts ? (
               <div>
@@ -4698,6 +4750,18 @@ export default function App(){
           age: cleanDeals[0].client_age || null,
           advisor_code: profile?.role === 'manager' ? cleanDeals[0].advisor_code : (profile?.advisor_code || cleanDeals[0].advisor_code),
         }, user.id)
+      }
+
+      // Enregistre / complète la data structurée sur la fiche CLIENT (statut,
+      // profession, revenus, patrimoine), pour un nouveau comme pour un client
+      // existant. Ne touche que les champs renseignés (pas d'écrasement).
+      if (clientId) {
+        await clientsService.updateInfoIfProvided(clientId, {
+          statut_pro: cleanDeals[0].client_statut_pro,
+          profession: cleanDeals[0].client_profession,
+          revenus_annuels: cleanDeals[0].client_revenus,
+          patrimoine_estime: cleanDeals[0].client_patrimoine,
+        });
       }
 
       // Appliquer le même client_id à tous les deals + auto-aligner le month

@@ -24,6 +24,15 @@ export function estTns(profession) {
   return MOTS_TNS.some((mot) => p.includes(mot))
 }
 
+// Vrai si le client est TNS ou en profession libérale. On se fie d'abord au
+// STATUT structuré (fiable, obligatoire à la signature), et on retombe sur le
+// texte profession pour la data historique sans statut.
+export function estTnsOuLiberal(c) {
+  const s = (c?.statut || '').toLowerCase()
+  if (s === 'tns' || s.includes('libéral') || s.includes('liberal')) return true
+  return estTns(c?.profession)
+}
+
 // Un client est « fort potentiel » si revenus ou patrimoine élevés.
 export function estFortPotentiel(c) {
   return Number(c.revenus || 0) >= SEUILS.revenusFortPotentiel
@@ -39,7 +48,7 @@ export const REGLES = [
     famille_suggeree: 'prevoyance',
     label: 'Proposer Prévoyance',
     raison: 'Profession TNS ou libérale sans prévoyance : protection des revenus prioritaire.',
-    applicable: (c) => estTns(c.profession) && !c.familles.includes('prevoyance'),
+    applicable: (c) => estTnsOuLiberal(c) && !c.familles.includes('prevoyance'),
   },
   {
     id: 'per_sans_av',
