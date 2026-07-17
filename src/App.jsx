@@ -33,6 +33,7 @@ const ClientView = lazy(() => import('./components/clients/ClientView'))
 const WeeklyReview = lazy(() => import('./components/WeeklyReview.jsx'))
 // Conformite embarque jspdf : lazy pour rester hors du bundle de login.
 const Conformite = lazy(() => import('./components/Conformite'))
+const MultiEquipement = lazy(() => import('./components/MultiEquipement'))
 import {
   annualize,
   isPipeline,
@@ -713,6 +714,7 @@ function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,prospects
     {key:'pipeline',  label:'Pipeline',  Icon:Icon.Pipeline,  badge:isManager?pipelineCount:hotCount},
     {key:'dossiers',  label:'Dossiers',  Icon:Icon.Dossiers},
     {key:'clients',   label:'Clients',   Icon:Icon.Team},
+    {key:'multi-equipement', label:'Multi-équipement', Icon:Icon.Kanban},
     {key:'conformite', label:'Conformité', Icon:Icon.Dossiers},
     {key:'forecast',  label:isManager?'Management':'Prévisionnel', Icon:Icon.Forecast},
     {key:'agenda',    label:'Agenda',    Icon:Icon.Calendar},
@@ -5007,6 +5009,7 @@ export default function App(){
           {activeTab==='remuneration'&&<Remuneration profile={profile} deals={deals} month={month}/>}
           {activeTab==='outils'&&<OutilsCGP profile={profile}/>}
           {activeTab==='conformite'&&<Conformite profile={profile}/>}
+          {activeTab==='multi-equipement'&&<MultiEquipement profile={profile}/>}
           </Suspense>
         </div>
       </div>
