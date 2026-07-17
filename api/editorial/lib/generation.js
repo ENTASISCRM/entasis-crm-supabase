@@ -21,11 +21,13 @@ import {
   FOUNDING_ARTICLES,
   buildSystemPrompt,
   buildUserPrompt,
+  FORMAT_RETRY_REMINDER,
 } from '../prompts.js'
 
 const ANTHROPIC_MODEL = 'claude-sonnet-4-6'
 const MAX_TOKENS = 8000
 const MAX_CONTINUATIONS = 5 // garde-fou sur les reprises pause_turn
+const MAX_GENERATIONS = 2 // plafond strict : 1 génération + 1 retry métier MODEL_OUTPUT
 const FRESHNESS_DAYS = 30 // au moins une source doit dater de ≤ 30 jours
 const RECENT_PACKAGES = 12 // profondeur de l'anti-répétition en base
 
@@ -324,29 +326,87 @@ export async function callAnthropic({ system, userPrompt }) {
   throw new Error('API Anthropic : trop de reprises pause_turn')
 }
 
-// Extrait l'objet JSON de la sortie du modèle (fences ```json tolérées).
-function parseModelJson(content) {
-  const text = (content || [])
-    .filter((b) => b.type === 'text')
-    .map((b) => b.text)
-    .join('\n')
+// Concatène TOUS les blocs text de la réponse, dans l'ordre, SANS séparateur :
+// avec web search + citations, la réponse finale est segmentée en de multiples
+// blocs text contigus (63 blocs observés en prod) — insérer un '\n' entre deux
+// segments peut tomber au milieu d'une chaîne JSON et invalider le parse.
+// Exportée pour les tests de la couche de parsing.
+export function extractText(content) {
+  return (content || [])
+    .filter((b) => b && b.type === 'text')
+    .map((b) => b.text || '')
+    .join('')
     .trim()
+}
 
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/)
-  let candidate = fenced ? fenced[1].trim() : text
-  if (!candidate.startsWith('{')) {
-    const start = candidate.indexOf('{')
-    const end = candidate.lastIndexOf('}')
-    if (start === -1 || end <= start) {
-      throw bizError('MODEL_OUTPUT', 'aucun objet JSON dans la sortie')
+// Cherche la fin de l'objet JSON équilibré ouvert à `start` (accolades
+// comptées hors chaînes, échappements gérés). -1 si jamais refermé.
+function scanBalanced(text, start) {
+  let depth = 0
+  let inString = false
+  let escaped = false
+  for (let i = start; i < text.length; i++) {
+    const c = text[i]
+    if (escaped) { escaped = false; continue }
+    if (inString) {
+      if (c === '\\') escaped = true
+      else if (c === '"') inString = false
+      continue
     }
-    candidate = candidate.slice(start, end + 1)
+    if (c === '"') inString = true
+    else if (c === '{') depth++
+    else if (c === '}') {
+      depth--
+      if (depth === 0) return i
+    }
   }
-  try {
-    return JSON.parse(candidate)
-  } catch (err) {
-    throw bizError('MODEL_OUTPUT', `JSON invalide : ${err.message}`)
+  return -1
+}
+
+// Extrait l'objet JSON de la sortie du modèle. Stratégies dans l'ordre :
+//  1. fences ```json explicites (chacune, dans l'ordre d'apparition),
+//  2. fences ``` génériques dont le contenu commence par '{',
+//  3. scan équilibré depuis chaque '{' du texte (JSON le plus externe :
+//     premier '{' → son '}' équilibré ; on avance si ce candidat ne parse pas).
+// Tolère donc préambule, commentaires après le JSON, fences non-JSON
+// antérieures. Exportée pour les tests de la couche de parsing.
+export function parseModelJson(text) {
+  const candidates = []
+  for (const m of text.matchAll(/```json\s*([\s\S]*?)```/g)) candidates.push(m[1].trim())
+  for (const m of text.matchAll(/```\s*([\s\S]*?)```/g)) {
+    const c = m[1].trim()
+    if (c.startsWith('{')) candidates.push(c)
   }
+  for (const candidate of candidates) {
+    try { return JSON.parse(candidate) } catch { /* stratégie suivante */ }
+  }
+
+  let sawBrace = false
+  let from = text.indexOf('{')
+  while (from !== -1) {
+    sawBrace = true
+    const end = scanBalanced(text, from)
+    if (end !== -1) {
+      try { return JSON.parse(text.slice(from, end + 1)) } catch { /* '{' suivant */ }
+    }
+    from = text.indexOf('{', from + 1)
+  }
+
+  throw bizError(
+    'MODEL_OUTPUT',
+    sawBrace ? 'aucun objet JSON parsable dans la sortie' : 'aucun objet JSON dans la sortie'
+  )
+}
+
+// Diagnostic MODEL_OUTPUT : début et fin du texte concaténé sur stderr
+// (jamais l'intégralité — les 800 premiers et 800 derniers caractères
+// suffisent à voir un préambule parasite ou une sortie tronquée).
+function logModelOutputDiag(text, err) {
+  const head = text.slice(0, 800)
+  const tail = text.length > 1600 ? text.slice(-800) : ''
+  console.error(`[diagnostic] MODEL_OUTPUT (${err.message}) — texte concaténé : ${text.length} caractères`)
+  console.error(`[diagnostic] DÉBUT (800 car.) :\n${head}`)
+  if (tail) console.error(`[diagnostic] FIN (800 car.) :\n${tail}`)
 }
 
 // Au moins une source datée de ≤ FRESHNESS_DAYS jours (les références plus
@@ -439,12 +499,29 @@ export async function generateEditorialPackage(admin, { theme, sujet } = {}) {
     dateIso,
     forbiddenSubjects,
   })
-  const response = await callAnthropic({
-    system,
-    userPrompt: buildUserPrompt({ theme: resolvedTheme, sujet }),
-  })
+  const baseUserPrompt = buildUserPrompt({ theme: resolvedTheme, sujet })
 
-  const pkg = validatePackage(parseModelJson(response.content), resolvedTheme)
+  // Retry MÉTIER (distinct du retry réseau de runTurnWithRetry) : si la
+  // sortie du modèle est inexploitable (MODEL_OUTPUT — JSON absent/invalide,
+  // frontmatter non conforme, fraîcheur), UNE relance complète avec un rappel
+  // de format renforcé dans le user prompt. Plafond strict : 2 générations
+  // par run (coût API).
+  let pkg
+  for (let attempt = 1; attempt <= MAX_GENERATIONS; attempt++) {
+    const userPrompt = attempt === 1 ? baseUserPrompt : baseUserPrompt + FORMAT_RETRY_REMINDER
+    const response = await callAnthropic({ system, userPrompt })
+    const text = extractText(response.content)
+    try {
+      pkg = validatePackage(parseModelJson(text), resolvedTheme)
+      break
+    } catch (err) {
+      if (err.code !== 'MODEL_OUTPUT') throw err
+      logModelOutputDiag(text, err)
+      if (attempt === MAX_GENERATIONS) throw err
+      console.error(`[anthropic] MODEL_OUTPUT en génération ${attempt}/${MAX_GENERATIONS} — relance unique avec rappel de format renforcé`)
+    }
+  }
+
   await assertSlugAvailable(admin, pkg.slug)
   return { theme: resolvedTheme, pkg }
 }
