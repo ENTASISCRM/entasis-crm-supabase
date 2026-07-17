@@ -50,6 +50,36 @@ export function buildReviewEmail({ pkg, vetoDeadline, crmUrl, secret }) {
     .map((t, i) => `<li style="margin:6px 0;">${esc(t)} <span style="color:#9ca3af;">(${t.length} car.)</span></li>`)
     .join('')
 
+  // Formats 360° — tolérants : sections omises si absents (packages antérieurs
+  // à la migration ou format invalide à la génération).
+  const slides = Array.isArray(pkg.carrousel_insta) ? pkg.carrousel_insta : []
+  const carrouselHtml = slides.length
+    ? `<h2 style="font-size:16px;border-bottom:1px solid #e5e2da;padding-bottom:6px;">Carrousel Instagram (${slides.length} slides)</h2>
+       ${slides.map((s, i) => `
+         <div style="border:1px solid #e5e2da;border-radius:6px;padding:10px 14px;margin:8px 0;">
+           <div style="font-size:10px;font-weight:700;color:#9ca3af;">SLIDE ${i + 1}/${slides.length}</div>
+           <div style="font-size:13.5px;font-weight:700;margin:4px 0;">${esc(s.titre)}</div>
+           <div style="font-size:12.5px;color:#4b5563;">${esc(s.texte)}</div>
+         </div>`).join('')}`
+    : ''
+  const video = pkg.script_video && typeof pkg.script_video === 'object' && !Array.isArray(pkg.script_video) ? pkg.script_video : {}
+  const videoSeqs = Array.isArray(video.sequences) ? video.sequences : []
+  const videoHtml = video.hook && videoSeqs.length
+    ? `<h2 style="font-size:16px;border-bottom:1px solid #e5e2da;padding-bottom:6px;">Script vidéo (~${esc(String(video.duree_cible_sec || '45'))} s, vertical)</h2>
+       <p style="font-size:13px;"><strong>Hook (&lt; 3 s) :</strong> ${esc(video.hook)}</p>
+       <table style="border-collapse:collapse;font-size:12px;width:100%;">
+         <tr>${['#', 'Plan', 'Texte oral', 'Texte écran'].map((h) => `<th style="text-align:left;border-bottom:2px solid #e5e2da;padding:4px 8px;color:#9ca3af;">${h}</th>`).join('')}</tr>
+         ${videoSeqs.map((s, i) => `
+           <tr>
+             <td style="border-bottom:1px solid #f0ede6;padding:5px 8px;color:#9ca3af;font-weight:700;">${i + 1}</td>
+             <td style="border-bottom:1px solid #f0ede6;padding:5px 8px;color:#4b5563;">${esc(s.plan || '—')}</td>
+             <td style="border-bottom:1px solid #f0ede6;padding:5px 8px;">${esc(s.texte_oral || '')}</td>
+             <td style="border-bottom:1px solid #f0ede6;padding:5px 8px;color:#4b5563;">${esc(s.texte_ecran || '—')}</td>
+           </tr>`).join('')}
+       </table>
+       ${video.cta ? `<p style="font-size:12.5px;"><strong>CTA :</strong> ${esc(video.cta)}</p>` : ''}`
+    : ''
+
   const html = `<!doctype html>
 <html lang="fr"><head><meta charset="utf-8"></head>
 <body style="margin:0;background:#eceae5;padding:24px 8px;">
@@ -75,6 +105,8 @@ export function buildReviewEmail({ pkg, vetoDeadline, crmUrl, secret }) {
               padding:14px;font-family:inherit;font-size:13.5px;">${esc(pkg.post_linkedin || '(absent)')}</pre>
   <h2 style="font-size:16px;border-bottom:1px solid #e5e2da;padding-bottom:6px;">Thread X</h2>
   <ol style="font-size:13.5px;">${tweets}</ol>
+  ${carrouselHtml}
+  ${videoHtml}
   ${actions}
   <p style="color:#9ca3af;font-size:12px;margin-top:20px;">
     Rappel du mécanisme : cet article a été généré automatiquement puis inséré en attente de veto.

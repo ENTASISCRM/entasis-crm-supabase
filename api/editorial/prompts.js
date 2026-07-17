@@ -125,12 +125,21 @@ Réponds avec UN SEUL objet JSON strict (pas de texte avant ou après, pas de fe
   "body": "…",                        // corps markdown SANS frontmatter, SANS H1
   "post_linkedin": "…",
   "thread_x": ["…", "…"],
+  "carrousel_insta": [{ "titre": "…", "texte": "…" }],
+  "script_video": {
+    "hook": "…",
+    "sequences": [{ "plan": "…", "texte_oral": "…", "texte_ecran": "…" }],
+    "cta": "…",
+    "duree_cible_sec": 45
+  },
   "sources": [{ "url": "…", "titre": "…", "date": "YYYY-MM-DD" }]
 }
 
 DÉRIVÉS
 - post_linkedin : 300 à 500 mots, même sujet, accroche forte, ton professionnel, se termine par le lien https://www.entasis-conseil.fr/journal/{slug} (remplace {slug} par le slug réel).
 - thread_x : 5 à 8 tweets de 280 caractères maximum chacun, le dernier contenant le lien vers l'article.
+- carrousel_insta : 8 à 10 slides qui vulgarisent le sujet, chaque slide AUTONOME (compréhensible seule) — titre percutant ≤ 60 caractères + texte 2-3 phrases courtes. Slide 1 = accroche (la question client), dernière slide = CTA « lien en bio / prendre rendez-vous avec un conseiller ». Pas de jargon non expliqué.
+- script_video : vidéo verticale courte de 30 à 60 secondes (duree_cible_sec). hook = première phrase, < 3 secondes à l'oral, qui arrête le scroll. sequences = 4 à 8 plans : "plan" décrit l'image (face caméra, incrustation chiffre, b-roll…), "texte_oral" = phrases COURTES et orales (pas de subordonnées à rallonge), "texte_ecran" = incrustation synthétique. cta final = renvoi conseiller/simulateur. Conformité AMF : aucune promesse de rendement, et la DERNIÈRE séquence porte en texte_ecran le disclaimer « Ceci n'est pas un conseil personnalisé. Tout investissement comporte des risques. »
 - sources : les actualités web réellement utilisées (url, titre, date réelle de publication au format YYYY-MM-DD). Au moins une source doit dater de moins de 30 jours — la génération sera REJETÉE sinon.
 
 RÈGLE DE SORTIE FINALE (absolue)

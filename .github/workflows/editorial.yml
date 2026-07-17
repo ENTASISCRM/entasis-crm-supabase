@@ -20,12 +20,15 @@ on:
     - cron: '0 5 * * 1,4'
     # publish : toutes les 6 h (00h/06h/12h/18h UTC)
     - cron: '0 */6 * * *'
+    # newsletter : le 1er du mois à 06h00 UTC — crée un BROUILLON Brevo,
+    # l'envoi reste manuel depuis Brevo.
+    - cron: '0 6 1 * *'
   workflow_dispatch:
     inputs:
       job:
         description: 'Job à lancer'
         type: choice
-        options: [generate, publish]
+        options: [generate, publish, newsletter]
         required: true
       theme:
         # Menu déroulant : évite les fautes de saisie (un run a échoué en
@@ -92,3 +95,27 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           EDITORIAL_GH_TOKEN: ${{ secrets.EDITORIAL_GH_TOKEN }}
         run: node scripts/editorial/publish-due.mjs
+
+  newsletter:
+    if: >-
+      (github.event_name == 'schedule' && github.event.schedule == '0 6 1 * *') ||
+      (github.event_name == 'workflow_dispatch' && inputs.job == 'newsletter')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Assembler la newsletter mensuelle (brouillon Brevo)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          BREVO_SENDER_EMAIL: ${{ secrets.BREVO_SENDER_EMAIL }}
+          BREVO_LIST_ID: ${{ secrets.BREVO_LIST_ID }}
+          EDITORIAL_REVIEWER_EMAIL: ${{ secrets.EDITORIAL_REVIEWER_EMAIL }}
+        run: node scripts/editorial/newsletter-monthly.mjs

@@ -152,6 +152,17 @@ function PackageDetail({ pkg, onBack, onModerated }) {
   const articleHtml = useMemo(() => marked.parse(pkg.article_md || '', { async: false }), [pkg.article_md])
   const tweets = Array.isArray(pkg.thread_x) ? pkg.thread_x : []
   const sources = Array.isArray(pkg.sources) ? pkg.sources : []
+  // Formats 360° — absents sur les packages antérieurs à la migration : tolérer.
+  const slides = Array.isArray(pkg.carrousel_insta) ? pkg.carrousel_insta : []
+  const video = pkg.script_video && typeof pkg.script_video === 'object' && !Array.isArray(pkg.script_video) ? pkg.script_video : {}
+  const videoSequences = Array.isArray(video.sequences) ? video.sequences : []
+  const hasVideo = !!(video.hook && videoSequences.length)
+  const slideText = (s) => `${s.titre}\n\n${s.texte}`
+  const videoText = hasVideo
+    ? [`HOOK : ${video.hook}`, '',
+       ...videoSequences.map((s, i) => `SÉQUENCE ${i + 1} [${s.plan || 'plan libre'}]\nOral : ${s.texte_oral}\nÉcran : ${s.texte_ecran || '—'}`),
+       '', `CTA : ${video.cta || '—'}`, `Durée cible : ${video.duree_cible_sec || '—'} s`].join('\n')
+    : ''
 
   async function moderate(action) {
     setBusy(true)
@@ -288,6 +299,72 @@ function PackageDetail({ pkg, onBack, onModerated }) {
           </div>
         ))}
         {!tweets.length && <div style={{ fontSize: 13, color: 'var(--t3)' }}>(absent)</div>}
+      </div>
+
+      {/* Carrousel Instagram */}
+      <div style={{ background: 'var(--card)', border: '1px solid var(--line, rgba(60,60,67,0.12))', borderRadius: 'var(--rad-lg)', padding: '20px 24px', marginBottom: 16 }}>
+        <div className="section-header" style={{ marginBottom: 10 }}>
+          <div className="section-title" style={{ fontSize: 15 }}>Carrousel Instagram ({slides.length} slides)</div>
+          {slides.length > 0 && <CopyBtn text={slides.map((s, i) => `— Slide ${i + 1} —\n${slideText(s)}`).join('\n\n')} label="Copier tout le carrousel" toastLabel="Carrousel complet copié" />}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
+          {slides.map((s, i) => (
+            <div key={i} style={{ border: '1px solid rgba(60,60,67,0.12)', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--t3)', marginBottom: 6 }}>SLIDE {i + 1}/{slides.length}</div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--t1)', marginBottom: 6 }}>{s.titre}</div>
+              <div style={{ fontSize: 12.5, lineHeight: 1.5, color: 'var(--t2, #3A3A3C)', flex: 1, marginBottom: 8 }}>{s.texte}</div>
+              <CopyBtn text={slideText(s)} label="Copier" toastLabel={`Slide ${i + 1} copiée`} />
+            </div>
+          ))}
+        </div>
+        {!slides.length && <div style={{ fontSize: 13, color: 'var(--t3)' }}>(absent — package antérieur au format 360° ou carrousel invalide à la génération)</div>}
+      </div>
+
+      {/* Script vidéo */}
+      <div style={{ background: 'var(--card)', border: '1px solid var(--line, rgba(60,60,67,0.12))', borderRadius: 'var(--rad-lg)', padding: '20px 24px', marginBottom: 16 }}>
+        <div className="section-header" style={{ marginBottom: 10 }}>
+          <div className="section-title" style={{ fontSize: 15 }}>
+            Script vidéo{hasVideo && video.duree_cible_sec ? ` (~${video.duree_cible_sec} s, vertical)` : ''}
+          </div>
+          {hasVideo && <CopyBtn text={videoText} label="Copier le script" toastLabel="Script vidéo copié" />}
+        </div>
+        {hasVideo ? (
+          <>
+            <div style={{ background: 'var(--gold-subtle)', border: '1px solid var(--gold-line)', borderRadius: 10, padding: '10px 14px', marginBottom: 12 }}>
+              <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--gold-dk)' }}>HOOK (&lt; 3 s) </span>
+              <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--t1)' }}>{video.hook}</span>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ borderCollapse: 'collapse', fontSize: 12.5, width: '100%' }}>
+                <thead>
+                  <tr>
+                    {['#', 'Plan', 'Texte oral', 'Texte écran'].map((h) => (
+                      <th key={h} style={{ textAlign: 'left', padding: '6px 10px', borderBottom: '2px solid rgba(60,60,67,0.16)', color: 'var(--t3)', fontSize: 11, whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {videoSequences.map((s, i) => (
+                    <tr key={i}>
+                      <td style={{ padding: '7px 10px', borderBottom: '1px solid rgba(60,60,67,0.08)', color: 'var(--t3)', fontWeight: 700 }}>{i + 1}</td>
+                      <td style={{ padding: '7px 10px', borderBottom: '1px solid rgba(60,60,67,0.08)', color: 'var(--t2, #3A3A3C)', minWidth: 120 }}>{s.plan || '—'}</td>
+                      <td style={{ padding: '7px 10px', borderBottom: '1px solid rgba(60,60,67,0.08)', color: 'var(--t1)', minWidth: 220 }}>{s.texte_oral}</td>
+                      <td style={{ padding: '7px 10px', borderBottom: '1px solid rgba(60,60,67,0.08)', color: 'var(--t2, #3A3A3C)', minWidth: 140 }}>{s.texte_ecran || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {video.cta && (
+              <div style={{ fontSize: 12.5, marginTop: 10 }}>
+                <span style={{ fontWeight: 700, color: 'var(--t3)' }}>CTA : </span>
+                <span style={{ color: 'var(--t1)' }}>{video.cta}</span>
+              </div>
+            )}
+          </>
+        ) : (
+          <div style={{ fontSize: 13, color: 'var(--t3)' }}>(absent — package antérieur au format 360° ou script invalide à la génération)</div>
+        )}
       </div>
 
       {/* Sources */}
