@@ -25,7 +25,9 @@ import {
 } from '../prompts.js'
 
 const ANTHROPIC_MODEL = 'claude-sonnet-4-6'
-const MAX_TOKENS = 8000
+// 16k : la sortie article+dérivés observée fait 6-12k tokens ; le carrousel
+// Instagram et le script vidéo (package 360°) ajoutent ~2k — marge large.
+const MAX_TOKENS = 16000
 const MAX_CONTINUATIONS = 5 // garde-fou sur les reprises pause_turn
 const MAX_GENERATIONS = 2 // plafond strict : 1 génération + 1 retry métier MODEL_OUTPUT
 const FRESHNESS_DAYS = 30 // au moins une source doit dater de ≤ 30 jours
@@ -469,7 +471,43 @@ function validatePackage(pkg, theme) {
   fm.readingTime = `${Math.max(1, Math.round(words / 200))} min`
   fm.draft = false
 
-  return { ...pkg, frontmatter: fm }
+  // Formats 360° (carrousel Instagram, script vidéo) : validation TOLÉRANTE.
+  // L'article est la valeur principale — on ne fait jamais échouer 9 minutes
+  // de génération pour un dérivé absent/mal formé : champ vidé + warning.
+  return { ...pkg, frontmatter: fm, ...normalizeExtraFormats(pkg) }
+}
+
+// Normalise carrousel_insta ([{titre, texte}] × 8-10) et script_video
+// ({hook, sequences[{plan, texte_oral, texte_ecran}], cta, duree_cible_sec}).
+// Invalide → valeur vide + warning stderr, jamais d'erreur.
+function normalizeExtraFormats(pkg) {
+  const warn = (msg) => console.error(`[generation] WARNING formats 360° : ${msg} — champ vidé, l'article reste valide`)
+
+  let carrousel = []
+  const c = pkg.carrousel_insta
+  if (Array.isArray(c) && c.length >= 8 && c.length <= 10 &&
+      c.every((s) => s && typeof s.titre === 'string' && s.titre.trim() && typeof s.texte === 'string' && s.texte.trim())) {
+    carrousel = c
+  } else if (c !== undefined) {
+    warn(`carrousel_insta invalide (attendu 8-10 slides {titre, texte}, reçu ${Array.isArray(c) ? `${c.length} slide(s)` : typeof c})`)
+  } else {
+    warn('carrousel_insta absent de la sortie')
+  }
+
+  let video = {}
+  const v = pkg.script_video
+  if (v && typeof v === 'object' && !Array.isArray(v) &&
+      typeof v.hook === 'string' && v.hook.trim() &&
+      Array.isArray(v.sequences) && v.sequences.length > 0 &&
+      v.sequences.every((s) => s && typeof s.texte_oral === 'string' && s.texte_oral.trim())) {
+    video = v
+  } else if (v !== undefined) {
+    warn('script_video invalide (attendu {hook, sequences non vides, cta, duree_cible_sec})')
+  } else {
+    warn('script_video absent de la sortie')
+  }
+
+  return { carrousel_insta: carrousel, script_video: video }
 }
 
 // Vérifie que le slug est libre (la contrainte UNIQUE reste le filet).
@@ -530,22 +568,37 @@ export async function generateEditorialPackage(admin, { theme, sujet } = {}) {
 // 'en_attente_veto' (cron, avec vetoDeadline). Renvoie la ligne insérée
 // (id, sujet, article_slug, statut).
 export async function insertPackage(admin, { theme, sujet, pkg, statut = 'genere', vetoDeadline = null }) {
-  const { data, error } = await admin
+  const baseRow = {
+    sujet: sujet || pkg.frontmatter.title,
+    theme,
+    sources: Array.isArray(pkg.sources) ? pkg.sources : [],
+    article_frontmatter: pkg.frontmatter,
+    article_md: pkg.body,
+    article_slug: pkg.slug,
+    post_linkedin: typeof pkg.post_linkedin === 'string' ? pkg.post_linkedin : null,
+    thread_x: pkg.thread_x,
+    statut,
+    ...(vetoDeadline && { veto_deadline: vetoDeadline }),
+  }
+
+  const doInsert = (row) => admin
     .from('editorial_packages')
-    .insert({
-      sujet: sujet || pkg.frontmatter.title,
-      theme,
-      sources: Array.isArray(pkg.sources) ? pkg.sources : [],
-      article_frontmatter: pkg.frontmatter,
-      article_md: pkg.body,
-      article_slug: pkg.slug,
-      post_linkedin: typeof pkg.post_linkedin === 'string' ? pkg.post_linkedin : null,
-      thread_x: pkg.thread_x,
-      statut,
-      ...(vetoDeadline && { veto_deadline: vetoDeadline }),
-    })
+    .insert(row)
     .select('id, sujet, article_slug, statut, veto_deadline')
     .single()
+
+  // Formats 360° inclus par défaut ; si la migration migration_editorial_formats.sql
+  // n'a pas encore été exécutée (colonnes absentes → PGRST204), on réinsère
+  // sans ces colonnes plutôt que de perdre la génération.
+  let { data, error } = await doInsert({
+    ...baseRow,
+    carrousel_insta: pkg.carrousel_insta ?? [],
+    script_video: pkg.script_video ?? {},
+  })
+  if (error && error.code === 'PGRST204') {
+    console.error('[generation] WARNING : colonnes formats 360° absentes en base (migration_editorial_formats.sql non exécutée) — insertion sans carrousel/script vidéo')
+    ;({ data, error } = await doInsert(baseRow))
+  }
   if (error) {
     if (error.code === '23505') throw bizError('SLUG_CONFLICT', `Slug déjà utilisé : ${pkg.slug}`)
     throw new Error(`Insertion : ${error.message}`)
