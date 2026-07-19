@@ -1,51 +1,36 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// MULTI-ÉQUIPEMENT V2 : la matrice de cross-sell du cabinet
+// MULTI ÉQUIPEMENT V3 : les missions, l argent d abord
 //
-// Refonte demandée par Louis (« c'est fouilli, on voit mal ») : la V1 empilait
-// badges et blocs, la V2 organise tout autour d'une MATRICE clients × familles
-// à pastilles, de segments, et d'un panneau latéral d'action.
+// Cap fixé par Louis : la V2 (matrice, radar, heatmap) était un bel outil
+// d analyse mais un mauvais outil de vente. La V3 renverse la logique :
+//   L ARGENT D ABORD  une liste de missions triées par montant, un hero
+//                     qui dit combien d euros restent à aller chercher.
+//   ANTI ZAP          « Plus tard » sans friction faisait tout zapper. Ici
+//                     reporter exige une raison ET une échéance, la mission
+//                     revient toute seule à la date dite, et les cartes qui
+//                     dorment vieillissent visuellement (7 j orange, 14 j
+//                     rouge). Le manager voit qui reporte quoi et pourquoi.
+//   AUTO VALIDATION   à la signature du deal, la réconciliation passe la
+//                     mission en gagnée avec le montant réel : personne ne
+//                     coche rien à la main.
+// La matrice V2 reste accessible via un toggle discret (sous composant
+// allégé : matrice + drawer de déclarations, sans radar ni heatmap).
 //
-// Les 20 innovations de la V2 :
-//   1  matrice à pastilles (détenu ● / manquant ◌ / absence confirmée ✕)
-//   2  segments intelligents (Tous / Opportunités / Mono / Multi / Sans info)
-//   3  regroupement par conseiller repliable, taux multi par portefeuille
-//   4  jauge de complétude par ligne
-//   5  tri par potentiel (défaut) et par colonnes
-//   6  recherche instantanée
-//   7  panneau latéral d'action au clic
-//   8  déclarer un produit détenu ou une absence en 2 clics
-//   9  créer un deal prérempli (via App.jsx)
-//  10  argumentaire d'appel prêt à copier
-//  11  estimation € par opportunité + KPI gisement total
-//  12  campagne du mois (famille cible cabinet, éditable manager, en base)
-//  13  radar de couverture par famille
-//  14  heatmap conseiller × famille (manager)
-//  15  timeline d'équipement du client (deals signés + déclarations)
-//  16  badge « à revoir » (dernier deal signé il y a plus de 12 mois)
-//  17  export CSV de la vue filtrée
-//  18  densité compact / confort
-//  19  filtres mémorisés (localStorage) + réinitialisation
-//  20  objectif de taux multi avec projection (combien de clients à convertir)
-//
-// Périmètre de données : vue SQL `client_equipment` en security_invoker, la
-// RLS applique le périmètre (manager = tous, conseiller = ses clients).
+// Données : vue client_equipment (RLS security invoker) + table me_missions
+// (RLS alignée sur clients) + app_settings clé multiequipement (campagne).
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
-import {
-  Chart as ChartJS, RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend,
-} from 'chart.js'
-import { Radar } from 'react-chartjs-2'
 import {
   listEquipment, listFamilies, upsertDeclare, removeDeclare,
   listDeclaresForClient, listSignedDealsForClient, getSettings, saveSettings,
 } from '../services/equipment'
+import { listMissions, upsertMission, reconcileGagnees } from '../services/missions'
 import {
-  suggestionPour, estFortPotentiel, ARGUMENTAIRES, estimationCollecte, scorePotentiel,
+  suggestionPour, ARGUMENTAIRES, estimationCollecte, REGLES,
+  RAISONS_REPORT, ECHEANCES_REPORT,
 } from '../config/multiEquipementRules'
-
-ChartJS.register(RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend)
 
 const fmtEur = (v) =>
   Number(v || 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
@@ -55,37 +40,47 @@ function nomClient(c) {
   const n = `${c.prenom || ''} ${c.nom || ''}`.trim()
   return n || '(sans nom)'
 }
-
-// Filtres par défaut (innovation 19 : mémorisés en localStorage)
-const FILTRES_DEFAUT = { seg: 'opportunites', cons: 'all', q: '', groupe: true, dense: false }
-const LS_KEY = 'meq2_filtres'
+function dansNJours(n) {
+  const d = new Date()
+  d.setDate(d.getDate() + n)
+  return d.toISOString().slice(0, 10)
+}
+function fmtDate(iso) {
+  if (!iso) return ''
+  const d = new Date(iso.length === 10 ? `${iso}T00:00:00` : iso)
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+function memeMois(iso) {
+  if (!iso) return false
+  const d = new Date(iso); const n = new Date()
+  return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear()
+}
+// Age en jours d une mission depuis sa creation en base (null si pas en base).
+function ageJours(mi) {
+  if (!mi.enBase || !mi.created_at) return null
+  return Math.floor((Date.now() - new Date(mi.created_at).getTime()) / 86400000)
+}
+const ACTIFS = ['a_attaquer', 'en_cours', 'reportee']
 
 export default function MultiEquipement({ profile, onCreateDeal }) {
   const isManager = profile?.role === 'manager'
   const [rows, setRows] = useState([])
   const [families, setFamilies] = useState([])
   const [settings, setSettings] = useState({ campagne_du_mois: 'prevoyance', objectif_taux_multi: 40 })
+  const [missions, setMissions] = useState([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
-  const [selId, setSelId] = useState(null)          // client ouvert dans le panneau
-  const [detail, setDetail] = useState(null)        // { declares, deals } du client ouvert
-  const [showAnalyse, setShowAnalyse] = useState(false)
-  const [collapsed, setCollapsed] = useState({})    // groupes conseiller repliés
-  const [saving, setSaving] = useState(false)
-
-  // Filtres persistés
-  const [flt, setFlt] = useState(() => {
-    try { return { ...FILTRES_DEFAUT, ...JSON.parse(localStorage.getItem(LS_KEY) || '{}') } }
-    catch { return FILTRES_DEFAUT }
-  })
-  useEffect(() => { try { localStorage.setItem(LS_KEY, JSON.stringify(flt)) } catch { /* stockage plein : tant pis */ } }, [flt])
-  const setF = (k, v) => setFlt((p) => ({ ...p, [k]: v }))
+  const [vue, setVue] = useState('missions')       // missions | reports | matrice
+  const [chip, setChip] = useState('a_attaquer')   // filtre d etat de la liste
+  const [campSeul, setCampSeul] = useState(false)  // ne montrer que la campagne
+  const [reportPour, setReportPour] = useState(null) // mission ouverte dans la modale
+  const [editCamp, setEditCamp] = useState(false)
 
   async function reload() {
-    const [eq, fam, st] = await Promise.all([listEquipment(), listFamilies(), getSettings()])
-    setFamilies(fam)
-    setSettings(st)
-    setRows(eq.map((c) => ({
+    const [eq, fam, st, mis] = await Promise.all([
+      listEquipment(), listFamilies(), getSettings(), listMissions(),
+    ])
+    const mapped = eq.map((c) => ({
       client_id: c.client_id,
       nom: nomClient(c),
       prenom: c.prenom || '', nomSeul: c.nom || '',
@@ -97,10 +92,13 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
       familles: Array.isArray(c.familles) ? c.familles : [],
       absences: Array.isArray(c.absences_confirmees) ? c.absences_confirmees : [],
       nb: Number(c.nb_familles || 0),
-      dernier: c.dernier_deal_signe || null,
-    })))
+    }))
+    setFamilies(fam)
+    setSettings(st)
+    setRows(mapped)
+    // Reconciliation : coche les gagnees a la signature, reveille les reports echus
+    try { setMissions(await reconcileGagnees(mapped, mis)) } catch { setMissions(mis) }
   }
-
   useEffect(() => {
     let vivant = true
     ;(async () => {
@@ -109,83 +107,518 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
     })()
     return () => { vivant = false }
   }, [])
+  async function refreshMissions() {
+    try { setMissions(await listMissions()) } catch { /* la prochaine navigation rechargera */ }
+  }
 
-  // Colonnes de la matrice : toutes les familles sauf « autre » (innovation 1)
-  const matCols = useMemo(() => families.filter((f) => f.key !== 'autre'), [families])
   const famMap = useMemo(() => Object.fromEntries(families.map((f) => [f.key, f])), [families])
   const labelFam = (k) => famMap[k]?.label || k
   const couleurFam = (k) => famMap[k]?.couleur || '#8A95A8'
+  const matCols = useMemo(() => families.filter((f) => f.key !== 'autre'), [families])
+  const camp = settings.campagne_du_mois || null
 
-  // Enrichissement par ligne : suggestion, potentiel, ancienneté (16), campagne
-  const enriched = useMemo(() => rows.map((r) => {
-    const sug = suggestionPour(r)
-    const pot = scorePotentiel(r, sug)
-    const collecte = sug ? estimationCollecte(r, sug.famille_suggeree) : 0
-    const moisDepuisDernier = r.dernier
-      ? Math.floor((Date.now() - new Date(r.dernier).getTime()) / (30.44 * 86400000))
-      : null
-    return {
-      ...r, sug, pot, collecte,
-      aRevoir: moisDepuisDernier != null && moisDepuisDernier >= 12,
-      // Regle Louis (20/07) : la campagne du mois cible TOUT client qui ne
-      // detient pas la famille, pas seulement les absences confirmees.
-      campagneCible: !!settings.campagne_du_mois
-        && !r.familles.includes(settings.campagne_du_mois),
+  // ── Génération des missions à l affichage ────────────────────────────────
+  // Les opportunités (règles + campagne du mois) fabriquent les candidates,
+  // fusionnées avec l état persisté me_missions. Une mission en base reste
+  // affichée même si sa règle s est éteinte : la base fait foi une fois lancée.
+  const missionsAff = useMemo(() => {
+    const dbByKey = new Map(missions.map((m) => [`${m.client_id}|${m.famille}`, m]))
+    const rowById = new Map(rows.map((r) => [r.client_id, r]))
+    const lf = (k) => famMap[k]?.label || k
+    const raisonFallback = (famille) =>
+      REGLES.find((rg) => rg.famille_suggeree === famille)?.raison
+      || (famille === camp ? `Campagne du mois : proposer ${lf(famille)}.` : 'Mission de suivi enregistrée.')
+    const vus = new Set()
+    const out = []
+    const fusion = (r, famille, raison) => {
+      const key = `${r.client_id}|${famille}`
+      if (vus.has(key)) return
+      vus.add(key)
+      const db = dbByKey.get(key)
+      out.push({
+        key, client: r, famille, raison,
+        statut: db?.statut || 'a_attaquer',
+        montant: db?.montant_estime != null ? Number(db.montant_estime) : estimationCollecte(r, famille),
+        montant_reel: db?.montant_reel != null ? Number(db.montant_reel) : null,
+        raison_report: db?.raison_report || null,
+        retour_le: db?.retour_le || null,
+        advisor_code: db?.advisor_code || r.advisor_code,
+        created_at: db?.created_at || null,
+        updated_at: db?.updated_at || null,
+        enBase: !!db,
+      })
     }
-  }), [rows, settings.campagne_du_mois])
+    for (const r of rows) {
+      const sug = suggestionPour(r)
+      if (sug) fusion(r, sug.famille_suggeree, sug.raison)
+      // Règle Louis : la campagne cible tout client qui ne détient pas la famille
+      if (camp && !r.familles.includes(camp)) {
+        fusion(r, camp, `Campagne du mois : proposer ${lf(camp)}.`)
+      }
+    }
+    // Missions en base sans candidate (gagnées, exclues, règle éteinte, campagne passée)
+    for (const m of missions) {
+      const key = `${m.client_id}|${m.famille}`
+      if (vus.has(key)) continue
+      const r = rowById.get(m.client_id)
+      if (!r) continue // client hors périmètre RLS ou sans ligne équipement
+      // Une mission active sur famille désormais détenue est gérée par la réconciliation
+      if (ACTIFS.includes(m.statut) && r.familles.includes(m.famille)) continue
+      vus.add(key)
+      out.push({
+        key, client: r, famille: m.famille, raison: raisonFallback(m.famille),
+        statut: m.statut,
+        montant: m.montant_estime != null ? Number(m.montant_estime) : estimationCollecte(r, m.famille),
+        montant_reel: m.montant_reel != null ? Number(m.montant_reel) : null,
+        raison_report: m.raison_report || null,
+        retour_le: m.retour_le || null,
+        advisor_code: m.advisor_code || r.advisor_code,
+        created_at: m.created_at || null,
+        updated_at: m.updated_at || null,
+        enBase: true,
+      })
+    }
+    return out
+  }, [rows, missions, camp, famMap])
 
-  // KPIs globaux + gisement (11) + objectif (20)
-  const kpis = useMemo(() => {
-    const total = enriched.length
-    const multi = enriched.filter((r) => r.nb >= 2).length
-    const mono = enriched.filter((r) => r.nb === 1).length
-    const zero = enriched.filter((r) => r.nb === 0).length
-    const opps = enriched.filter((r) => r.sug)
-    const gisement = opps.reduce((s, r) => s + r.collecte, 0)
-    const taux = total ? Math.round((100 * multi) / total) : 0
-    const objectif = Number(settings.objectif_taux_multi || 40)
-    // Projection : combien de clients doivent passer multi pour l'objectif
-    const cible = Math.ceil((objectif / 100) * total)
-    return { total, multi, mono, zero, taux, opps: opps.length, gisement, objectif, manquants: Math.max(0, cible - multi) }
-  }, [enriched, settings.objectif_taux_multi])
+  // ── Agrégats argent ──────────────────────────────────────────────────────
+  const actives = useMemo(() => missionsAff.filter((m) => ACTIFS.includes(m.statut)), [missionsAff])
+  const totalActives = useMemo(() => actives.reduce((s, m) => s + (m.montant || 0), 0), [actives])
+  const gagnees = useMemo(() => missionsAff.filter((m) => m.statut === 'gagnee'), [missionsAff])
+  const gagneesMois = useMemo(() => gagnees.filter((m) => memeMois(m.updated_at)), [gagnees])
+  const gagneesMoisEur = useMemo(() => gagneesMois.reduce((s, m) => s + (m.montant_reel || 0), 0), [gagneesMois])
+  const reportees = useMemo(() => missionsAff.filter((m) => m.statut === 'reportee'), [missionsAff])
+  const reporteesEur = useMemo(() => reportees.reduce((s, m) => s + (m.montant || 0), 0), [reportees])
+  const nb = (st) => missionsAff.filter((m) => m.statut === st).length
+
+  // ── Campagne du mois : jauge et euros en jeu ─────────────────────────────
+  const campagne = useMemo(() => {
+    if (!camp) return null
+    const misCamp = missionsAff.filter((m) => m.famille === camp)
+    const gagneesCamp = misCamp.filter((m) => m.statut === 'gagnee' && memeMois(m.updated_at)).length
+    const cibles = rows.filter((r) => !r.familles.includes(camp)).length + gagneesCamp
+    const traitees = misCamp.filter((m) => m.enBase && m.statut !== 'a_attaquer').length
+    const enJeu = misCamp.filter((m) => ACTIFS.includes(m.statut)).reduce((s, m) => s + (m.montant || 0), 0)
+    const objectif = Number(settings.objectif_campagne || 0) || cibles
+    return { cibles, traitees, enJeu, objectif }
+  }, [missionsAff, rows, camp, settings.objectif_campagne])
+
+  // ── Liste affichée : chip d état + filtre campagne, triée argent d abord ─
+  const liste = useMemo(() => {
+    let l = missionsAff.filter((m) => m.statut === chip)
+    if (campSeul && camp) l = l.filter((m) => m.famille === camp)
+    if (chip === 'gagnee') return l.sort((a, b) => (b.montant_reel || 0) - (a.montant_reel || 0))
+    return l.sort((a, b) => (b.montant || 0) - (a.montant || 0))
+  }, [missionsAff, chip, campSeul, camp])
+
+  // ── Vue manager Reports : redevabilité par conseiller ────────────────────
+  const reportsParConseiller = useMemo(() => {
+    if (!isManager) return []
+    const m = new Map()
+    for (const mi of missionsAff) {
+      if (mi.statut !== 'reportee' && mi.statut !== 'exclue') continue
+      const code = mi.advisor_code || '—'
+      if (!m.has(code)) m.set(code, { code, reports: [], exclusions: [], total: 0 })
+      const g = m.get(code)
+      if (mi.statut === 'reportee') { g.reports.push(mi); g.total += mi.montant || 0 }
+      else g.exclusions.push(mi)
+    }
+    return Array.from(m.values()).sort((a, b) => b.total - a.total)
+  }, [isManager, missionsAff])
+
+  // ── Actions ──────────────────────────────────────────────────────────────
+  async function attaquer(mi) {
+    try {
+      await upsertMission({
+        client_id: mi.client.client_id,
+        famille: mi.famille,
+        patch: {
+          statut: 'en_cours',
+          advisor_code: profile?.advisor_code || mi.client.advisor_code || null,
+          montant_estime: mi.montant,
+          raison_report: null,
+          retour_le: null,
+        },
+      })
+      toast.success(`Mission ${labelFam(mi.famille)} lancée, le deal s ouvre`)
+      await refreshMissions()
+      if (onCreateDeal) onCreateDeal(mi.client)
+    } catch (e) { toast.error(e.message || 'Échec du lancement de la mission') }
+  }
+  // Confirmation de la modale anti zap : report daté ou exclusion motivée
+  async function confirmerReport(mi, { mode, raison, jours }) {
+    const retour = mode === 'report' ? dansNJours(jours) : null
+    try {
+      await upsertMission({
+        client_id: mi.client.client_id,
+        famille: mi.famille,
+        patch: {
+          statut: mode === 'report' ? 'reportee' : 'exclue',
+          raison_report: raison,
+          retour_le: retour,
+          advisor_code: profile?.advisor_code || mi.client.advisor_code || null,
+          montant_estime: mi.montant,
+        },
+      })
+      toast.success(mode === 'report'
+        ? `Mission reportée, elle reviendra le ${fmtDate(retour)}`
+        : 'Client marqué non éligible sur cette mission')
+      setReportPour(null)
+      await refreshMissions()
+    } catch (e) { toast.error(e.message || 'Échec de l enregistrement') }
+  }
+  function copierArgumentaire(famille) {
+    const txt = ARGUMENTAIRES[famille]
+    if (!txt) return
+    navigator.clipboard?.writeText(txt)
+      .then(() => toast.success('Argumentaire copié'))
+      .catch(() => toast.error('Copie impossible sur ce navigateur'))
+  }
+  async function sauverCampagne(famille, objectif) {
+    const v = { ...settings, campagne_du_mois: famille, objectif_campagne: Number(objectif) > 0 ? Number(objectif) : null }
+    setSettings(v)
+    setEditCamp(false)
+    try { await saveSettings(v); toast.success(`Campagne du mois : ${labelFam(famille)}`) }
+    catch (e) { toast.error(e.message || 'Échec (réservé aux managers)') }
+  }
+
+  const chips = [
+    { k: 'a_attaquer', l: 'À attaquer', n: nb('a_attaquer') },
+    { k: 'en_cours', l: 'En cours', n: nb('en_cours') },
+    { k: 'reportee', l: 'Reportées', n: nb('reportee'), extra: reporteesEur > 0 ? `~${fmtK(reporteesEur)} en attente` : null },
+    { k: 'gagnee', l: 'Gagnées ✓', n: nb('gagnee') },
+    ...(isManager ? [{ k: 'exclue', l: 'Exclues', n: nb('exclue') }] : []),
+  ]
+
+  return (
+    <div className="meq3">
+      <style>{styles}</style>
+
+      <div className="hd">
+        <div>
+          <h1>Multi-équipement</h1>
+          <div className="sub">le cross-sell du cabinet, l argent d abord</div>
+        </div>
+        <div className="vues">
+          <button className={vue === 'missions' ? 'on' : ''} onClick={() => setVue('missions')}>Missions</button>
+          {isManager && <button className={vue === 'reports' ? 'on' : ''} onClick={() => setVue('reports')}>Reports</button>}
+          <button className={vue === 'matrice' ? 'on' : ''} onClick={() => setVue('matrice')}>Vue matrice</button>
+        </div>
+      </div>
+
+      {loading && <div className="empty">Chargement…</div>}
+      {err && <div className="empty errtxt">Erreur : {err}</div>}
+
+      {!loading && !err && vue === 'missions' && (
+        <>
+          {/* Hero : combien d euros restent sur la table, combien sont rentrés */}
+          <div className="hero">
+            <div className="hbox navy">
+              <div className="hv">~{fmtEur(totalActives)}</div>
+              <div className="hl">à aller chercher · {actives.length} mission{actives.length > 1 ? 's' : ''}</div>
+            </div>
+            <div className="hbox vert">
+              <div className="hv">+{fmtEur(gagneesMoisEur)}</div>
+              <div className="hl">signé grâce au cross-sell ce mois · {gagneesMois.length} gagnée{gagneesMois.length > 1 ? 's' : ''}</div>
+            </div>
+          </div>
+
+          {/* Bandeau campagne du mois */}
+          {campagne && (
+            <div className="camp">
+              <span className="ic">🎯</span>
+              {!editCamp && (
+                <>
+                  <span>Campagne du mois : <b>{labelFam(camp)}</b></span>
+                  <span className="cjauge" title={`${campagne.traitees} clients traités sur ${campagne.objectif}`}>
+                    {campagne.traitees}/{campagne.objectif} clients
+                    <span className="bar"><i style={{ width: `${Math.min(100, (100 * campagne.traitees) / Math.max(1, campagne.objectif))}%` }} /></span>
+                  </span>
+                  <span className="enjeu">~{fmtK(campagne.enJeu)} en jeu</span>
+                  <button className={`lnk${campSeul ? ' on' : ''}`} onClick={() => setCampSeul((v) => !v)}>
+                    {campSeul ? 'toutes les missions' : 'voir la campagne'}
+                  </button>
+                  {isManager && <button className="lnk" onClick={() => setEditCamp(true)}>modifier</button>}
+                </>
+              )}
+              {editCamp && isManager && (
+                <FormCampagne matCols={matCols} camp={camp} objectif={settings.objectif_campagne}
+                  onCancel={() => setEditCamp(false)} onSave={sauverCampagne} />
+              )}
+            </div>
+          )}
+
+          {/* Chips d états */}
+          <div className="chips">
+            {chips.map((c) => (
+              <button key={c.k} className={`chip${chip === c.k ? ' on' : ''}${c.k === 'gagnee' ? ' win' : ''}`} onClick={() => setChip(c.k)}>
+                {c.l} <span className="n">{c.n}</span>
+                {c.extra && <span className="extra">{c.extra}</span>}
+              </button>
+            ))}
+          </div>
+
+          {/* Liste de missions : le coeur du module */}
+          <div className="cartes">
+            {liste.length === 0 && (
+              <div className="empty">
+                {chip === 'a_attaquer'
+                  ? 'Rien à attaquer pour ces filtres. Passe en vue matrice pour déclarer l équipement et faire émerger des missions.'
+                  : 'Aucune mission dans cet état.'}
+              </div>
+            )}
+            {chip !== 'gagnee' && chip !== 'exclue' && liste.map((mi) => {
+              const age = chip === 'a_attaquer' ? ageJours(mi) : null
+              const niveau = age != null && age > 14 ? 'rouge' : age != null && age > 7 ? 'orange' : ''
+              return (
+                <div key={mi.key} className={`carte ${niveau}`}>
+                  <div className="c1">
+                    <div className="qui">
+                      <span className="nomcli">{mi.client.nom}</span>
+                      {isManager && <span className="cons">{mi.advisor_code}</span>}
+                      {age != null && age > 0 && <span className={`age ${niveau}`}>{age} j</span>}
+                    </div>
+                    <div className="souscli">
+                      {mi.client.statut || mi.client.profession || '—'}
+                      {mi.client.revenus ? ` · ${Math.round(mi.client.revenus / 1000)} k€ de revenus` : ''}
+                    </div>
+                  </div>
+                  <div className="c2">
+                    <span className="fam" style={{ borderColor: couleurFam(mi.famille) }}>{labelFam(mi.famille)}</span>
+                    <span className="mont">~{fmtK(mi.montant)}</span>
+                  </div>
+                  <div className="raison">{mi.raison}</div>
+                  {niveau === 'rouge' && (
+                    <div className="dort">⏳ {age} jours sans action, ~{fmtK(mi.montant)} qui dorment</div>
+                  )}
+                  {mi.statut === 'reportee' && (
+                    <div className="repinfo">🕰 Reportée ({mi.raison_report || 'sans raison'}) · reviendra le {fmtDate(mi.retour_le)}</div>
+                  )}
+                  <div className="cbtns">
+                    <button className="pri" onClick={() => attaquer(mi)}>📞 Attaquer</button>
+                    {mi.statut !== 'reportee' && <button className="sec" onClick={() => setReportPour(mi)}>Plus tard</button>}
+                    {mi.statut === 'reportee' && <button className="sec" onClick={() => setReportPour(mi)}>Re-reporter</button>}
+                    {ARGUMENTAIRES[mi.famille] && (
+                      <button className="ter" title="Copier l argumentaire d appel" onClick={() => copierArgumentaire(mi.famille)}>📋</button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+            {(chip === 'gagnee' || chip === 'exclue') && liste.map((mi) => (
+              <div key={mi.key} className={`carte mini ${chip === 'gagnee' ? 'ok' : 'ko'}`}>
+                <span className="nomcli">{mi.client.nom}</span>
+                <span className="fam" style={{ borderColor: couleurFam(mi.famille) }}>{labelFam(mi.famille)}</span>
+                {chip === 'gagnee' && <span className="montwin">{mi.montant_reel != null ? `+${fmtK(mi.montant_reel)}` : '✓'}</span>}
+                {chip === 'exclue' && <span className="excraison">{mi.raison_report || 'sans raison'}</span>}
+                {isManager && <span className="cons">{mi.advisor_code}</span>}
+              </div>
+            ))}
+          </div>
+
+          {/* Gagnées ce mois : la preuve que ça paie */}
+          {chip !== 'gagnee' && gagneesMois.length > 0 && (
+            <div className="winsec">
+              <div className="wtit">Gagnées ce mois</div>
+              <div className="wins">
+                {gagneesMois.map((mi) => (
+                  <div key={mi.key} className="win">
+                    <span className="nomcli">{mi.client.nom}</span>
+                    <span className="wfam">{labelFam(mi.famille)}</span>
+                    {mi.montant_reel != null && <span className="montwin">+{fmtK(mi.montant_reel)}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Vue manager Reports : qui reporte quoi, pourquoi, pour combien */}
+      {!loading && !err && vue === 'reports' && isManager && (
+        <div className="reports">
+          {reportsParConseiller.length === 0 && <div className="empty">Aucun report ni exclusion : tout le monde attaque.</div>}
+          {reportsParConseiller.map((g) => (
+            <div key={g.code} className="rgrp">
+              <div className="rhd">
+                <b>{g.code}</b>
+                <span className="rtot">{fmtEur(g.total)} reportés · {g.reports.length} mission{g.reports.length > 1 ? 's' : ''}{g.exclusions.length ? ` · ${g.exclusions.length} exclusion${g.exclusions.length > 1 ? 's' : ''}` : ''}</span>
+              </div>
+              {g.reports.length > 0 && (
+                <div className="scrollx">
+                  <table className="rtab">
+                    <thead><tr><th>Client</th><th>Famille</th><th>Montant</th><th>Raison</th><th>Retour le</th></tr></thead>
+                    <tbody>
+                      {g.reports.map((mi) => (
+                        <tr key={mi.key}>
+                          <td>{mi.client.nom}</td>
+                          <td>{labelFam(mi.famille)}</td>
+                          <td className="num">~{fmtK(mi.montant)}</td>
+                          <td className="rs">{mi.raison_report || '—'}</td>
+                          <td>{fmtDate(mi.retour_le) || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {g.exclusions.length > 0 && (
+                <div className="rexc">
+                  {g.exclusions.map((mi) => (
+                    <div key={mi.key}>✕ {mi.client.nom} · {labelFam(mi.famille)} · {mi.raison_report || 'sans raison'}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Vue matrice V2 allégée : correction des données d équipement */}
+      {!loading && !err && vue === 'matrice' && (
+        <MatriceV2 rows={rows} matCols={matCols} famMap={famMap} isManager={isManager}
+          profile={profile} onCreateDeal={onCreateDeal} reload={reload} />
+      )}
+
+      {/* Modale anti zap */}
+      {reportPour && (
+        <ModaleReport mission={reportPour} labelFam={labelFam}
+          onClose={() => setReportPour(null)}
+          onConfirm={(res) => confirmerReport(reportPour, res)} />
+      )}
+    </div>
+  )
+}
+
+// ── Formulaire campagne (manager) : famille cible + objectif de clients ─────
+function FormCampagne({ matCols, camp, objectif, onCancel, onSave }) {
+  const [fam, setFam] = useState(camp)
+  const [obj, setObj] = useState(objectif || '')
+  return (
+    <span className="fcamp">
+      <select value={fam} onChange={(e) => setFam(e.target.value)}>
+        {matCols.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+      </select>
+      <input type="number" min="1" placeholder="objectif clients" value={obj} onChange={(e) => setObj(e.target.value)} />
+      <button className="lnk" onClick={() => onSave(fam, obj)}>enregistrer</button>
+      <button className="lnk" onClick={onCancel}>annuler</button>
+    </span>
+  )
+}
+
+// ── Modale de report anti zap ───────────────────────────────────────────────
+// « Plus tard » a un prix : une raison obligatoire ET une échéance obligatoire.
+// La mission reviendra toute seule à la date choisie (réconciliation).
+// Option séparée discrète : exclure un client non éligible, raison obligatoire,
+// visible par le manager dans la vue Reports.
+function ModaleReport({ mission, labelFam, onClose, onConfirm }) {
+  const [mode, setMode] = useState('report')  // report | exclusion
+  const [raison, setRaison] = useState(null)
+  const [autre, setAutre] = useState('')
+  const [jours, setJours] = useState(null)
+  const [raisonExcl, setRaisonExcl] = useState('')
+  const [envoi, setEnvoi] = useState(false)
+
+  const raisonFinale = mode === 'exclusion'
+    ? raisonExcl.trim()
+    : (raison === 'Autre' ? autre.trim() : raison)
+  const valide = mode === 'exclusion' ? !!raisonFinale : (!!raisonFinale && !!jours)
+
+  async function go() {
+    if (!valide || envoi) return
+    setEnvoi(true)
+    try { await onConfirm({ mode, raison: raisonFinale, jours }) }
+    finally { setEnvoi(false) }
+  }
+
+  return (
+    <div className="mrOverlay" onClick={onClose}>
+      <div className="mr" onClick={(e) => e.stopPropagation()}>
+        <div className="mrhd">
+          <h3>{mode === 'report' ? 'Reporter la mission' : 'Client non éligible'}</h3>
+          <button className="x" onClick={onClose}>✕</button>
+        </div>
+        <div className="mrsub">
+          {mission.client.nom} · {labelFam(mission.famille)} · ~{fmtK(mission.montant)}
+        </div>
+
+        {mode === 'report' && (
+          <>
+            <div className="mrlab">Pourquoi ? <span className="ob">obligatoire</span></div>
+            <div className="mrchips">
+              {RAISONS_REPORT.map((r) => (
+                <button key={r} className={`mrc${raison === r ? ' on' : ''}`} onClick={() => setRaison(r)}>{r}</button>
+              ))}
+              <button className={`mrc${raison === 'Autre' ? ' on' : ''}`} onClick={() => setRaison('Autre')}>Autre</button>
+            </div>
+            {raison === 'Autre' && (
+              <input className="mrtxt" autoFocus placeholder="Précise la raison…" value={autre} onChange={(e) => setAutre(e.target.value)} />
+            )}
+            <div className="mrlab">Quand revient-elle ? <span className="ob">obligatoire</span></div>
+            <div className="mrchips">
+              {ECHEANCES_REPORT.map((j) => (
+                <button key={j} className={`mrc${jours === j ? ' on' : ''}`} onClick={() => setJours(j)}>{j} jours</button>
+              ))}
+            </div>
+            {jours && <div className="mrinfo">La mission reviendra le <b>{fmtDate(dansNJours(jours))}</b>, automatiquement.</div>}
+          </>
+        )}
+
+        {mode === 'exclusion' && (
+          <>
+            <div className="mrlab">Pourquoi ce client n est pas éligible ? <span className="ob">obligatoire, visible par la direction</span></div>
+            <input className="mrtxt" autoFocus placeholder="Ex. déjà couvert par son conjoint, refus définitif…" value={raisonExcl} onChange={(e) => setRaisonExcl(e.target.value)} />
+          </>
+        )}
+
+        <div className="mrbtns">
+          <button className="pri" disabled={!valide || envoi} onClick={go}>
+            {mode === 'report' ? 'Reporter' : 'Exclure la mission'}
+          </button>
+          <button className="sec" onClick={onClose}>Annuler</button>
+        </div>
+        {mode === 'report' && (
+          <button className="mrexcl" onClick={() => setMode('exclusion')}>Client non éligible ?</button>
+        )}
+        {mode === 'exclusion' && (
+          <button className="mrexcl" onClick={() => setMode('report')}>← Revenir au report</button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Matrice V2 allégée ──────────────────────────────────────────────────────
+// Conservée pour corriger les données : matrice à pastilles + drawer de
+// déclarations (détenu, absence, historique signé). Radar, heatmap, export et
+// bloc opportunités de la V2 ont été retirés, les missions les remplacent.
+function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, reload }) {
+  const [seg, setSeg] = useState('tous')
+  const [cons, setCons] = useState('all')
+  const [q, setQ] = useState('')
+  const [selId, setSelId] = useState(null)
+  const [detail, setDetail] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const labelFam = (k) => famMap[k]?.label || k
+  const couleurFam = (k) => famMap[k]?.couleur || '#8A95A8'
 
   const conseillers = useMemo(
-    () => Array.from(new Set(enriched.map((r) => r.advisor_code).filter((x) => x && x !== '—'))).sort(),
-    [enriched],
+    () => Array.from(new Set(rows.map((r) => r.advisor_code).filter((x) => x && x !== '—'))).sort(),
+    [rows],
   )
-
-  // Segments (2) + recherche (6) + filtre conseiller
   const visibles = useMemo(() => {
-    const q = flt.q.trim().toLowerCase()
-    return enriched.filter((r) => {
-      if (flt.cons !== 'all' && r.advisor_code !== flt.cons) return false
-      if (flt.seg === 'opportunites' && !r.sug) return false
-      if (flt.seg === 'mono' && r.nb !== 1) return false
-      if (flt.seg === 'multi' && r.nb < 2) return false
-      if (flt.seg === 'sans' && r.nb !== 0) return false
-      if (flt.seg === 'campagne' && !r.campagneCible) return false
-      if (q && !(`${r.nom} ${r.profession} ${r.advisor_code}`.toLowerCase().includes(q))) return false
+    const ql = q.trim().toLowerCase()
+    return rows.filter((r) => {
+      if (cons !== 'all' && r.advisor_code !== cons) return false
+      if (seg === 'mono' && r.nb !== 1) return false
+      if (seg === 'multi' && r.nb < 2) return false
+      if (seg === 'sans' && r.nb !== 0) return false
+      if (ql && !(`${r.nom} ${r.profession} ${r.advisor_code}`.toLowerCase().includes(ql))) return false
       return true
-    }).sort((a, b) => b.pot - a.pot || b.revenus - a.revenus) // tri par potentiel (5)
-  }, [enriched, flt])
+    }).sort((a, b) => b.revenus - a.revenus)
+  }, [rows, seg, cons, q])
 
-  // Regroupement par conseiller (3)
-  const groupes = useMemo(() => {
-    if (!flt.groupe) return [{ code: null, rows: visibles }]
-    const m = new Map()
-    visibles.forEach((r) => {
-      if (!m.has(r.advisor_code)) m.set(r.advisor_code, [])
-      m.get(r.advisor_code).push(r)
-    })
-    return Array.from(m.entries()).map(([code, rws]) => {
-      const all = enriched.filter((r) => r.advisor_code === code)
-      const multi = all.filter((r) => r.nb >= 2).length
-      return { code, rows: rws, taux: all.length ? Math.round((100 * multi) / all.length) : 0, total: all.length }
-    }).sort((a, b) => b.rows.length - a.rows.length)
-  }, [visibles, flt.groupe, enriched])
-
-  // Panneau latéral (7) : charge le détail du client sélectionné (15)
-  const sel = useMemo(() => enriched.find((r) => r.client_id === selId) || null, [enriched, selId])
+  const sel = useMemo(() => rows.find((r) => r.client_id === selId) || null, [rows, selId])
   useEffect(() => {
     if (!selId) { setDetail(null); return }
     let vivant = true
@@ -200,15 +633,12 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
     return () => { vivant = false }
   }, [selId])
 
-  // Déclarations depuis le panneau (8)
   async function declarer(famille, detenu) {
     if (!sel) return
     setSaving(true)
     try {
       let compagnie = null
-      if (detenu) {
-        compagnie = window.prompt('Compagnie (facultatif) :', '') || null
-      }
+      if (detenu) compagnie = window.prompt('Compagnie (facultatif) :', '') || null
       await upsertDeclare({
         client_id: sel.client_id, famille, detenu, compagnie,
         note: detenu ? 'déclaré depuis le Multi-équipement' : 'absence confirmée depuis le Multi-équipement',
@@ -234,430 +664,280 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
     finally { setSaving(false) }
   }
 
-  // Argumentaire copiable (10)
-  function copierArgumentaire(famille) {
-    const txt = ARGUMENTAIRES[famille]
-    if (!txt) return
-    navigator.clipboard?.writeText(txt)
-      .then(() => toast.success('Argumentaire copié, colle le dans tes notes d appel'))
-      .catch(() => toast.error('Copie impossible sur ce navigateur'))
-  }
-
-  // Export CSV de la vue filtrée (17)
-  function exportCsv() {
-    const cols = ['client', 'conseiller', 'statut', 'profession', 'revenus', 'familles_detenues', 'suggestion', 'collecte_estimee']
-    const lignes = visibles.map((r) => [
-      r.nom, r.advisor_code, r.statut, r.profession, r.revenus,
-      r.familles.map(labelFam).join(' + '),
-      r.sug ? labelFam(r.sug.famille_suggeree) : '',
-      r.collecte || '',
-    ])
-    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
-    const csv = [cols, ...lignes].map((l) => l.map(esc).join(';')).join('\n')
-    const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = `multi-equipement-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
-    URL.revokeObjectURL(a.href)
-    toast.success(`${visibles.length} lignes exportées`)
-  }
-
-  // Réglages manager (12, 20)
-  async function changerCampagne(k) {
-    const v = { ...settings, campagne_du_mois: k }
-    setSettings(v)
-    try { await saveSettings(v); toast.success(`Campagne du mois : ${labelFam(k)}`) }
-    catch (e) { toast.error(e.message || 'Échec (réservé aux managers)') }
-  }
-  async function changerObjectif() {
-    const saisi = window.prompt('Objectif de taux de multi-équipement (%) :', String(settings.objectif_taux_multi))
-    const n = Number(saisi)
-    if (!saisi || Number.isNaN(n) || n <= 0 || n > 100) return
-    const v = { ...settings, objectif_taux_multi: n }
-    setSettings(v)
-    try { await saveSettings(v); toast.success(`Objectif : ${n} %`) }
-    catch (e) { toast.error(e.message || 'Échec (réservé aux managers)') }
-  }
-
-  // Radar de couverture (13) : % de clients équipés par famille
-  const radarData = useMemo(() => {
-    const total = Math.max(1, enriched.length)
-    const labels = matCols.map((f) => f.label)
-    const data = matCols.map((f) =>
-      Math.round((100 * enriched.filter((r) => r.familles.includes(f.key)).length) / total))
-    return {
-      labels,
-      datasets: [{
-        label: '% de clients équipés',
-        data,
-        backgroundColor: 'rgba(201,169,97,0.18)',
-        borderColor: '#C9A961',
-        pointBackgroundColor: '#0A1628',
-      }],
-    }
-  }, [enriched, matCols])
-
-  // Heatmap conseiller × famille (14, manager)
-  const heatmap = useMemo(() => {
-    if (!isManager) return []
-    return conseillers.map((code) => {
-      const cli = enriched.filter((r) => r.advisor_code === code)
-      return {
-        code,
-        total: cli.length,
-        cells: matCols.map((f) => cli.filter((r) => r.familles.includes(f.key)).length),
-      }
-    })
-  }, [isManager, conseillers, enriched, matCols])
-  const heatMax = useMemo(() => Math.max(1, ...heatmap.flatMap((h) => h.cells)), [heatmap])
-
-  // Pastille de la matrice (1)
-  function Pastille({ r, f }) {
-    const detenu = r.familles.includes(f.key)
-    const absent = r.absences.includes(f.key)
-    const suggere = r.sug && r.sug.famille_suggeree === f.key
-    if (detenu) return <span className="p2 on" title={`${labelFam(f.key)} : détenu`} style={{ background: couleurFam(f.key) }} />
-    if (absent) return <span className={`p2 no${suggere ? ' hot' : ''}`} title={`${labelFam(f.key)} : absence confirmée`}>✕</span>
-    return <span className={`p2 off${suggere ? ' hot' : ''}`} title={`${labelFam(f.key)} : ${suggere ? 'SUGGÉRÉ' : 'non renseigné'}`} />
-  }
-
   const segs = [
-    { k: 'tous', l: 'Tous', n: enriched.length },
-    { k: 'opportunites', l: '🔥 Opportunités', n: kpis.opps },
-    { k: 'campagne', l: `🎯 ${labelFam(settings.campagne_du_mois)}`, n: enriched.filter((r) => r.campagneCible).length },
-    { k: 'mono', l: 'Mono', n: kpis.mono },
-    { k: 'multi', l: 'Multi 2+', n: kpis.multi },
-    { k: 'sans', l: 'Sans info', n: kpis.zero },
+    { k: 'tous', l: 'Tous' }, { k: 'mono', l: 'Mono' }, { k: 'multi', l: 'Multi 2+' }, { k: 'sans', l: 'Sans info' },
   ]
-
   return (
-    <div className={`meq2${flt.dense ? ' dense' : ''}`}>
-      <style>{styles}</style>
-
-      {/* En-tête : titre + KPIs + objectif (20) + gisement (11) */}
-      <div className="hd">
-        <div>
-          <h1>Multi-équipement</h1>
-          <div className="sub">{kpis.total} clients · matrice de cross-sell du cabinet</div>
-        </div>
-        <div className="kpis">
-          <button className="kpi obj" onClick={isManager ? changerObjectif : undefined} title={isManager ? 'Modifier l objectif' : ''}>
-            <span className="v">{kpis.taux} %<span className="cible">/ {kpis.objectif} %</span></span>
-            <span className="l">taux multi · encore {kpis.manquants} clients à convertir</span>
-            <span className="jauge"><i style={{ width: `${Math.min(100, (kpis.taux / kpis.objectif) * 100)}%` }} /></span>
-          </button>
-          <div className="kpi">
-            <span className="v gold">~{fmtK(kpis.gisement)}</span>
-            <span className="l">gisement estimé · {kpis.opps} opportunités</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Campagne du mois (12) */}
-      <div className="camp">
-        <span className="ic">🎯</span>
-        <span>Campagne du mois : <b>{labelFam(settings.campagne_du_mois)}</b> · {enriched.filter((r) => r.campagneCible).length} clients à travailler</span>
+    <div className="mx2">
+      <div className="segs">
+        {segs.map((s) => (
+          <button key={s.k} className={`seg${seg === s.k ? ' on' : ''}`} onClick={() => setSeg(s.k)}>{s.l}</button>
+        ))}
+        <span className="sp" />
+        <input className="search" placeholder="Rechercher…" value={q} onChange={(e) => setQ(e.target.value)} />
         {isManager && (
-          <select value={settings.campagne_du_mois} onChange={(e) => changerCampagne(e.target.value)}>
-            {matCols.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+          <select className="mini" value={cons} onChange={(e) => setCons(e.target.value)}>
+            <option value="all">Tous conseillers</option>
+            {conseillers.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         )}
-        <button className="lnk" onClick={() => setF('seg', 'campagne')}>voir la liste</button>
       </div>
-
-      {loading && <div className="empty">Chargement…</div>}
-      {err && <div className="empty err">Erreur : {err}</div>}
-
-      {!loading && !err && (
-        <>
-          {/* Segments (2) + outils */}
-          <div className="segs">
-            {segs.map((s) => (
-              <button key={s.k} className={`seg${flt.seg === s.k ? ' on' : ''}`} onClick={() => setF('seg', s.k)}>
-                {s.l} <span className="n">{s.n}</span>
-              </button>
-            ))}
-            <span className="sp" />
-            <input className="search" placeholder="Rechercher…" value={flt.q} onChange={(e) => setF('q', e.target.value)} />
-            {isManager && (
-              <select className="mini" value={flt.cons} onChange={(e) => setF('cons', e.target.value)}>
-                <option value="all">Tous conseillers</option>
-                {conseillers.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            )}
-            <button className={`tgl${flt.groupe ? ' on' : ''}`} onClick={() => setF('groupe', !flt.groupe)} title="Regrouper par conseiller">👥</button>
-            <button className={`tgl${flt.dense ? ' on' : ''}`} onClick={() => setF('dense', !flt.dense)} title="Densité compacte">≡</button>
-            <button className="tgl" onClick={() => setShowAnalyse((v) => !v)} title="Radar et heatmap">📊</button>
-            <button className="tgl" onClick={exportCsv} title="Exporter la vue en CSV">⬇</button>
-            <button className="tgl" onClick={() => setFlt(FILTRES_DEFAUT)} title="Réinitialiser les filtres">↺</button>
-          </div>
-
-          {/* Analyse : radar (13) + heatmap (14) */}
-          {showAnalyse && (
-            <div className="analyse">
-              <div className="pane">
-                <div className="ptit">Couverture du portefeuille par famille</div>
-                <div className="radar"><Radar data={radarData} options={{
-                  responsive: true, maintainAspectRatio: false,
-                  scales: { r: { beginAtZero: true, max: 100, ticks: { display: false } } },
-                  plugins: { legend: { display: false } },
-                }} /></div>
-              </div>
-              {isManager && (
-                <div className="pane">
-                  <div className="ptit">Qui vend quoi (nb de clients équipés)</div>
-                  <div className="heat">
-                    <table>
-                      <thead><tr><th></th>{matCols.map((f) => <th key={f.key}>{f.label.split(' ')[0]}</th>)}</tr></thead>
-                      <tbody>
-                        {heatmap.map((h) => (
-                          <tr key={h.code}>
-                            <td className="hc">{h.code} <span>({h.total})</span></td>
-                            {h.cells.map((n, i) => (
-                              <td key={i}>
-                                <span className="cell" style={{ background: n ? `rgba(201,169,97,${0.15 + 0.85 * (n / heatMax)})` : '#F4F2ED', color: n / heatMax > 0.55 ? '#fff' : '#5b6470' }}>{n || ''}</span>
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="layout">
-            {/* Matrice (1) */}
-            <div className="tblwrap">
-              <div className="scroll">
-                <table className="mx">
-                  <thead>
-                    <tr>
-                      <th className="l">Client</th>
-                      {matCols.map((f) => <th key={f.key} title={f.label}>{f.label.length > 8 ? `${f.label.slice(0, 7)}.` : f.label}</th>)}
-                      <th>Complétude</th>
-                      <th className="r">Potentiel</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {groupes.map((g) => (
-                      <GroupeRows key={g.code || 'flat'} g={g} matCols={matCols} collapsed={collapsed}
-                        toggle={(c) => setCollapsed((p) => ({ ...p, [c]: !p[c] }))}
-                        selId={selId} onSel={setSelId} Pastille={Pastille} labelFam={labelFam} />
-                    ))}
-                    {visibles.length === 0 && (
-                      <tr><td colSpan={matCols.length + 3} className="empty">Aucun client pour ces filtres.</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              <div className="legend">● détenu · ◌ non renseigné · ✕ absence confirmée · contour or = suggéré · 🕰 = dernier deal il y a plus d un an</div>
-            </div>
-
-            {/* Panneau latéral (7, 8, 9, 10, 15) */}
-            {sel && (
-              <div className="drawer">
-                <div className="dhd">
-                  <div>
-                    <h4>{sel.nom}</h4>
-                    <div className="dsub">{sel.statut || sel.profession || '—'}{sel.revenus ? ` · ${fmtEur(sel.revenus)}` : ''} · {sel.advisor_code}</div>
-                  </div>
-                  <button className="x" onClick={() => setSelId(null)}>✕</button>
-                </div>
-
-                {sel.aRevoir && <div className="warn">🕰 Dernier deal signé il y a plus d un an : client à revoir</div>}
-
-                <div className="dsec">Équipement</div>
-                {matCols.map((f) => {
-                  const detenu = sel.familles.includes(f.key)
-                  const absent = sel.absences.includes(f.key)
-                  const decl = detail?.declares?.find((d) => d.famille === f.key)
-                  return (
-                    <div className="drow" key={f.key}>
-                      <span className="dfam" style={{ color: detenu ? couleurFam(f.key) : undefined }}>{f.label}</span>
-                      {detenu && <span className="st ok">détenu{decl?.compagnie ? ` · ${decl.compagnie}` : ''}</span>}
-                      {!detenu && absent && <span className="st no">absent confirmé</span>}
-                      {!detenu && !absent && <span className="st miss">?</span>}
-                      <span className="dactions">
-                        {!detenu && <button disabled={saving} title="Déclarer détenu (souscrit ailleurs ou avant le CRM)" onClick={() => declarer(f.key, true)}>✓</button>}
-                        {!detenu && !absent && <button disabled={saving} title="Confirmer l absence" onClick={() => declarer(f.key, false)}>✕</button>}
-                        {decl && <button disabled={saving} title="Effacer la déclaration" onClick={() => effacerDeclaration(f.key)}>↺</button>}
+      <div className="layout">
+        <div className="tblwrap">
+          <div className="scrollx">
+            <table className="mx">
+              <thead>
+                <tr>
+                  <th className="l">Client</th>
+                  {matCols.map((f) => <th key={f.key} title={f.label}>{f.label.length > 8 ? `${f.label.slice(0, 7)}.` : f.label}</th>)}
+                  <th>Complétude</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibles.map((r) => (
+                  <tr key={r.client_id} className={selId === r.client_id ? 'sel' : ''} onClick={() => setSelId(r.client_id)}>
+                    <td className="l cli">
+                      {r.nom}
+                      <small>{r.statut || r.profession || '—'}{r.revenus ? ` · ${Math.round(r.revenus / 1000)} k€` : ''} · {r.advisor_code}</small>
+                    </td>
+                    {matCols.map((f) => {
+                      const detenu = r.familles.includes(f.key)
+                      const absent = r.absences.includes(f.key)
+                      return (
+                        <td key={f.key}>
+                          {detenu && <span className="p2 on" title={`${labelFam(f.key)} : détenu`} style={{ background: couleurFam(f.key) }} />}
+                          {!detenu && absent && <span className="p2 no" title={`${labelFam(f.key)} : absence confirmée`}>✕</span>}
+                          {!detenu && !absent && <span className="p2 off" title={`${labelFam(f.key)} : non renseigné`} />}
+                        </td>
+                      )
+                    })}
+                    <td>
+                      <span className="comp">{r.nb}/{matCols.length}
+                        <span className="bar"><i style={{ width: `${Math.min(100, (100 * r.nb) / matCols.length)}%` }} /></span>
                       </span>
-                    </div>
-                  )
-                })}
-
-                {sel.sug && (
-                  <div className="sugg">
-                    💡 <b>{sel.sug.label}</b> (~{fmtK(sel.collecte)} de collecte estimée)
-                    <div className="sraison">{sel.sug.raison}</div>
-                    <button className="scopy" onClick={() => copierArgumentaire(sel.sug.famille_suggeree)}>📋 Copier l argumentaire d appel</button>
-                  </div>
+                    </td>
+                  </tr>
+                ))}
+                {visibles.length === 0 && (
+                  <tr><td colSpan={matCols.length + 2} className="empty">Aucun client pour ces filtres.</td></tr>
                 )}
-
-                {detail?.deals?.length > 0 && (
-                  <>
-                    <div className="dsec">Historique signé</div>
-                    <div className="tl">
-                      {detail.deals.map((d) => (
-                        <div className="tli" key={d.id}>
-                          <span className="td">{d.date_signed || '—'}</span>
-                          <span className="tp">{d.product}{d.company ? ` · ${d.company}` : ''}</span>
-                          <span className="tm">{Number(d.pu) > 0 ? fmtEur(d.pu) : (Number(d.pp_m) > 0 ? `${fmtEur(d.pp_m)}/mois` : '')}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-
-                <div className="dbtns">
-                  <button className="pri" onClick={() => onCreateDeal && onCreateDeal(sel)}>+ Créer le deal</button>
-                </div>
-              </div>
-            )}
+              </tbody>
+            </table>
           </div>
-        </>
-      )}
+          <div className="legend">● détenu · ◌ non renseigné · ✕ absence confirmée · clique une ligne pour corriger</div>
+        </div>
+
+        {sel && (
+          <div className="drawer">
+            <div className="dhd">
+              <div>
+                <h4>{sel.nom}</h4>
+                <div className="dsub">{sel.statut || sel.profession || '—'}{sel.revenus ? ` · ${fmtEur(sel.revenus)}` : ''} · {sel.advisor_code}</div>
+              </div>
+              <button className="x" onClick={() => setSelId(null)}>✕</button>
+            </div>
+            <div className="dsec">Équipement</div>
+            {matCols.map((f) => {
+              const detenu = sel.familles.includes(f.key)
+              const absent = sel.absences.includes(f.key)
+              const decl = detail?.declares?.find((d) => d.famille === f.key)
+              return (
+                <div className="drow" key={f.key}>
+                  <span className="dfam" style={{ color: detenu ? couleurFam(f.key) : undefined }}>{f.label}</span>
+                  {detenu && <span className="st ok">détenu{decl?.compagnie ? ` · ${decl.compagnie}` : ''}</span>}
+                  {!detenu && absent && <span className="st no">absent confirmé</span>}
+                  {!detenu && !absent && <span className="st miss">?</span>}
+                  <span className="dactions">
+                    {!detenu && <button disabled={saving} title="Déclarer détenu (souscrit ailleurs ou avant le CRM)" onClick={() => declarer(f.key, true)}>✓</button>}
+                    {!detenu && !absent && <button disabled={saving} title="Confirmer l absence" onClick={() => declarer(f.key, false)}>✕</button>}
+                    {decl && <button disabled={saving} title="Effacer la déclaration" onClick={() => effacerDeclaration(f.key)}>↺</button>}
+                  </span>
+                </div>
+              )
+            })}
+            {detail?.deals?.length > 0 && (
+              <>
+                <div className="dsec">Historique signé</div>
+                <div className="tl">
+                  {detail.deals.map((d) => (
+                    <div className="tli" key={d.id}>
+                      <span className="td">{d.date_signed || '—'}</span>
+                      <span className="tp">{d.product}{d.company ? ` · ${d.company}` : ''}</span>
+                      <span className="tm">{Number(d.pu) > 0 ? fmtEur(d.pu) : (Number(d.pp_m) > 0 ? `${fmtEur(d.pp_m)}/mois` : '')}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            <div className="dbtns">
+              <button className="pri" onClick={() => onCreateDeal && onCreateDeal(sel)}>+ Créer le deal</button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
-// Lignes d'un groupe conseiller (repliable, innovation 3)
-function GroupeRows({ g, matCols, collapsed, toggle, selId, onSel, Pastille, labelFam }) {
-  const plie = g.code && collapsed[g.code]
-  return (
-    <>
-      {g.code && (
-        <tr className="grp" onClick={() => toggle(g.code)}>
-          <td colSpan={matCols.length + 3}>
-            <span className="chev">{plie ? '▸' : '▾'}</span> {g.code} · {g.rows.length} affiché{g.rows.length > 1 ? 's' : ''} sur {g.total} · taux multi <span className="tx">{g.taux} %</span>
-          </td>
-        </tr>
-      )}
-      {!plie && g.rows.map((r) => (
-        <tr key={r.client_id} className={selId === r.client_id ? 'sel' : ''} onClick={() => onSel(r.client_id)}>
-          <td className="l cli">
-            {r.nom}{r.aRevoir && <span className="rev" title="Dernier deal il y a plus d un an"> 🕰</span>}
-            <small>{r.statut || r.profession || '—'}{r.revenus ? ` · ${Math.round(r.revenus / 1000)} k€` : ''}</small>
-          </td>
-          {matCols.map((f) => <td key={f.key}><Pastille r={r} f={f} /></td>)}
-          <td>
-            <span className="comp">{r.nb}/{matCols.length}
-              <span className="bar"><i style={{ width: `${Math.min(100, (100 * r.nb) / matCols.length)}%` }} /></span>
-            </span>
-          </td>
-          <td className="r">
-            {r.sug
-              ? <span className="pot" title={r.sug.raison}>{labelFam(r.sug.famille_suggeree)} · ~{r.collecte >= 1000 ? `${Math.round(r.collecte / 1000)}k` : r.collecte}</span>
-              : <span className="potv">—</span>}
-          </td>
-        </tr>
-      ))}
-    </>
-  )
-}
-
 const styles = `
-.meq2{ --line:#ECEAE4; --silver:#8A95A8; --ink:#1D1D1F; color:var(--ink); font-size:13px; }
-.meq2 *{ box-sizing:border-box }
-.meq2 .hd{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:10px }
-.meq2 h1{ font-size:22px; font-weight:700; color:var(--navy,#0A1628); margin:0; letter-spacing:-.02em }
-.meq2 .sub{ color:var(--silver); font-size:12px; margin-top:2px }
-.meq2 .kpis{ display:flex; gap:10px }
-.meq2 .kpi{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px 14px; display:flex; flex-direction:column; gap:3px; min-width:190px; text-align:left }
-.meq2 .kpi .v{ font-size:20px; font-weight:750; color:var(--navy,#0A1628); line-height:1 }
-.meq2 .kpi .v .cible{ font-size:12px; color:var(--silver); font-weight:600; margin-left:4px }
-.meq2 .kpi .v.gold{ color:var(--gold-dk,#A6843F) }
-.meq2 .kpi .l{ font-size:10.5px; color:var(--silver); font-weight:600 }
-.meq2 .kpi.obj{ cursor:pointer; border:1px solid rgba(201,169,97,.45) }
-.meq2 .jauge{ height:5px; border-radius:3px; background:#EEECE6; overflow:hidden; margin-top:2px }
-.meq2 .jauge i{ display:block; height:100%; background:var(--gold,#C9A961) }
-.meq2 .camp{ display:flex; align-items:center; gap:8px; background:#FBF4E4; border:1px solid rgba(201,169,97,.5); border-radius:11px; padding:8px 12px; margin-bottom:10px; font-size:12.5px; flex-wrap:wrap }
-.meq2 .camp b{ color:var(--gold-dk,#A6843F) }
-.meq2 .camp select{ border:1px solid rgba(201,169,97,.5); border-radius:7px; padding:3px 6px; font-size:12px; background:#fff; color:var(--gold-dk,#A6843F); font-weight:600 }
-.meq2 .camp .lnk{ background:none; border:none; color:var(--gold-dk,#A6843F); font-weight:700; font-size:12px; cursor:pointer; text-decoration:underline }
-.meq2 .segs{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px }
-.meq2 .seg{ padding:6px 12px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:12px; font-weight:650; color:#5b6470; cursor:pointer }
-.meq2 .seg.on{ background:var(--navy,#0A1628); color:#fff; border-color:var(--navy,#0A1628) }
-.meq2 .seg .n{ opacity:.65; font-weight:600; margin-left:3px }
-.meq2 .sp{ flex:1 }
-.meq2 .search{ border:1px solid var(--line); border-radius:9px; padding:6px 10px; font-size:12.5px; width:150px; background:#fff }
-.meq2 .mini{ border:1px solid var(--line); border-radius:9px; padding:6px 8px; font-size:12px; background:#fff; color:#5b6470; font-weight:600 }
-.meq2 .tgl{ border:1px solid var(--line); background:#fff; border-radius:9px; padding:6px 9px; cursor:pointer; font-size:12.5px; color:#5b6470 }
-.meq2 .tgl.on{ background:#EEF0F3; border-color:#C7CDD6; color:var(--navy,#0A1628) }
-.meq2 .analyse{ display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap }
-.meq2 .pane{ flex:1; min-width:280px; background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px }
-.meq2 .ptit{ font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--silver); font-weight:700; margin-bottom:8px }
-.meq2 .radar{ height:210px }
-.meq2 .heat table{ border-collapse:collapse; width:100% }
-.meq2 .heat th{ font-size:9.5px; color:var(--silver); font-weight:700; padding:3px; text-transform:uppercase }
-.meq2 .heat td{ padding:2px; text-align:center }
-.meq2 .heat .hc{ text-align:left; font-size:11px; font-weight:700; color:var(--navy,#0A1628); white-space:nowrap; padding-right:6px }
-.meq2 .heat .hc span{ color:var(--silver); font-weight:500 }
-.meq2 .cell{ display:inline-flex; align-items:center; justify-content:center; min-width:26px; height:20px; border-radius:5px; font-size:10.5px; font-weight:700 }
-.meq2 .layout{ display:flex; gap:10px; align-items:flex-start }
-.meq2 .tblwrap{ flex:1; background:#fff; border:1px solid var(--line); border-radius:13px; overflow:hidden; box-shadow:0 1px 2px rgba(10,22,40,.04); min-width:0 }
-.meq2 .scroll{ overflow-x:auto }
-.meq2 .mx{ width:100%; border-collapse:collapse; min-width:660px }
-.meq2 .mx thead th{ font-size:9px; text-transform:uppercase; letter-spacing:.03em; color:var(--silver); font-weight:700; padding:8px 4px; border-bottom:1px solid var(--line); background:#FCFBF9; text-align:center; white-space:nowrap }
-.meq2 .mx thead th.l{ text-align:left; padding-left:12px }
-.meq2 .mx thead th.r{ text-align:right; padding-right:12px }
-.meq2 .mx tbody td{ padding:7px 4px; border-bottom:1px solid #F4F2ED; text-align:center; vertical-align:middle }
-.meq2.dense .mx tbody td{ padding:4px 4px }
-.meq2 .mx tbody td.l{ text-align:left; padding-left:12px }
-.meq2 .mx tbody td.r{ text-align:right; padding-right:10px }
-.meq2 .mx tbody tr{ cursor:pointer }
-.meq2 .mx tbody tr:hover td{ background:#FCFBF6 }
-.meq2 .mx tbody tr.sel td{ background:#FBF6EC }
-.meq2 .mx tr.grp td{ background:#F3F1EC; font-weight:700; color:var(--navy,#0A1628); font-size:11px; text-align:left; padding:5px 12px; cursor:pointer }
-.meq2 .mx tr.grp .tx{ color:var(--gold-dk,#A6843F) }
-.meq2 .mx tr.grp .chev{ color:var(--silver); margin-right:2px }
-.meq2 .cli{ font-weight:650; white-space:nowrap; max-width:190px; overflow:hidden; text-overflow:ellipsis }
-.meq2 .cli small{ display:block; font-weight:500; color:var(--silver); font-size:10px }
-.meq2.dense .cli small{ display:none }
-.meq2 .cli .rev{ font-size:11px }
-.meq2 .p2{ display:inline-block; width:13px; height:13px; border-radius:50%; line-height:12px; font-size:9px; font-weight:800 }
-.meq2 .p2.off{ border:1.5px dashed #CFCCC4; background:#fff }
-.meq2 .p2.no{ background:#fff; border:1.5px solid #D89B94; color:#B4453B }
-.meq2 .p2.hot{ box-shadow:0 0 0 2px var(--gold,#C9A961) }
-.meq2 .comp{ display:inline-flex; align-items:center; gap:5px; font-variant-numeric:tabular-nums; font-weight:700; font-size:11px; color:#5b6470 }
-.meq2 .bar{ width:30px; height:4px; border-radius:2px; background:#EEECE6; overflow:hidden; display:inline-block }
-.meq2 .bar i{ display:block; height:100%; background:var(--gold,#C9A961) }
-.meq2 .pot{ font-size:10px; font-weight:800; color:#8f5636; background:#F6EBE2; border-radius:5px; padding:2px 6px; white-space:nowrap }
-.meq2 .potv{ color:#D6D3CC }
-.meq2 .legend{ font-size:10px; color:var(--silver); padding:7px 12px; border-top:1px solid #F4F2ED }
-.meq2 .empty{ padding:20px; text-align:center; color:var(--silver) }
-.meq2 .err{ color:#B4453B }
-.meq2 .drawer{ width:265px; flex-shrink:0; background:#fff; border:1px solid rgba(201,169,97,.45); border-radius:13px; padding:13px; box-shadow:0 6px 22px rgba(201,169,97,.14); position:sticky; top:10px }
-.meq2 .dhd{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px }
-.meq2 .dhd h4{ margin:0; font-size:14px; color:var(--navy,#0A1628) }
-.meq2 .dsub{ font-size:10.5px; color:var(--silver) }
-.meq2 .x{ border:none; background:#F4F2ED; border-radius:7px; width:22px; height:22px; cursor:pointer; color:#5b6470 }
-.meq2 .warn{ background:#FBECEC; color:#B4453B; border-radius:8px; padding:6px 8px; font-size:11px; font-weight:600; margin-bottom:8px }
-.meq2 .dsec{ font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--silver); font-weight:750; margin:10px 0 4px }
-.meq2 .drow{ display:flex; align-items:center; gap:6px; padding:3.5px 0; border-bottom:1px solid #F7F5F1; font-size:12px }
-.meq2 .drow:last-of-type{ border-bottom:none }
-.meq2 .dfam{ flex:1; font-weight:600 }
-.meq2 .st{ font-size:9.5px; font-weight:700; padding:2px 6px; border-radius:999px; white-space:nowrap }
-.meq2 .st.ok{ background:#E7F3EC; color:#2C6B4E }
-.meq2 .st.no{ background:#FBECEC; color:#B4453B }
-.meq2 .st.miss{ background:#F4F3EF; color:var(--silver) }
-.meq2 .dactions{ display:flex; gap:3px }
-.meq2 .dactions button{ border:1px solid var(--line); background:#fff; border-radius:6px; width:21px; height:21px; font-size:10.5px; cursor:pointer; color:#5b6470; line-height:1 }
-.meq2 .dactions button:hover{ border-color:var(--gold,#C9A961); color:var(--gold-dk,#A6843F) }
-.meq2 .sugg{ margin-top:10px; background:#FBF4E4; border:1px solid rgba(201,169,97,.5); border-radius:10px; padding:9px; font-size:11.5px; color:#6b5620 }
-.meq2 .sugg b{ color:var(--gold-dk,#A6843F) }
-.meq2 .sraison{ margin-top:4px; font-size:10.5px; color:#8a7a4e }
-.meq2 .scopy{ margin-top:7px; width:100%; border:1px solid rgba(201,169,97,.6); background:#fff; border-radius:8px; padding:6px; font-size:11px; font-weight:700; color:var(--gold-dk,#A6843F); cursor:pointer }
-.meq2 .tl{ max-height:130px; overflow-y:auto }
-.meq2 .tli{ display:flex; gap:6px; align-items:baseline; font-size:11px; padding:2.5px 0; border-bottom:1px solid #F7F5F1 }
-.meq2 .tli .td{ color:var(--silver); font-variant-numeric:tabular-nums; white-space:nowrap }
-.meq2 .tli .tp{ flex:1; font-weight:600 }
-.meq2 .tli .tm{ color:#5b6470; white-space:nowrap }
-.meq2 .dbtns{ margin-top:11px }
-.meq2 .dbtns .pri{ width:100%; background:var(--navy,#0A1628); color:#fff; border:none; border-radius:9px; padding:9px; font-size:12.5px; font-weight:700; cursor:pointer }
-@media(max-width:900px){ .meq2 .layout{ flex-direction:column } .meq2 .drawer{ width:100%; position:static } }
+.meq3{ --line:#ECEAE4; --silver:#8A95A8; --ink:#1D1D1F; --navy:#0A1628; --gold:#C9A961; --gold-dk:#A6843F; --vert:#2C6B4E; color:var(--ink); font-size:13px }
+.meq3 *{ box-sizing:border-box }
+.meq3 .hd{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:12px }
+.meq3 h1{ font-size:22px; font-weight:700; color:var(--navy); margin:0; letter-spacing:-.02em }
+.meq3 .sub{ color:var(--silver); font-size:12px; margin-top:2px }
+.meq3 .vues{ display:flex; gap:6px }
+.meq3 .vues button{ border:1px solid var(--line); background:#fff; border-radius:9px; padding:6px 12px; font-size:12px; font-weight:650; color:#5b6470; cursor:pointer }
+.meq3 .vues button.on{ background:var(--navy); border-color:var(--navy); color:#fff }
+.meq3 .empty{ padding:22px; text-align:center; color:var(--silver) }
+.meq3 .errtxt{ color:#B4453B }
+
+.meq3 .hero{ display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap }
+.meq3 .hbox{ flex:1; min-width:230px; border-radius:14px; padding:16px 18px }
+.meq3 .hbox.navy{ background:var(--navy); color:#fff }
+.meq3 .hbox.navy .hv{ color:var(--gold) }
+.meq3 .hbox.vert{ background:#E9F4EE; border:1px solid #CBE5D6; color:var(--vert) }
+.meq3 .hv{ font-size:27px; font-weight:800; letter-spacing:-.02em; line-height:1.1; font-variant-numeric:tabular-nums }
+.meq3 .hl{ font-size:11.5px; font-weight:600; opacity:.85; margin-top:3px }
+
+.meq3 .camp{ display:flex; align-items:center; gap:10px; background:#FBF4E4; border:1px solid rgba(201,169,97,.5); border-radius:11px; padding:8px 12px; margin-bottom:10px; font-size:12.5px; flex-wrap:wrap }
+.meq3 .camp b{ color:var(--gold-dk) }
+.meq3 .cjauge{ display:inline-flex; align-items:center; gap:6px; font-weight:700; color:#6b5620; font-variant-numeric:tabular-nums }
+.meq3 .bar{ width:70px; height:5px; border-radius:3px; background:#EEE5CC; overflow:hidden; display:inline-block }
+.meq3 .bar i{ display:block; height:100%; background:var(--gold) }
+.meq3 .enjeu{ font-weight:800; color:var(--gold-dk) }
+.meq3 .lnk{ background:none; border:none; color:var(--gold-dk); font-weight:700; font-size:12px; cursor:pointer; text-decoration:underline }
+.meq3 .lnk.on{ color:var(--navy) }
+.meq3 .fcamp{ display:inline-flex; gap:6px; align-items:center; flex-wrap:wrap }
+.meq3 .fcamp select,.meq3 .fcamp input{ border:1px solid rgba(201,169,97,.5); border-radius:7px; padding:3px 6px; font-size:12px; background:#fff }
+.meq3 .fcamp input{ width:110px }
+
+.meq3 .chips{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px }
+.meq3 .chip{ padding:6px 12px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:12px; font-weight:650; color:#5b6470; cursor:pointer }
+.meq3 .chip.on{ background:var(--navy); color:#fff; border-color:var(--navy) }
+.meq3 .chip.win.on{ background:var(--vert); border-color:var(--vert) }
+.meq3 .chip .n{ opacity:.65; font-weight:600; margin-left:3px }
+.meq3 .chip .extra{ margin-left:6px; font-size:10.5px; font-weight:700; color:var(--gold-dk) }
+.meq3 .chip.on .extra{ color:var(--gold) }
+
+.meq3 .cartes{ display:flex; flex-direction:column; gap:8px }
+.meq3 .carte{ background:#fff; border:1px solid var(--line); border-radius:13px; padding:12px 14px; display:grid; grid-template-columns:1fr auto; gap:2px 12px; box-shadow:0 1px 2px rgba(10,22,40,.04) }
+.meq3 .carte.orange{ border-color:#E4A23C; box-shadow:0 0 0 1px #E4A23C33 }
+.meq3 .carte.rouge{ border-color:#C4483C; box-shadow:0 0 0 1px #C4483C33 }
+.meq3 .qui{ display:flex; align-items:center; gap:8px; flex-wrap:wrap }
+.meq3 .nomcli{ font-weight:750; font-size:14px; color:var(--navy) }
+.meq3 .cons{ font-size:10px; font-weight:700; color:var(--silver); background:#F4F2ED; border-radius:5px; padding:1px 6px }
+.meq3 .age{ font-size:10px; font-weight:800; border-radius:5px; padding:1px 6px; background:#F4F2ED; color:#5b6470 }
+.meq3 .age.orange{ background:#FBEED8; color:#9A6A1B }
+.meq3 .age.rouge{ background:#FBE4E1; color:#B4453B }
+.meq3 .souscli{ font-size:11px; color:var(--silver) }
+.meq3 .c2{ grid-row:1 / span 2; display:flex; flex-direction:column; align-items:flex-end; gap:3px; justify-content:center }
+.meq3 .fam{ font-size:10.5px; font-weight:800; color:var(--gold-dk); border:1.5px solid var(--gold); border-radius:999px; padding:2px 9px; white-space:nowrap }
+.meq3 .mont{ font-size:23px; font-weight:800; color:var(--navy); letter-spacing:-.02em; font-variant-numeric:tabular-nums; white-space:nowrap }
+.meq3 .raison{ grid-column:1; font-size:11.5px; color:#5b6470; margin-top:2px }
+.meq3 .dort{ grid-column:1 / -1; font-size:11px; font-weight:700; color:#B4453B; background:#FBECEC; border-radius:8px; padding:5px 8px; margin-top:4px }
+.meq3 .repinfo{ grid-column:1 / -1; font-size:11px; font-weight:600; color:#9A6A1B; background:#FBF4E4; border-radius:8px; padding:5px 8px; margin-top:4px }
+.meq3 .cbtns{ grid-column:1 / -1; display:flex; gap:7px; margin-top:8px }
+.meq3 .pri{ background:var(--navy); color:#fff; border:none; border-radius:9px; padding:8px 16px; font-size:12.5px; font-weight:750; cursor:pointer }
+.meq3 .pri:disabled{ opacity:.45; cursor:default }
+.meq3 .sec{ background:#fff; color:#5b6470; border:1px solid var(--line); border-radius:9px; padding:8px 14px; font-size:12.5px; font-weight:650; cursor:pointer }
+.meq3 .ter{ background:#fff; border:1px solid var(--line); border-radius:9px; padding:8px 10px; cursor:pointer; font-size:12.5px }
+
+.meq3 .carte.mini{ display:flex; align-items:center; gap:10px; padding:9px 13px }
+.meq3 .carte.mini.ok{ background:#F2F9F5; border-color:#CBE5D6 }
+.meq3 .carte.mini.ko{ background:#FAF7F6; border-color:#E8DAD7 }
+.meq3 .montwin{ font-weight:800; color:var(--vert); font-variant-numeric:tabular-nums; margin-left:auto }
+.meq3 .excraison{ font-size:11.5px; color:#8a6a64; margin-left:auto }
+
+.meq3 .winsec{ margin-top:16px }
+.meq3 .wtit{ font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--vert); font-weight:750; margin-bottom:6px }
+.meq3 .wins{ display:flex; flex-wrap:wrap; gap:7px }
+.meq3 .win{ display:flex; align-items:center; gap:8px; background:#E9F4EE; border:1px solid #CBE5D6; border-radius:10px; padding:7px 11px; font-size:12px }
+.meq3 .win .nomcli{ font-size:12.5px }
+.meq3 .wfam{ font-size:10.5px; font-weight:700; color:var(--vert) }
+
+.meq3 .reports{ display:flex; flex-direction:column; gap:12px }
+.meq3 .rgrp{ background:#fff; border:1px solid var(--line); border-radius:13px; padding:12px 14px }
+.meq3 .rhd{ display:flex; align-items:baseline; gap:10px; margin-bottom:8px; flex-wrap:wrap }
+.meq3 .rhd b{ color:var(--navy); font-size:14px }
+.meq3 .rtot{ font-size:12px; font-weight:700; color:var(--gold-dk) }
+.meq3 .rtab{ width:100%; border-collapse:collapse; min-width:520px }
+.meq3 .rtab th{ font-size:9.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--silver); font-weight:700; text-align:left; padding:4px 8px; border-bottom:1px solid var(--line) }
+.meq3 .rtab td{ font-size:12px; padding:6px 8px; border-bottom:1px solid #F4F2ED }
+.meq3 .rtab td.num{ font-weight:750; color:var(--navy); font-variant-numeric:tabular-nums; white-space:nowrap }
+.meq3 .rtab td.rs{ color:#5b6470 }
+.meq3 .rexc{ margin-top:8px; font-size:11.5px; color:#8a6a64; display:flex; flex-direction:column; gap:3px }
+.meq3 .scrollx{ overflow-x:auto }
+
+.meq3 .mrOverlay{ position:fixed; inset:0; background:rgba(10,22,40,.45); display:flex; align-items:center; justify-content:center; z-index:80; padding:16px }
+.meq3 .mr{ background:#fff; border-radius:15px; padding:17px; width:100%; max-width:430px; box-shadow:0 18px 50px rgba(10,22,40,.3) }
+.meq3 .mrhd{ display:flex; justify-content:space-between; align-items:center }
+.meq3 .mrhd h3{ margin:0; font-size:16px; color:var(--navy) }
+.meq3 .x{ border:none; background:#F4F2ED; border-radius:7px; width:24px; height:24px; cursor:pointer; color:#5b6470 }
+.meq3 .mrsub{ font-size:12px; color:var(--silver); margin:4px 0 12px; font-weight:600 }
+.meq3 .mrlab{ font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--navy); font-weight:750; margin:12px 0 6px }
+.meq3 .mrlab .ob{ text-transform:none; letter-spacing:0; color:#B4453B; font-weight:650; font-size:10.5px; margin-left:5px }
+.meq3 .mrchips{ display:flex; gap:6px; flex-wrap:wrap }
+.meq3 .mrc{ padding:7px 11px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:12px; font-weight:650; color:#5b6470; cursor:pointer }
+.meq3 .mrc.on{ background:var(--navy); color:#fff; border-color:var(--navy) }
+.meq3 .mrtxt{ width:100%; border:1px solid var(--line); border-radius:9px; padding:8px 10px; font-size:12.5px; margin-top:8px }
+.meq3 .mrinfo{ margin-top:10px; font-size:12px; color:#6b5620; background:#FBF4E4; border-radius:9px; padding:7px 10px }
+.meq3 .mrinfo b{ color:var(--gold-dk) }
+.meq3 .mrbtns{ display:flex; gap:8px; margin-top:15px }
+.meq3 .mrexcl{ display:block; margin:11px auto 0; background:none; border:none; font-size:11px; color:var(--silver); text-decoration:underline; cursor:pointer }
+
+.meq3 .mx2 .segs{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px }
+.meq3 .seg{ padding:6px 12px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:12px; font-weight:650; color:#5b6470; cursor:pointer }
+.meq3 .seg.on{ background:var(--navy); color:#fff; border-color:var(--navy) }
+.meq3 .sp{ flex:1 }
+.meq3 .search{ border:1px solid var(--line); border-radius:9px; padding:6px 10px; font-size:12.5px; width:150px; background:#fff }
+.meq3 .mini{ border:1px solid var(--line); border-radius:9px; padding:6px 8px; font-size:12px; background:#fff; color:#5b6470; font-weight:600 }
+.meq3 .layout{ display:flex; gap:10px; align-items:flex-start }
+.meq3 .tblwrap{ flex:1; background:#fff; border:1px solid var(--line); border-radius:13px; overflow:hidden; min-width:0 }
+.meq3 .mx{ width:100%; border-collapse:collapse; min-width:620px }
+.meq3 .mx thead th{ font-size:9px; text-transform:uppercase; letter-spacing:.03em; color:var(--silver); font-weight:700; padding:8px 4px; border-bottom:1px solid var(--line); background:#FCFBF9; text-align:center; white-space:nowrap }
+.meq3 .mx thead th.l{ text-align:left; padding-left:12px }
+.meq3 .mx tbody td{ padding:7px 4px; border-bottom:1px solid #F4F2ED; text-align:center; vertical-align:middle }
+.meq3 .mx tbody td.l{ text-align:left; padding-left:12px }
+.meq3 .mx tbody tr{ cursor:pointer }
+.meq3 .mx tbody tr:hover td{ background:#FCFBF6 }
+.meq3 .mx tbody tr.sel td{ background:#FBF6EC }
+.meq3 .cli{ font-weight:650; white-space:nowrap; max-width:200px; overflow:hidden; text-overflow:ellipsis }
+.meq3 .cli small{ display:block; font-weight:500; color:var(--silver); font-size:10px }
+.meq3 .p2{ display:inline-block; width:13px; height:13px; border-radius:50%; line-height:12px; font-size:9px; font-weight:800 }
+.meq3 .p2.off{ border:1.5px dashed #CFCCC4; background:#fff }
+.meq3 .p2.no{ background:#fff; border:1.5px solid #D89B94; color:#B4453B }
+.meq3 .comp{ display:inline-flex; align-items:center; gap:5px; font-variant-numeric:tabular-nums; font-weight:700; font-size:11px; color:#5b6470 }
+.meq3 .legend{ font-size:10px; color:var(--silver); padding:7px 12px; border-top:1px solid #F4F2ED }
+.meq3 .drawer{ width:265px; flex-shrink:0; background:#fff; border:1px solid rgba(201,169,97,.45); border-radius:13px; padding:13px; box-shadow:0 6px 22px rgba(201,169,97,.14); position:sticky; top:10px }
+.meq3 .dhd{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px }
+.meq3 .dhd h4{ margin:0; font-size:14px; color:var(--navy) }
+.meq3 .dsub{ font-size:10.5px; color:var(--silver) }
+.meq3 .dsec{ font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--silver); font-weight:750; margin:10px 0 4px }
+.meq3 .drow{ display:flex; align-items:center; gap:6px; padding:3.5px 0; border-bottom:1px solid #F7F5F1; font-size:12px }
+.meq3 .drow:last-of-type{ border-bottom:none }
+.meq3 .dfam{ flex:1; font-weight:600 }
+.meq3 .st{ font-size:9.5px; font-weight:700; padding:2px 6px; border-radius:999px; white-space:nowrap }
+.meq3 .st.ok{ background:#E7F3EC; color:#2C6B4E }
+.meq3 .st.no{ background:#FBECEC; color:#B4453B }
+.meq3 .st.miss{ background:#F4F3EF; color:var(--silver) }
+.meq3 .dactions{ display:flex; gap:3px }
+.meq3 .dactions button{ border:1px solid var(--line); background:#fff; border-radius:6px; width:21px; height:21px; font-size:10.5px; cursor:pointer; color:#5b6470; line-height:1 }
+.meq3 .dactions button:hover{ border-color:var(--gold); color:var(--gold-dk) }
+.meq3 .tl{ max-height:130px; overflow-y:auto }
+.meq3 .tli{ display:flex; gap:6px; align-items:baseline; font-size:11px; padding:2.5px 0; border-bottom:1px solid #F7F5F1 }
+.meq3 .tli .td{ color:var(--silver); font-variant-numeric:tabular-nums; white-space:nowrap }
+.meq3 .tli .tp{ flex:1; font-weight:600 }
+.meq3 .tli .tm{ color:#5b6470; white-space:nowrap }
+.meq3 .dbtns{ margin-top:11px }
+.meq3 .dbtns .pri{ width:100% }
+
+@media(max-width:700px){
+  .meq3 .carte{ grid-template-columns:1fr }
+  .meq3 .c2{ grid-row:auto; flex-direction:row; align-items:center; justify-content:space-between; margin-top:4px }
+  .meq3 .cbtns{ flex-wrap:wrap }
+  .meq3 .cbtns .pri,.meq3 .cbtns .sec{ flex:1; min-width:120px }
+  .meq3 .hbox{ min-width:100% }
+  .meq3 .layout{ flex-direction:column }
+  .meq3 .drawer{ width:100%; position:static }
+}
 `

@@ -113,3 +113,33 @@ export function scorePotentiel(c, sug) {
   const richesse = Math.min(2, (Number(c.revenus || 0) / 100000) + (Number(c.patrimoine || 0) / 500000))
   return Math.round(collecte * (1 + richesse))
 }
+
+// V3 : correspondance produit vers famille, miroir JS fidele de la fonction
+// SQL equipment_famille utilisee par la vue client_equipment. Sert cote client
+// a retrouver le dernier deal Signe d une famille pour la reconciliation des
+// missions gagnees. L ordre des tests compte, il reproduit celui du SQL.
+export function familleDuProduit(product) {
+  if (!product) return 'autre'
+  const p = String(product).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  if (p.includes('scpi')) return 'scpi'
+  if (p.includes('private equity') || p.includes('private-equity')) return 'private_equity'
+  if (p.includes('structur')) return 'structures'
+  if (p.includes('assurance vie') || p === 'av') return 'av'
+  if (p.includes('emprunteur')) return 'emprunteur'
+  if (p.includes('prevoyance')) return 'prevoyance'
+  if (p.includes('mutuelle') || p.includes('sante')) return 'mutuelle'
+  if (p.includes('lmnp') || p.includes('immobil') || p.includes('monument') || p.includes('girardin') || p.includes('vefa')) return 'immobilier'
+  if (p.includes('per') || p.includes('retraite') || p.includes('pero')) return 'per'
+  return 'autre'
+}
+
+// V3 : raisons de report proposees dans la modale anti zap. La raison est
+// obligatoire, c est le prix a payer pour dire plus tard.
+export const RAISONS_REPORT = [
+  'Client prevenu recemment',
+  'Pas le bon moment fiscal',
+  'Deja tente ce mois',
+]
+
+// V3 : echeances de report autorisees en jours. Pas de report sans date.
+export const ECHEANCES_REPORT = [7, 30, 90]
