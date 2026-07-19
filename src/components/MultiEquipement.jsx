@@ -244,7 +244,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
           retour_le: null,
         },
       })
-      toast.success(`Mission ${labelFam(mi.famille)} lancée, le deal s ouvre`)
+      toast.success(`Proposition ${labelFam(mi.famille)} initiée, le dossier s ouvre`)
       await refreshMissions()
       if (onCreateDeal) onCreateDeal(mi.client)
     } catch (e) { toast.error(e.message || 'Échec du lancement de la mission') }
@@ -287,7 +287,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
   }
 
   const chips = [
-    { k: 'a_attaquer', l: 'À attaquer', n: nb('a_attaquer') },
+    { k: 'a_attaquer', l: 'À proposer', n: nb('a_attaquer') },
     { k: 'en_cours', l: 'En cours', n: nb('en_cours') },
     { k: 'reportee', l: 'Reportées', n: nb('reportee'), extra: reporteesEur > 0 ? `~${fmtK(reporteesEur)} en attente` : null },
     { k: 'gagnee', l: 'Gagnées ✓', n: nb('gagnee') },
@@ -301,7 +301,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
       <div className="hd">
         <div>
           <h1>Multi-équipement</h1>
-          <div className="sub">le cross-sell du cabinet, l argent d abord</div>
+          <div className="sub">l équipement patrimonial de vos clients, famille par famille</div>
         </div>
         <div className="vues">
           <button className={vue === 'missions' ? 'on' : ''} onClick={() => setVue('missions')}>Missions</button>
@@ -319,11 +319,11 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
           <div className="hero">
             <div className="hbox navy">
               <div className="hv">~{fmtEur(totalActives)}</div>
-              <div className="hl">à aller chercher · {actives.length} mission{actives.length > 1 ? 's' : ''}</div>
+              <div className="hl">de collecte identifiée · {actives.length} mission{actives.length > 1 ? 's' : ''}</div>
             </div>
             <div className="hbox vert">
               <div className="hv">+{fmtEur(gagneesMoisEur)}</div>
-              <div className="hl">signé grâce au cross-sell ce mois · {gagneesMois.length} gagnée{gagneesMois.length > 1 ? 's' : ''}</div>
+              <div className="hl">signé ce mois en équipement complémentaire · {gagneesMois.length} gagnée{gagneesMois.length > 1 ? 's' : ''}</div>
             </div>
           </div>
 
@@ -365,15 +365,15 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
           {/* Liste de missions : le coeur du module */}
           {chip === 'a_attaquer' && liste.length > 0 && (
             <div className="aide">
-              Chaque ligne = <b>un client</b> à qui vendre <b>un produit</b>. « Attaquer » ouvre un dossier prérempli.
-              Les montants sont des estimations (base indiquée sous le chiffre) ; « ≈ défaut » = fiche à compléter pour un vrai chiffre.
+              Chaque ligne = <b>un client</b> et le produit à lui proposer. Les <b>ronds</b> montrent son équipement (plein = détenu, ✕ = absence confirmée, rond doré = la famille à proposer).
+              « Proposer » ouvre un dossier prérempli ; « ≈ défaut » sous le montant = fiche à compléter pour un chiffre réel.
             </div>
           )}
           <div className="cartes">
             {liste.length === 0 && (
               <div className="empty">
                 {chip === 'a_attaquer'
-                  ? 'Rien à attaquer pour ces filtres. Passe en vue matrice pour déclarer l équipement et faire émerger des missions.'
+                  ? 'Rien à proposer pour ces filtres. La vue matrice permet de déclarer l équipement et de faire émerger des missions.'
                   : 'Aucune mission dans cet état.'}
               </div>
             )}
@@ -391,6 +391,8 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
                         <span className="rep">🕰 revient le {fmtDate(mi.retour_le)}</span>
                       )}
                     </div>
+                    <EquipementDots client={mi.client} suggest={mi.famille} matCols={matCols}
+                      couleurFam={couleurFam} labelFam={labelFam} />
                     <div className="raison">{mi.raison}</div>
                   </div>
                   <span className="fam" style={{ borderColor: couleurFam(mi.famille) }}>{labelFam(mi.famille)}</span>
@@ -401,7 +403,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
                     </span>
                   </div>
                   <div className="ract">
-                    <button className="pri" onClick={() => attaquer(mi)} title="Ouvre un dossier prérempli">📞 Attaquer</button>
+                    <button className="pri" onClick={() => attaquer(mi)} title="Ouvre un dossier prérempli">Proposer</button>
                     <button className="sec" onClick={() => setReportPour(mi)}>{mi.statut === 'reportee' ? 'Re-reporter' : 'Plus tard'}</button>
                     {ARGUMENTAIRES[mi.famille] && (
                       <button className="ter" title="Copier l argumentaire d appel" onClick={() => copierArgumentaire(mi.famille)}>📋</button>
@@ -442,7 +444,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
       {/* Vue manager Reports : qui reporte quoi, pourquoi, pour combien */}
       {!loading && !err && vue === 'reports' && isManager && (
         <div className="reports">
-          {reportsParConseiller.length === 0 && <div className="empty">Aucun report ni exclusion : tout le monde attaque.</div>}
+          {reportsParConseiller.length === 0 && <div className="empty">Aucun report ni exclusion : tout le monde est à jour.</div>}
           {reportsParConseiller.map((g) => (
             <div key={g.code} className="rgrp">
               <div className="rhd">
@@ -784,6 +786,33 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
   )
 }
 
+// ── Ronds d équipement ───────────────────────────────────────────────────────
+// Un rond par famille de produit, l état d équipement du client d un coup d oeil
+// (retour Louis : « c était mieux avec les ronds, tous les types de produits »).
+//   plein coloré = famille détenue
+//   rond doré cible = la famille à proposer (la mission)
+//   anneau rouge = absence confirmée (déclarée non détenue)
+//   pointillé = non renseigné
+function EquipementDots({ client, suggest, matCols, couleurFam, labelFam }) {
+  return (
+    <div className="dots">
+      {matCols.map((f) => {
+        const detenu = client.familles.includes(f.key)
+        const absent = !detenu && client.absences.includes(f.key)
+        const cible = !detenu && f.key === suggest
+        const cls = detenu ? 'on' : cible ? 'target' : absent ? 'no' : 'off'
+        const etat = detenu ? 'détenu' : cible ? 'à proposer' : absent ? 'absence confirmée' : 'non renseigné'
+        return (
+          <span key={f.key} className={`d ${cls}`} title={`${labelFam(f.key)} : ${etat}`}
+            style={detenu ? { background: couleurFam(f.key) } : undefined}>
+            {absent ? '✕' : ''}
+          </span>
+        )
+      })}
+    </div>
+  )
+}
+
 const styles = `
 .meq3{ --line:#ECEAE4; --silver:#8A95A8; --ink:#1D1D1F; --navy:#0A1628; --gold:#C9A961; --gold-dk:#A6843F; --vert:#2C6B4E; color:var(--ink); font-size:13px }
 .meq3 *{ box-sizing:border-box }
@@ -841,6 +870,12 @@ const styles = `
 .meq3 .ract{ display:flex; gap:6px; flex-shrink:0 }
 .meq3 .rgauche .raison{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; margin-top:1px }
 .meq3 .rep{ font-size:10px; font-weight:700; color:#8A6A2F; background:#FBF4E4; border-radius:5px; padding:1px 6px }
+.meq3 .dots{ display:flex; align-items:center; gap:4px; flex-wrap:wrap; margin:4px 0 3px }
+.meq3 .d{ width:12px; height:12px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; font-size:7px; font-weight:800; line-height:1 }
+.meq3 .d.off{ border:1.5px dashed #D2CFC7; background:#fff }
+.meq3 .d.no{ background:#fff; border:1.5px solid #D89B94; color:#B4453B }
+.meq3 .d.target{ background:#fff; box-shadow:0 0 0 2px #fff,0 0 0 3.5px var(--gold) }
+.meq3 .d.target::after{ content:''; width:5px; height:5px; border-radius:50%; background:var(--gold) }
 @media(max-width:760px){ .meq3 .row{ flex-wrap:wrap } .meq3 .rgauche{ flex-basis:100% } .meq3 .ract{ width:100% } .meq3 .ract .pri{ flex:1 } }
 .meq3 .qui{ display:flex; align-items:center; gap:8px; flex-wrap:wrap }
 .meq3 .nomcli{ font-weight:750; font-size:13.5px; color:var(--navy) }
