@@ -26,7 +26,7 @@ import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { chargerDonnees, construireSections } from '../services/opportunites'
 
-export default function OpportunitesDuJour({ profile }) {
+export default function OpportunitesDuJour({ profile, embedded }) {
   const isManager = profile?.role === 'manager'
   const [donnees, setDonnees] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -74,6 +74,9 @@ export default function OpportunitesDuJour({ profile }) {
   // Le total en tête compte les vraies occasions de contact : la section fiches
   // à compléter est exclue (ce n'est pas un appel), elle a son propre compteur.
   const total = useMemo(() => sections.reduce((s, x) => s + (x.fiches ? 0 : x.items.length), 0), [sections])
+  // En mode intégré (Mon mois), on ne montre que les sections qui ont vraiment
+  // une action du jour : pas de cartes vides qui alourdissent le tableau de bord.
+  const secShown = embedded ? sections.filter((s) => s.items.length > 0) : sections
   const toggle = (k) => setReplies((p) => ({ ...p, [k]: !p[k] }))
 
   // Clic sur un client : copie du téléphone dans le presse papier
@@ -105,19 +108,26 @@ export default function OpportunitesDuJour({ profile }) {
   const dateDuJour = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
 
   return (
-    <div className="opj">
+    <div className={`opj${embedded ? ' emb' : ''}`}>
       <style>{styles}</style>
 
-      <div className="hd">
-        <div>
-          <h1>Opportunités du jour</h1>
-          <div className="sub">{dateDuJour}</div>
+      {embedded ? (
+        <div className="embhd">
+          <h2>Actions immédiates du jour</h2>
+          <span className="embkpi">{total} occasion{total > 1 ? 's' : ''}</span>
         </div>
-        <div className="kpi">
-          <span className="v">{total}</span>
-          <span className="l">occasion{total > 1 ? 's' : ''} de contact aujourd'hui</span>
+      ) : (
+        <div className="hd">
+          <div>
+            <h1>Opportunités du jour</h1>
+            <div className="sub">{dateDuJour}</div>
+          </div>
+          <div className="kpi">
+            <span className="v">{total}</span>
+            <span className="l">occasion{total > 1 ? 's' : ''} de contact aujourd'hui</span>
+          </div>
         </div>
-      </div>
+      )}
 
       {isManager && conseillers.length > 0 && (
         <div className="filtre">
@@ -134,7 +144,11 @@ export default function OpportunitesDuJour({ profile }) {
       {loading && <div className="empty">Chargement…</div>}
       {err && <div className="empty err">Erreur : {err}</div>}
 
-      {!loading && !err && sections.map((sec) => {
+      {embedded && !loading && !err && secShown.length === 0 && (
+        <div className="embvide">Rien d'urgent aujourd'hui, tout est à jour.</div>
+      )}
+
+      {!loading && !err && secShown.map((sec) => {
         const replie = !!replies[sec.key]
         return (
           <section key={sec.key} className={`sec${sec.highlight ? ' hi' : ''}${sec.urgent ? ' urg' : ''}${sec.fiches ? ' fiches' : ''}`}>
@@ -261,4 +275,9 @@ const styles = `
 .opj .edu b{ color:var(--gold-dk,#A6843F) }
 .opj .empty{ padding:20px; text-align:center; color:var(--silver) }
 .opj .err{ color:#B4453B }
+.opj.emb{ max-width:none; margin-bottom:22px }
+.opj .embhd{ display:flex; align-items:center; gap:10px; margin-bottom:10px }
+.opj .embhd h2{ margin:0; font-size:15px; font-weight:750; color:var(--navy,#0A1628) }
+.opj .embkpi{ font-size:11px; font-weight:750; color:var(--gold-dk,#A6843F); background:#FBF4E4; border:1px solid rgba(201,169,97,.45); border-radius:999px; padding:3px 10px }
+.opj .embvide{ font-size:12.5px; color:#4a7a52; background:#F2F9F5; border:1px solid #CBE5D6; border-radius:12px; padding:14px 16px }
 `

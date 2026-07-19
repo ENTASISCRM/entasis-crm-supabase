@@ -766,7 +766,6 @@ function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,prospects
     {key:'dossiers',  label:'Dossiers',  Icon:Icon.Dossiers},
     {key:'clients',   label:'Clients',   Icon:Icon.Team},
     {key:'multi-equipement', label:'Multi-équipement', Icon:Icon.Kanban},
-    {key:'opportunites', label:'Opportunités', Icon:Icon.Calendar},
     {key:'conformite', label:'Conformité', Icon:Icon.Dossiers},
     {key:'cockpit', label:'Cockpit', Icon:Icon.Forecast},
     {key:'forecast',  label:isManager?'Management':'Prévisionnel', Icon:Icon.Forecast},
@@ -969,7 +968,7 @@ async function genererFicheParrainage(profile){
 /* ─────────────────────────────────────────────────────────────────────────────
    TOP BAR
 ───────────────────────────────────────────────────────────────────────────── */
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs',prospection:'Prospection LinkedIn','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA',remuneration:'Rémunération',outils:'Outils CGP','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️',editorial:'Agent éditorial ✍️',opportunites:'Opportunités du jour',cockpit:'Cockpit ratios',certifications:'Certifications produit'}
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs',prospection:'Prospection LinkedIn','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA',remuneration:'Rémunération',outils:'Outils CGP','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️',editorial:'Agent éditorial ✍️',cockpit:'Cockpit ratios',certifications:'Certifications produit'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile}){
   return (
@@ -5409,6 +5408,7 @@ export default function App(){
           {!profile&&error&&<div className="notice notice-warn">Profil introuvable dans <span className="code">public.profiles</span>. Vérifie la table et les policies.</div>}
 
           <Suspense fallback={<div style={{padding:24,color:'var(--t3)',fontSize:13}}>Chargement…</div>}>
+          {activeTab==='dashboard'&&<OpportunitesDuJour profile={profile} embedded/>}
           {activeTab==='dashboard'&&isManager&&<EditorialPendingBanner count={editorialPending.count} nextDeadline={editorialPending.nextDeadline} onOpen={()=>setActiveTab('editorial')}/>}
           {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile}/>)}
           {activeTab==='leads'&&<LeadRoomEmbed/>}
@@ -5488,7 +5488,6 @@ export default function App(){
           {activeTab==='outils'&&<OutilsCGP profile={profile}/>}
           {activeTab==='conformite'&&<Conformite profile={profile}/>}
           {activeTab==='multi-equipement'&&<MultiEquipement profile={profile} onCreateDeal={startCreateForClient}/>}
-          {activeTab==='opportunites'&&<OpportunitesDuJour profile={profile}/>}
           {activeTab==='cockpit'&&<CockpitRatios profile={profile}/>}
           {activeTab==='certifications'&&isManager&&<CertificationsProduit profile={profile}/>}
           </Suspense>
