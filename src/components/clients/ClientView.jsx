@@ -2,6 +2,14 @@ import { useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
 import { statusLabel } from '../../lib/ui-shared'
 import ClientModal from './ClientModal.jsx'
+import ClientEquipementCard from './ClientEquipementCard.jsx'
+
+// Copie une valeur dans le presse papiers avec retour visuel
+function copier(valeur, label) {
+  navigator.clipboard.writeText(valeur)
+    .then(() => toast.success(`${label} copié`))
+    .catch(() => toast.error('Copie impossible'))
+}
 
 // Helper pour formatage monétaire
 function euro(amount) {
@@ -117,6 +125,14 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
         statusPriority[status] === Math.min(...clientDeals.map(d => statusPriority[d.status] || 1))
       ) || 'En cours'
     : 'Aucun deal'
+
+  // Derniere activite : anciennete en jours de la derniere action chargee
+  // (history est trie du plus recent au plus ancien). Au dela de 90 jours,
+  // ou sans aucune activite, le chip passe en ambre : signal de relance.
+  const lastActivityDays = history.length > 0
+    ? Math.max(0, Math.floor((Date.now() - new Date(history[0].created_at).getTime()) / 86400000))
+    : null
+  const activiteEnRetard = lastActivityDays === null || lastActivityDays >= 90
 
   // Recharger les deals du client après sauvegarde
   const reloadClientDeals = async () => {
@@ -235,6 +251,30 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
             <div className="kpi-value">{euro(client.patrimoine_estime)}</div>
           </div>
         </div>
+        <div className="card">
+          <div className="card-header" style={{ padding: '20px 24px 12px 24px' }}>
+            <h3>Dernière activité</h3>
+          </div>
+          <div className="card-body" style={{ padding: '0 24px 20px 24px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <div className="kpi-value">
+              {lastActivityDays === null
+                ? '—'
+                : lastActivityDays === 0
+                  ? 'Auj.'
+                  : `il y a ${lastActivityDays} j`}
+            </div>
+            <span style={{
+              fontSize: '11px',
+              fontWeight: '600',
+              padding: '3px 8px',
+              borderRadius: '10px',
+              backgroundColor: activiteEnRetard ? 'rgba(217, 119, 6, 0.14)' : 'rgba(22, 163, 74, 0.12)',
+              color: activiteEnRetard ? '#B45309' : '#15803D'
+            }}>
+              {activiteEnRetard ? 'À relancer' : 'Suivi actif'}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Section Informations client */}
@@ -250,13 +290,33 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
                 <strong>Nom complet:</strong> {client.prenom} {client.nom}
               </div>
               {client.email && (
-                <div style={{ marginBottom: '12px' }}>
-                  <strong>Email:</strong> {client.email}
+                <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <strong>Email:</strong>
+                  <a href={`mailto:${client.email}`} style={{ color: 'var(--gold)', textDecoration: 'none' }}>
+                    {client.email}
+                  </a>
+                  <button
+                    onClick={() => copier(client.email, 'Email')}
+                    title="Copier l'email"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', fontSize: '13px' }}
+                  >
+                    📋
+                  </button>
                 </div>
               )}
               {client.telephone && (
-                <div style={{ marginBottom: '12px' }}>
-                  <strong>Téléphone:</strong> {client.telephone}
+                <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <strong>Téléphone:</strong>
+                  <a href={`tel:${client.telephone.replace(/[^+\d]/g, '')}`} style={{ color: 'var(--gold)', textDecoration: 'none' }}>
+                    {client.telephone}
+                  </a>
+                  <button
+                    onClick={() => copier(client.telephone, 'Téléphone')}
+                    title="Copier le téléphone"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', fontSize: '13px' }}
+                  >
+                    📋
+                  </button>
                 </div>
               )}
               {client.age && (
@@ -499,6 +559,9 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
           )}
         </div>
       </div>
+
+      {/* Section Equipement : familles detenues, absences et suggestion */}
+      <ClientEquipementCard clientId={client.id} client={client} supabase={supabase} />
 
       {/* Section Dossiers immobilier */}
       {clientDossiers.length > 0 && (

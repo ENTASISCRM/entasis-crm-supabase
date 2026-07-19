@@ -18,9 +18,11 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { useEffect, useState } from 'react'
+import { toast } from 'react-hot-toast'
 import * as contratsService from '../services/conseillerContrats'
 import { LIBELLE_TYPE_CONTRAT } from '../lib/contrat-enums'
 import { fetchRemuneration } from '../lib/remuneration-api'
+import { MONTHS } from '../lib/metrics'
 
 const fmtEur = (v) => Number(v || 0).toLocaleString('fr-FR', {
   style: 'currency', currency: 'EUR', maximumFractionDigits: 0,
@@ -133,9 +135,21 @@ function VueConseiller({ contrat, profile, month, isManager }) {
   const [dealsMoisCount, setDealsMoisCount] = useState(0)
   const [calcLoading, setCalcLoading] = useState(true)
   const [calcError, setCalcError] = useState(null)
+  // Total variable du mois precedent pour afficher le delta. Null tant que
+  // le fetch parallele n a pas repondu, ou si le mois affiche est JANVIER.
+  const [totalMoisPrecedent, setTotalMoisPrecedent] = useState(null)
 
   useEffect(() => {
     let alive = true
+    // Second appel en parallele sur le mois precedent pour le delta.
+    // Non bloquant : un echec ici n empeche pas l affichage du mois courant.
+    setTotalMoisPrecedent(null)
+    const prevIdx = MONTHS.indexOf(month) - 1
+    if (prevIdx >= 0) {
+      fetchRemuneration('perso', MONTHS[prevIdx])
+        .then(r => { if (alive) setTotalMoisPrecedent(Number(r?.comm?.total ?? 0)) })
+        .catch(() => {})
+    }
     ;(async () => {
       setCalcLoading(true)
       setCalcError(null)
@@ -186,6 +200,25 @@ function VueConseiller({ contrat, profile, month, isManager }) {
   // les KPIs en conséquence.
   const isMandataire = contrat.type_contrat === 'MANDATAIRE' || contrat.type_contrat === 'GERANT'
 
+  // Projection fin de mois au prorata du rythme actuel. Uniquement pour le
+  // mois courant, et a partir du 5 pour eviter les extrapolations absurdes
+  // des tout premiers jours. Calcul purement client sur comm.total.
+  const maintenant = new Date()
+  const estMoisCourant = month === MONTHS[maintenant.getMonth()]
+  const jourDuMois = maintenant.getDate()
+  const joursDansMois = new Date(maintenant.getFullYear(), maintenant.getMonth() + 1, 0).getDate()
+  const projectionFinMois = estMoisCourant && jourDuMois >= 5 && comm.total > 0
+    ? (comm.total / jourDuMois) * joursDansMois
+    : null
+
+  // Delta variable vs mois precedent (les deux totaux sortent du meme moteur
+  // serveur, aucun changement d API necessaire)
+  const prevIdxMois = MONTHS.indexOf(month) - 1
+  const libelleMoisPrecedent = prevIdxMois >= 0 ? MONTHS[prevIdxMois].toLowerCase() : null
+  const deltaMoisPrecedent = totalMoisPrecedent != null && libelleMoisPrecedent
+    ? comm.total - totalMoisPrecedent
+    : null
+
   return (
     <div>
       {calcError && (
@@ -206,6 +239,11 @@ function VueConseiller({ contrat, profile, month, isManager }) {
               <div className="kpi-label">Commissions {month}</div>
               <div className="kpi-value">{fmtEur(comm.total)}</div>
               <div className="kpi-hint">{dealsMoisCount} dossier{dealsMoisCount !== 1 ? 's' : ''} signé{dealsMoisCount !== 1 ? 's' : ''}</div>
+              <LignesTendanceVariable
+                projection={projectionFinMois}
+                delta={deltaMoisPrecedent}
+                libelleMoisPrecedent={libelleMoisPrecedent}
+              />
             </div>
             <div className="kpi-card kpi-card-blue">
               <div className="kpi-label">À facturer ce mois</div>
@@ -224,6 +262,11 @@ function VueConseiller({ contrat, profile, month, isManager }) {
               <div className="kpi-label">Variable {month}</div>
               <div className="kpi-value">{fmtEur(comm.total)}</div>
               <div className="kpi-hint">{dealsMoisCount} dossier{dealsMoisCount !== 1 ? 's' : ''} signé{dealsMoisCount !== 1 ? 's' : ''}</div>
+              <LignesTendanceVariable
+                projection={projectionFinMois}
+                delta={deltaMoisPrecedent}
+                libelleMoisPrecedent={libelleMoisPrecedent}
+              />
             </div>
             <div className="kpi-card kpi-card-blue">
               <div className="kpi-label">Total brut estimé</div>
@@ -278,6 +321,29 @@ function VueConseiller({ contrat, profile, month, isManager }) {
       {/* Détail des deals du mois */}
       <SectionDetail comm={comm} month={month} />
     </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Lignes affichees sous le KPI Variable : projection fin de mois au
+// prorata et delta vs mois precedent. Rien ne s affiche tant que les
+// donnees ne sont pas la, le KPI existant reste identique.
+// ─────────────────────────────────────────────────────────────────────────
+function LignesTendanceVariable({ projection, delta, libelleMoisPrecedent }) {
+  if (projection == null && delta == null) return null
+  return (
+    <>
+      {projection != null && (
+        <div className="kpi-hint" style={{ marginTop: 4 }}>
+          Projection fin de mois : ~{fmtEur(projection)} <span style={{ opacity: 0.8 }}>au rythme actuel</span>
+        </div>
+      )}
+      {delta != null && (
+        <div style={{ marginTop: 4, fontSize: 12, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: delta >= 0 ? 'var(--signed)' : 'var(--danger, #C0392B)' }}>
+          {delta >= 0 ? '+' : '-'}{fmtEur(Math.abs(delta))} vs {libelleMoisPrecedent}
+        </div>
+      )}
+    </>
   )
 }
 
@@ -480,6 +546,35 @@ function VueManager({ month }) {
     return () => { alive = false }
   }, [month])
 
+  // Export CSV du tableau equipe pour la paie et le point mensuel direction.
+  // Meme generateur que l export MultiEquipement : echappement guillemets,
+  // separateur point virgule, BOM UTF-8 pour Excel.
+  function exportCsv() {
+    const cols = ['conseiller', 'matricule', 'type_contrat', 'brut_fixe', 'pp_realisee', 'pct_palier_pp', `variable_${month.toLowerCase()}`]
+    const data = lignes.map((l) => {
+      const palierPp = Number(l.contrat.palier_pp_mensuel || 0)
+      const pctPp = palierPp > 0 ? Math.min(100, (l.comm.ppRealisee / palierPp) * 100).toFixed(0) : ''
+      return [
+        l.contrat.full_name,
+        l.contrat.matricule || '',
+        LIBELLE_TYPE_CONTRAT[l.contrat.type_contrat] || l.contrat.type_contrat || '',
+        Number(l.contrat.salaire_brut_mensuel || 0),
+        Math.round(Number(l.comm.ppRealisee || 0)),
+        pctPp,
+        Number(l.comm.total || 0).toFixed(2),
+      ]
+    })
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
+    const csv = [cols, ...data].map((l) => l.map(esc).join(';')).join('\n')
+    const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `remuneration-equipe-${month.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(a.href)
+    toast.success(`${lignes.length} ligne${lignes.length !== 1 ? 's' : ''} exportée${lignes.length !== 1 ? 's' : ''}`)
+  }
+
   return (
     <div>
       {calcError && (
@@ -509,6 +604,17 @@ function VueManager({ month }) {
           <div className="kpi-value">{fmtEur(totals.total)}</div>
           <div className="kpi-hint">Fixe + variable {month}</div>
         </div>
+      </div>
+
+      {/* Bouton export au dessus du tableau equipe */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+        <button
+          className="btn btn-ghost btn-sm"
+          onClick={exportCsv}
+          disabled={calcLoading || lignes.length === 0}
+          title="Télécharge le tableau équipe en CSV (paie, point mensuel direction)">
+          📥 Export CSV
+        </button>
       </div>
 
       <div className="table-wrap">

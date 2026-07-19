@@ -161,7 +161,7 @@ function KpiCard({label, value, hint, accent, progressValue, delta}) {
   )
 }
 
-function ObjectiveModal({show, objective, onSave, onClose, weekNumber, year}) {
+function ObjectiveModal({show, objective, onSave, onClose, weekNumber, year, suggestion}) {
   const [tempObjective, setTempObjective] = useState(objective)
 
   useEffect(() => {
@@ -190,6 +190,33 @@ function ObjectiveModal({show, objective, onSave, onClose, weekNumber, year}) {
                 signatures_target: Number(e.target.value)
               })}
             />
+            {/* Suggestion basée sur la moyenne des dernières semaines,
+                un clic préremplit le champ, le manager reste décideur */}
+            {suggestion && (
+              <div style={{marginTop: '8px', fontSize: '12px', color: '#999'}}>
+                Moyenne {suggestion.semaines} dernière{suggestion.semaines > 1 ? 's' : ''} semaine{suggestion.semaines > 1 ? 's' : ''} : {suggestion.moyenne} signature{suggestion.moyenne > 1 ? 's' : ''}
+                {' '}
+                <button
+                  type="button"
+                  onClick={() => setTempObjective({
+                    ...tempObjective,
+                    signatures_target: suggestion.arrondi
+                  })}
+                  style={{
+                    border: 'none',
+                    background: 'none',
+                    color: '#C09B5A',
+                    fontWeight: 600,
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    padding: 0
+                  }}
+                >
+                  utiliser
+                </button>
+              </div>
+            )}
           </div>
           <div className="form-group">
             <label className="form-label">Objectif RDV cette semaine</label>
@@ -475,6 +502,22 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
     getWeeklyHistory(deals), [deals]
   )
 
+  // Suggestion d'objectif : moyenne des signatures sur les 4 dernières
+  // semaines terminées (la semaine en cours est exclue pour ne pas biaiser
+  // la moyenne avec une semaine partielle). Le manager reste décideur.
+  const suggestionObjectif = useMemo(() => {
+    const passees = weeklyHistory
+      .filter(w => w.weekKey !== currentWeekKey)
+      .slice(-4)
+    if (passees.length === 0) return null
+    const moyenne = passees.reduce((s, w) => s + w.signatures, 0) / passees.length
+    return {
+      semaines: passees.length,
+      moyenne: Math.round(moyenne * 10) / 10,
+      arrondi: Math.round(moyenne),
+    }
+  }, [weeklyHistory, currentWeekKey])
+
   // Statistiques produit pour tous les deals signés
   const productStats = useMemo(() => {
     const signedDeals = deals.filter(d => d.status === 'Signé')
@@ -692,6 +735,29 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
     toast.success('Export téléchargé')
   }
 
+  // Synthèse texte prête à coller dans le mail du lundi. Reprend les
+  // agrégats déjà calculés dans la vue, aucune requête supplémentaire.
+  function copierSynthese() {
+    const ecartSigs = totalCurrentSigs - totalPreviousSigs
+    const top = advisorRows.find(r => r.currentSigs > 0)
+    const lignesTxt = [
+      `Revue hebdo Entasis, semaine ${selectedBounds.weekNumber} · ${selectedBounds.year} (du ${mondayStr} au ${fridayStr})`,
+      `Signatures : ${totalCurrentSigs} (${ecartSigs >= 0 ? '+' : ''}${ecartSigs} vs S-1)`,
+      `PP annualisée signée : ${euro(totalCurrentPp)}`,
+      `PU signée : ${euro(totalCurrentPu)}`,
+      `Dossiers signés sur la semaine : ${getSignedDealsInRange(deals, selectedBounds.monday, selectedBounds.sunday).length}`,
+    ]
+    if (top) {
+      lignesTxt.push(`Top conseiller : ${top.advisor.full_name || top.advisor.advisor_code} (${top.currentSigs} signature${top.currentSigs > 1 ? 's' : ''}, ${euro(top.currentPp)} de PP)`)
+    }
+    if (weekObjective.signatures_target > 0) {
+      lignesTxt.push(`Objectif : ${totalCurrentSigs}/${weekObjective.signatures_target} signatures (${Math.round(objectiveProgress)} %)`)
+    }
+    navigator.clipboard?.writeText(lignesTxt.join('\n'))
+      .then(() => toast.success('Synthèse copiée, prête à coller'))
+      .catch(() => toast.error('Copie impossible sur ce navigateur'))
+  }
+
   // Formatage des dates
   // Calcul correct des dates de la semaine pour selectedWeek
   const selectedFriday = new Date(selectedBounds.monday)
@@ -771,6 +837,13 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
             disabled={loadingObjective}
           >
             ⚙️ Objectifs
+          </button>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={copierSynthese}
+            title="Copie un résumé texte de la semaine (signatures, PP, PU, top conseiller) pour le mail du lundi"
+          >
+            📋 Copier la synthèse
           </button>
           <button
             className="btn btn-ghost btn-sm"
@@ -1439,6 +1512,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
         onClose={() => setShowObjectiveModal(false)}
         weekNumber={selectedBounds.weekNumber}
         year={selectedBounds.year}
+        suggestion={suggestionObjectif}
       />
     </div>
   )

@@ -12,6 +12,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { useEffect, useMemo, useState } from 'react'
+import { toast } from 'react-hot-toast'
 import { leadroomAdmin } from '../lib/leadroom-api'
 import {
   advisorMetrics,
@@ -200,6 +201,37 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
     [rows]
   )
 
+  // Synthèse du mois copiable pour le mail direction. Reprend les agrégats
+  // déjà calculés dans la vue (cabinet, objectifs, top, à booster), aucune
+  // requête supplémentaire.
+  function copierSyntheseMois() {
+    const lignesTxt = [
+      `Synthèse cabinet Entasis · ${month}`,
+      `PP signée : ${fmtEur(cabinet.ppSigned)}${targets.pp_target > 0 ? ` / objectif ${fmtEur(targets.pp_target)} (${pctNum(cabinet.ppSigned, targets.pp_target)} %)` : ''}`,
+      `PU signée : ${fmtEur(cabinet.puSigned)}${targets.pu_target > 0 ? ` / objectif ${fmtEur(targets.pu_target)} (${pctNum(cabinet.puSigned, targets.pu_target)} %)` : ''}`,
+      `Dossiers signés : ${cabinet.totalSigned} (${cabinet.totalPipeline} en pipeline)`,
+      `Conseillers actifs : ${activeAdvisors.length}, dont ${rows.filter(r => r.m.signedCount > 0).length} ont signé ce mois`,
+    ]
+    if (topPerformeurs.length > 0) {
+      lignesTxt.push('', 'Top performeurs :')
+      topPerformeurs.forEach(r => {
+        lignesTxt.push(`  ${r.profile.full_name || r.profile.advisor_code} : ${r.m.signedCount} signature${r.m.signedCount > 1 ? 's' : ''}, ${fmtEur(r.m.ppSigned)} de PP`)
+      })
+    }
+    if (aBooster.length > 0) {
+      lignesTxt.push('', 'À booster :')
+      aBooster.forEach(r => {
+        const ecart = r.prev
+          ? `${r.dSigned >= 0 ? '+' : ''}${r.dSigned} signature${Math.abs(r.dSigned) > 1 ? 's' : ''} vs M-1`
+          : 'pas de données M-1'
+        lignesTxt.push(`  ${r.profile.full_name || r.profile.advisor_code} : ${r.m.signedCount} signature${r.m.signedCount > 1 ? 's' : ''} ce mois, ${ecart}`)
+      })
+    }
+    navigator.clipboard?.writeText(lignesTxt.join('\n'))
+      .then(() => toast.success('Synthèse du mois copiée, prête à coller'))
+      .catch(() => toast.error('Copie impossible sur ce navigateur'))
+  }
+
   async function submitObj(e) {
     e.preventDefault()
     if (!canEditObjectifs) return
@@ -251,6 +283,12 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
             Vue d'ensemble équipe : performances individuelles, top, retardataires.
           </div>
         </div>
+        <button
+          className="btn btn-ghost btn-sm"
+          onClick={copierSyntheseMois}
+          title="Copie un résumé texte du mois (PP/PU vs objectif, top, à booster) pour le mail direction">
+          📋 Copier la synthèse du mois
+        </button>
       </div>
 
       {/* ─── KPIs globaux cabinet ──────────────────────────────────── */}

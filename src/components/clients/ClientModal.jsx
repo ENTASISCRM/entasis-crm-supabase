@@ -1,6 +1,20 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
 
+// Normalise un numero francais a la perte de focus du champ : espaces,
+// points, tirets et parentheses retires, prefixe international 33 ramene
+// a 0, puis regroupement par paires de chiffres. Un numero non reconnu est
+// laisse tel quel, aucun blocage. Fiabilise les liens tel de la fiche
+// client et le rapprochement Lead Room qui compare les numeros.
+function normaliserTelephone(brut) {
+  if (!brut) return brut
+  let t = String(brut).trim().replace(/[\s.()-]/g, '')
+  if (t.startsWith('+33')) t = '0' + t.slice(3)
+  else if (t.startsWith('0033')) t = '0' + t.slice(4)
+  if (/^0\d{9}$/.test(t)) return t.replace(/(\d{2})(?=\d)/g, '$1 ')
+  return String(brut).trim()
+}
+
 export default function ClientModal({ open, client, onClose, onSave, supabase, profile }) {
   const [form, setForm] = useState({
     nom: '',
@@ -75,6 +89,9 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
   }, [client, profile])
 
   const set = (key, value) => setForm(prev => ({ ...prev, [key]: value }))
+
+  // Signal doux, sans blocage : email saisi mais sans arobase
+  const emailSuspect = !!form.email?.trim() && !form.email.includes('@')
 
   const toggleObjectif = (objectif) => {
     if (form.objectifs.includes(objectif)) {
@@ -203,7 +220,13 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
                   value={form.email}
                   onChange={e => set('email', e.target.value)}
                   placeholder="jean.dupont@email.com"
+                  style={emailSuspect ? { borderColor: '#D97706' } : undefined}
                 />
+                {emailSuspect && (
+                  <div style={{ fontSize: '12px', color: '#B45309', marginTop: '4px' }}>
+                    Adresse sans @, vérifiez la saisie
+                  </div>
+                )}
               </div>
               <div className="form-group">
                 <label className="form-label">Téléphone</label>
@@ -211,6 +234,7 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
                   className="form-input"
                   value={form.telephone}
                   onChange={e => set('telephone', e.target.value)}
+                  onBlur={e => set('telephone', normaliserTelephone(e.target.value))}
                   placeholder="06 12 34 56 78"
                 />
               </div>

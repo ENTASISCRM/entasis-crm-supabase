@@ -13,6 +13,7 @@ import * as objectifsService from './services/objectifs'
 import * as conseillerContratsService from './services/conseillerContrats'
 import * as dossiersImmoService from './services/dossiersImmo'
 import MissionDuMois from './components/MissionDuMois'
+import CommandPalette from './components/CommandPalette'
 // Onglets lourds charges a la demande (code-splitting via React.lazy) : sortis du
 // bundle principal pour alleger le JS au login. jspdf/html2canvas (OutilsCGP) et
 // chart.js (ManagementView) ne se telechargent que quand l onglet s ouvre.
@@ -97,6 +98,23 @@ function ageSeverity(days,status){
   if(days>60)return 'critical'
   if(days>30)return 'warn'
   return 'ok'
+}
+
+// Brouillon « RDV calé » non encore travaillé (produit Autre, 0 EUR), condition
+// partagée entre le compteur de DealsTable et le badge ambre du kanban.
+function isDealACompleter(d){
+  return d.product==='Autre'&&!(d.pp_m>0)&&d.status!=='Signé'&&d.status!=='Annulé'
+}
+
+// En tête de colonne triable, même motif que SortableTh de ManagementView.
+function SortableTh({label,col,sortKey,sortDir,onSort,align}){
+  const active=sortKey===col
+  return (
+    <th onClick={()=>onSort(col)} style={{cursor:'pointer',userSelect:'none',textAlign:align||'left'}} title={`Trier par ${label}`}>
+      {label}
+      <span style={{marginLeft:4,color:active?'var(--gold)':'var(--t3)',fontSize:10}}>{active?(sortDir==='asc'?'↑':'↓'):'⇅'}</span>
+    </th>
+  )
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -854,11 +872,20 @@ function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu}){
       )}
       <div className="topbar-title">{PAGE_TITLES[activeTab]||'CRM'}</div>
       <div className="topbar-actions">
-        {activeTab!=='leads'&&activeTab!=='prospection'&&(
-          <select className="month-select" value={month} onChange={e=>setMonth(e.target.value)}>
-            {MONTHS.map(m=><option key={m} value={m}>{m}</option>)}
-          </select>
-        )}
+        {activeTab!=='leads'&&activeTab!=='prospection'&&(()=>{
+          // Chevrons de navigation mois : action la plus fréquente du CRM,
+          // évite le double clic + scroll dans le select. Bornés aux extrémités.
+          const mi=MONTHS.indexOf(month)
+          return (
+            <div style={{display:'flex',alignItems:'center',gap:4}}>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setMonth(MONTHS[mi-1])} disabled={mi<=0} title="Mois précédent" aria-label="Mois précédent" style={{padding:'4px 9px',fontSize:15,lineHeight:1}}>‹</button>
+              <select className="month-select" value={month} onChange={e=>setMonth(e.target.value)}>
+                {MONTHS.map(m=><option key={m} value={m}>{m}</option>)}
+              </select>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setMonth(MONTHS[mi+1])} disabled={mi<0||mi>=MONTHS.length-1} title="Mois suivant" aria-label="Mois suivant" style={{padding:'4px 9px',fontSize:15,lineHeight:1}}>›</button>
+            </div>
+          )
+        })()}
         <button className="btn btn-ghost btn-sm" onClick={onRefresh}><Icon.Refresh/></button>
         {activeTab!=='leads'&&activeTab!=='prospection'&&<button className="btn btn-gold" onClick={onNewDeal}><Icon.Plus/> Nouveau dossier</button>}
       </div>
@@ -2059,13 +2086,25 @@ const PIPELINE_COLS=[
 
 function PipelineBoard({deals,month,profile,onEdit}){
   const [search,setSearch]=useState('')
+  const [advisorF,setAdvisorF]=useState('Tous')
   const isManager=profile?.role==='manager'
+  // Filtre conseiller (manager seulement) : codes présents sur les dossiers du
+  // mois affiché, principal et co conseiller confondus.
+  const advisorCodes=useMemo(()=>{
+    if(!isManager)return[]
+    const set=new Set()
+    deals.forEach(d=>{if(d.month!==month)return;if(d.advisor_code)set.add(d.advisor_code);if(d.co_advisor_code)set.add(d.co_advisor_code)})
+    return[...set].sort()
+  },[deals,month,isManager])
   const visible=useMemo(()=>{
     let list=deals.filter(d=>d.month===month)
     if(!isManager&&profile?.advisor_code)list=list.filter(d=>dealMatchesAdvisor(d,profile.advisor_code))
-    if(search)list=list.filter(d=>`${getClientName(d)} ${d.product} ${d.advisor_code}`.toLowerCase().includes(search.toLowerCase()))
+    if(isManager&&advisorF!=='Tous')list=list.filter(d=>dealMatchesAdvisor(d,advisorF))
+    // La recherche couvre aussi téléphone et email : retrouver un dossier en
+    // tapant les derniers chiffres du numéro qui appelle.
+    if(search)list=list.filter(d=>`${getClientName(d)} ${d.product} ${d.advisor_code} ${d.client_email||''} ${d.client_phone||''}`.toLowerCase().includes(search.toLowerCase()))
     return list
-  },[deals,month,profile,isManager,search])
+  },[deals,month,profile,isManager,search,advisorF])
   const byStatus=useMemo(()=>{
     const m={}
     PIPELINE_COLS.forEach(c=>m[c.id]=[])
@@ -2074,12 +2113,35 @@ function PipelineBoard({deals,month,profile,onEdit}){
   },[visible])
   const ppByStatus=useMemo(()=>{const m={};PIPELINE_COLS.forEach(c=>m[c.id]=sumAnnualPp(byStatus[c.id]||[]));return m},[byStatus])
   const puByStatus=useMemo(()=>{const m={};PIPELINE_COLS.forEach(c=>m[c.id]=sumPu(byStatus[c.id]||[]));return m},[byStatus])
+  // Totaux du mois affiché, toutes colonnes hors Annulé : simple réduction
+  // des totaux déjà calculés par colonne.
+  const ppTotalMois=PIPELINE_COLS.filter(c=>c.id!=='Annulé').reduce((s,c)=>s+(ppByStatus[c.id]||0),0)
+  const puTotalMois=PIPELINE_COLS.filter(c=>c.id!=='Annulé').reduce((s,c)=>s+(puByStatus[c.id]||0),0)
 
   return (
     <div>
       <div className="section-header mb-16">
-        <div><div className="section-kicker">Vue kanban</div><div className="section-title">Pipeline commercial</div><div className="section-sub">{visible.length} dossiers · {MONTHS[MONTHS.indexOf(month)]}</div></div>
-        <input className="search-input" style={{maxWidth:260}} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher un dossier…"/>
+        <div>
+          <div className="section-kicker">Vue kanban</div><div className="section-title">Pipeline commercial</div>
+          <div className="section-sub" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+            <span>{visible.length} dossiers · {MONTHS[MONTHS.indexOf(month)]}</span>
+            {ppTotalMois>0&&(
+              <span style={{fontSize:11,fontWeight:700,padding:'2px 8px',borderRadius:4,background:'rgba(201,169,97,0.15)',color:'var(--gold-dk, #A6843F)',fontVariantNumeric:'tabular-nums'}}>PP totale {euro(ppTotalMois)}</span>
+            )}
+            {puTotalMois>0&&(
+              <span style={{fontSize:11,fontWeight:700,padding:'2px 8px',borderRadius:4,background:'rgba(0,113,227,0.12)',color:'#0071E3',fontVariantNumeric:'tabular-nums'}}>PU totale {euro(puTotalMois)}</span>
+            )}
+          </div>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+          {isManager&&(
+            <select className="filter-select" value={advisorF} onChange={e=>setAdvisorF(e.target.value)}>
+              <option value="Tous">Tous les conseillers</option>
+              {advisorCodes.map(c=><option key={c} value={c}>{c}</option>)}
+            </select>
+          )}
+          <input className="search-input" data-global-search style={{maxWidth:260}} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher un dossier…"/>
+        </div>
       </div>
       <StalePipelineAlert deals={visible} onEdit={onEdit}/>
       <div className="pipeline-board">
@@ -2112,6 +2174,14 @@ function PipelineBoard({deals,month,profile,onEdit}){
                   <div key={deal.id} className="pipeline-deal-card" onClick={()=>onEdit(deal)}>
                     <div className="pipeline-deal-client">{getClientName(deal)}</div>
                     <div className="pipeline-deal-product">{deal.product} · {deal.company||'—'}</div>
+                    {/* Brouillon créé depuis un RDV (produit Autre, 0 EUR) : déjà
+                        compté dans Dossiers mais invisible ici, badge ambre pour
+                        que le conseiller le qualifie au lieu de le laisser dormir. */}
+                    {isDealACompleter(deal)&&(
+                      <div style={{display:'inline-flex',alignItems:'center',gap:4,marginTop:4,padding:'2px 8px',borderRadius:6,background:'rgba(180,83,9,0.10)',border:'1px solid rgba(180,83,9,0.28)',fontSize:10,fontWeight:700,color:'#B45309'}}>
+                        ✏️ À compléter
+                      </div>
+                    )}
                     {/* Marqueur d'action de relance (mail 1 clic : Traité / RDV pris /
                         À relancer). Remontée Gianni 09/07 : le clic ne laissait aucune
                         trace visible sur le dossier. */}
@@ -2156,9 +2226,34 @@ function PipelineBoard({deals,month,profile,onEdit}){
                         </div>
                       )}
                     </div>
+                    {/* Engagement de date : la date de signature prévue est obligatoire
+                        pour En cours / Prévu mais n'était jamais montrée sur le kanban.
+                        Rouge si dépassée. Complète le badge d'âge sans le dupliquer. */}
+                    {(deal.status==='En cours'||deal.status==='Prévu')&&deal.date_expected&&(()=>{
+                      const iso=String(deal.date_expected).slice(0,10)
+                      const overdue=iso<new Date().toISOString().slice(0,10)
+                      const dt=new Date(iso+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})
+                      return (
+                        <div style={{display:'inline-flex',alignItems:'center',gap:4,marginBottom:6,padding:'2px 7px',borderRadius:5,fontSize:10,fontWeight:700,fontVariantNumeric:'tabular-nums',
+                          background:overdue?'var(--cancelled-bg)':'var(--bg)',
+                          border:`1px solid ${overdue?'var(--cancelled-bd)':'var(--bd)'}`,
+                          color:overdue?'var(--cancelled)':'var(--t3)'}}>
+                          <Icon.Clock/> {overdue?'prévu le '+dt+' ⚠':'prévu le '+dt}
+                        </div>
+                      )
+                    })()}
                     <div className="pipeline-deal-footer">
                       <span className={PRIORITY_CLASS[deal.priority]||'badge'}>{deal.priority}</span>
-                      <div style={{display:'flex',alignItems:'center',gap:6}}><AgeBadge deal={deal} compact/><span style={{fontSize:11,color:'var(--t3)'}}>{deal.advisor_code}</span></div>
+                      <div style={{display:'flex',alignItems:'center',gap:6}}>
+                        {/* Contact client en 1 clic sans ouvrir la modale (stopPropagation). */}
+                        {deal.client_phone&&(
+                          <a href={`tel:${deal.client_phone}`} onClick={e=>e.stopPropagation()} title={`Appeler ${deal.client_phone}`} style={{display:'inline-flex',alignItems:'center',color:'var(--t3)'}}><Icon.Phone/></a>
+                        )}
+                        {deal.client_email&&(
+                          <a href={`mailto:${deal.client_email}`} onClick={e=>e.stopPropagation()} title={`Écrire à ${deal.client_email}`} style={{display:'inline-flex',alignItems:'center',color:'var(--t3)'}}><Icon.Mail/></a>
+                        )}
+                        <AgeBadge deal={deal} compact/><span style={{fontSize:11,color:'var(--t3)'}}>{deal.advisor_code}</span>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -2182,7 +2277,9 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
   const [priorityF,setPriorityF]=useState('Tous')
   const [allMonths,setAllMonths]=useState(false)
   const [expandedGroups,setExpandedGroups]=useState(new Set())
-  const filtered=useMemo(()=>deals.filter(d=>allMonths||d.month===month).filter(d=>statusF==='Tous'||d.status===statusF).filter(d=>productF==='Tous'||d.product===productF).filter(d=>priorityF==='Tous'||d.priority===priorityF).filter(d=>`${getClientName(d)} ${d.product} ${d.company} ${d.advisor_code} ${d.co_advisor_code||''}`.toLowerCase().includes(search.toLowerCase())),[deals,month,allMonths,search,statusF,productF,priorityF])
+  // La recherche couvre aussi téléphone et email : retrouver un dossier en
+  // tapant les derniers chiffres du numéro qui appelle.
+  const filtered=useMemo(()=>deals.filter(d=>allMonths||d.month===month).filter(d=>statusF==='Tous'||d.status===statusF).filter(d=>productF==='Tous'||d.product===productF).filter(d=>priorityF==='Tous'||d.priority===priorityF).filter(d=>`${getClientName(d)} ${d.product} ${d.company} ${d.advisor_code} ${d.co_advisor_code||''} ${d.client_email||''} ${d.client_phone||''}`.toLowerCase().includes(search.toLowerCase())),[deals,month,allMonths,search,statusF,productF,priorityF])
 
   // Fonction helper pour générer clé de regroupement
   const groupKey = (deal) => {
@@ -2246,15 +2343,31 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
   const puTotal=sumPu(filtered.filter(d=>d.status==='Signé'))
   // Brouillons "RDV calé" non encore travailles (produit Autre + 0 EUR), a
   // distinguer des dossiers reellement travailles, pour ne pas gonfler le compteur.
-  const aCompleter = filtered.filter(d => d.product==='Autre' && !(d.pp_m>0) && d.status!=='Signé' && d.status!=='Annulé').length
+  // Condition factorisee dans isDealACompleter, partagee avec le badge kanban.
+  const aCompleter = filtered.filter(isDealACompleter).length
   const travailles = filtered.length - aCompleter
+
+  // Tri cliquable sur PP annualisée, PU et Signé le (même motif que ManagementView).
+  // Sans tri actif, l'ordre existant des groupes est conservé.
+  const [sort,setSort]=useState({col:null,dir:'desc'})
+  const onSort=(col)=>setSort(p=>p.col===col?{col,dir:p.dir==='asc'?'desc':'asc'}:{col,dir:'desc'})
+  const sortedGroups=useMemo(()=>{
+    if(!sort.col)return groupedDeals
+    const val=g=>sort.col==='pp'?(g.totalPp||0):sort.col==='pu'?(g.totalPu||0):(g.latestSignedDate||'')
+    return [...groupedDeals].sort((a,b)=>{
+      const va=val(a),vb=val(b)
+      if(va<vb)return sort.dir==='asc'?-1:1
+      if(va>vb)return sort.dir==='asc'?1:-1
+      return 0
+    })
+  },[groupedDeals,sort])
 
   return (
     <div>
       <div className="section-header"><div><div className="section-kicker">Référentiel</div><div className="section-title">Dossiers clients</div><div className="section-sub">{groupedDeals.length} client{groupedDeals.length!==1?'s':''} · {travailles} dossier{travailles!==1?'s':''} travaillé{travailles!==1?'s':''}{aCompleter>0?` · ${aCompleter} RDV calé${aCompleter!==1?'s':''} à compléter`:''} · PP signée {euro(ppTotal)} · PU signée {euro(puTotal)}</div></div></div>
       <div className="card card-p mb-16">
         <div className="table-toolbar">
-          <input className="search-input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Recherche client, produit, conseiller…"/>
+          <input className="search-input" data-global-search value={search} onChange={e=>setSearch(e.target.value)} placeholder="Recherche client, produit, conseiller…"/>
           <select className="filter-select" value={statusF} onChange={e=>setStatusF(e.target.value)}><option value="Tous">Tous statuts</option>{STATUS_OPTIONS.map(s=><option key={s} value={s}>{statusLabel(s)}</option>)}</select>
           <select className="filter-select" value={productF} onChange={e=>setProductF(e.target.value)}><option value="Tous">Tous produits</option>{PRODUCTS.map(p=><option key={p}>{p}</option>)}</select>
           <select className="filter-select" value={priorityF} onChange={e=>setPriorityF(e.target.value)}><option value="Tous">Toutes priorités</option>{PRIORITY_OPTIONS.map(p=><option key={p}>{p}</option>)}</select>
@@ -2268,9 +2381,9 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
       <div className="table-wrap">
         {groupedDeals.length>0?(
           <table className="data-table">
-            <thead><tr><th>Client</th><th>Produits</th><th>PP annualisée</th><th>PU</th><th>Conseiller</th><th>Signé le</th><th>Statut global</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Client</th><th>Produits</th><SortableTh label="PP annualisée" col="pp" sortKey={sort.col} sortDir={sort.dir} onSort={onSort}/><SortableTh label="PU" col="pu" sortKey={sort.col} sortDir={sort.dir} onSort={onSort}/><th>Conseiller</th><SortableTh label="Signé le" col="signed" sortKey={sort.col} sortDir={sort.dir} onSort={onSort}/><th>Statut global</th><th>Actions</th></tr></thead>
             <tbody>
-              {groupedDeals.map(group=>{
+              {sortedGroups.map(group=>{
                 const currentGroupKey = groupKey(group.deals[0])
                 const isExpanded = expandedGroups.has(currentGroupKey)
                 return (
@@ -2480,7 +2593,20 @@ function RelanceModal({open,onClose,deals,defaultDate}){
           <div className="form-group"><label className="form-label">Lier à un dossier (optionnel)</label><select className="form-select" value={dealId} onChange={e=>setDealId(e.target.value)}><option value="">— Aucun dossier lié —</option>{activePipeline.map(d=><option key={d.id} value={d.id}>{d.client} · {d.product} · {d.advisor_code}</option>)}</select></div>
           <div className="form-group"><label className="form-label">Titre</label><input className="form-input" value={title} onChange={e=>setTitle(e.target.value)} placeholder="Ex. Relance signature PER — Dupont"/></div>
           <div className="form-row form-row-2">
-            <div className="form-group"><label className="form-label">Date</label><input className="form-input" type="date" value={date} onChange={e=>setDate(e.target.value)}/></div>
+            <div className="form-group">
+              <label className="form-label">Date</label>
+              <input className="form-input" type="date" value={date} onChange={e=>setDate(e.target.value)}/>
+              {/* Raccourcis du quotidien : « je le rappelle demain / lundi », pose
+                  la date a aujourd hui plus N jours en un clic. */}
+              <div style={{display:'flex',gap:6,marginTop:6}}>
+                {[1,3,7].map(n=>(
+                  <button key={n} type="button" className="btn btn-outline btn-sm" style={{padding:'3px 10px',fontSize:12}}
+                    onClick={()=>{const d=new Date();d.setDate(d.getDate()+n);setDate(d.toISOString().slice(0,10))}}>
+                    +{n}j
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="form-group"><label className="form-label">Heure</label><input className="form-input" type="time" value={time} onChange={e=>setTime(e.target.value)}/></div>
           </div>
           <div className="form-group"><label className="form-label">Durée</label><select className="form-select" value={duration} onChange={e=>setDuration(e.target.value)}>{['15','30','45','60','90','120'].map(d=><option key={d} value={d}>{d} min</option>)}</select></div>
@@ -4542,6 +4668,7 @@ export default function App(){
   const [dossiersImmoCount,setDossiersImmoCount]=useState(0)
   const [editorialPending,setEditorialPending]=useState({count:0,nextDeadline:null})
   const [reloadCallback,setReloadCallback]=useState(null) // Callback après sauvegarde deal
+  const [paletteOpen,setPaletteOpen]=useState(false) // Palette de commandes Ctrl+K
 
   // Anti race condition : empêche les appels parallèles à loadAll() depuis
   // getSession() et onAuthStateChange au mount.
@@ -4573,6 +4700,35 @@ export default function App(){
         }
       })
   }, [profile, activeTab])
+
+  // Raccourcis clavier globaux : Ctrl/Cmd+K ouvre la palette, « / » focus la
+  // recherche de la vue active (input marque data-global-search), « n » ouvre
+  // la modale Nouveau dossier. Garde systematique si un champ a le focus.
+  useEffect(()=>{
+    function onKey(e){
+      if(!session)return
+      const tag=(e.target?.tagName||'').toLowerCase()
+      const typing=tag==='input'||tag==='textarea'||tag==='select'||e.target?.isContentEditable
+      if((e.ctrlKey||e.metaKey)&&!e.altKey&&e.key.toLowerCase()==='k'){
+        e.preventDefault()
+        setPaletteOpen(o=>!o)
+        return
+      }
+      if(typing||e.ctrlKey||e.metaKey||e.altKey||modalOpen||paletteOpen)return
+      if(e.key==='/'){
+        const el=document.querySelector('[data-global-search]')
+        if(el){e.preventDefault();el.focus()}
+        return
+      }
+      if(e.key==='n'&&activeTab!=='leads'&&activeTab!=='prospection'){
+        e.preventDefault()
+        setEditingDeal(emptyDeal(profile?.advisor_code))
+        setModalOpen(true)
+      }
+    }
+    window.addEventListener('keydown',onKey)
+    return()=>window.removeEventListener('keydown',onKey)
+  },[session,modalOpen,paletteOpen,activeTab,profile])
 
   const fetchProspects=()=>prospectsService.listAll().then(({ list, aContacter })=>{
     setProspects(list)
@@ -5154,6 +5310,16 @@ export default function App(){
         </div>
       </div>
 
+      <CommandPalette
+        open={paletteOpen}
+        onClose={()=>setPaletteOpen(false)}
+        deals={deals}
+        pages={PAGE_TITLES}
+        isManager={isManager}
+        onOpenDeal={(d)=>{setPaletteOpen(false);startEdit(d)}}
+        onOpenClient={(id)=>{setPaletteOpen(false);setSelectedClientId(id);setActiveTab('clients')}}
+        onGoTab={(t)=>{setPaletteOpen(false);setActiveTab(t)}}
+      />
       <DealModal
         open={modalOpen}
         initialDeal={editingDeal}

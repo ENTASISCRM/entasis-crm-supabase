@@ -24,6 +24,8 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState('Tous') // Tous | Mes clients | Par statut
+  const [statusFilter, setStatusFilter] = useState('Tous') // filtre sur le statut global calcule
+  const [sort, setSort] = useState({ col: null, dir: 'desc' }) // tri colonnes, null = ordre de creation
   const [newClientModalOpen, setNewClientModalOpen] = useState(false)
 
   const isManager = profile?.role === 'manager'
@@ -123,15 +125,46 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
     return filtered
   }, [clients, search, filterType, isManager, profile])
 
-  // Enrichir les clients avec métriques calculées
+  // Enrichir les clients avec métriques calculées, puis appliquer le filtre
+  // sur le statut global (Sans deal correspond a la valeur Aucun deal)
   const enrichedClients = useMemo(() => {
-    return filteredClients.map(client => ({
+    const enriched = filteredClients.map(client => ({
       ...client,
       globalStatus: getGlobalStatus(client.deals),
       caTotal: getClientCA(client.deals),
       hasImmo: (client.dossiers_immo || []).length > 0
     }))
-  }, [filteredClients])
+    if (statusFilter === 'Tous') return enriched
+    const cible = statusFilter === 'Sans deal' ? 'Aucun deal' : statusFilter
+    return enriched.filter(c => c.globalStatus === cible)
+  }, [filteredClients, statusFilter])
+
+  // Tri cliquable des colonnes Client, Produits et CA total. Sans colonne
+  // choisie on garde l ordre par date de creation renvoye par la requete.
+  const sortedClients = useMemo(() => {
+    if (!sort.col) return enrichedClients
+    const dir = sort.dir === 'asc' ? 1 : -1
+    return [...enrichedClients].sort((a, b) => {
+      if (sort.col === 'client') {
+        const na = `${a.nom || ''} ${a.prenom || ''}`.trim().toLowerCase()
+        const nb = `${b.nom || ''} ${b.prenom || ''}`.trim().toLowerCase()
+        return na.localeCompare(nb, 'fr') * dir
+      }
+      if (sort.col === 'produits') return ((a.deals || []).length - (b.deals || []).length) * dir
+      if (sort.col === 'ca') return ((a.caTotal || 0) - (b.caTotal || 0)) * dir
+      return 0
+    })
+  }, [enrichedClients, sort])
+
+  // Premier clic : croissant pour le nom, decroissant pour les valeurs.
+  // Second clic sur la meme colonne : sens inverse.
+  const toggleSort = (col) => {
+    setSort(prev => prev.col === col
+      ? { col, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+      : { col, dir: col === 'client' ? 'asc' : 'desc' })
+  }
+
+  const sortArrow = (col) => sort.col === col ? (sort.dir === 'asc' ? ' ▲' : ' ▼') : ''
 
   const handleClientCreated = (newClient) => {
     setClients(prev => [newClient, ...prev])
@@ -193,6 +226,19 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
           <option value="Tous">Tous les clients</option>
           {!isManager && <option value="Mes clients">Mes clients</option>}
         </select>
+        <select
+          className="form-input"
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}
+          style={{ width: 'auto', minWidth: '150px' }}
+          title="Filtrer par statut global"
+        >
+          <option value="Tous">Tous les statuts</option>
+          <option value="Signé">Signé</option>
+          <option value="En cours">En cours</option>
+          <option value="Prévu">{statusLabel('Prévu')}</option>
+          <option value="Sans deal">Sans deal</option>
+        </select>
       </div>
 
       {/* Tableau des clients */}
@@ -200,15 +246,15 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
         <div className="card">
           <div className="card-body" style={{ textAlign: 'center', padding: '60px' }}>
             <div style={{ fontSize: '18px', color: 'var(--t2)', marginBottom: '16px' }}>
-              {search ? 'Aucun client trouvé' : 'Aucun client'}
+              {(search || statusFilter !== 'Tous') ? 'Aucun client trouvé' : 'Aucun client'}
             </div>
             <div style={{ color: 'var(--t3)', marginBottom: '24px' }}>
-              {search
-                ? 'Essayez de modifier votre recherche'
+              {(search || statusFilter !== 'Tous')
+                ? 'Essayez de modifier votre recherche ou vos filtres'
                 : 'Commencez par créer votre premier client'
               }
             </div>
-            {!search && (
+            {!search && statusFilter === 'Tous' && (
               <button
                 className="btn btn-primary"
                 onClick={() => setNewClientModalOpen(true)}
@@ -224,16 +270,28 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
             <table className="table" style={{ width: '100%' }}>
               <thead>
                 <tr style={{ backgroundColor: '#F5F2EC' }}>
-                  <th style={{ fontWeight: '600', width: '35%' }}>Client</th>
+                  <th
+                    style={{ fontWeight: '600', width: '35%', cursor: 'pointer', userSelect: 'none' }}
+                    onClick={() => toggleSort('client')}
+                    title="Trier par nom"
+                  >Client{sortArrow('client')}</th>
                   <th style={{ fontWeight: '600', width: '15%' }}>Conseiller</th>
-                  <th style={{ fontWeight: '600', width: '10%' }}>Produits</th>
+                  <th
+                    style={{ fontWeight: '600', width: '10%', cursor: 'pointer', userSelect: 'none' }}
+                    onClick={() => toggleSort('produits')}
+                    title="Trier par nombre de produits"
+                  >Produits{sortArrow('produits')}</th>
                   <th style={{ fontWeight: '600', width: '15%' }}>Statut global</th>
-                  <th style={{ fontWeight: '600', width: '15%' }}>CA total</th>
+                  <th
+                    style={{ fontWeight: '600', width: '15%', cursor: 'pointer', userSelect: 'none' }}
+                    onClick={() => toggleSort('ca')}
+                    title="Trier par CA total"
+                  >CA total{sortArrow('ca')}</th>
                   <th style={{ fontWeight: '600', width: '10%' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {enrichedClients.map(client => (
+                {sortedClients.map(client => (
                   <tr
                     key={client.id}
                     onClick={() => onSelectClient(client.id)}
