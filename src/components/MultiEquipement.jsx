@@ -25,12 +25,14 @@ import toast from 'react-hot-toast'
 import {
   listEquipment, listFamilies, upsertDeclare, removeDeclare,
   listDeclaresForClient, listSignedDealsForClient, getSettings, saveSettings,
+  getClientContact,
 } from '../services/equipment'
 import { listMissions, upsertMission, reconcileGagnees } from '../services/missions'
 import {
   suggestionPour, ARGUMENTAIRES, estimationCollecte, baseMontant, REGLES,
   RAISONS_REPORT, ECHEANCES_REPORT,
 } from '../config/multiEquipementRules'
+import { genererMail, genererRecommandation, CABINET } from '../config/mailsProduits'
 
 const fmtEur = (v) =>
   Number(v || 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
@@ -70,10 +72,11 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
   const [missions, setMissions] = useState([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
-  const [vue, setVue] = useState('missions')       // missions | reports | matrice
+  const [vue, setVue] = useState('matrice')        // matrice (defaut) | missions | reports
   const [chip, setChip] = useState('a_attaquer')   // filtre d etat de la liste
   const [campSeul, setCampSeul] = useState(false)  // ne montrer que la campagne
   const [reportPour, setReportPour] = useState(null) // mission ouverte dans la modale
+  const [proposerPour, setProposerPour] = useState(null) // { client, preset } de la modale Proposer
   const [editCamp, setEditCamp] = useState(false)
 
   async function reload() {
@@ -249,6 +252,25 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
       if (onCreateDeal) onCreateDeal(mi.client)
     } catch (e) { toast.error(e.message || 'Échec du lancement de la mission') }
   }
+  // Depuis la modale Proposer : marque la mission en cours (sans ouvrir le
+  // dossier), pour que le suivi reflete l envoi du mail. Silencieux : le mail
+  // prime, le suivi est un bonus.
+  async function marquerPropose(client, famille) {
+    try {
+      await upsertMission({
+        client_id: client.client_id,
+        famille,
+        patch: {
+          statut: 'en_cours',
+          advisor_code: profile?.advisor_code || client.advisor_code || null,
+          montant_estime: baseMontant(client, famille).montant,
+          raison_report: null,
+          retour_le: null,
+        },
+      })
+      await refreshMissions()
+    } catch { /* la prochaine navigation rechargera l etat */ }
+  }
   // Confirmation de la modale anti zap : report daté ou exclusion motivée
   async function confirmerReport(mi, { mode, raison, jours }) {
     const retour = mode === 'report' ? dansNJours(jours) : null
@@ -403,7 +425,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
                     </span>
                   </div>
                   <div className="ract">
-                    <button className="pri" onClick={() => attaquer(mi)} title="Ouvre un dossier prérempli">Proposer</button>
+                    <button className="pri" onClick={() => setProposerPour({ client: mi.client, preset: mi.famille })} title="Rédige un mail de proposition, ou ouvre le dossier">Proposer</button>
                     <button className="sec" onClick={() => setReportPour(mi)}>{mi.statut === 'reportee' ? 'Re-reporter' : 'Plus tard'}</button>
                     {ARGUMENTAIRES[mi.famille] && (
                       <button className="ter" title="Copier l argumentaire d appel" onClick={() => copierArgumentaire(mi.famille)}>📋</button>
@@ -484,7 +506,8 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
       {/* Vue matrice V2 allégée : correction des données d équipement */}
       {!loading && !err && vue === 'matrice' && (
         <MatriceV2 rows={rows} matCols={matCols} famMap={famMap} isManager={isManager}
-          profile={profile} onCreateDeal={onCreateDeal} reload={reload} />
+          profile={profile} onCreateDeal={onCreateDeal} reload={reload}
+          onProposer={(client, preset) => setProposerPour({ client, preset })} />
       )}
 
       {/* Modale anti zap */}
@@ -492,6 +515,19 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
         <ModaleReport mission={reportPour} labelFam={labelFam}
           onClose={() => setReportPour(null)}
           onConfirm={(res) => confirmerReport(reportPour, res)} />
+      )}
+
+      {/* Modale Proposer : choix du produit, mail type genere, ou recommandation */}
+      {proposerPour && (
+        <ProposerModal
+          client={proposerPour.client}
+          preset={proposerPour.preset}
+          matCols={matCols}
+          famMap={famMap}
+          conseiller={profile?.full_name || ''}
+          onClose={() => setProposerPour(null)}
+          onCreateDeal={onCreateDeal}
+          onMarkPropose={marquerPropose} />
       )}
     </div>
   )
@@ -595,11 +631,127 @@ function ModaleReport({ mission, labelFam, onClose, onConfirm }) {
   )
 }
 
+// ── Modale Proposer ─────────────────────────────────────────────────────────
+// Le coeur de l innovation demandee par Louis : depuis un client, le conseiller
+// choisit le produit a proposer (parmi les familles manquantes) OU une demande
+// de recommandation, le mail type se genere aussitot, il le relit, l ajuste et
+// l ouvre dans sa messagerie (ou le copie). Marque la mission en cours au
+// passage a l action, pour que le suivi reflete l envoi.
+function ProposerModal({ client, preset, matCols, famMap, conseiller, onClose, onCreateDeal, onMarkPropose }) {
+  const labelFam = (k) => famMap[k]?.label || k
+  const couleurFam = (k) => famMap[k]?.couleur || '#8A95A8'
+  const gaps = matCols.filter((f) => !client.familles.includes(f.key))
+  const choix = gaps.length ? gaps : matCols
+
+  const [mode, setMode] = useState('produit') // produit | reco
+  const [famille, setFamille] = useState(
+    preset && choix.some((f) => f.key === preset) ? preset : (choix[0]?.key || null),
+  )
+  const [contact, setContact] = useState(null)
+  const [objet, setObjet] = useState('')
+  const [corps, setCorps] = useState('')
+  const [propose, setPropose] = useState(false)
+
+  // Contact client (prenom pour la personnalisation, email pour le mailto)
+  useEffect(() => {
+    let vivant = true
+    ;(async () => {
+      try { const c = await getClientContact(client.client_id); if (vivant) setContact(c) }
+      catch { if (vivant) setContact(null) }
+    })()
+    return () => { vivant = false }
+  }, [client.client_id])
+
+  const prenom = (contact?.prenom || client.prenom || '').trim()
+  const email = (contact?.email || '').trim()
+
+  // (Re)genere le mail des que le mode, la famille ou le prenom changent
+  useEffect(() => {
+    const ctx = { prenom, conseiller, cabinet: CABINET }
+    const mail = mode === 'reco' ? genererRecommandation(ctx) : genererMail(famille, ctx)
+    if (mail) { setObjet(mail.objet); setCorps(mail.corps) }
+  }, [mode, famille, prenom, conseiller])
+
+  const mailtoHref = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(objet)}&body=${encodeURIComponent(corps)}`
+
+  function copier() {
+    navigator.clipboard?.writeText(`Objet : ${objet}\n\n${corps}`)
+      .then(() => toast.success('Mail copié, collez le dans votre messagerie'))
+      .catch(() => toast.error('Copie impossible sur ce navigateur'))
+  }
+  function marquer() {
+    if (mode === 'produit' && famille && !propose) {
+      onMarkPropose && onMarkPropose(client, famille)
+      setPropose(true)
+    }
+  }
+  function creerDossier() {
+    marquer()
+    if (onCreateDeal) onCreateDeal(client)
+    onClose()
+  }
+
+  return (
+    <div className="mrOverlay" onClick={onClose}>
+      <div className="mr pmail" onClick={(e) => e.stopPropagation()}>
+        <div className="mrhd">
+          <h3>Proposer à {client.nom}</h3>
+          <button className="x" onClick={onClose}>✕</button>
+        </div>
+
+        <div className="pmtabs">
+          <button className={mode === 'produit' ? 'on' : ''} onClick={() => setMode('produit')}>Proposer un produit</button>
+          <button className={mode === 'reco' ? 'on' : ''} onClick={() => setMode('reco')}>Demander une recommandation</button>
+        </div>
+
+        {mode === 'produit' && (
+          <>
+            <div className="mrlab">Quel produit proposer ?</div>
+            <div className="pmchoix">
+              {choix.map((f) => (
+                <button key={f.key} className={`pmc${famille === f.key ? ' on' : ''}`} onClick={() => setFamille(f.key)}>
+                  <span className="pmdot" style={{ background: couleurFam(f.key) }} />
+                  {labelFam(f.key)}
+                </button>
+              ))}
+            </div>
+            {gaps.length === 0 && (
+              <div className="pmnote">Ce client détient déjà toutes les familles suivies. Vous pouvez tout de même proposer un renforcement.</div>
+            )}
+          </>
+        )}
+        {mode === 'reco' && (
+          <div className="pmnote reco">Un mot pour demander avec tact si {prenom || 'ce client'} connaît un proche à qui une mise en relation serait utile. La recommandation, moteur du cabinet.</div>
+        )}
+
+        <div className="mrlab">Objet</div>
+        <input className="pmobj" value={objet} onChange={(e) => setObjet(e.target.value)} />
+        <div className="mrlab">Message <span className="pmhint">relisez et ajustez avant envoi</span></div>
+        <textarea className="pmcorps" rows={12} value={corps} onChange={(e) => setCorps(e.target.value)} />
+
+        <div className="pmdest">
+          {email
+            ? <>Destinataire : <b>{email}</b></>
+            : <span className="pmwarn">Aucun email sur la fiche : copiez le mail, ou complétez la fiche pour l envoi direct.</span>}
+        </div>
+
+        <div className="mrbtns pmbtns">
+          <a className="pri" href={mailtoHref} onClick={() => marquer()}>Ouvrir dans ma messagerie</a>
+          <button className="sec" onClick={copier}>Copier le mail</button>
+        </div>
+        {mode === 'produit' && (
+          <button className="pmdeal" onClick={creerDossier}>Créer le dossier pour ce client</button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── Matrice V2 allégée ──────────────────────────────────────────────────────
 // Conservée pour corriger les données : matrice à pastilles + drawer de
 // déclarations (détenu, absence, historique signé). Radar, heatmap, export et
 // bloc opportunités de la V2 ont été retirés, les missions les remplacent.
-function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, reload }) {
+function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, reload, onProposer }) {
   const [seg, setSeg] = useState('tous')
   const [cons, setCons] = useState('all')
   const [q, setQ] = useState('')
@@ -777,7 +929,8 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
               </>
             )}
             <div className="dbtns">
-              <button className="pri" onClick={() => onCreateDeal && onCreateDeal(sel)}>+ Créer le deal</button>
+              <button className="pri" onClick={() => onProposer && onProposer(sel, null)}>Proposer</button>
+              <button className="lien" onClick={() => onCreateDeal && onCreateDeal(sel)}>ou créer le dossier directement</button>
             </div>
           </div>
         )}
@@ -938,6 +1091,28 @@ const styles = `
 .meq3 .mrinfo b{ color:var(--gold-dk) }
 .meq3 .mrbtns{ display:flex; gap:8px; margin-top:15px }
 .meq3 .mrexcl{ display:block; margin:11px auto 0; background:none; border:none; font-size:11px; color:var(--silver); text-decoration:underline; cursor:pointer }
+
+.meq3 .mr.pmail{ max-width:560px; max-height:90vh; overflow-y:auto }
+.meq3 .pmtabs{ display:flex; gap:6px; margin:10px 0 6px }
+.meq3 .pmtabs button{ flex:1; padding:8px 10px; border-radius:9px; border:1px solid var(--line); background:#fff; font-size:12.5px; font-weight:700; color:#5b6470; cursor:pointer }
+.meq3 .pmtabs button.on{ background:var(--navy); color:#fff; border-color:var(--navy) }
+.meq3 .pmchoix{ display:flex; flex-wrap:wrap; gap:6px }
+.meq3 .pmc{ display:inline-flex; align-items:center; gap:6px; padding:6px 11px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:12px; font-weight:650; color:#5b6470; cursor:pointer }
+.meq3 .pmc.on{ border-color:var(--gold); background:#FBF6EC; color:var(--navy) }
+.meq3 .pmdot{ width:9px; height:9px; border-radius:50%; flex-shrink:0 }
+.meq3 .pmnote{ font-size:11.5px; color:#6b5620; background:#FBF4E4; border-radius:9px; padding:8px 10px; margin-top:8px }
+.meq3 .pmnote.reco{ color:#2C6B4E; background:#E9F4EE; border:1px solid #CBE5D6 }
+.meq3 .pmobj{ width:100%; border:1px solid var(--line); border-radius:9px; padding:8px 10px; font-size:13px; font-weight:650; color:var(--ink) }
+.meq3 .pmcorps{ width:100%; border:1px solid var(--line); border-radius:9px; padding:10px 12px; font-size:12.5px; line-height:1.5; color:var(--ink); font-family:inherit; resize:vertical }
+.meq3 .pmhint{ text-transform:none; letter-spacing:0; font-weight:600; font-size:10.5px; color:var(--silver); margin-left:6px }
+.meq3 .pmdest{ font-size:11.5px; color:#5b6470; margin-top:9px }
+.meq3 .pmdest b{ color:var(--navy) }
+.meq3 .pmwarn{ color:#9A6A1B }
+.meq3 .pmbtns{ margin-top:12px }
+.meq3 .pmbtns .pri{ text-decoration:none; display:inline-flex; align-items:center; justify-content:center; text-align:center }
+.meq3 .pmdeal{ display:block; width:100%; margin-top:9px; background:#fff; border:1px solid var(--line); border-radius:9px; padding:9px; font-size:12.5px; font-weight:700; color:var(--navy); cursor:pointer }
+.meq3 .pmdeal:hover{ border-color:var(--gold) }
+.meq3 .dbtns .lien{ display:block; width:100%; margin-top:6px; background:none; border:none; font-size:11.5px; color:var(--silver); text-decoration:underline; cursor:pointer }
 
 .meq3 .mx2 .segs{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px }
 .meq3 .seg{ padding:6px 12px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:12px; font-weight:650; color:#5b6470; cursor:pointer }

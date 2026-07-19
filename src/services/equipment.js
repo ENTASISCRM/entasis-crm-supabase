@@ -71,6 +71,18 @@ export async function listSignedDealsForClient(clientId) {
   return data || []
 }
 
+// Coordonnées d un client (prénom, email, téléphone) pour préremplir le mail
+// de proposition. RLS : le conseiller ne récupère que ses propres clients.
+export async function getClientContact(clientId) {
+  const { data, error } = await supabase
+    .from('clients')
+    .select('prenom, nom, email, telephone')
+    .eq('id', clientId)
+    .maybeSingle()
+  if (error) throw error
+  return data || null
+}
+
 // Réglages cabinet du module (campagne du mois, objectif de taux multi).
 // Lecture ouverte à tous les connectés, écriture réservée aux managers (RLS).
 export async function getSettings() {
