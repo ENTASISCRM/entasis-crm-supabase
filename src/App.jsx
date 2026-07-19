@@ -39,6 +39,12 @@ const MultiEquipement = lazy(() => import('./components/MultiEquipement'))
 // Opportunités du jour : lazy comme les autres onglets pour rester hors du
 // bundle de login.
 const OpportunitesDuJour = lazy(() => import('./components/OpportunitesDuJour'))
+// Briques V3 multi equipement construites en parallele (peuvent ne pas encore
+// exister a la compilation) : chargees a la demande comme les autres onglets.
+const PlaybooksOffres = lazy(() => import('./components/PlaybooksOffres'))
+const CockpitRatios = lazy(() => import('./components/CockpitRatios'))
+const Temoignages = lazy(() => import('./components/Temoignages'))
+const CertificationsProduit = lazy(() => import('./components/CertificationsProduit'))
 import {
   annualize,
   isPipeline,
@@ -764,6 +770,9 @@ function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,prospects
     {key:'multi-equipement', label:'Multi-équipement', Icon:Icon.Kanban},
     {key:'opportunites', label:'Opportunités', Icon:Icon.Calendar},
     {key:'conformite', label:'Conformité', Icon:Icon.Dossiers},
+    {key:'playbooks', label:'Offres', Icon:Icon.Catalogue},
+    {key:'cockpit', label:'Cockpit', Icon:Icon.Forecast},
+    {key:'temoignages', label:'Témoignages', Icon:Icon.Outils},
     {key:'forecast',  label:isManager?'Management':'Prévisionnel', Icon:Icon.Forecast},
     {key:'agenda',    label:'Agenda',    Icon:Icon.Calendar},
     {key:'market',    label:'Marchés',   Icon:Icon.Market},
@@ -774,6 +783,9 @@ function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,prospects
       {key:'weekly-review', label:'Revue hebdo', Icon:Icon.Forecast},
       {key:'pilotage-rh', label:'Pilotage RH', Icon:Icon.Team, manager:true},
       {key:'recrutement', label:'Recrutement', Icon:Icon.Team, manager:true},
+      // Certifications produit : manager uniquement (habilitation des conseillers
+      // par famille). Double barrière avec le RLS de certifications_produit.
+      {key:'certifications', label:'Certifications', Icon:Icon.Team, manager:true},
       // Éditorial : manager uniquement (double barrière avec le RLS
       // manager-only de editorial_packages). Badge = packages en attente de veto.
       {key:'editorial', label:'Éditorial', Icon:Icon.Editorial, manager:true, badge:editorialCount}
@@ -860,11 +872,110 @@ function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,prospects
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   FICHE DE RECOMMANDATION (idee 3)
+   Outil papier que le conseiller remet en fin de RDV. Genere et telecharge un PDF
+   A4 pre rempli au nom du conseiller courant, avec trois blocs vides que le client
+   remplit a la main. Aucun envoi, aucune ecriture en base. jsPDF est importe
+   dynamiquement (comme partout ailleurs dans le CRM) pour rester hors du bundle de
+   login. On evite volontairement les accents dans le PDF (police standard jsPDF),
+   convention deja suivie dans OutilsCGP et conformite-pdf.
+───────────────────────────────────────────────────────────────────────────── */
+async function genererFicheParrainage(profile){
+  const { jsPDF } = await import('jspdf')
+  const doc = new jsPDF({ unit:'mm', format:'a4' })
+  const navy=[10,22,40]
+  const gold=[201,169,97]
+  const gris=[110,120,135]
+  const W=210
+
+  const conseiller = profile?.full_name || 'Votre conseiller Entasis'
+  const code = profile?.advisor_code ? ('Conseiller ' + profile.advisor_code) : 'Entasis Conseil'
+
+  // Bandeau navy en tete avec filet or, charte cabinet
+  doc.setFillColor(navy[0],navy[1],navy[2])
+  doc.rect(0,0,W,44,'F')
+  doc.setFillColor(gold[0],gold[1],gold[2])
+  doc.rect(0,44,W,1.4,'F')
+  doc.setTextColor(gold[0],gold[1],gold[2])
+  doc.setFont('helvetica','bold')
+  doc.setFontSize(20)
+  doc.text('ENTASIS CONSEIL', 20, 21)
+  doc.setTextColor(255,255,255)
+  doc.setFont('helvetica','normal')
+  doc.setFontSize(13)
+  doc.text('Fiche de recommandation', 20, 31)
+  doc.setFontSize(9)
+  doc.setTextColor(206,212,222)
+  doc.text(conseiller + '   /   ' + code, 20, 38)
+
+  // Introduction
+  let y=57
+  doc.setTextColor(navy[0],navy[1],navy[2])
+  doc.setFont('helvetica','bold')
+  doc.setFontSize(11)
+  doc.text('Vous connaissez quelqu un a qui nous pourrions etre utiles ?', 20, y)
+  y+=7
+  doc.setFont('helvetica','normal')
+  doc.setFontSize(9.5)
+  doc.setTextColor(gris[0],gris[1],gris[2])
+  const intro='La recommandation est la plus belle marque de confiance. Indiquez ci dessous les personnes de votre entourage que nous pourrions accompagner. Nous les contacterons de votre part, en toute discretion et sans aucun engagement de leur part.'
+  const introLines=doc.splitTextToSize(intro, W-40)
+  doc.text(introLines, 20, y)
+  y += introLines.length*4.9 + 7
+
+  // Trois blocs a remplir a la main par le client
+  const champs=['Nom et prenom','Telephone','Email','Besoin ou situation']
+  for(let i=1;i<=3;i++){
+    doc.setFillColor(navy[0],navy[1],navy[2])
+    doc.rect(20,y,W-40,8.5,'F')
+    doc.setTextColor(gold[0],gold[1],gold[2])
+    doc.setFont('helvetica','bold')
+    doc.setFontSize(10)
+    doc.text('Personne que je recommande  #' + i, 24, y+5.8)
+    y += 13
+    for(const champ of champs){
+      doc.setTextColor(navy[0],navy[1],navy[2])
+      doc.setFont('helvetica','bold')
+      doc.setFontSize(8.5)
+      doc.text(champ, 24, y)
+      doc.setDrawColor(gold[0],gold[1],gold[2])
+      doc.setLineWidth(0.3)
+      doc.line(24, y+3.4, W-24, y+3.4)
+      y += 9
+      // Le besoin a droit a une deuxieme ligne pour ecrire a l aise
+      if(champ==='Besoin ou situation'){
+        doc.line(24, y+0.4, W-24, y+0.4)
+        y += 6
+      }
+    }
+    y += 3
+  }
+
+  // Pied de page charte + mention RGPD
+  const fy=283
+  doc.setDrawColor(gold[0],gold[1],gold[2])
+  doc.setLineWidth(0.5)
+  doc.line(20, fy, W-20, fy)
+  doc.setFont('helvetica','bold')
+  doc.setFontSize(8)
+  doc.setTextColor(navy[0],navy[1],navy[2])
+  doc.text('Entasis Conseil   /   Cabinet de gestion de patrimoine', 20, fy+5)
+  doc.setFont('helvetica','normal')
+  doc.setFontSize(6.6)
+  doc.setTextColor(gris[0],gris[1],gris[2])
+  const mentions='Informations recueillies avec l accord des personnes concernees, utilisees uniquement pour une prise de contact Entasis Conseil et conservees conformement au RGPD. Merci de votre confiance.'
+  doc.text(doc.splitTextToSize(mentions, W-40), 20, fy+9)
+
+  const tag=(profile?.advisor_code || profile?.full_name || 'Entasis').replace(/[^a-zA-Z0-9]+/g,'-')
+  doc.save('Fiche-parrainage-Entasis-' + tag + '.pdf')
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
    TOP BAR
 ───────────────────────────────────────────────────────────────────────────── */
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs',prospection:'Prospection LinkedIn','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA',remuneration:'Rémunération',outils:'Outils CGP','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️',editorial:'Agent éditorial ✍️',opportunites:'Opportunités du jour'}
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs',prospection:'Prospection LinkedIn','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA',remuneration:'Rémunération',outils:'Outils CGP','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️',editorial:'Agent éditorial ✍️',opportunites:'Opportunités du jour',playbooks:'Offres & Playbooks',cockpit:'Cockpit ratios',temoignages:'Témoignages clients',certifications:'Certifications produit'}
 
-function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu}){
+function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile}){
   return (
     <div className="topbar">
       {onMobileMenu && (
@@ -891,6 +1002,12 @@ function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu}){
           )
         })()}
         <button className="btn btn-ghost btn-sm" onClick={onRefresh}><Icon.Refresh/></button>
+        {/* Fiche de recommandation (idee 3) : outil papier remis en fin de RDV,
+            genere un PDF pre rempli au nom du conseiller. Toujours accessible. */}
+        <button className="btn btn-ghost btn-sm" title="Fiche de recommandation a remettre au client" onClick={async()=>{
+          try{ await genererFicheParrainage(profile) }
+          catch(e){ toast.error('Impossible de générer la fiche') }
+        }}>Fiche parrainage</button>
         {activeTab!=='leads'&&activeTab!=='prospection'&&<button className="btn btn-gold" onClick={onNewDeal}><Icon.Plus/> Nouveau dossier</button>}
       </div>
     </div>
@@ -5290,7 +5407,7 @@ export default function App(){
         onCloseMobile={()=>setMobileMenuOpen(false)}
       />
       <div className="app-main">
-        <TopBar activeTab={activeTab} month={month} setMonth={setMonth} onNewDeal={startCreate} onRefresh={loadAll} onMobileMenu={()=>setMobileMenuOpen(true)}/>
+        <TopBar activeTab={activeTab} month={month} setMonth={setMonth} onNewDeal={startCreate} onRefresh={loadAll} onMobileMenu={()=>setMobileMenuOpen(true)} profile={effectiveProfile}/>
         <div className="app-content">
           {error&&<div className="notice notice-error">{error}</div>}
           {!profile&&error&&<div className="notice notice-warn">Profil introuvable dans <span className="code">public.profiles</span>. Vérifie la table et les policies.</div>}
@@ -5376,6 +5493,10 @@ export default function App(){
           {activeTab==='conformite'&&<Conformite profile={profile}/>}
           {activeTab==='multi-equipement'&&<MultiEquipement profile={profile} onCreateDeal={startCreateForClient}/>}
           {activeTab==='opportunites'&&<OpportunitesDuJour profile={profile}/>}
+          {activeTab==='playbooks'&&<PlaybooksOffres profile={profile}/>}
+          {activeTab==='cockpit'&&<CockpitRatios profile={profile}/>}
+          {activeTab==='temoignages'&&<Temoignages profile={profile}/>}
+          {activeTab==='certifications'&&isManager&&<CertificationsProduit profile={profile}/>}
           </Suspense>
         </div>
       </div>
