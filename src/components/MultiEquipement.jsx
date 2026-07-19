@@ -306,6 +306,18 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
     if (tri === 'conseil') return [...l].sort((a, b) => scoreConseil(b) - scoreConseil(a))
     return [...l].sort((a, b) => (b.montant || 0) - (a.montant || 0))
   }, [missionsAff, chip, campSeul, camp, tri, journee])
+  // Une seule ligne par CLIENT (retour Louis : un client avec plusieurs produits
+  // ne doit pas apparaître deux fois). La 1re mission fait office de représentante
+  // (la liste est déjà triée), les autres familles s ajoutent en badges.
+  const listeGroupee = useMemo(() => {
+    const m = new Map()
+    for (const mi of liste) {
+      const g = m.get(mi.client.client_id) || { client: mi.client, missions: [] }
+      g.missions.push(mi)
+      m.set(mi.client.client_id, g)
+    }
+    return Array.from(m.values())
+  }, [liste])
 
   // ── Vue manager Reports : redevabilité par conseiller ────────────────────
   const reportsParConseiller = useMemo(() => {
@@ -526,8 +538,8 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
               « Proposer » rédige le mail ou ouvre le dossier ; un montant affiché <b>en fourchette</b> (« à préciser ») = complétez la fiche en un clic pour un chiffre net.
             </div>
           )}
-          {(chip === 'a_attaquer' || chip === 'journee') && liste.length > 1 && (
-            <button className="revuebtn" onClick={() => setRevue(liste)}>▸ Revue par lot ({liste.length}) : enchaîner les propositions au clavier</button>
+          {(chip === 'a_attaquer' || chip === 'journee') && listeGroupee.length > 1 && (
+            <button className="revuebtn" onClick={() => setRevue(listeGroupee.map((g) => ({ client: g.client, famille: g.missions[0].famille })))}>▸ Revue par lot ({listeGroupee.length}) : enchaîner les propositions au clavier</button>
           )}
           <div className="cartes">
             {liste.length === 0 && (
@@ -539,58 +551,64 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
                     : 'Aucune mission dans cet état.'}
               </div>
             )}
-            {chip !== 'gagnee' && chip !== 'exclue' && liste.map((mi) => {
-              const age = chip === 'a_attaquer' ? ageJours(mi) : null
+            {chip !== 'gagnee' && chip !== 'exclue' && listeGroupee.map((g) => {
+              const repr = g.missions[0]
+              const familles = g.missions.map((m) => m.famille)
+              const multi = g.missions.length > 1
+              const montantTotal = g.missions.reduce((s, m) => s + (m.montant || 0), 0)
+              const age = chip === 'a_attaquer' ? ageJours(repr) : null
               const niveau = age != null && age > 14 ? 'rouge' : age != null && age > 7 ? 'orange' : ''
-              const rel = mi.client.pauseActive ? { due: false, jours: 0, etape: 0 } : infoRelance(mi)
+              const rel = g.client.pauseActive ? { due: false, jours: 0, etape: 0 } : infoRelance(repr)
               return (
-                <div key={mi.key}>
+                <div key={g.client.client_id}>
                   <div className={`row ${niveau}${rel.due ? ' relance' : ''}`}>
                     <div className="rgauche">
                       <div className="qui">
-                        <span className="nomcli">{mi.client.nom}</span>
-                        {isManager && <span className="cons">{mi.advisor_code}</span>}
+                        <span className="nomcli">{g.client.nom}</span>
+                        {isManager && <span className="cons">{repr.advisor_code}</span>}
                         {age != null && age > 7 && <span className={`age ${niveau}`}>{age} j sans action</span>}
                         {rel.due && <span className={`age relb e${rel.etape}`}>{LIB_RELANCE[rel.etape]} · {rel.jours} j</span>}
-                        {mi.client.pauseActive && <span className="veille">en veille jusqu au {fmtDate(mi.client.pauseJusqu)}</span>}
-                        {mi.renfort_code && <span className="renfb">🤝 renfort {mi.renfort_code}</span>}
-                        {mi.statut === 'reportee' && (
-                          <span className="rep">🕰 revient le {fmtDate(mi.retour_le)}</span>
+                        {g.client.pauseActive && <span className="veille">en veille jusqu au {fmtDate(g.client.pauseJusqu)}</span>}
+                        {repr.renfort_code && <span className="renfb">🤝 renfort {repr.renfort_code}</span>}
+                        {repr.statut === 'reportee' && (
+                          <span className="rep">🕰 revient le {fmtDate(repr.retour_le)}</span>
                         )}
                       </div>
-                      <EquipementDots client={mi.client} suggest={mi.famille} matCols={matCols}
+                      <EquipementDots client={g.client} suggests={familles} matCols={matCols}
                         couleurFam={couleurFam} labelFam={labelFam} />
-                      <div className="raison">{mi.raison}</div>
-                      {mi.regard_avis && <div className="avisp">👁 {mi.regard_avis_by || 'Pair'} : {mi.regard_avis}</div>}
+                      <div className="raison">{multi ? `${g.missions.length} produits à proposer` : repr.raison}</div>
+                      {repr.regard_avis && <div className="avisp">👁 {repr.regard_avis_by || 'Pair'} : {repr.regard_avis}</div>}
                     </div>
-                    <span className="fam" style={{ borderColor: couleurFam(mi.famille) }}>{labelFam(mi.famille)}</span>
+                    <div className="fams">
+                      {familles.map((f) => <span key={f} className="fam" style={{ borderColor: couleurFam(f) }}>{labelFam(f)}</span>)}
+                    </div>
                     <div className="rmont">
-                      {mi.confiance === 'faible' ? (
+                      {!multi && repr.confiance === 'faible' ? (
                         <>
-                          <span className="mont flou" title="Fourchette large faute de données, précisez la fiche">~{fmtK(mi.bas)} à {fmtK(mi.haut)}</span>
-                          <button className="baselink" onClick={() => setCapId(capId === mi.key ? null : mi.key)}>à préciser ✎</button>
+                          <span className="mont flou" title="Fourchette large faute de données, précisez la fiche">~{fmtK(repr.bas)} à {fmtK(repr.haut)}</span>
+                          <button className="baselink" onClick={() => setCapId(capId === g.client.client_id ? null : g.client.client_id)}>à préciser ✎</button>
                         </>
                       ) : (
                         <>
-                          <span className="mont">~{fmtK(mi.montant)}</span>
-                          <span className="base" title={mi.base}>{mi.base}</span>
+                          <span className="mont">~{fmtK(montantTotal)}</span>
+                          <span className="base">{multi ? `${g.missions.length} produits` : repr.base}</span>
                         </>
                       )}
                     </div>
                     <div className="ract">
-                      {mi.statut === 'en_cours' ? (
-                        <button className="pri" onClick={() => setProposerPour({ client: mi.client, preset: mi.famille, relance: true })} title="Rédige un mail de relance douce">Relancer</button>
+                      {repr.statut === 'en_cours' ? (
+                        <button className="pri" onClick={() => setProposerPour({ client: g.client, preset: repr.famille, relance: true })} title="Rédige un mail de relance douce">Relancer</button>
                       ) : (
-                        <button className="pri" onClick={() => setProposerPour({ client: mi.client, preset: mi.famille })} title="Rédige un mail de proposition, ou ouvre le dossier">Proposer</button>
+                        <button className="pri" onClick={() => setProposerPour({ client: g.client, preset: repr.famille })} title={multi ? 'Choisissez le produit à proposer' : 'Rédige le mail ou ouvre le dossier'}>Proposer</button>
                       )}
-                      <button className="sec" onClick={() => setReportPour(mi)}>{mi.statut === 'reportee' ? 'Re-reporter' : 'Plus tard'}</button>
-                      {ARGUMENTAIRES[mi.famille] && (
-                        <button className="ter" title="Copier l argumentaire d appel" onClick={() => copierArgumentaire(mi.famille)}>📋</button>
+                      <button className="sec" onClick={() => setReportPour(repr)}>{repr.statut === 'reportee' ? 'Re-reporter' : 'Plus tard'}</button>
+                      {ARGUMENTAIRES[repr.famille] && (
+                        <button className="ter" title="Copier l argumentaire d appel" onClick={() => copierArgumentaire(repr.famille)}>📋</button>
                       )}
                     </div>
                   </div>
-                  {capId === mi.key && (
-                    <CaptureInline client={mi.client}
+                  {capId === g.client.client_id && (
+                    <CaptureInline client={g.client}
                       onSaved={async () => { setCapId(null); await reload() }}
                       onClose={() => setCapId(null)} />
                   )}
@@ -1763,13 +1781,13 @@ function RevueParLot({ items, conseiller, famMap, onMark, onClose }) {
 //   rond doré cible = la famille à proposer (la mission)
 //   anneau rouge = absence confirmée (déclarée non détenue)
 //   pointillé = non renseigné
-function EquipementDots({ client, suggest, matCols, couleurFam, labelFam }) {
+function EquipementDots({ client, suggest, suggests, matCols, couleurFam, labelFam }) {
   return (
     <div className="dots">
       {matCols.map((f) => {
         const detenu = client.familles.includes(f.key)
         const absent = !detenu && client.absences.includes(f.key)
-        const cible = !detenu && f.key === suggest
+        const cible = !detenu && (f.key === suggest || (Array.isArray(suggests) && suggests.includes(f.key)))
         const cls = detenu ? 'on' : cible ? 'target' : absent ? 'no' : 'off'
         const etat = detenu ? 'détenu' : cible ? 'à proposer' : absent ? 'absence confirmée' : 'non renseigné'
         return (
@@ -2038,6 +2056,7 @@ const styles = `
 .meq3 .sigadd input{ flex:1; min-width:120px; border:1px solid var(--line); border-radius:7px; padding:5px 8px; font-size:11.5px }
 .meq3 .sigadd select{ border:1px solid var(--line); border-radius:7px; padding:5px 6px; font-size:11.5px; background:#fff }
 .meq3 .pmangle{ margin-top:9px; font-size:11.5px; color:#5B4B8A; background:#F3F0FA; border:1px solid #DCD4EE; border-radius:9px; padding:7px 10px }
+.meq3 .fams{ display:flex; flex-direction:column; align-items:flex-end; gap:3px; flex-shrink:0 }
 .meq3 .plancher{ display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:11.5px; color:#2C6B4E; background:#E9F4EE; border:1px solid #CBE5D6; border-radius:9px; padding:7px 10px; margin:6px 0 }
 .meq3 .plancher button{ border:1px solid #2C6B4E; background:#fff; color:#2C6B4E; border-radius:7px; padding:3px 10px; font-size:11.5px; font-weight:700; cursor:pointer; white-space:nowrap }
 .meq3 .plancher button:hover{ background:#2C6B4E; color:#fff }

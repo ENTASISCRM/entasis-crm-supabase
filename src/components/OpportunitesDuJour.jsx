@@ -276,6 +276,7 @@ const styles = `
 .opj .empty{ padding:20px; text-align:center; color:var(--silver) }
 .opj .err{ color:#B4453B }
 .opj.emb{ max-width:none; margin-bottom:22px }
+.opj.emb ul{ max-height:184px; overflow-y:auto }
 .opj .embhd{ display:flex; align-items:center; gap:10px; margin-bottom:10px }
 .opj .embhd h2{ margin:0; font-size:15px; font-weight:750; color:var(--navy,#0A1628) }
 .opj .embkpi{ font-size:11px; font-weight:750; color:var(--gold-dk,#A6843F); background:#FBF4E4; border:1px solid rgba(201,169,97,.45); border-radius:999px; padding:3px 10px }
