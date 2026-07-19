@@ -4983,6 +4983,29 @@ export default function App(){
 
   function startCreate(){setEditingDeal(emptyDeal(profile?.advisor_code));setModalOpen(true)}
   function startEdit(deal){setEditingDeal({...deal});setModalOpen(true)}
+
+  // Multi-équipement V2 : « Créer le deal » depuis le panneau d'un client.
+  // Recharge la fiche complète (email, téléphone) puis ouvre la modale deal
+  // avec le client déjà sélectionné (même mécanisme client_data que l'édition).
+  async function startCreateForClient(c){
+    let cli = { id: c.client_id, nom: c.nomSeul || c.nom || '', prenom: c.prenom || '', email: null, telephone: null }
+    try {
+      const { data } = await supabase.from('clients')
+        .select('id, nom, prenom, email, telephone').eq('id', c.client_id).maybeSingle()
+      if (data) cli = data
+    } catch (_) { /* fiche injoignable : on ouvre quand même avec le nom */ }
+    setEditingDeal({
+      ...emptyDeal(profile?.advisor_code),
+      client_id: cli.id,
+      client: `${cli.prenom || ''} ${cli.nom || ''}`.trim(),
+      client_email: cli.email || '',
+      client_phone: cli.telephone || '',
+      client_data: true,
+      clients: cli,
+    })
+    setModalOpen(true)
+    setActiveTab('pipeline')
+  }
   async function signOut(){
     // ✅ Révoquer token Google avant logout Supabase
     const token = localStorage.getItem('entasis_gcal_token')
@@ -5126,7 +5149,7 @@ export default function App(){
           {activeTab==='remuneration'&&<Remuneration profile={profile} deals={deals} month={month}/>}
           {activeTab==='outils'&&<OutilsCGP profile={profile}/>}
           {activeTab==='conformite'&&<Conformite profile={profile}/>}
-          {activeTab==='multi-equipement'&&<MultiEquipement profile={profile}/>}
+          {activeTab==='multi-equipement'&&<MultiEquipement profile={profile} onCreateDeal={startCreateForClient}/>}
           </Suspense>
         </div>
       </div>

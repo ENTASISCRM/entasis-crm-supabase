@@ -47,3 +47,44 @@ export async function removeDeclare({ client_id, famille }) {
     .eq('famille', famille)
   if (error) throw error
 }
+
+// Détail des déclarations d'un client (compagnie, note, détenu ou absence),
+// pour le panneau latéral. RLS : le conseiller ne voit que ses clients.
+export async function listDeclaresForClient(clientId) {
+  const { data, error } = await supabase
+    .from('client_equipements_declares')
+    .select('famille, detenu, compagnie, note, created_at')
+    .eq('client_id', clientId)
+  if (error) throw error
+  return data || []
+}
+
+// Historique des deals signés d'un client (timeline d'équipement du panneau).
+export async function listSignedDealsForClient(clientId) {
+  const { data, error } = await supabase
+    .from('deals')
+    .select('id, product, company, date_signed, pp_m, pu')
+    .eq('client_id', clientId)
+    .eq('status', 'Signé')
+    .order('date_signed', { ascending: false })
+  if (error) throw error
+  return data || []
+}
+
+// Réglages cabinet du module (campagne du mois, objectif de taux multi).
+// Lecture ouverte à tous les connectés, écriture réservée aux managers (RLS).
+export async function getSettings() {
+  const { data } = await supabase
+    .from('app_settings')
+    .select('value')
+    .eq('key', 'multiequipement')
+    .maybeSingle()
+  return data?.value || { campagne_du_mois: 'prevoyance', objectif_taux_multi: 40 }
+}
+
+export async function saveSettings(value) {
+  const { error } = await supabase
+    .from('app_settings')
+    .upsert({ key: 'multiequipement', value, updated_at: new Date().toISOString() })
+  if (error) throw error
+}

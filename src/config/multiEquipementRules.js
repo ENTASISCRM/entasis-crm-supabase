@@ -70,3 +70,46 @@ export const REGLES = [
 export function suggestionPour(c) {
   return REGLES.find((r) => r.applicable(c)) || null
 }
+
+// ─── V2 : argumentaires et estimation de collecte ───────────────────────────
+
+// Argumentaire pret a copier par famille suggeree (bouton copier du panneau).
+// Volontairement court : c'est une accroche d'appel, pas un devoir de conseil.
+export const ARGUMENTAIRES = {
+  prevoyance: 'En tant qu independant, un arret de travail = zero revenu. Une prevoyance Madelin protege vos revenus ET se deduit de votre benefice imposable. On regarde ensemble ce que ca donnerait dans votre situation ?',
+  av: 'Vous avez deja un PER pour la retraite, mais rien pour les projets a moyen terme. Une assurance vie complete parfaitement : disponible a tout moment, fiscalite douce apres 8 ans. On en parle 10 minutes ?',
+  scpi: 'Avec vos revenus, vous payez beaucoup d impots sur des liquidites qui dorment. La SCPI genere des loyers reguliers sans aucune gestion locative. Je peux vous montrer une simulation rapide ?',
+  per: 'A votre TMI, chaque versement PER vous fait economiser de l impot des cette annee tout en preparant la retraite. Voulez vous que je chiffre votre economie exacte ?',
+  mutuelle: 'Votre mutuelle actuelle est elle adaptee a votre statut ? Souvent on paie pour des garanties inutiles et on rate la deductibilite Madelin. Un comparatif prend 5 minutes.',
+  emprunteur: 'Si vous avez un credit immobilier, l assurance emprunteur de la banque est souvent 2 fois trop chere. La deleguer = meme protection, grosse economie. Vous avez un pret en cours ?',
+  immobilier: 'Le LMNP permet de generer des revenus locatifs quasi non imposes grace a l amortissement. Avec votre profil ca vaut une simulation.',
+  structures: 'Les produits structures offrent un rendement cible avec une protection partielle du capital, un bon complement entre fonds euro et actions. Je vous montre le produit du moment ?',
+}
+
+// Estimation grossiere de collecte par opportunite (pour le KPI gisement et
+// le tri par potentiel). Ordres de grandeur cabinet, PAS un engagement :
+// affiches avec le prefixe « ~ » dans l interface.
+export function estimationCollecte(c, familleSuggeree) {
+  const rev = Number(c.revenus || 0)
+  const pat = Number(c.patrimoine || 0)
+  switch (familleSuggeree) {
+    case 'prevoyance': return 1800                        // PP ~150/mois annualisee
+    case 'mutuelle': return 1200
+    case 'per': return Math.max(2400, Math.round(rev * 0.06))   // ~6% du revenu en versements
+    case 'av': return Math.max(10000, Math.round(pat * 0.08))   // ~8% du patrimoine place
+    case 'scpi': return Math.max(20000, Math.round(pat * 0.10))
+    case 'immobilier': return 120000                      // ticket LMNP moyen
+    case 'structures': return 25000
+    default: return 5000
+  }
+}
+
+// Score de potentiel d'une ligne (tri par defaut de la V2) : combine la
+// valeur estimee de la suggestion et la richesse du client. Echelle libre,
+// seul l'ordre compte.
+export function scorePotentiel(c, sug) {
+  if (!sug) return 0
+  const collecte = estimationCollecte(c, sug.famille_suggeree)
+  const richesse = Math.min(2, (Number(c.revenus || 0) / 100000) + (Number(c.patrimoine || 0) / 500000))
+  return Math.round(collecte * (1 + richesse))
+}
