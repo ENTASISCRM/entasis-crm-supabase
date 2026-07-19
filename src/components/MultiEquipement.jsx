@@ -25,14 +25,25 @@ import toast from 'react-hot-toast'
 import {
   listEquipment, listFamilies, upsertDeclare, removeDeclare,
   listDeclaresForClient, listSignedDealsForClient, getSettings, saveSettings,
-  getClientContact,
+  getClientContact, updateClientInfo,
 } from '../services/equipment'
 import { listMissions, upsertMission, reconcileGagnees } from '../services/missions'
 import {
   suggestionPour, ARGUMENTAIRES, estimationCollecte, baseMontant, REGLES,
   RAISONS_REPORT, ECHEANCES_REPORT,
 } from '../config/multiEquipementRules'
-import { genererMail, genererRecommandation, CABINET } from '../config/mailsProduits'
+import { genererMail, genererRecommandation, genererRelance, CABINET } from '../config/mailsProduits'
+
+// Statuts pro (miroir de la fiche client) pour la capture inline.
+const STATUTS_PRO = ['Salarié', 'TNS', 'Chef d entreprise', 'Retraité', 'Profession libérale', 'Autre']
+// Jalons de relance (jours depuis la mise en cours) : cadence de suivi douce.
+function infoRelance(mi) {
+  if (mi.statut !== 'en_cours' || !mi.updated_at) return { due: false, jours: 0, etape: 0 }
+  const jours = Math.floor((Date.now() - new Date(mi.updated_at).getTime()) / 86400000)
+  const etape = jours >= 45 ? 3 : jours >= 21 ? 2 : jours >= 7 ? 1 : 0
+  return { due: etape > 0, jours, etape }
+}
+const LIB_RELANCE = { 1: 'à relancer', 2: 'relance ferme', 3: 'point de décision' }
 
 const fmtEur = (v) =>
   Number(v || 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
@@ -76,8 +87,10 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
   const [chip, setChip] = useState('a_attaquer')   // filtre d etat de la liste
   const [campSeul, setCampSeul] = useState(false)  // ne montrer que la campagne
   const [reportPour, setReportPour] = useState(null) // mission ouverte dans la modale
-  const [proposerPour, setProposerPour] = useState(null) // { client, preset } de la modale Proposer
+  const [proposerPour, setProposerPour] = useState(null) // { client, preset, relance } de la modale Proposer
   const [editCamp, setEditCamp] = useState(false)
+  const [capId, setCapId] = useState(null)         // ligne dont la capture inline est ouverte
+  const [tri, setTri] = useState('montant')        // montant | conseil
 
   async function reload() {
     const [eq, fam, st, mis] = await Promise.all([
@@ -144,6 +157,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
         statut: db?.statut || 'a_attaquer',
         montant: db?.montant_estime != null ? Number(db.montant_estime) : bm.montant,
         base: bm.base, parDefaut: bm.parDefaut && db?.montant_estime == null,
+        confiance: bm.confiance, bas: bm.bas, haut: bm.haut,
         montant_reel: db?.montant_reel != null ? Number(db.montant_reel) : null,
         raison_report: db?.raison_report || null,
         retour_le: db?.retour_le || null,
@@ -176,6 +190,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
         statut: m.statut,
         montant: m.montant_estime != null ? Number(m.montant_estime) : bm2.montant,
         base: bm2.base, parDefaut: bm2.parDefaut && m.montant_estime == null,
+        confiance: bm2.confiance, bas: bm2.bas, haut: bm2.haut,
         montant_reel: m.montant_reel != null ? Number(m.montant_reel) : null,
         raison_report: m.raison_report || null,
         retour_le: m.retour_le || null,
@@ -210,13 +225,30 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
     return { cibles, traitees, enJeu, objectif }
   }, [missionsAff, rows, camp, settings.objectif_campagne])
 
-  // ── Liste affichée : chip d état + filtre campagne, triée argent d abord ─
+  // Missions en cours dues pour une relance (cadence de suivi)
+  const relanceDue = useMemo(
+    () => missionsAff.filter((m) => m.statut === 'en_cours' && infoRelance(m).due),
+    [missionsAff],
+  )
+  // Score « ordre conseillé » : euros, pondérés par la confiance, relance en tête
+  const scoreConseil = (m) => {
+    let s = m.montant || 0
+    if (m.confiance === 'fort') s *= 1.4
+    else if (m.confiance === 'faible') s *= 0.6
+    if (infoRelance(m).due) s += 1000000
+    return s
+  }
+  // ── Liste affichée : chip d état (ou relance) + filtre campagne + tri ──────
   const liste = useMemo(() => {
-    let l = missionsAff.filter((m) => m.statut === chip)
+    let l = chip === 'relance'
+      ? missionsAff.filter((m) => m.statut === 'en_cours' && infoRelance(m).due)
+      : missionsAff.filter((m) => m.statut === chip)
     if (campSeul && camp) l = l.filter((m) => m.famille === camp)
-    if (chip === 'gagnee') return l.sort((a, b) => (b.montant_reel || 0) - (a.montant_reel || 0))
-    return l.sort((a, b) => (b.montant || 0) - (a.montant || 0))
-  }, [missionsAff, chip, campSeul, camp])
+    if (chip === 'gagnee') return [...l].sort((a, b) => (b.montant_reel || 0) - (a.montant_reel || 0))
+    if (chip === 'relance') return [...l].sort((a, b) => infoRelance(b).jours - infoRelance(a).jours)
+    if (tri === 'conseil') return [...l].sort((a, b) => scoreConseil(b) - scoreConseil(a))
+    return [...l].sort((a, b) => (b.montant || 0) - (a.montant || 0))
+  }, [missionsAff, chip, campSeul, camp, tri])
 
   // ── Vue manager Reports : redevabilité par conseiller ────────────────────
   const reportsParConseiller = useMemo(() => {
@@ -311,6 +343,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
   const chips = [
     { k: 'a_attaquer', l: 'À proposer', n: nb('a_attaquer') },
     { k: 'en_cours', l: 'En cours', n: nb('en_cours') },
+    ...(relanceDue.length > 0 ? [{ k: 'relance', l: 'À relancer', n: relanceDue.length, hot: true }] : []),
     { k: 'reportee', l: 'Reportées', n: nb('reportee'), extra: reporteesEur > 0 ? `~${fmtK(reporteesEur)} en attente` : null },
     { k: 'gagnee', l: 'Gagnées ✓', n: nb('gagnee') },
     ...(isManager ? [{ k: 'exclue', l: 'Exclues', n: nb('exclue') }] : []),
@@ -377,18 +410,24 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
           {/* Chips d états */}
           <div className="chips">
             {chips.map((c) => (
-              <button key={c.k} className={`chip${chip === c.k ? ' on' : ''}${c.k === 'gagnee' ? ' win' : ''}`} onClick={() => setChip(c.k)}>
+              <button key={c.k} className={`chip${chip === c.k ? ' on' : ''}${c.k === 'gagnee' ? ' win' : ''}${c.hot ? ' hot' : ''}`} onClick={() => setChip(c.k)}>
                 {c.l} <span className="n">{c.n}</span>
                 {c.extra && <span className="extra">{c.extra}</span>}
               </button>
             ))}
+            {(chip === 'a_attaquer' || chip === 'en_cours') && liste.length > 1 && (
+              <button className="tribtn" onClick={() => setTri((t) => (t === 'montant' ? 'conseil' : 'montant'))}
+                title="Bascule entre tri par montant et ordre conseillé">
+                {tri === 'montant' ? '↕ par montant' : '↕ ordre conseillé'}
+              </button>
+            )}
           </div>
 
           {/* Liste de missions : le coeur du module */}
           {chip === 'a_attaquer' && liste.length > 0 && (
             <div className="aide">
               Chaque ligne = <b>un client</b> et le produit à lui proposer. Les <b>ronds</b> montrent son équipement (plein = détenu, ✕ = absence confirmée, rond doré = la famille à proposer).
-              « Proposer » ouvre un dossier prérempli ; « ≈ défaut » sous le montant = fiche à compléter pour un chiffre réel.
+              « Proposer » rédige le mail ou ouvre le dossier ; un montant affiché <b>en fourchette</b> (« à préciser ») = complétez la fiche en un clic pour un chiffre net.
             </div>
           )}
           <div className="cartes">
@@ -402,35 +441,55 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
             {chip !== 'gagnee' && chip !== 'exclue' && liste.map((mi) => {
               const age = chip === 'a_attaquer' ? ageJours(mi) : null
               const niveau = age != null && age > 14 ? 'rouge' : age != null && age > 7 ? 'orange' : ''
+              const rel = infoRelance(mi)
               return (
-                <div key={mi.key} className={`row ${niveau}`}>
-                  <div className="rgauche">
-                    <div className="qui">
-                      <span className="nomcli">{mi.client.nom}</span>
-                      {isManager && <span className="cons">{mi.advisor_code}</span>}
-                      {age != null && age > 7 && <span className={`age ${niveau}`}>{age} j sans action</span>}
-                      {mi.statut === 'reportee' && (
-                        <span className="rep">🕰 revient le {fmtDate(mi.retour_le)}</span>
+                <div key={mi.key}>
+                  <div className={`row ${niveau}${rel.due ? ' relance' : ''}`}>
+                    <div className="rgauche">
+                      <div className="qui">
+                        <span className="nomcli">{mi.client.nom}</span>
+                        {isManager && <span className="cons">{mi.advisor_code}</span>}
+                        {age != null && age > 7 && <span className={`age ${niveau}`}>{age} j sans action</span>}
+                        {rel.due && <span className={`age relb e${rel.etape}`}>{LIB_RELANCE[rel.etape]} · {rel.jours} j</span>}
+                        {mi.statut === 'reportee' && (
+                          <span className="rep">🕰 revient le {fmtDate(mi.retour_le)}</span>
+                        )}
+                      </div>
+                      <EquipementDots client={mi.client} suggest={mi.famille} matCols={matCols}
+                        couleurFam={couleurFam} labelFam={labelFam} />
+                      <div className="raison">{mi.raison}</div>
+                    </div>
+                    <span className="fam" style={{ borderColor: couleurFam(mi.famille) }}>{labelFam(mi.famille)}</span>
+                    <div className="rmont">
+                      {mi.confiance === 'faible' ? (
+                        <>
+                          <span className="mont flou" title="Fourchette large faute de données, précisez la fiche">~{fmtK(mi.bas)} à {fmtK(mi.haut)}</span>
+                          <button className="baselink" onClick={() => setCapId(capId === mi.key ? null : mi.key)}>à préciser ✎</button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="mont">~{fmtK(mi.montant)}</span>
+                          <span className="base" title={mi.base}>{mi.base}</span>
+                        </>
                       )}
                     </div>
-                    <EquipementDots client={mi.client} suggest={mi.famille} matCols={matCols}
-                      couleurFam={couleurFam} labelFam={labelFam} />
-                    <div className="raison">{mi.raison}</div>
+                    <div className="ract">
+                      {mi.statut === 'en_cours' ? (
+                        <button className="pri" onClick={() => setProposerPour({ client: mi.client, preset: mi.famille, relance: true })} title="Rédige un mail de relance douce">Relancer</button>
+                      ) : (
+                        <button className="pri" onClick={() => setProposerPour({ client: mi.client, preset: mi.famille })} title="Rédige un mail de proposition, ou ouvre le dossier">Proposer</button>
+                      )}
+                      <button className="sec" onClick={() => setReportPour(mi)}>{mi.statut === 'reportee' ? 'Re-reporter' : 'Plus tard'}</button>
+                      {ARGUMENTAIRES[mi.famille] && (
+                        <button className="ter" title="Copier l argumentaire d appel" onClick={() => copierArgumentaire(mi.famille)}>📋</button>
+                      )}
+                    </div>
                   </div>
-                  <span className="fam" style={{ borderColor: couleurFam(mi.famille) }}>{labelFam(mi.famille)}</span>
-                  <div className="rmont">
-                    <span className={`mont ${mi.parDefaut ? 'flou' : ''}`}>~{fmtK(mi.montant)}</span>
-                    <span className="base" title={mi.parDefaut ? 'Estimation par defaut, complete la fiche client pour un vrai chiffre' : 'Base de l estimation'}>
-                      {mi.parDefaut ? '≈ défaut' : mi.base}
-                    </span>
-                  </div>
-                  <div className="ract">
-                    <button className="pri" onClick={() => setProposerPour({ client: mi.client, preset: mi.famille })} title="Rédige un mail de proposition, ou ouvre le dossier">Proposer</button>
-                    <button className="sec" onClick={() => setReportPour(mi)}>{mi.statut === 'reportee' ? 'Re-reporter' : 'Plus tard'}</button>
-                    {ARGUMENTAIRES[mi.famille] && (
-                      <button className="ter" title="Copier l argumentaire d appel" onClick={() => copierArgumentaire(mi.famille)}>📋</button>
-                    )}
-                  </div>
+                  {capId === mi.key && (
+                    <CaptureInline client={mi.client}
+                      onSaved={async () => { setCapId(null); await reload() }}
+                      onClose={() => setCapId(null)} />
+                  )}
                 </div>
               )
             })}
@@ -522,6 +581,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
         <ProposerModal
           client={proposerPour.client}
           preset={proposerPour.preset}
+          relance={proposerPour.relance}
           matCols={matCols}
           famMap={famMap}
           conseiller={profile?.full_name || ''}
@@ -637,13 +697,13 @@ function ModaleReport({ mission, labelFam, onClose, onConfirm }) {
 // de recommandation, le mail type se genere aussitot, il le relit, l ajuste et
 // l ouvre dans sa messagerie (ou le copie). Marque la mission en cours au
 // passage a l action, pour que le suivi reflete l envoi.
-function ProposerModal({ client, preset, matCols, famMap, conseiller, onClose, onCreateDeal, onMarkPropose }) {
+function ProposerModal({ client, preset, relance, matCols, famMap, conseiller, onClose, onCreateDeal, onMarkPropose }) {
   const labelFam = (k) => famMap[k]?.label || k
   const couleurFam = (k) => famMap[k]?.couleur || '#8A95A8'
   const gaps = matCols.filter((f) => !client.familles.includes(f.key))
   const choix = gaps.length ? gaps : matCols
 
-  const [mode, setMode] = useState('produit') // produit | reco
+  const [mode, setMode] = useState(relance ? 'relance' : 'produit') // produit | reco | relance
   const [famille, setFamille] = useState(
     preset && choix.some((f) => f.key === preset) ? preset : (choix[0]?.key || null),
   )
@@ -651,6 +711,8 @@ function ProposerModal({ client, preset, matCols, famMap, conseiller, onClose, o
   const [objet, setObjet] = useState('')
   const [corps, setCorps] = useState('')
   const [propose, setPropose] = useState(false)
+  const [capDone, setCapDone] = useState(false)
+  const ficheManque = [!client.patrimoine, !client.revenus, !client.statut].filter(Boolean).length
 
   // Contact client (prenom pour la personnalisation, email pour le mailto)
   useEffect(() => {
@@ -668,7 +730,10 @@ function ProposerModal({ client, preset, matCols, famMap, conseiller, onClose, o
   // (Re)genere le mail des que le mode, la famille ou le prenom changent
   useEffect(() => {
     const ctx = { prenom, conseiller, cabinet: CABINET }
-    const mail = mode === 'reco' ? genererRecommandation(ctx) : genererMail(famille, ctx)
+    let mail
+    if (mode === 'reco') mail = genererRecommandation(ctx)
+    else if (mode === 'relance') mail = genererRelance({ ...ctx, sujet: labelFam(famille) })
+    else mail = genererMail(famille, ctx)
     if (mail) { setObjet(mail.objet); setCorps(mail.corps) }
   }, [mode, famille, prenom, conseiller])
 
@@ -680,7 +745,7 @@ function ProposerModal({ client, preset, matCols, famMap, conseiller, onClose, o
       .catch(() => toast.error('Copie impossible sur ce navigateur'))
   }
   function marquer() {
-    if (mode === 'produit' && famille && !propose) {
+    if ((mode === 'produit' || mode === 'relance') && famille && !propose) {
       onMarkPropose && onMarkPropose(client, famille)
       setPropose(true)
     }
@@ -695,14 +760,19 @@ function ProposerModal({ client, preset, matCols, famMap, conseiller, onClose, o
     <div className="mrOverlay" onClick={onClose}>
       <div className="mr pmail" onClick={(e) => e.stopPropagation()}>
         <div className="mrhd">
-          <h3>Proposer à {client.nom}</h3>
+          <h3>{relance ? 'Relancer' : 'Proposer'} à {client.nom}</h3>
           <button className="x" onClick={onClose}>✕</button>
         </div>
 
-        <div className="pmtabs">
-          <button className={mode === 'produit' ? 'on' : ''} onClick={() => setMode('produit')}>Proposer un produit</button>
-          <button className={mode === 'reco' ? 'on' : ''} onClick={() => setMode('reco')}>Demander une recommandation</button>
-        </div>
+        {!relance && (
+          <div className="pmtabs">
+            <button className={mode === 'produit' ? 'on' : ''} onClick={() => setMode('produit')}>Proposer un produit</button>
+            <button className={mode === 'reco' ? 'on' : ''} onClick={() => setMode('reco')}>Demander une recommandation</button>
+          </div>
+        )}
+        {relance && (
+          <div className="pmnote">Relance douce sur <b>{labelFam(famille)}</b>. On prend soin de la relation, sans insistance.</div>
+        )}
 
         {mode === 'produit' && (
           <>
@@ -722,6 +792,13 @@ function ProposerModal({ client, preset, matCols, famMap, conseiller, onClose, o
         )}
         {mode === 'reco' && (
           <div className="pmnote reco">Un mot pour demander avec tact si {prenom || 'ce client'} connaît un proche à qui une mise en relation serait utile. La recommandation, moteur du cabinet.</div>
+        )}
+
+        {!capDone && ficheManque > 0 && (
+          <div className="pmcap">
+            <div className="pmcaptit">Compléter la fiche (facultatif, affine les montants et le suivi)</div>
+            <CaptureInline client={client} compact onSaved={() => setCapDone(true)} onClose={() => setCapDone(true)} />
+          </div>
         )}
 
         <div className="mrlab">Objet</div>
@@ -850,6 +927,7 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
                   <th className="l">Client</th>
                   {matCols.map((f) => <th key={f.key} title={f.label}>{f.label.length > 8 ? `${f.label.slice(0, 7)}.` : f.label}</th>)}
                   <th>Complétude</th>
+                  <th>Prochaine action</th>
                 </tr>
               </thead>
               <tbody>
@@ -875,10 +953,18 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
                         <span className="bar"><i style={{ width: `${Math.min(100, (100 * r.nb) / matCols.length)}%` }} /></span>
                       </span>
                     </td>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      {(() => {
+                        const sug = suggestionPour(r)
+                        return sug
+                          ? <button className="nba" title={sug.raison} onClick={() => onProposer && onProposer(r, sug.famille_suggeree)}>{labelFam(sug.famille_suggeree)} ▸</button>
+                          : <span className="nbamute">à jour</span>
+                      })()}
+                    </td>
                   </tr>
                 ))}
                 {visibles.length === 0 && (
-                  <tr><td colSpan={matCols.length + 2} className="empty">Aucun client pour ces filtres.</td></tr>
+                  <tr><td colSpan={matCols.length + 3} className="empty">Aucun client pour ces filtres.</td></tr>
                 )}
               </tbody>
             </table>
@@ -895,6 +981,21 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
               </div>
               <button className="x" onClick={() => setSelId(null)}>✕</button>
             </div>
+            {(() => {
+              const sug = suggestionPour(sel)
+              return (
+                <div className="dbrief">
+                  {sel.statut || 'statut à préciser'} · {sel.nb}/{matCols.length} familles · {sel.patrimoine ? `patrimoine ${fmtEur(sel.patrimoine)}` : 'patrimoine à compléter'}
+                  {sug ? <> · prochaine étape <b>{labelFam(sug.famille_suggeree)}</b></> : null}
+                </div>
+              )
+            })()}
+            {[!sel.patrimoine, !sel.revenus, !sel.statut].filter(Boolean).length > 0 && (
+              <>
+                <div className="dsec">Compléter la fiche</div>
+                <CaptureInline client={sel} compact onSaved={async () => { await reload() }} />
+              </>
+            )}
             <div className="dsec">Équipement</div>
             {matCols.map((f) => {
               const detenu = sel.familles.includes(f.key)
@@ -934,6 +1035,58 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
             </div>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ── Capture inline ───────────────────────────────────────────────────────────
+// Complete les 2 ou 3 champs financiers manquants (patrimoine, revenus, statut)
+// AU POINT DE FRICTION, sans ouvrir la fiche complete. La saisie recalcule les
+// montants (au reload) et leve le point rouge du verrou de signature. On ne
+// demande QUE ce qui manque, la ou le conseiller a une raison de completer.
+function CaptureInline({ client, onSaved, onClose, compact }) {
+  const [pat, setPat] = useState(client.patrimoine ? String(client.patrimoine) : '')
+  const [rev, setRev] = useState(client.revenus ? String(client.revenus) : '')
+  const [statut, setStatut] = useState(client.statut || '')
+  const [saving, setSaving] = useState(false)
+  const manque = { pat: !client.patrimoine, rev: !client.revenus, statut: !client.statut }
+  const rempli = [statut, rev, pat].filter((v) => `${v}`.trim() !== '').length
+
+  async function save() {
+    setSaving(true)
+    try {
+      await updateClientInfo(client.client_id, {
+        patrimoine_estime: pat, revenus_annuels: rev, statut_pro: statut || undefined,
+      })
+      toast.success('Fiche complétée, montants recalculés')
+      onSaved && onSaved()
+    } catch (e) { toast.error(e.message || 'Échec de l enregistrement') }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <div className={`cap${compact ? ' compact' : ''}`} onClick={(e) => e.stopPropagation()}>
+      <div className="capf">
+        <label>Patrimoine estimé
+          <input type="number" min="0" step="1000" placeholder="€" value={pat}
+            onChange={(e) => setPat(e.target.value)} className={manque.pat ? 'miss' : ''} />
+        </label>
+        <label>Revenus annuels
+          <input type="number" min="0" step="1000" placeholder="€" value={rev}
+            onChange={(e) => setRev(e.target.value)} className={manque.rev ? 'miss' : ''} />
+        </label>
+        <label>Statut
+          <select value={statut} onChange={(e) => setStatut(e.target.value)} className={manque.statut ? 'miss' : ''}>
+            <option value="">…</option>
+            {STATUTS_PRO.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </label>
+      </div>
+      <div className="capb">
+        <span className="capprog">{rempli}/3 renseignés</span>
+        <button className="pri" disabled={saving} onClick={save}>Enregistrer</button>
+        {onClose && <button className="sec" onClick={onClose}>Fermer</button>}
       </div>
     </div>
   )
@@ -1113,6 +1266,38 @@ const styles = `
 .meq3 .pmdeal{ display:block; width:100%; margin-top:9px; background:#fff; border:1px solid var(--line); border-radius:9px; padding:9px; font-size:12.5px; font-weight:700; color:var(--navy); cursor:pointer }
 .meq3 .pmdeal:hover{ border-color:var(--gold) }
 .meq3 .dbtns .lien{ display:block; width:100%; margin-top:6px; background:none; border:none; font-size:11.5px; color:var(--silver); text-decoration:underline; cursor:pointer }
+
+/* Estimation calibree, capture inline, cadence relance, prochaine action */
+.meq3 .chip.hot{ border-color:#E4A23C; color:#9A6A1B; background:#FBF3E4 }
+.meq3 .chip.hot.on{ background:#E4A23C; color:#fff; border-color:#E4A23C }
+.meq3 .tribtn{ padding:6px 12px; border-radius:999px; border:1px dashed var(--line); background:#fff; font-size:11.5px; font-weight:650; color:#5b6470; cursor:pointer }
+.meq3 .rmont .mont.flou{ font-size:13.5px }
+.meq3 .baselink{ background:none; border:none; color:var(--gold-dk); font-size:9.5px; font-weight:750; cursor:pointer; text-decoration:underline; margin-top:1px; padding:0 }
+.meq3 .age.relb{ background:#FBEED8; color:#9A6A1B }
+.meq3 .age.relb.e2{ background:#FBE4D2; color:#B4632B }
+.meq3 .age.relb.e3{ background:#FBE4E1; color:#B4453B }
+.meq3 .row.relance{ border-left-color:#E4A23C }
+
+.meq3 .cap{ background:#F8FAF9; border:1px solid #DCE6E1; border-radius:10px; padding:10px 12px; margin:2px 0 6px }
+.meq3 .cap.compact{ background:#FBFAF7; border-color:var(--line) }
+.meq3 .capf{ display:flex; gap:10px; flex-wrap:wrap }
+.meq3 .capf label{ display:flex; flex-direction:column; gap:3px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--silver); flex:1; min-width:118px }
+.meq3 .capf input,.meq3 .capf select{ border:1px solid var(--line); border-radius:8px; padding:6px 8px; font-size:12.5px; background:#fff; color:var(--ink); font-weight:600 }
+.meq3 .capf .miss{ border-color:#D89B94; background:#FDF6F5 }
+.meq3 .capb{ display:flex; align-items:center; gap:8px; margin-top:9px }
+.meq3 .capprog{ font-size:10.5px; font-weight:700; color:var(--silver); margin-right:auto }
+.meq3 .cap .pri{ padding:6px 14px; font-size:12px }
+.meq3 .cap .sec{ padding:6px 12px; font-size:12px }
+
+.meq3 .pmcap{ margin-top:10px; background:#FBFAF7; border:1px solid var(--line); border-radius:10px; padding:10px 12px }
+.meq3 .pmcaptit{ font-size:10.5px; font-weight:750; color:#9A6A1B; text-transform:uppercase; letter-spacing:.03em; margin-bottom:7px }
+.meq3 .pmcap .cap{ background:none; border:none; padding:0; margin:0 }
+
+.meq3 .nba{ border:1px solid var(--gold); background:#FBF6EC; color:var(--gold-dk); border-radius:999px; padding:3px 9px; font-size:11px; font-weight:750; cursor:pointer; white-space:nowrap }
+.meq3 .nba:hover{ background:var(--gold); color:#fff }
+.meq3 .nbamute{ font-size:10.5px; color:#B7BDC4 }
+.meq3 .dbrief{ font-size:11px; color:#5b6470; background:#F6F4EF; border:1px solid var(--line); border-radius:8px; padding:6px 9px; margin-bottom:8px; line-height:1.4 }
+.meq3 .dbrief b{ color:var(--gold-dk) }
 
 .meq3 .mx2 .segs{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px }
 .meq3 .seg{ padding:6px 12px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:12px; font-weight:650; color:#5b6470; cursor:pointer }

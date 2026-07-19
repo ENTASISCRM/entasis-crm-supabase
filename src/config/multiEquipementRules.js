@@ -94,26 +94,41 @@ export const ARGUMENTAIRES = {
 // affiche sous le montant), parDefaut (true = valeur forfaitaire faute de
 // donnee, a afficher en grise pour ne pas faire croire a un vrai chiffre) }.
 // Quand revenus ou patrimoine manquent, on retombe sur un forfait honnete.
+// Moteur d estimation calibre (remplace le « ≈ defaut » plat). Renvoie, en plus
+// du montant et de sa base, un niveau de CONFIANCE et une FOURCHETTE bas/haut :
+//   fort   la donnee client pilote le calcul (revenus ou patrimoine renseignes)
+//   moyen  montant standard credible (prime type, ticket moyen d une classe)
+//   faible forfait faute de donnee (a preciser via la capture inline)
+// La fourchette s elargit quand la confiance baisse. Aucune promesse de
+// rendement : ce sont des ordres de grandeur de collecte, affiches avec « ~ ».
 export function baseMontant(c, famille) {
   const rev = Number(c.revenus || 0)
   const pat = Number(c.patrimoine || 0)
   const k = (n) => `${Math.round(n / 1000)} k€`
+  let montant; let base; let parDefaut; let confiance
   switch (famille) {
-    case 'prevoyance': return { montant: 1800, base: 'prime type 150 €/mois', parDefaut: false }
-    case 'mutuelle': return { montant: 1200, base: 'prime type 100 €/mois', parDefaut: false }
-    case 'per': return rev > 0
-      ? { montant: Math.round(rev * 0.06), base: `6 % des revenus (${k(rev)})`, parDefaut: false }
-      : { montant: 2400, base: 'forfait, revenus non renseignés', parDefaut: true }
-    case 'av': return pat > 0
-      ? { montant: Math.round(pat * 0.08), base: `8 % du patrimoine (${k(pat)})`, parDefaut: false }
-      : { montant: 10000, base: 'forfait, patrimoine non renseigné', parDefaut: true }
-    case 'scpi': return pat > 0
-      ? { montant: Math.round(pat * 0.10), base: `10 % du patrimoine (${k(pat)})`, parDefaut: false }
-      : { montant: 20000, base: 'forfait, patrimoine non renseigné', parDefaut: true }
-    case 'immobilier': return { montant: 120000, base: 'ticket LMNP moyen', parDefaut: true }
-    case 'structures': return { montant: 25000, base: 'ticket moyen structuré', parDefaut: true }
-    default: return { montant: 5000, base: 'forfait', parDefaut: true }
+    case 'prevoyance': montant = 1800; base = 'prime type 150 €/mois'; parDefaut = false; confiance = 'moyen'; break
+    case 'mutuelle': montant = 1200; base = 'prime type 100 €/mois'; parDefaut = false; confiance = 'moyen'; break
+    case 'per':
+      if (rev > 0) { montant = Math.round(rev * 0.06); base = `6 % des revenus (${k(rev)})`; parDefaut = false; confiance = 'fort' }
+      else { montant = 2400; base = 'forfait, revenus à préciser'; parDefaut = true; confiance = 'faible' }
+      break
+    case 'av':
+      if (pat > 0) { montant = Math.round(pat * 0.08); base = `8 % du patrimoine (${k(pat)})`; parDefaut = false; confiance = 'fort' }
+      else { montant = 10000; base = 'forfait, patrimoine à préciser'; parDefaut = true; confiance = 'faible' }
+      break
+    case 'scpi':
+      if (pat > 0) { montant = Math.round(pat * 0.10); base = `10 % du patrimoine (${k(pat)})`; parDefaut = false; confiance = 'fort' }
+      else { montant = 20000; base = 'forfait, patrimoine à préciser'; parDefaut = true; confiance = 'faible' }
+      break
+    case 'immobilier': montant = 120000; base = 'ticket LMNP moyen'; parDefaut = true; confiance = 'moyen'; break
+    case 'structures': montant = 25000; base = 'ticket moyen structuré'; parDefaut = true; confiance = 'moyen'; break
+    case 'private_equity': montant = 50000; base = 'ticket moyen non coté'; parDefaut = true; confiance = 'moyen'; break
+    default: montant = 5000; base = 'forfait'; parDefaut = true; confiance = 'faible'
   }
+  const amp = confiance === 'fort' ? 0.2 : confiance === 'moyen' ? 0.3 : 0.45
+  const arr = (n) => Math.max(0, Math.round(n / 1000) * 1000)
+  return { montant, base, parDefaut, confiance, bas: arr(montant * (1 - amp)), haut: arr(montant * (1 + amp)) }
 }
 
 export function estimationCollecte(c, familleSuggeree) {

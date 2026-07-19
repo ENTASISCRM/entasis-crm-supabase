@@ -162,6 +162,23 @@ Bien à vous,
   },
 }
 
+// Mail de relance douce (cadence de suivi d une mission déjà proposée).
+// {sujet} = le thème évoqué (ex. « l assurance vie »). Sobre, sans relance
+// insistante, on prend soin de la relation avant tout.
+export const MAIL_RELANCE = {
+  objet: 'Suite à notre échange',
+  corps: `Bonjour {prenom},
+J'espère que vous allez bien.
+
+Je me permets de revenir brièvement vers vous au sujet de {sujet}, que nous avions commencé à évoquer.
+Rien d'urgent, je souhaitais simplement m'assurer que le sujet n'était pas resté de côté et rester à votre disposition pour en parler quand le moment vous conviendra.
+Je demeure bien entendu à votre écoute pour toute question.
+
+Bien à vous,
+{conseiller}
+{cabinet}`,
+}
+
 // Mail de demande de recommandation (parrainage), adressé à un client satisfait.
 export const MAIL_RECOMMANDATION = {
   objet: 'Un mot de gratitude',
@@ -185,6 +202,7 @@ function remplir(tpl, ctx) {
     .replace(/\{prenom\}/g, prenom)
     .replace(/\{conseiller\}/g, ctx.conseiller || 'Votre conseiller Entasis')
     .replace(/\{cabinet\}/g, ctx.cabinet || CABINET)
+    .replace(/\{sujet\}/g, ctx.sujet || 'votre situation patrimoniale')
     .replace(/Bonjour ,/g, 'Bonjour,') // prénom manquant : greeting propre
 }
 
@@ -198,4 +216,9 @@ export function genererMail(famille, ctx = {}) {
 // Renvoie { objet, corps } du mail de demande de recommandation.
 export function genererRecommandation(ctx = {}) {
   return { objet: remplir(MAIL_RECOMMANDATION.objet, ctx), corps: remplir(MAIL_RECOMMANDATION.corps, ctx) }
+}
+
+// Renvoie { objet, corps } du mail de relance (ctx.sujet = thème évoqué).
+export function genererRelance(ctx = {}) {
+  return { objet: remplir(MAIL_RELANCE.objet, ctx), corps: remplir(MAIL_RELANCE.corps, ctx) }
 }

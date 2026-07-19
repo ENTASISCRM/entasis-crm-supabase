@@ -83,6 +83,20 @@ export async function getClientContact(clientId) {
   return data || null
 }
 
+// Capture inline : complète les champs financiers d un client au point de
+// friction (patrimoine, revenus, statut, profession) sans passer par la fiche
+// complète. Ne touche QUE les champs fournis et non vides. RLS clients.
+export async function updateClientInfo(clientId, patch = {}) {
+  const clean = {}
+  if (patch.patrimoine_estime !== undefined && patch.patrimoine_estime !== '' && patch.patrimoine_estime !== null) clean.patrimoine_estime = Number(patch.patrimoine_estime)
+  if (patch.revenus_annuels !== undefined && patch.revenus_annuels !== '' && patch.revenus_annuels !== null) clean.revenus_annuels = Number(patch.revenus_annuels)
+  if (patch.statut_pro) clean.statut_pro = patch.statut_pro
+  if (patch.profession) clean.profession = patch.profession
+  if (Object.keys(clean).length === 0) return
+  const { error } = await supabase.from('clients').update(clean).eq('id', clientId)
+  if (error) throw error
+}
+
 // Réglages cabinet du module (campagne du mois, objectif de taux multi).
 // Lecture ouverte à tous les connectés, écriture réservée aux managers (RLS).
 export async function getSettings() {
