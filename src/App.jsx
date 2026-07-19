@@ -2112,7 +2112,6 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile}){
   return (
     <div>
       <div className="section-header"><div><div className="section-kicker">Vue direction · {month}</div><div className="section-title">Tableau de bord cabinet</div><div className="section-sub">{monthDeals.length} dossiers · {signed.length} signés · {pipeline.length} en pipeline{prevMonth&&<span style={{color:'var(--t3)'}}> · vs {prevMonth}</span>}</div></div></div>
-      <div style={{marginBottom:24}}><Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded/></Suspense></div>
       <div className="kpi-grid mb-24">
         <KpiCard label="PP financière signée" value={euro(ppS)} hint="PER, AV, SCPI, PS, PE" accent="gold" progressValue={pct(ppS,ppTarget)} delta={prevMonth?dPpS:null}/>
         <KpiCard label="PP financière prévisionnelle" value={euro(ppS+ppP)} hint="Atterrissage projeté" accent="amber" delta={prevMonth?dPpProj:null}/>
@@ -2120,6 +2119,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile}){
         <KpiCard label="PU prévisionnelle" value={euro(puS+puP)} hint="Atterrissage projeté" accent="blue"/>
         <KpiCard label="PP Mutuelle/Prévoyance" value={euro(ppMutS)} hint="Mutuelle Santé + Prévoyance TNS" accent="gold" delta={prevMonth?dPpMutS:null}/>
       </div>
+      <div style={{marginBottom:24}}><Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded/></Suspense></div>
       <div className="grid-2 gap-16 mb-24">
         <AreaChart title="PP cabinet annualisée" subtitle="Réalisé + pipeline → objectif" actual={ppS} projected={ppS+ppP} target={ppTarget}/>
         <AreaChart title="PU cabinet" subtitle="Versements uniques consolidés" actual={puS} projected={puS+puP} target={puTarget}/>
