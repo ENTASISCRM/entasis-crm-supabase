@@ -3,8 +3,9 @@
 // Lecture seule : aucune ecriture, la RLS applique le perimetre
 // (le manager voit tout le cabinet, le conseiller voit ses clients,
 // ses deals et son equipement via la vue client_equipment).
-// Les 7 generateurs d'occasions de contact sont calcules cote client
-// dans construireSections, a partir de listes paginees simples.
+// Les 8 generateurs d'occasions de contact sont calcules cote client
+// dans construireSections, a partir de listes paginees simples. Le
+// 8e (fiches a completer) est un rappel prioritaire place en tete.
 
 import { supabase } from '../lib/supabase'
 import { euro } from '../lib/ui-shared'
@@ -25,11 +26,13 @@ async function fetchTout(buildQuery) {
   return lignes
 }
 
-// Portefeuille clients avec les champs utiles aux generateurs.
+// Portefeuille clients avec les champs utiles aux generateurs. email et
+// patrimoine_estime servent au generateur fiches a completer (memes champs
+// que le verrou de signature).
 export function listClients() {
   return fetchTout(() => supabase
     .from('clients')
-    .select('id, nom, prenom, telephone, age, date_naissance, nb_enfants, situation_familiale, statut_pro, profession, revenus_annuels, advisor_code, co_advisor_code')
+    .select('id, nom, prenom, email, telephone, age, date_naissance, nb_enfants, situation_familiale, statut_pro, profession, revenus_annuels, patrimoine_estime, advisor_code, co_advisor_code')
     .order('nom', { ascending: true }))
 }
 
@@ -135,10 +138,52 @@ function cleNom(s) {
 
 const STATUTS_MADELIN = ['TNS', 'Profession libérale']
 
-// ═══ Les 7 generateurs ═══
+// Deals consideres comme actifs : le client va devoir signer, le verrou de
+// signature le bloquera si sa fiche est incomplete. Memes libelles que la
+// colonne deals.status.
+const STATUTS_ACTIFS = new Set(['En cours', 'Prévu'])
+
+// ═══ Generateur 8 : fiches clients incompletes (fonction pure) ═══
+// Miroir EXACT du verrou de signature (App.jsx, passage d'un deal en « Signé ») :
+// un client est COMPLET si email, telephone, statut_pro, profession,
+// revenus_annuels ET patrimoine_estime sont renseignes. date_naissance ne
+// compte PAS dans le complet obligatoire, elle est signalee a part comme bonus
+// (elle sert aux anniversaires et au compte a rebours des 70 ans).
+
+// Champ texte manquant : vide une fois nettoye (email, telephone, statut, profession).
+const texteVide = (v) => !String(v ?? '').trim()
+// Champ numerique manquant : null ou chaine vide. Un zero compte comme
+// renseigne, exactement comme le verrou de signature (revenus, patrimoine).
+const nombreVide = (v) => v == null || String(v).trim() === ''
+
+// Renvoie, pour chaque client incomplet, la liste des champs obligatoires
+// manquants (libelles courts destines a l'affichage rouge) et le bonus
+// date de naissance s'il manque. Calcul pur, testable, sans acces reseau.
+export function fichesIncompletes(clients = []) {
+  const resultat = []
+  clients.forEach((c) => {
+    const manquants = []
+    if (texteVide(c.email)) manquants.push('email')
+    if (texteVide(c.telephone)) manquants.push('téléphone')
+    if (texteVide(c.statut_pro)) manquants.push('statut')
+    if (texteVide(c.profession)) manquants.push('profession')
+    if (nombreVide(c.revenus_annuels)) manquants.push('revenus')
+    if (nombreVide(c.patrimoine_estime)) manquants.push('patrimoine')
+    if (manquants.length === 0) return
+    resultat.push({
+      client: c,
+      manquants,
+      bonus: parseDateTexte(c.date_naissance) ? null : 'date de naissance',
+    })
+  })
+  return resultat
+}
+
+// ═══ Les 8 generateurs ═══
 // Recoit les donnees brutes (deja filtrees par la RLS, et eventuellement par
 // le filtre conseiller du composant) et renvoie les sections dans l'ordre
-// d'affichage. Aucune ecriture, calcul pur.
+// d'affichage. Le generateur fiches a completer est place en tete (avant les
+// anniversaires) car c'est un rappel prioritaire. Aucune ecriture, calcul pur.
 export function construireSections({ clients = [], deals = [], equipement = [], profils = [] }, { isManager = false, today = new Date() } = {}) {
   const t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate())
   const mois = t0.getMonth()
@@ -372,6 +417,35 @@ export function construireSections({ clients = [], deals = [], equipement = [], 
       items: orphelins,
     })
   }
+
+  // 8. Fiches a completer, placee EN TETE via unshift. Rappel prioritaire :
+  //    fiche incomplete = signature impossible (verrou) et modules de vente
+  //    aveugles. Les clients avec un deal actif (En cours / Prévu) passent
+  //    devant car ils vont devoir signer bientot. Le libelle rouge des champs
+  //    manquants est porte tel quel dans raison pour que « Copier la liste »
+  //    et le rendu partagent la meme source.
+  const dealActif = (c) => dealsDuClient(c).some((d) => STATUTS_ACTIFS.has(d.status))
+  const fiches = fichesIncompletes(clients).map(({ client, manquants, bonus }) => {
+    const actif = dealActif(client)
+    return {
+      ...item(client, { section: 'fiches' }),
+      manquants,
+      bonus,
+      dealActif: actif,
+      raison: `manque : ${manquants.join(', ')}`,
+      detail: bonus ? `${bonus} recommandée` : null,
+      tri: actif ? 0 : 1,
+    }
+  })
+  fiches.sort((a, b) => a.tri - b.tri || a.nom.localeCompare(b.nom))
+  sections.unshift({
+    key: 'fiches-incompletes',
+    titre: 'Fiches à compléter',
+    regle: 'fiches dont un champ obligatoire à la signature manque : email, téléphone, statut, profession, revenus, patrimoine',
+    fiches: true,
+    accroche: 'Sans ces infos, impossible de signer et les modules de vente sont aveugles.',
+    items: fiches,
+  })
 
   return sections
 }

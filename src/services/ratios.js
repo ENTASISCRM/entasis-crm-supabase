@@ -150,3 +150,119 @@ export function computeCockpit({ mois, deals, clients, equip, missions, team = [
   lignes.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
   return { mois, moisCourant, lignes }
 }
+
+// ─── Completude des fiches clients (constructeur 3) ──────────────────────────
+// Objectif : forcer la saisie des fiches, la data est capitale. Une fiche est
+// « complete » selon EXACTEMENT la meme regle que le verrou de signature en
+// base (fonction exiger_fiche_complete_a_la_signature) : email, telephone,
+// statut_pro et profession non vides apres trim, revenus_annuels et
+// patrimoine_estime non null (zero compte comme une valeur saisie, le verrou ne
+// teste que is null). date_naissance ne compte PAS dans l obligatoire, c est un
+// bonus pour les anniversaires, signale a part comme « recommande ». Aucune
+// ecriture, tout est lecture pure et agregation pure.
+
+// Les six champs obligatoires, memes que le verrou de signature.
+export const CHAMPS_OBLIGATOIRES = ['email', 'telephone', 'statut_pro', 'profession', 'revenus_annuels', 'patrimoine_estime']
+
+// Un champ texte est renseigne si, une fois trimme, il n est pas vide.
+function texteRenseigne(v) {
+  return String(v ?? '').trim() !== ''
+}
+
+// Un champ numerique est renseigne des qu il n est pas null (zero compte comme
+// une valeur saisie, exactement comme le verrou qui ne teste que is null).
+function nombreRenseigne(v) {
+  return v !== null && v !== undefined
+}
+
+// Les champs obligatoires manquants sur une fiche, en libelles lisibles, dans le
+// meme ordre et avec les memes mots que le message d erreur du verrou.
+export function champsManquants(client) {
+  const manque = []
+  if (!texteRenseigne(client?.email)) manque.push('email')
+  if (!texteRenseigne(client?.telephone)) manque.push('téléphone')
+  if (!texteRenseigne(client?.statut_pro)) manque.push('statut')
+  if (!texteRenseigne(client?.profession)) manque.push('profession')
+  if (!nombreRenseigne(client?.revenus_annuels)) manque.push('revenus annuels')
+  if (!nombreRenseigne(client?.patrimoine_estime)) manque.push('patrimoine estimé')
+  return manque
+}
+
+// Une fiche est complete quand aucun champ obligatoire ne manque.
+export function ficheComplete(client) {
+  return champsManquants(client).length === 0
+}
+
+// date_naissance : bonus (anniversaires), signale a part comme recommande.
+export function naissanceRenseignee(client) {
+  return texteRenseigne(client?.date_naissance)
+}
+
+// Les codes conseiller rattaches a une fiche : le principal et le co conseiller
+// s il existe et differe. La fiche compte pour chacun d eux (perimetre
+// advisor_code / co_advisor_code), sans jamais compter deux fois le meme code.
+function codesDuClient(client) {
+  const codes = new Set()
+  if (texteRenseigne(client?.advisor_code)) codes.add(client.advisor_code)
+  if (texteRenseigne(client?.co_advisor_code)) codes.add(client.co_advisor_code)
+  return codes
+}
+
+// Fonction pure : le taux de completude par conseiller. Chaque fiche est
+// attribuee a son conseiller principal ET a son co conseiller. Retourne une
+// ligne par code { code, total, complets, incompletes, pct, sansNaissance },
+// triee par PIRE taux d abord (ceux a relancer en tete), egalite departagee par
+// le plus grand nombre d incompletes puis par code.
+export function completudeParConseiller(clients = []) {
+  const parCode = new Map()
+  for (const c of clients) {
+    const complete = ficheComplete(c)
+    const naissance = naissanceRenseignee(c)
+    for (const code of codesDuClient(c)) {
+      let ligne = parCode.get(code)
+      if (!ligne) { ligne = { code, total: 0, complets: 0, sansNaissance: 0 }; parCode.set(code, ligne) }
+      ligne.total += 1
+      if (complete) ligne.complets += 1
+      if (!naissance) ligne.sansNaissance += 1
+    }
+  }
+  const lignes = [...parCode.values()].map((l) => ({
+    ...l,
+    incompletes: l.total - l.complets,
+    pct: l.total ? Math.round((100 * l.complets) / l.total) : 0,
+  }))
+  lignes.sort((a, b) => a.pct - b.pct || b.incompletes - a.incompletes || String(a.code).localeCompare(String(b.code), 'fr'))
+  return lignes
+}
+
+// Fonction pure : l agregat sur un lot de fiches, chaque fiche comptee une seule
+// fois (la carte « Tes fiches » du conseiller, ou un total cabinet). La RLS a
+// deja restreint le perimetre en amont, donc les fiches recues sont bien celles
+// que l on doit compter.
+export function completudeGlobale(clients = []) {
+  const total = clients.length
+  let complets = 0
+  let sansNaissance = 0
+  for (const c of clients) {
+    if (ficheComplete(c)) complets += 1
+    if (!naissanceRenseignee(c)) sansNaissance += 1
+  }
+  return {
+    total,
+    complets,
+    incompletes: total - complets,
+    sansNaissance,
+    pct: total ? Math.round((100 * complets) / total) : 0,
+  }
+}
+
+// Fetch dedie : les fiches avec les six champs obligatoires, plus
+// co_advisor_code (double rattachement) et date_naissance (bonus). La RLS fait
+// le perimetre (manager tout le cabinet, conseiller ses fiches). Lecture pure.
+export async function listClientsCompletude() {
+  const { data, error } = await supabase
+    .from('clients')
+    .select('id, advisor_code, co_advisor_code, email, telephone, statut_pro, profession, revenus_annuels, patrimoine_estime, date_naissance')
+  if (error) throw error
+  return data || []
+}

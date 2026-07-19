@@ -21,9 +21,10 @@ import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip,
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
-import { loadCockpit, computeCockpit } from '../services/ratios'
+import { loadCockpit, computeCockpit, listClientsCompletude, completudeParConseiller, completudeGlobale } from '../services/ratios'
 import { listTeam } from '../services/profiles'
 import { euro } from '../lib/ui-shared'
+import toast from 'react-hot-toast'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip)
 
@@ -124,6 +125,161 @@ function Carte({ ligne, labels, isManager }) {
   )
 }
 
+// ─── Completude des fiches (constructeur 3) ──────────────────────────────────
+// Bloc de visibilite manager : forcer la saisie des fiches (data capitale) par
+// la transparence et la relance en amont du verrou de signature. Le manager voit
+// un mini classement par conseiller trie du pire taux au meilleur ; le conseiller
+// voit sa propre carte avec un lien vers l ecran Opportunites (fiches a completer).
+
+// Couleur de la barre selon le taux : vert des 80 %, orange au dessus de 50 %,
+// rouge en dessous. Rouge = semantique « manque » de la charte.
+function couleurCompletude(pct) {
+  if (pct >= 80) return '#2C6B4E'
+  if (pct >= 50) return '#A6843F'
+  return '#B4453B'
+}
+
+// Barre de progression coloree, largeur = part de fiches completes.
+function BarreCompletude({ pct }) {
+  const p = Math.max(0, Math.min(100, pct))
+  return (
+    <div className="cmpl-bar" title={`${pct} % de fiches completes`}>
+      <span style={{ width: `${p}%`, background: couleurCompletude(pct) }} />
+    </div>
+  )
+}
+
+// Amene le conseiller sur l onglet Opportunites (bloc fiches a completer) sans
+// dependre d un routeur : on reutilise le bouton de navigation deja rendu par la
+// sidebar. Si le bouton n est pas trouve, on guide au lieu de rester muet.
+function allerAuxOpportunites() {
+  const cible = Array.from(document.querySelectorAll('.nav-item'))
+    .find((b) => (b.textContent || '').trim().startsWith('Opportunités'))
+  if (cible) { cible.click(); return }
+  toast('Ouvre l onglet Opportunites du menu pour completer tes fiches.')
+}
+
+// Manager : mini classement par conseiller, pire taux en tete (a relancer).
+function ClassementCompletude({ rows, nomParCode, global }) {
+  return (
+    <>
+      <div className="cmpl-cab">
+        <BarreCompletude pct={global.pct} />
+        <div className="cmpl-cab-txt">
+          <b>{global.pct} %</b> des {global.total} fiches du cabinet completes
+          {global.incompletes > 0 && <> · <span className="rouge">{global.incompletes} à compléter</span></>}
+        </div>
+      </div>
+      <div className="cmpl-note-sec">Classement du taux le plus faible d abord : les conseillers a relancer sont en tete.</div>
+      <div className="cmpl-table" role="table">
+        <div className="cmpl-tr cmpl-th" role="row">
+          <span role="columnheader">Conseiller</span>
+          <span role="columnheader">Complétude</span>
+          <span role="columnheader" className="num">À compléter</span>
+        </div>
+        {rows.map((r) => (
+          <div className="cmpl-tr" role="row" key={r.code}>
+            <span className="cmpl-nom" role="cell">
+              <span className="cmpl-nom-txt">{nomParCode.get(r.code) || r.code}</span>
+              {r.sansNaissance > 0 && (
+                <em className="cmpl-bonus" title="Date de naissance recommandee pour les anniversaires">
+                  {r.sansNaissance} sans date de naiss.
+                </em>
+              )}
+            </span>
+            <span className="cmpl-cell-bar" role="cell">
+              <BarreCompletude pct={r.pct} />
+              <b style={{ color: couleurCompletude(r.pct) }}>{r.pct} %</b>
+            </span>
+            <span className={`num ${r.incompletes > 0 ? 'rouge' : 'ok'}`} role="cell">{r.incompletes}</span>
+          </div>
+        ))}
+      </div>
+    </>
+  )
+}
+
+// Conseiller : sa propre carte, avec lien vers Opportunites.
+function CarteMesFiches({ global }) {
+  const pct = global.pct
+  if (global.total === 0) {
+    return <div className="ck-empty">Aucune fiche a ton portefeuille pour l instant.</div>
+  }
+  return (
+    <div className="cmpl-moi">
+      <div className="cmpl-moi-hd">
+        <div className="cmpl-moi-pct" style={{ color: couleurCompletude(pct) }}>{pct} %</div>
+        <div className="cmpl-moi-txt">
+          <div className="cmpl-moi-l1">Tes fiches : {pct}% complètes</div>
+          <div className="cmpl-moi-l2">
+            {global.incompletes > 0
+              ? <><b className="rouge">{global.incompletes}</b> à compléter sur {global.total}</>
+              : <>Tes {global.total} fiche{global.total > 1 ? 's' : ''} sont complètes, bravo.</>}
+          </div>
+        </div>
+      </div>
+      <BarreCompletude pct={pct} />
+      {global.incompletes > 0 && (
+        <button type="button" className="cmpl-cta" onClick={allerAuxOpportunites}>
+          Compléter mes fiches dans Opportunités →
+        </button>
+      )}
+      {global.sansNaissance > 0 && (
+        <div className="cmpl-bonus-note">
+          {global.sansNaissance} fiche{global.sansNaissance > 1 ? 's' : ''} sans date de naissance (recommandé pour les anniversaires).
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Le bloc complet. Charge ses propres donnees (fiches plus noms d equipe), en
+// parallele et independamment du reste du cockpit. RLS = perimetre.
+function SectionCompletude({ isManager }) {
+  const [st, setSt] = useState({ loading: true, err: null, clients: [], team: [] })
+
+  useEffect(() => {
+    let vivant = true
+    ;(async () => {
+      try {
+        const [clients, team] = await Promise.all([
+          listClientsCompletude(),
+          listTeam().catch(() => []),
+        ])
+        if (vivant) setSt({ loading: false, err: null, clients, team })
+      } catch (e) {
+        if (vivant) setSt({ loading: false, err: e.message || 'Erreur de chargement', clients: [], team: [] })
+      }
+    })()
+    return () => { vivant = false }
+  }, [])
+
+  const nomParCode = useMemo(() => new Map((st.team || []).map((p) => [p.advisor_code, p.full_name])), [st.team])
+  const rows = useMemo(() => completudeParConseiller(st.clients), [st.clients])
+  const global = useMemo(() => completudeGlobale(st.clients), [st.clients])
+
+  return (
+    <div className="cmpl">
+      <style>{stylesCompletude}</style>
+      <div className="cmpl-hd">
+        <h2>Complétude des fiches</h2>
+        <div className="cmpl-why">Une fiche complète = un dossier signable et des opportunités de vente chiffrées.</div>
+      </div>
+
+      {st.loading && <div className="ck-empty">Chargement…</div>}
+      {st.err && <div className="ck-empty err">Erreur : {st.err}</div>}
+
+      {!st.loading && !st.err && (
+        isManager
+          ? (rows.length === 0
+              ? <div className="ck-empty">Aucune fiche sur le perimetre.</div>
+              : <ClassementCompletude rows={rows} nomParCode={nomParCode} global={global} />)
+          : <CarteMesFiches global={global} />
+      )}
+    </div>
+  )
+}
+
 export default function CockpitRatios({ profile }) {
   const isManager = profile?.role === 'manager'
   const [state, setState] = useState({ loading: true, err: null, mois: [], lignes: [] })
@@ -197,6 +353,8 @@ export default function CockpitRatios({ profile }) {
           ))}
         </div>
       )}
+
+      <SectionCompletude isManager={isManager} />
     </div>
   )
 }
@@ -248,5 +406,52 @@ const styles = `
   .ckr .ck-kpis{ grid-template-columns:repeat(2,1fr); gap:10px }
   .ckr .ck-cabinet{ width:100% }
   .ckr .cbx{ flex:1 }
+}
+`
+
+// Styles du bloc Completude des fiches. Scopes sous .cmpl, charte navy et or,
+// rouge #B4453B pour la semantique « manque ».
+const stylesCompletude = `
+.ckr .cmpl{ margin-top:22px; border-top:1px solid #ECEAE4; padding-top:16px }
+.ckr .cmpl h2{ font-size:16px; font-weight:750; color:#0A1628; margin:0; letter-spacing:-.01em }
+.ckr .cmpl-hd{ margin-bottom:12px }
+.ckr .cmpl-why{ font-size:11.5px; color:#8A95A8; margin-top:3px }
+.ckr .cmpl .rouge{ color:#B4453B; font-weight:750 }
+.ckr .cmpl-bar{ position:relative; height:8px; background:#F0EEE8; border-radius:999px; overflow:hidden; min-width:60px }
+.ckr .cmpl-bar>span{ position:absolute; left:0; top:0; bottom:0; border-radius:999px; transition:width .3s ease }
+
+.ckr .cmpl-cab{ display:flex; align-items:center; gap:14px; background:#fff; border:1px solid #ECEAE4; border-radius:12px; padding:12px 14px; margin-bottom:8px }
+.ckr .cmpl-cab .cmpl-bar{ flex:1 }
+.ckr .cmpl-cab-txt{ font-size:12px; color:#1D1D1F; white-space:nowrap }
+.ckr .cmpl-cab-txt b{ color:#0A1628; font-variant-numeric:tabular-nums }
+.ckr .cmpl-note-sec{ font-size:11px; color:#8A95A8; margin:0 2px 8px }
+
+.ckr .cmpl-table{ border:1px solid #ECEAE4; border-radius:12px; overflow:hidden; background:#fff }
+.ckr .cmpl-tr{ display:grid; grid-template-columns:1.4fr 1.7fr auto; align-items:center; gap:12px; padding:10px 14px; border-top:1px solid #F4F2ED }
+.ckr .cmpl-tr:first-child{ border-top:0 }
+.ckr .cmpl-th{ background:#FAF8F3; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:#8A95A8 }
+.ckr .cmpl-th .num{ text-align:right }
+.ckr .cmpl-nom{ display:flex; flex-direction:column; gap:1px; min-width:0 }
+.ckr .cmpl-nom-txt{ font-size:13px; font-weight:650; color:#0A1628; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.ckr .cmpl-bonus{ font-style:normal; font-size:9.5px; font-weight:600; color:#A6843F }
+.ckr .cmpl-cell-bar{ display:flex; align-items:center; gap:9px }
+.ckr .cmpl-cell-bar .cmpl-bar{ flex:1 }
+.ckr .cmpl-cell-bar b{ font-size:12px; font-variant-numeric:tabular-nums; min-width:36px; text-align:right }
+.ckr .cmpl .num{ font-size:14px; font-weight:800; text-align:right; font-variant-numeric:tabular-nums }
+.ckr .cmpl .num.ok{ color:#2C6B4E }
+
+.ckr .cmpl-moi{ background:#fff; border:1px solid #ECEAE4; border-radius:14px; padding:16px; max-width:460px; box-shadow:0 1px 2px rgba(10,22,40,.04) }
+.ckr .cmpl-moi-hd{ display:flex; align-items:center; gap:14px; margin-bottom:12px }
+.ckr .cmpl-moi-pct{ font-size:34px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; line-height:1 }
+.ckr .cmpl-moi-l1{ font-size:15px; font-weight:750; color:#0A1628 }
+.ckr .cmpl-moi-l2{ font-size:12px; color:#5b6470; margin-top:3px }
+.ckr .cmpl-moi-l2 b{ font-variant-numeric:tabular-nums }
+.ckr .cmpl-cta{ margin-top:12px; width:100%; border:0; border-radius:10px; background:#0A1628; color:#fff; font-weight:700; font-size:12.5px; padding:11px 12px; cursor:pointer }
+.ckr .cmpl-cta:hover{ background:#142438 }
+.ckr .cmpl-bonus-note{ margin-top:9px; font-size:11px; color:#A6843F }
+
+@media(max-width:520px){
+  .ckr .cmpl-tr{ grid-template-columns:1.2fr 1.5fr auto; gap:8px; padding:10px }
+  .ckr .cmpl-cab-txt{ white-space:normal }
 }
 `

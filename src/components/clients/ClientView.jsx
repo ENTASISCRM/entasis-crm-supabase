@@ -45,6 +45,42 @@ const PIPELINE_STATUS_CLASS = {
   'honoraires': 'badge badge-signed'
 }
 
+// Rouge charte pour le manque (voir styles.css, semantique "manque").
+const ROUGE_MANQUE = '#B4453B'
+
+// Champs obligatoires d'une fiche client, STRICTEMENT identiques au verrou de
+// signature d'un deal (App.jsx submitInner, passage en "Signé"). Sans eux,
+// impossible de signer et le module Opportunites reste aveugle. La
+// date_naissance ne compte PAS ici : c'est un bonus recommande pour les
+// anniversaires, traite a part.
+const CHAMPS_REQUIS = [
+  { cle: 'email', label: 'email' },
+  { cle: 'telephone', label: 'téléphone' },
+  { cle: 'statut_pro', label: 'statut' },
+  { cle: 'profession', label: 'profession' },
+  { cle: 'revenus_annuels', label: 'revenus' },
+  { cle: 'patrimoine_estime', label: 'patrimoine' },
+]
+
+// Un champ est renseigne s'il n'est ni null/undefined ni chaine vide apres
+// trim. Meme regle que le verrou de signature : une valeur numerique a 0
+// (ex. patrimoine 0) compte comme renseignee, c'est une donnee saisie.
+function champRempli(valeur) {
+  return valeur != null && String(valeur).trim() !== ''
+}
+
+// Calcule l'etat de completude d'une fiche client (6 champs obligatoires).
+function calculerCompletude(client) {
+  const manquants = CHAMPS_REQUIS.filter(c => !champRempli(client?.[c.cle]))
+  return {
+    remplis: CHAMPS_REQUIS.length - manquants.length,
+    total: CHAMPS_REQUIS.length,
+    manquants,
+    complet: manquants.length === 0,
+    dateNaissanceManquante: !champRempli(client?.date_naissance),
+  }
+}
+
 export default function ClientView({ clientId, onBack, supabase, profile, onEditDeal, onAddDeal }) {
   const [client, setClient] = useState(null)
   const [clientDeals, setClientDeals] = useState([])
@@ -168,8 +204,52 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
     )
   }
 
+  // Completude de la fiche (client garanti non nul apres les gardes ci-dessus).
+  // Vert si 6/6, rouge si <= 2/6, orange sinon.
+  const completude = calculerCompletude(client)
+  const scoreCouleur = completude.complet
+    ? '#2C6B4E'
+    : (completude.remplis <= 2 ? ROUGE_MANQUE : '#B45309')
+
   return (
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+      {/* Bandeau "Fiche incomplete" : impossible a rater, en haut de la fiche.
+          N'apparait que si au moins un champ obligatoire manque. */}
+      {!completude.complet && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: '16px',
+          flexWrap: 'wrap',
+          padding: '16px 20px',
+          marginBottom: '24px',
+          backgroundColor: 'rgba(180, 69, 59, 0.08)',
+          border: `1px solid ${ROUGE_MANQUE}`,
+          borderLeft: `4px solid ${ROUGE_MANQUE}`,
+          borderRadius: 'var(--rad)'
+        }}>
+          <div style={{ flex: '1 1 320px' }}>
+            <div style={{ fontSize: '15px', fontWeight: '700', color: ROUGE_MANQUE, marginBottom: '6px' }}>
+              ⚠ Fiche incomplète
+            </div>
+            <div style={{ fontSize: '13px', color: 'var(--t1)', marginBottom: '8px' }}>
+              Champs manquants : {completude.manquants.map(c => c.label).join(', ')}.
+            </div>
+            <div style={{ fontSize: '13px', color: 'var(--t2)' }}>
+              À compléter pour pouvoir signer et alimenter les opportunités de vente.
+            </div>
+          </div>
+          <button
+            className="btn btn-primary"
+            onClick={() => setEditModalOpen(true)}
+            style={{ whiteSpace: 'nowrap', alignSelf: 'center' }}
+          >
+            Compléter
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{
         display: 'flex',
@@ -195,7 +275,7 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
           }}>
             {client.prenom} {client.nom}
           </h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '14px', color: 'var(--t2)' }}>
               Conseiller: {client.advisor_code || '—'}
             </span>
@@ -207,6 +287,48 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
             <span className={STATUS_CLASS[globalStatus] || 'badge'}>
               {statusLabel(globalStatus)}
             </span>
+
+            {/* Score de completude, toujours visible (vert a 6/6). */}
+            <span
+              title="Complétude de la fiche client (6 champs obligatoires pour signer)"
+              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <span style={{ fontSize: '13px', fontWeight: '600', color: scoreCouleur, whiteSpace: 'nowrap' }}>
+                Fiche {completude.remplis}/{completude.total}
+              </span>
+              <span style={{
+                width: '64px',
+                height: '6px',
+                borderRadius: '3px',
+                backgroundColor: 'rgba(60,60,67,0.12)',
+                overflow: 'hidden',
+                display: 'inline-block'
+              }}>
+                <span style={{
+                  display: 'block',
+                  width: `${(completude.remplis / completude.total) * 100}%`,
+                  height: '100%',
+                  backgroundColor: scoreCouleur,
+                  borderRadius: '3px'
+                }} />
+              </span>
+            </span>
+
+            {/* Date de naissance : bonus recommande (anniversaires), hors score
+                obligatoire. Signal doux, jamais rouge. */}
+            {completude.dateNaissanceManquante && (
+              <span style={{
+                fontSize: '12px',
+                fontWeight: '600',
+                padding: '3px 8px',
+                borderRadius: '10px',
+                backgroundColor: 'var(--gold-subtle)',
+                color: 'var(--gold-dk)',
+                whiteSpace: 'nowrap'
+              }}>
+                Date de naissance recommandée
+              </span>
+            )}
           </div>
         </div>
         <button

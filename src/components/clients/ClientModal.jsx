@@ -1,5 +1,36 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
+import { STATUTS_PRO } from '../../lib/ui-shared'
+
+// Rouge charte pour le manque (semantique "champ obligatoire vide").
+const ROUGE_MANQUE = '#B4453B'
+
+// Un champ est vide s'il est null/undefined ou chaine vide apres trim. Meme
+// regle que le verrou de signature et que le score de la fiche client.
+function champVide(valeur) {
+  return valeur == null || String(valeur).trim() === ''
+}
+
+// Pastille rouge affichee a cote du label d'un champ obligatoire encore vide
+// pendant l'edition. Ne bloque pas la sauvegarde (la contrainte dure est a la
+// signature), rend juste le manque tres visible.
+function PastilleRequise({ vide }) {
+  if (!vide) return null
+  return (
+    <span
+      title="Champ obligatoire pour signer et alimenter les opportunités"
+      style={{
+        display: 'inline-block',
+        width: '8px',
+        height: '8px',
+        borderRadius: '50%',
+        backgroundColor: ROUGE_MANQUE,
+        marginLeft: '6px',
+        verticalAlign: 'middle'
+      }}
+    />
+  )
+}
 
 // Normalise un numero francais a la perte de focus du champ : espaces,
 // points, tirets et parentheses retires, prefixe international 33 ramene
@@ -22,11 +53,13 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
     email: '',
     telephone: '',
     age: '',
+    date_naissance: '',
     adresse: '',
     code_postal: '',
     ville: '',
     situation_familiale: '',
     nb_enfants: 0,
+    statut_pro: '',
     profession: '',
     revenus_annuels: '',
     patrimoine_estime: '',
@@ -51,11 +84,13 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
         email: client.email || '',
         telephone: client.telephone || '',
         age: client.age || '',
+        date_naissance: client.date_naissance || '',
         adresse: client.adresse || '',
         code_postal: client.code_postal || '',
         ville: client.ville || '',
         situation_familiale: client.situation_familiale || '',
         nb_enfants: client.nb_enfants || 0,
+        statut_pro: client.statut_pro || '',
         profession: client.profession || '',
         revenus_annuels: client.revenus_annuels || '',
         patrimoine_estime: client.patrimoine_estime || '',
@@ -72,11 +107,13 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
         email: '',
         telephone: '',
         age: '',
+        date_naissance: '',
         adresse: '',
         code_postal: '',
         ville: '',
         situation_familiale: '',
         nb_enfants: 0,
+        statut_pro: '',
         profession: '',
         revenus_annuels: '',
         patrimoine_estime: '',
@@ -92,6 +129,18 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
 
   // Signal doux, sans blocage : email saisi mais sans arobase
   const emailSuspect = !!form.email?.trim() && !form.email.includes('@')
+
+  // Champs obligatoires (identiques au verrou de signature) encore vides.
+  // Sert a la legende des pastilles rouges. Ne bloque PAS la sauvegarde : la
+  // contrainte dure reste au passage en "Signé".
+  const manquantsObligatoires = [
+    ['email', form.email],
+    ['téléphone', form.telephone],
+    ['statut', form.statut_pro],
+    ['profession', form.profession],
+    ['revenus', form.revenus_annuels],
+    ['patrimoine', form.patrimoine_estime],
+  ].filter(([, v]) => champVide(v)).map(([label]) => label)
 
   const toggleObjectif = (objectif) => {
     if (form.objectifs.includes(objectif)) {
@@ -116,11 +165,13 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
         email: form.email?.trim() || null,
         telephone: form.telephone?.trim() || null,
         age: form.age ? Number(form.age) : null,
+        date_naissance: form.date_naissance?.trim() || null,
         adresse: form.adresse?.trim() || null,
         code_postal: form.code_postal?.trim() || null,
         ville: form.ville?.trim() || null,
         situation_familiale: form.situation_familiale || null,
         nb_enfants: Number(form.nb_enfants) || 0,
+        statut_pro: form.statut_pro?.trim() || null,
         profession: form.profession?.trim() || null,
         revenus_annuels: form.revenus_annuels ? Number(form.revenus_annuels) : null,
         patrimoine_estime: form.patrimoine_estime ? Number(form.patrimoine_estime) : null,
@@ -134,9 +185,10 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
 
       if (client?.id) {
         // Mise à jour
+        const updatedAt = new Date().toISOString()
         const { error } = await supabase
           .from('clients')
-          .update({ ...payload, updated_at: new Date().toISOString() })
+          .update({ ...payload, updated_at: updatedAt })
           .eq('id', client.id)
 
         if (error) {
@@ -145,6 +197,10 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
         }
 
         toast.success('Client mis à jour')
+        // Propage la fiche a jour au parent (ClientView) pour rafraichir
+        // immediatement le bandeau "Fiche incomplete" et le score de
+        // completude sans rechargement de page.
+        if (onSave) onSave({ ...client, ...payload, updated_at: updatedAt })
       } else {
         // Création
         const { data, error } = await supabase
@@ -187,6 +243,35 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
         </div>
 
         <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+          {/* Legende des pastilles : rappelle les champs obligatoires encore
+              vides. N'apparait que s'il en manque au moins un. */}
+          {manquantsObligatoires.length > 0 && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 14px',
+              marginBottom: '16px',
+              backgroundColor: 'rgba(180, 69, 59, 0.08)',
+              border: `1px solid ${ROUGE_MANQUE}`,
+              borderRadius: 'var(--rad)',
+              fontSize: '13px',
+              color: 'var(--t1)'
+            }}>
+              <span style={{
+                display: 'inline-block',
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: ROUGE_MANQUE,
+                flexShrink: 0
+              }} />
+              <span>
+                Champs <strong>obligatoires pour signer</strong> encore à remplir : {manquantsObligatoires.join(', ')}.
+              </span>
+            </div>
+          )}
+
           {/* Section Identité */}
           <div className="form-section">
             <h3 className="form-section-title">Identité</h3>
@@ -213,7 +298,7 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
             </div>
             <div className="form-row form-row-2">
               <div className="form-group">
-                <label className="form-label">Email</label>
+                <label className="form-label">Email <PastilleRequise vide={champVide(form.email)} /></label>
                 <input
                   className="form-input"
                   type="email"
@@ -229,7 +314,7 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
                 )}
               </div>
               <div className="form-group">
-                <label className="form-label">Téléphone</label>
+                <label className="form-label">Téléphone <PastilleRequise vide={champVide(form.telephone)} /></label>
                 <input
                   className="form-input"
                   value={form.telephone}
@@ -279,13 +364,40 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Profession</label>
+                <label className="form-label">Profession <PastilleRequise vide={champVide(form.profession)} /></label>
                 <input
                   className="form-input"
                   value={form.profession}
                   onChange={e => set('profession', e.target.value)}
                   placeholder="Ingénieur, Médecin, etc."
                 />
+              </div>
+            </div>
+            <div className="form-row form-row-2">
+              <div className="form-group">
+                <label className="form-label">Statut professionnel <PastilleRequise vide={champVide(form.statut_pro)} /></label>
+                <select
+                  className="form-input"
+                  value={form.statut_pro}
+                  onChange={e => set('statut_pro', e.target.value)}
+                >
+                  <option value="">-- Choisir --</option>
+                  {STATUTS_PRO.map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Date de naissance</label>
+                <input
+                  className="form-input"
+                  type="date"
+                  value={form.date_naissance}
+                  onChange={e => set('date_naissance', e.target.value)}
+                />
+                <div style={{ fontSize: '12px', color: 'var(--t3)', marginTop: '4px' }}>
+                  Recommandé (sert aux anniversaires), non obligatoire.
+                </div>
               </div>
             </div>
           </div>
@@ -329,7 +441,7 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
             <h3 className="form-section-title">Patrimoine</h3>
             <div className="form-row form-row-2">
               <div className="form-group">
-                <label className="form-label">Revenus annuels (€)</label>
+                <label className="form-label">Revenus annuels (€) <PastilleRequise vide={champVide(form.revenus_annuels)} /></label>
                 <input
                   className="form-input"
                   type="number"
@@ -340,7 +452,7 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Patrimoine estimé (€)</label>
+                <label className="form-label">Patrimoine estimé (€) <PastilleRequise vide={champVide(form.patrimoine_estime)} /></label>
                 <input
                   className="form-input"
                   type="number"
