@@ -28,13 +28,24 @@ export async function listFamilies() {
 // detenu = true  → le client possède ce produit (souscrit avant le CRM).
 // detenu = false → absence confirmée (ex. « TNS sans prévoyance »), alimente
 //                  les opportunités.
-export async function upsertDeclare({ client_id, famille, detenu = true, compagnie = null, note = null, saisi_par = null }) {
+export async function upsertDeclare({ client_id, famille, detenu = true, compagnie = null, note = null, saisi_par = null, ailleurs = false, ou_loge = null }) {
   const { error } = await supabase
     .from('client_equipements_declares')
     .upsert(
-      { client_id, famille, detenu, compagnie, note, saisi_par, updated_at: new Date().toISOString() },
+      { client_id, famille, detenu, compagnie, note, saisi_par, ailleurs, ou_loge, updated_at: new Date().toISOString() },
       { onConflict: 'client_id,famille' },
     )
+  if (error) throw error
+}
+
+// Met à jour des champs « module » du client (foyer, prochain RDV, plan,
+// profil d approche). null autorisé pour effacer. RLS clients_update_scope.
+export async function patchClient(clientId, patch = {}) {
+  const allowed = ['foyer_id', 'prochain_rdv', 'plan_equipement', 'profil_approche']
+  const clean = {}
+  for (const k of allowed) if (k in patch) clean[k] = patch[k]
+  if (Object.keys(clean).length === 0) return
+  const { error } = await supabase.from('clients').update(clean).eq('id', clientId)
   if (error) throw error
 }
 

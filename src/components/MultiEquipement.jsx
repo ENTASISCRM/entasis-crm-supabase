@@ -25,9 +25,10 @@ import toast from 'react-hot-toast'
 import {
   listEquipment, listFamilies, upsertDeclare, removeDeclare,
   listDeclaresForClient, listSignedDealsForClient, getSettings, saveSettings,
-  getClientContact, updateClientInfo, setClientPause, listActivePauses,
+  getClientContact, updateClientInfo, setClientPause, listActivePauses, patchClient,
 } from '../services/equipment'
 import { listMissions, upsertMission, reconcileGagnees, listCollaboration } from '../services/missions'
+import { listSignaux, addSignal, deleteSignal } from '../services/signaux'
 import {
   suggestionPour, ARGUMENTAIRES, estimationCollecte, baseMontant, REGLES,
   RAISONS_REPORT, ECHEANCES_REPORT, simulationIndicative,
@@ -36,6 +37,8 @@ import { genererMail, genererRecommandation, genererRelance, CABINET } from '../
 
 // Statuts pro (miroir de la fiche client) pour la capture inline.
 const STATUTS_PRO = ['Salarié', 'TNS', 'Chef d entreprise', 'Retraité', 'Profession libérale', 'Autre']
+// Motivations dominantes du foyer (#10 profil d approche).
+const PROFILS = ['Transmission', 'Fiscalité', 'Protection', 'ISR']
 // Jalons de relance (jours depuis la mise en cours) : cadence de suivi douce.
 function infoRelance(mi) {
   if (mi.statut !== 'en_cours' || !mi.updated_at) return { due: false, jours: 0, etape: 0 }
@@ -44,6 +47,13 @@ function infoRelance(mi) {
   return { due: etape > 0, jours, etape }
 }
 const LIB_RELANCE = { 1: 'à relancer', 2: 'relance ferme', 3: 'point de décision' }
+// #10 : familles mises en avant selon la motivation dominante du foyer.
+const PROFIL_BOOST = {
+  Transmission: ['av', 'scpi', 'immobilier'],
+  'Fiscalité': ['per', 'scpi', 'immobilier'],
+  Protection: ['prevoyance', 'mutuelle', 'emprunteur'],
+  ISR: ['av', 'structures'],
+}
 
 const fmtEur = (v) =>
   Number(v || 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
@@ -82,6 +92,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
   const [settings, setSettings] = useState({ campagne_du_mois: 'prevoyance', objectif_taux_multi: 40 })
   const [missions, setMissions] = useState([])
   const [collab, setCollab] = useState([])       // missions de collaboration adressées à ce conseiller
+  const [signaux, setSignaux] = useState([])     // signaux terrain (#8)
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
   const [vue, setVue] = useState('matrice')        // matrice (defaut) | missions | reports
@@ -95,10 +106,13 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
   const [revue, setRevue] = useState(null)         // missions ouvertes en pile de revue par lot
 
   async function reload() {
-    const [eq, fam, st, mis, pauses] = await Promise.all([
-      listEquipment(), listFamilies(), getSettings(), listMissions(), listActivePauses(),
+    const [eq, fam, st, mis, pauses, sigs] = await Promise.all([
+      listEquipment(), listFamilies(), getSettings(), listMissions(), listActivePauses(), listSignaux(),
     ])
     const pauseMap = new Map((pauses || []).map((p) => [p.id, p]))
+    const sigByClient = new Map()
+    for (const s of (sigs || [])) { const a = sigByClient.get(s.client_id) || []; a.push(s); sigByClient.set(s.client_id, a) }
+    setSignaux(sigs || [])
     const mapped = eq.map((c) => {
       const p = pauseMap.get(c.client_id)
       return {
@@ -112,10 +126,18 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
         patrimoine: Number(c.patrimoine_estime || 0),
         familles: Array.isArray(c.familles) ? c.familles : [],
         absences: Array.isArray(c.absences_confirmees) ? c.absences_confirmees : [],
+        ailleurs: Array.isArray(c.ailleurs_familles) ? c.ailleurs_familles : [],
         nb: Number(c.nb_familles || 0),
+        nbEnfants: Number(c.nb_enfants || 0),
+        situationFam: c.situation_familiale || '',
+        foyerId: c.foyer_id || null,
+        prochainRdv: c.prochain_rdv || null,
+        plan: Array.isArray(c.plan_equipement) ? c.plan_equipement : [],
+        profil: Array.isArray(c.profil_approche) ? c.profil_approche : [],
         pauseJusqu: p?.pause_jusqu_au || null,
         pauseMotif: p?.pause_motif || '',
         pauseActive: !!p,
+        signaux: sigByClient.get(c.client_id) || [],
       }
     })
     setFamilies(fam)
@@ -269,6 +291,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
     let s = m.montant || 0
     if (m.confiance === 'fort') s *= 1.4
     else if (m.confiance === 'faible') s *= 0.6
+    if ((m.client.profil || []).some((t) => PROFIL_BOOST[t]?.includes(m.famille))) s *= 1.5
     if (!m.client.pauseActive && infoRelance(m).due) s += 1000000
     return s
   }
@@ -639,7 +662,8 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
       {!loading && !err && vue === 'matrice' && (
         <MatriceV2 rows={rows} matCols={matCols} famMap={famMap} isManager={isManager}
           profile={profile} onCreateDeal={onCreateDeal} reload={reload} budgetMap={budgetMap}
-          onProposer={(client, preset) => setProposerPour({ client, preset })} />
+          onProposer={(client, preset) => setProposerPour({ client, preset })}
+          onRevue={(items) => setRevue(items)} />
       )}
 
       {/* Pile de revue par lot */}
@@ -903,6 +927,9 @@ function ProposerModal({ client, preset, relance, matCols, famMap, conseiller, a
         {budget && budget.count >= 3 && (
           <div className="pmbudget">Ce client a déjà été sollicité {budget.count} fois ces six mois, la dernière le {fmtDate(new Date(budget.last).toISOString().slice(0, 10))}. Peut être vaut il mieux espacer.</div>
         )}
+        {client.profil?.length > 0 && mode !== 'reco' && (
+          <div className="pmangle">Angle conseillé pour ce foyer : {client.profil.join(', ')}</div>
+        )}
 
         <div className="mrlab">Objet</div>
         <input className="pmobj" value={objet} onChange={(e) => setObjet(e.target.value)} />
@@ -934,7 +961,7 @@ function ProposerModal({ client, preset, relance, matCols, famMap, conseiller, a
 // Conservée pour corriger les données : matrice à pastilles + drawer de
 // déclarations (détenu, absence, historique signé). Radar, heatmap, export et
 // bloc opportunités de la V2 ont été retirés, les missions les remplacent.
-function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, reload, onProposer, budgetMap }) {
+function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, reload, onProposer, budgetMap, onRevue }) {
   const [seg, setSeg] = useState('tous')
   const [cons, setCons] = useState('all')
   const [q, setQ] = useState('')
@@ -944,10 +971,37 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
   const [pauseForm, setPauseForm] = useState(false)
   const [pauseDur, setPauseDur] = useState('90')
   const [pauseMotif, setPauseMotif] = useState('')
+  const [views, setViews] = useState([])          // #1 vues sauvegardées (localStorage)
+  const [foyerMode, setFoyerMode] = useState(false) // #4 vue par foyer
+  const [multiSel, setMultiSel] = useState(() => new Set()) // #3 sélection multiple
+  const [lastIdx, setLastIdx] = useState(null)    // #3 ancre du shift-clic
+  const [debrief, setDebrief] = useState(false)   // #2 panneau débrief RDV
+  const [planEdit, setPlanEdit] = useState(false) // #7 édition du plan
+  const [sigTxt, setSigTxt] = useState('')        // #8 signal terrain
+  const [sigFam, setSigFam] = useState('')
+  const [sigEch, setSigEch] = useState('30')
+  const vkey = `meq_views_${profile?.advisor_code || 'x'}`
+  useEffect(() => {
+    try { setViews(JSON.parse(localStorage.getItem(vkey) || '[]')) } catch { setViews([]) }
+  }, [vkey])
   const labelFam = (k) => famMap[k]?.label || k
   const couleurFam = (k) => famMap[k]?.couleur || '#8A95A8'
   // Familles jamais explorées (ni détenues, ni absence confirmée) = angles morts (#7)
   const offCount = (r) => matCols.reduce((n, f) => n + ((!r.familles.includes(f.key) && !r.absences.includes(f.key)) ? 1 : 0), 0)
+  const todayIso = new Date().toISOString().slice(0, 10)
+  // Exposition défensive (#9 couverture) : statut à risque, enfants, crédit sans emprunteur
+  const DEF = ['prevoyance', 'mutuelle', 'emprunteur']
+  const exposure = (r) => {
+    let e = 0
+    const s = (r.statut || '').toLowerCase()
+    if (s === 'tns' || s.includes('libéral') || s.includes('liberal') || s.includes('chef')) e += 2
+    e += Math.min(3, r.nbEnfants || 0)
+    if (r.familles.includes('immobilier') && !r.familles.includes('emprunteur')) e += 2
+    return e
+  }
+  const expoGap = (r) => DEF.some((f) => !r.familles.includes(f)) && exposure(r) > 0
+  const rdvProche = (r) => !!r.prochainRdv && r.prochainRdv >= todayIso && r.prochainRdv <= dansNJours(7)
+  const signalDue = (r) => (r.signaux || []).some((s) => !s.echeance || s.echeance <= todayIso)
 
   const conseillers = useMemo(
     () => Array.from(new Set(rows.map((r) => r.advisor_code).filter((x) => x && x !== '—'))).sort(),
@@ -957,14 +1011,20 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
     const ql = q.trim().toLowerCase()
     const l = rows.filter((r) => {
       if (cons !== 'all' && r.advisor_code !== cons) return false
-      if (seg === 'mono' && r.nb !== 1) return false
+      if (seg === 'primo' && r.nb !== 1) return false
       if (seg === 'multi' && r.nb < 2) return false
       if (seg === 'sans' && r.nb !== 0) return false
       if (seg === 'explorer' && offCount(r) < 4) return false
+      if (seg === 'couverture' && !expoGap(r)) return false
+      if (seg === 'rapatrier' && (r.ailleurs?.length || 0) === 0) return false
+      if (seg === 'rdv' && !rdvProche(r)) return false
+      if (seg === 'signaux' && !signalDue(r)) return false
       if (ql && !(`${r.nom} ${r.profession} ${r.advisor_code}`.toLowerCase().includes(ql))) return false
       return true
     })
     if (seg === 'explorer') return l.sort((a, b) => offCount(b) - offCount(a))
+    if (seg === 'couverture') return l.sort((a, b) => exposure(b) - exposure(a))
+    if (seg === 'rdv') return l.sort((a, b) => (a.prochainRdv || '').localeCompare(b.prochainRdv || ''))
     return l.sort((a, b) => b.revenus - a.revenus)
   }, [rows, seg, cons, q])
 
@@ -1068,9 +1128,221 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
     } catch (e) { toast.error(e.message || 'Échec') }
     finally { setSaving(false) }
   }
+  // #1 vues sauvegardées (localStorage)
+  function persistViews(v) { setViews(v); try { localStorage.setItem(vkey, JSON.stringify(v)) } catch { /* quota */ } }
+  function saveView() {
+    const name = window.prompt('Nom de la vue (ex. Mes TNS sans prévoyance) :', '')
+    if (!name || !name.trim()) return
+    persistViews([...views.filter((x) => x.name !== name.trim()), { name: name.trim(), config: { seg, cons, q } }])
+    toast.success('Vue enregistrée')
+  }
+  function applyView(v) { setSeg(v.config.seg); setCons(v.config.cons ?? 'all'); setQ(v.config.q ?? '') }
+  function deleteView(name) { persistViews(views.filter((x) => x.name !== name)) }
+  // #6 pose ou efface le prochain RDV
+  async function poserRdv(dateIso) {
+    if (!sel) return
+    setSaving(true)
+    try { await patchClient(sel.client_id, { prochain_rdv: dateIso || null }); toast.success(dateIso ? 'RDV noté' : 'RDV retiré'); await reload() }
+    catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+  }
+  // #7 enregistre le plan d équipement (étapes ordonnées)
+  async function savePlan(etapes) {
+    if (!sel) return
+    setSaving(true)
+    try { await patchClient(sel.client_id, { plan_equipement: etapes.length ? etapes : null }); toast.success('Plan enregistré'); setPlanEdit(false); await reload() }
+    catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+  }
+  // #10 bascule un tag de profil d approche
+  async function toggleProfil(tag) {
+    if (!sel) return
+    const cur = Array.isArray(sel.profil) ? sel.profil : []
+    const next = cur.includes(tag) ? cur.filter((t) => t !== tag) : [...cur, tag]
+    setSaving(true)
+    try { await patchClient(sel.client_id, { profil_approche: next.length ? next : null }); await reload() }
+    catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+  }
+  // #8 signal terrain
+  async function ajouterSignal() {
+    if (!sel || !sigTxt.trim()) return
+    setSaving(true)
+    try {
+      await addSignal({ client_id: sel.client_id, famille: sigFam || null, texte: sigTxt.trim(), echeance: sigEch ? dansNJours(Number(sigEch)) : null, advisor_code: profile?.advisor_code || null })
+      toast.success('Signal enregistré')
+      setSigTxt(''); setSigFam(''); setSigEch('30')
+      await reload()
+    } catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+  }
+  async function supprimerSignal(id) {
+    setSaving(true)
+    try { await deleteSignal(id); await reload() } catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+  }
+  // #5 déclare une famille comme détenue ailleurs (chez un confrère)
+  async function declarerAilleurs(famille) {
+    if (!sel) return
+    const ou = window.prompt(`${labelFam(famille)} détenu ailleurs. Où est-ce logé ? (facultatif)`, '')
+    if (ou === null) return
+    setSaving(true)
+    try {
+      await upsertDeclare({ client_id: sel.client_id, famille, detenu: false, ailleurs: true, ou_loge: ou || null, note: 'détenu ailleurs', saisi_par: profile?.id || null })
+      toast.success(`${labelFam(famille)} noté détenu ailleurs`)
+      await reload()
+      const declares = await listDeclaresForClient(sel.client_id)
+      setDetail((d) => ({ ...(d || { deals: [] }), declares }))
+    } catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+  }
+  // #2 débrief RDV : un clic ferme la boucle vers les missions
+  async function debriefAction(famille, action) {
+    if (!sel) return
+    setSaving(true)
+    try {
+      if (action === 'interesse') {
+        await upsertMission({ client_id: sel.client_id, famille, patch: { statut: 'en_cours', advisor_code: sel.advisor_code, montant_estime: baseMontant(sel, famille).montant } })
+      } else if (action === 'plus_tard') {
+        await upsertMission({ client_id: sel.client_id, famille, patch: { statut: 'reportee', raison_report: 'Pas le moment (débrief RDV)', retour_le: dansNJours(90), advisor_code: sel.advisor_code, montant_estime: baseMontant(sel, famille).montant } })
+      } else if (action === 'ailleurs') {
+        await upsertDeclare({ client_id: sel.client_id, famille, detenu: false, ailleurs: true, note: 'détenu ailleurs (débrief RDV)', saisi_par: profile?.id || null })
+      } else if (action === 'hors_cible') {
+        await upsertDeclare({ client_id: sel.client_id, famille, detenu: false, ailleurs: false, note: 'hors cible (débrief RDV)', saisi_par: profile?.id || null })
+      }
+      await reload()
+      const declares = await listDeclaresForClient(sel.client_id)
+      setDetail((d) => ({ ...(d || { deals: [] }), declares }))
+    } catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+  }
+  // #4 rattache le client au foyer d un autre client (ou en crée un)
+  async function rattacherFoyer() {
+    if (!sel) return
+    const q2 = window.prompt('Rattacher au même foyer que quel client ? (nom ou prénom)', '')
+    if (!q2 || !q2.trim()) return
+    const target = rows.find((r) => r.client_id !== sel.client_id && r.nom.toLowerCase().includes(q2.trim().toLowerCase()))
+    if (!target) { toast.error('Client introuvable dans votre portefeuille'); return }
+    const fid = target.foyerId || sel.foyerId || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : null)
+    if (!fid) { toast.error('Impossible de générer le foyer'); return }
+    setSaving(true)
+    try {
+      await patchClient(sel.client_id, { foyer_id: fid })
+      if (!target.foyerId) await patchClient(target.client_id, { foyer_id: fid })
+      toast.success(`Foyer commun avec ${target.nom}`)
+      await reload()
+    } catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+  }
+  async function detacherFoyer() {
+    if (!sel) return
+    setSaving(true)
+    try { await patchClient(sel.client_id, { foyer_id: null }); toast.success('Détaché du foyer'); await reload() }
+    catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+  }
+  // #3 navigation client précédent / suivant dans la vue filtrée
+  function navSel(dir) {
+    const idx = visibles.findIndex((r) => r.client_id === selId)
+    if (idx < 0) return
+    const next = visibles[idx + dir]
+    if (next) setSelId(next.client_id)
+  }
+  // #3 sélection multiple (case à cocher + shift-clic)
+  function toggleSel(id, idx, shift) {
+    setMultiSel((prev) => {
+      const n = new Set(prev)
+      if (shift && lastIdx != null) {
+        const [a, b] = [Math.min(lastIdx, idx), Math.max(lastIdx, idx)]
+        for (let i = a; i <= b; i++) if (visibles[i]) n.add(visibles[i].client_id)
+      } else if (n.has(id)) { n.delete(id) } else { n.add(id) }
+      return n
+    })
+    setLastIdx(idx)
+  }
+  function toggleAll() {
+    setMultiSel((prev) => (prev.size >= visibles.length && visibles.length > 0 ? new Set() : new Set(visibles.map((r) => r.client_id))))
+  }
+  async function batchVeille() {
+    setSaving(true)
+    try {
+      for (const id of multiSel) await setClientPause(id, { pause_jusqu_au: dansNJours(90), pause_motif: 'mise en veille groupée' })
+      toast.success(`${multiSel.size} client(s) en veille`); setMultiSel(new Set()); await reload()
+    } catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+  }
+  async function batchReport() {
+    setSaving(true)
+    try {
+      for (const id of multiSel) {
+        const r = rows.find((x) => x.client_id === id); const sug = r && suggestionPour(r)
+        if (r && sug) await upsertMission({ client_id: id, famille: sug.famille_suggeree, patch: { statut: 'reportee', raison_report: 'Report groupé', retour_le: dansNJours(90), advisor_code: r.advisor_code, montant_estime: baseMontant(r, sug.famille_suggeree).montant } })
+      }
+      toast.success('Missions reportées'); setMultiSel(new Set()); await reload()
+    } catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+  }
+  function batchRevue() {
+    const items = []
+    for (const id of multiSel) {
+      const r = rows.find((x) => x.client_id === id); const sug = r && suggestionPour(r)
+      if (r && sug) items.push({ client: r, famille: sug.famille_suggeree })
+    }
+    if (items.length && onRevue) { onRevue(items); setMultiSel(new Set()) }
+    else if (!items.length) toast('Aucune proposition évidente sur la sélection')
+  }
+  // Rendu d une ligne client (partage matrice classique et vue foyer)
+  const renderRow = (r, idx) => (
+    <tr key={r.client_id} className={selId === r.client_id ? 'sel' : ''} onClick={() => setSelId(r.client_id)}>
+      <td className="ck" onClick={(e) => e.stopPropagation()}>
+        <input type="checkbox" checked={multiSel.has(r.client_id)} onChange={(e) => toggleSel(r.client_id, idx, e.nativeEvent.shiftKey)} />
+      </td>
+      <td className="l cli">
+        {r.nom}
+        {signalDue(r) && <span className="sigdot" title="Signal terrain à traiter">◆</span>}
+        {r.pauseActive && <span className="sigdot veille2" title="En veille">🌙</span>}
+        <small>{r.statut || r.profession || '—'}{r.revenus ? ` · ${Math.round(r.revenus / 1000)} k€` : ''} · {r.advisor_code}</small>
+      </td>
+      {matCols.map((f) => {
+        const detenu = r.familles.includes(f.key)
+        const ailleurs = !detenu && (r.ailleurs || []).includes(f.key)
+        const absent = !detenu && !ailleurs && r.absences.includes(f.key)
+        return (
+          <td key={f.key}>
+            {detenu && <span className="p2 on" title={`${labelFam(f.key)} : détenu`} style={{ background: couleurFam(f.key) }} />}
+            {ailleurs && <span className="p2 ailleurs" title={`${labelFam(f.key)} : détenu ailleurs`}>A</span>}
+            {absent && <span className="p2 no" title={`${labelFam(f.key)} : absence confirmée`}>✕</span>}
+            {!detenu && !ailleurs && !absent && <span className="p2 off" title={`${labelFam(f.key)} : non renseigné`} />}
+          </td>
+        )
+      })}
+      <td>
+        <span className="comp">{r.nb}/{matCols.length}
+          <span className="bar"><i style={{ width: `${Math.min(100, (100 * r.nb) / matCols.length)}%` }} /></span>
+        </span>
+        {offCount(r) > 0 && <div className="explore">{offCount(r)} à explorer</div>}
+      </td>
+      <td onClick={(e) => e.stopPropagation()}>
+        {(() => {
+          const planHead = Array.isArray(r.plan) && r.plan[0]?.famille
+          const sug = suggestionPour(r)
+          const fam = planHead || sug?.famille_suggeree
+          if (!fam) return <span className="nbamute">à jour</span>
+          return <button className="nba" title={planHead ? 'Tête du plan d équipement' : sug?.raison} onClick={() => onProposer && onProposer(r, fam)}>{labelFam(fam)} ▸</button>
+        })()}
+      </td>
+    </tr>
+  )
+  // #4 regroupement par foyer
+  const groupes = useMemo(() => {
+    if (!foyerMode) return null
+    const byFoyer = new Map(); const solo = []
+    for (const r of visibles) {
+      if (r.foyerId) { const a = byFoyer.get(r.foyerId) || []; a.push(r); byFoyer.set(r.foyerId, a) } else solo.push(r)
+    }
+    const out = []
+    for (const [fid, members] of byFoyer) {
+      const cov = new Set(); members.forEach((m) => m.familles.forEach((f) => cov.add(f)))
+      out.push({ header: true, fid, nom: members.map((m) => m.nomSeul).filter(Boolean).join(' / ') || 'Foyer', cov: cov.size })
+      members.forEach((m) => out.push({ row: m }))
+    }
+    if (solo.length) { out.push({ header: true, fid: 'solo', nom: 'Hors foyer', cov: null }); solo.forEach((m) => out.push({ row: m })) }
+    return out
+  }, [foyerMode, visibles])
 
   const segs = [
-    { k: 'tous', l: 'Tous' }, { k: 'mono', l: 'Mono' }, { k: 'multi', l: 'Multi 2+' }, { k: 'sans', l: 'Sans info' }, { k: 'explorer', l: 'Angles morts' },
+    { k: 'tous', l: 'Tous' }, { k: 'primo', l: 'Primo-équipés' }, { k: 'multi', l: 'Multi 2+' },
+    { k: 'explorer', l: 'Angles morts' }, { k: 'couverture', l: 'Couverture' }, { k: 'rapatrier', l: 'À rapatrier' },
+    { k: 'rdv', l: 'RDV à venir' }, { k: 'signaux', l: 'Signaux' }, { k: 'sans', l: 'Sans info' },
   ]
   return (
     <div className="mx2">
@@ -1079,6 +1351,7 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
           <button key={s.k} className={`seg${seg === s.k ? ' on' : ''}`} onClick={() => setSeg(s.k)}>{s.l}</button>
         ))}
         <span className="sp" />
+        <button className={`seg${foyerMode ? ' on' : ''}`} onClick={() => setFoyerMode((v) => !v)} title="Regrouper les clients par foyer">Par foyer</button>
         <input className="search" placeholder="Rechercher…" value={q} onChange={(e) => setQ(e.target.value)} />
         {isManager && (
           <select className="mini" value={cons} onChange={(e) => setCons(e.target.value)}>
@@ -1087,12 +1360,31 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
           </select>
         )}
       </div>
+      <div className="vuesbar">
+        {views.map((v) => (
+          <span key={v.name} className="vchip">
+            <button onClick={() => applyView(v)}>{v.name}</button>
+            <button className="vx" title="Supprimer la vue" onClick={() => deleteView(v.name)}>✕</button>
+          </span>
+        ))}
+        <button className="vsave" onClick={saveView}>+ enregistrer la vue actuelle</button>
+      </div>
+      {multiSel.size > 0 && (
+        <div className="batchbar">
+          <b>{multiSel.size} sélectionné{multiSel.size > 1 ? 's' : ''}</b>
+          <button onClick={batchRevue}>Générer les brouillons</button>
+          <button onClick={batchReport} disabled={saving}>Reporter 3 mois</button>
+          <button onClick={batchVeille} disabled={saving}>Mettre en veille</button>
+          <button className="bclear" onClick={() => setMultiSel(new Set())}>Vider</button>
+        </div>
+      )}
       <div className="layout">
         <div className="tblwrap">
           <div className="scrollx">
             <table className="mx">
               <thead>
                 <tr>
+                  <th className="ck"><input type="checkbox" checked={multiSel.size >= visibles.length && visibles.length > 0} onChange={toggleAll} /></th>
                   <th className="l">Client</th>
                   {matCols.map((f) => <th key={f.key} title={f.label}>{f.label.length > 8 ? `${f.label.slice(0, 7)}.` : f.label}</th>)}
                   <th>Complétude</th>
@@ -1100,41 +1392,12 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
                 </tr>
               </thead>
               <tbody>
-                {visibles.map((r) => (
-                  <tr key={r.client_id} className={selId === r.client_id ? 'sel' : ''} onClick={() => setSelId(r.client_id)}>
-                    <td className="l cli">
-                      {r.nom}
-                      <small>{r.statut || r.profession || '—'}{r.revenus ? ` · ${Math.round(r.revenus / 1000)} k€` : ''} · {r.advisor_code}</small>
-                    </td>
-                    {matCols.map((f) => {
-                      const detenu = r.familles.includes(f.key)
-                      const absent = r.absences.includes(f.key)
-                      return (
-                        <td key={f.key}>
-                          {detenu && <span className="p2 on" title={`${labelFam(f.key)} : détenu`} style={{ background: couleurFam(f.key) }} />}
-                          {!detenu && absent && <span className="p2 no" title={`${labelFam(f.key)} : absence confirmée`}>✕</span>}
-                          {!detenu && !absent && <span className="p2 off" title={`${labelFam(f.key)} : non renseigné`} />}
-                        </td>
-                      )
-                    })}
-                    <td>
-                      <span className="comp">{r.nb}/{matCols.length}
-                        <span className="bar"><i style={{ width: `${Math.min(100, (100 * r.nb) / matCols.length)}%` }} /></span>
-                      </span>
-                      {offCount(r) > 0 && <div className="explore">{offCount(r)} à explorer</div>}
-                    </td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      {(() => {
-                        const sug = suggestionPour(r)
-                        return sug
-                          ? <button className="nba" title={sug.raison} onClick={() => onProposer && onProposer(r, sug.famille_suggeree)}>{labelFam(sug.famille_suggeree)} ▸</button>
-                          : <span className="nbamute">à jour</span>
-                      })()}
-                    </td>
-                  </tr>
-                ))}
+                {!foyerMode && visibles.map((r, idx) => renderRow(r, idx))}
+                {foyerMode && (groupes || []).map((g, i) => (g.header
+                  ? <tr key={`h${i}`} className="foyerh"><td colSpan={matCols.length + 4}>👪 {g.nom}{g.cov != null ? ` · ${g.cov}/${matCols.length} familles couvertes` : ''}</td></tr>
+                  : renderRow(g.row, visibles.indexOf(g.row))))}
                 {visibles.length === 0 && (
-                  <tr><td colSpan={matCols.length + 3} className="empty">Aucun client pour ces filtres.</td></tr>
+                  <tr><td colSpan={matCols.length + 4} className="empty">Aucun client pour ces filtres.</td></tr>
                 )}
               </tbody>
             </table>
@@ -1149,7 +1412,11 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
                 <h4>{sel.nom}</h4>
                 <div className="dsub">{sel.statut || sel.profession || '—'}{sel.revenus ? ` · ${fmtEur(sel.revenus)}` : ''} · {sel.advisor_code}</div>
               </div>
-              <button className="x" onClick={() => setSelId(null)}>✕</button>
+              <span className="dnav">
+                <button title="Client précédent" onClick={() => navSel(-1)}>‹</button>
+                <button title="Client suivant" onClick={() => navSel(1)}>›</button>
+                <button className="x" onClick={() => setSelId(null)}>✕</button>
+              </span>
             </div>
             {(() => {
               const sug = suggestionPour(sel)
@@ -1203,6 +1470,73 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
                 </>
               )
             })()}
+
+            <div className="dsec">Prochain RDV</div>
+            <div className="dpause">
+              <input type="date" value={sel.prochainRdv || ''} onChange={(e) => poserRdv(e.target.value)} />
+              {sel.prochainRdv && <button className="lnk" disabled={saving} onClick={() => poserRdv(null)}>retirer</button>}
+            </div>
+
+            <div className="dsec">Débrief RDV
+              <button className="dseclnk" onClick={() => setDebrief((v) => !v)}>{debrief ? 'fermer' : '30 s ?'}</button>
+            </div>
+            {debrief && (
+              <div className="debrief">
+                {matCols.filter((f) => !sel.familles.includes(f.key)).map((f) => (
+                  <div className="debrow" key={`db-${f.key}`}>
+                    <span className="dbfam">{labelFam(f.key)}</span>
+                    <button disabled={saving} onClick={() => debriefAction(f.key, 'interesse')}>Intéressé</button>
+                    <button disabled={saving} onClick={() => debriefAction(f.key, 'plus_tard')}>Pas le moment</button>
+                    <button disabled={saving} onClick={() => debriefAction(f.key, 'ailleurs')}>Ailleurs</button>
+                    <button disabled={saving} onClick={() => debriefAction(f.key, 'hors_cible')}>Hors cible</button>
+                  </div>
+                ))}
+                {matCols.filter((f) => !sel.familles.includes(f.key)).length === 0 && <div className="pmnote">Client pleinement équipé.</div>}
+              </div>
+            )}
+
+            {sel.nb <= 2 && (
+              <>
+                <div className="dsec">Plan d équipement
+                  <button className="dseclnk" onClick={() => setPlanEdit((v) => !v)}>{planEdit ? 'fermer' : (sel.plan?.length ? 'modifier' : 'créer')}</button>
+                </div>
+                {!planEdit && sel.plan?.length > 0 && (
+                  <div className="frise">
+                    {sel.plan.map((e, i) => <span className="frstep" key={i}>{labelFam(e.famille)}{e.trimestre ? ` · ${e.trimestre}` : ''}</span>)}
+                  </div>
+                )}
+                {planEdit && <PlanEditor sel={sel} matCols={matCols} labelFam={labelFam} onSave={savePlan} />}
+              </>
+            )}
+
+            <div className="dsec">Profil d approche</div>
+            <div className="profiltags">
+              {PROFILS.map((t) => (
+                <button key={t} className={`ptag${(sel.profil || []).includes(t) ? ' on' : ''}`} disabled={saving} onClick={() => toggleProfil(t)}>{t}</button>
+              ))}
+            </div>
+
+            <div className="dsec">Signaux terrain</div>
+            {(sel.signaux || []).map((s) => (
+              <div className="sigrow" key={s.id}>
+                <span>◆ {s.texte}{s.famille ? ` · ${labelFam(s.famille)}` : ''}{s.echeance ? ` · ${fmtDate(s.echeance)}` : ''}</span>
+                <button className="lnk" disabled={saving} onClick={() => supprimerSignal(s.id)}>✕</button>
+              </div>
+            ))}
+            <div className="sigadd">
+              <input placeholder="+ signal (ex. vend un bien au T4)" value={sigTxt} onChange={(e) => setSigTxt(e.target.value)} />
+              <select value={sigFam} onChange={(e) => setSigFam(e.target.value)}><option value="">famille…</option>{matCols.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}</select>
+              <select value={sigEch} onChange={(e) => setSigEch(e.target.value)}><option value="7">7 j</option><option value="30">30 j</option><option value="90">90 j</option><option value="">sans</option></select>
+              <button className="lnk" disabled={saving || !sigTxt.trim()} onClick={ajouterSignal}>ajouter</button>
+            </div>
+
+            <div className="dsec">Foyer</div>
+            <div className="dpause">
+              {sel.foyerId
+                ? <>👪 Rattaché à un foyer <button className="lnk" disabled={saving} onClick={detacherFoyer}>détacher</button></>
+                : <>Aucun foyer <button className="lnk" disabled={saving} onClick={rattacherFoyer}>rattacher</button></>}
+            </div>
+
             {[!sel.patrimoine, !sel.revenus, !sel.statut].filter(Boolean).length > 0 && (
               <>
                 <div className="dsec">Compléter la fiche</div>
@@ -1216,17 +1550,20 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
             </div>
             {matCols.map((f) => {
               const detenu = sel.familles.includes(f.key)
-              const absent = sel.absences.includes(f.key)
+              const ailleurs = !detenu && (sel.ailleurs || []).includes(f.key)
+              const absent = !detenu && !ailleurs && sel.absences.includes(f.key)
               const decl = detail?.declares?.find((d) => d.famille === f.key)
               return (
                 <div className="drow" key={f.key}>
                   <span className="dfam" style={{ color: detenu ? couleurFam(f.key) : undefined }}>{f.label}</span>
                   {detenu && <span className="st ok">détenu{decl?.compagnie ? ` · ${decl.compagnie}` : ''}</span>}
-                  {!detenu && absent && <span className="st no">absent confirmé</span>}
-                  {!detenu && !absent && <span className="st miss">?</span>}
+                  {ailleurs && <span className="st ailleurs">ailleurs{decl?.ou_loge ? ` · ${decl.ou_loge}` : ''}</span>}
+                  {absent && <span className="st no">absent confirmé</span>}
+                  {!detenu && !ailleurs && !absent && <span className="st miss">?</span>}
                   <span className="dactions">
                     {!detenu && <button disabled={saving} title="Déclarer détenu (souscrit ailleurs ou avant le CRM)" onClick={() => declarer(f.key, true)}>✓</button>}
-                    {!detenu && !absent && <button disabled={saving} title="Confirmer l absence" onClick={() => declarer(f.key, false)}>✕</button>}
+                    {!detenu && !absent && !ailleurs && <button disabled={saving} title="Confirmer l absence" onClick={() => declarer(f.key, false)}>✕</button>}
+                    {!detenu && !ailleurs && <button disabled={saving} title="Détenu ailleurs (chez un confrère)" onClick={() => declarerAilleurs(f.key)}>↗</button>}
                     {!detenu && <button disabled={saving} title="Demander un renfort expert sur cette famille" onClick={() => demanderRenfort(f.key)}>🤝</button>}
                     {decl && <button disabled={saving} title="Effacer la déclaration" onClick={() => effacerDeclaration(f.key)}>↺</button>}
                   </span>
@@ -1254,6 +1591,44 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// ── Éditeur de plan d équipement (#7) ───────────────────────────────────────
+// Le conseiller ordonne 2 ou 3 briques cibles avec un trimestre indicatif. La
+// tête du plan alimente la colonne « prochaine action » de la matrice.
+function PlanEditor({ sel, matCols, labelFam, onSave }) {
+  const [etapes, setEtapes] = useState(Array.isArray(sel.plan) ? sel.plan : [])
+  const [fam, setFam] = useState('')
+  const [tri, setTri] = useState('')
+  const manquantes = matCols.filter((f) => !sel.familles.includes(f.key))
+  function add() {
+    if (!fam || etapes.some((e) => e.famille === fam)) return
+    setEtapes([...etapes, { famille: fam, trimestre: tri || null }])
+    setFam(''); setTri('')
+  }
+  return (
+    <div className="planed">
+      {etapes.map((e, i) => (
+        <div className="plrow" key={i}>
+          <span>{i + 1}. {labelFam(e.famille)}{e.trimestre ? ` · ${e.trimestre}` : ''}</span>
+          <button className="lnk" onClick={() => setEtapes(etapes.filter((_, j) => j !== i))}>✕</button>
+        </div>
+      ))}
+      <div className="planadd">
+        <select value={fam} onChange={(e) => setFam(e.target.value)}>
+          <option value="">brique…</option>
+          {manquantes.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+        </select>
+        <select value={tri} onChange={(e) => setTri(e.target.value)}>
+          <option value="">quand…</option>
+          <option value="T1">T1</option><option value="T2">T2</option><option value="T3">T3</option><option value="T4">T4</option>
+          <option value="T+1an">T+1 an</option>
+        </select>
+        <button className="lnk" onClick={add}>+ étape</button>
+      </div>
+      <button className="pri" onClick={() => onSave(etapes)}>Enregistrer le plan</button>
     </div>
   )
 }
@@ -1669,6 +2044,45 @@ const styles = `
 .meq3 .avisp{ font-size:11px; color:#5B4B8A; background:#F3F0FA; border:1px solid #DCD4EE; border-radius:7px; padding:4px 8px; margin-top:4px; line-height:1.35 }
 .meq3 .pmsecond{ display:block; width:100%; margin-top:8px; background:none; border:1px dashed var(--line); border-radius:9px; padding:8px; font-size:11.5px; font-weight:650; color:#5b6470; cursor:pointer }
 .meq3 .pmsecond:hover{ border-color:#5B4B8A; color:#5B4B8A }
+
+/* Axes v2 : vues sauvegardees, lot, foyer, ailleurs, debrief, plan, profil, signaux */
+.meq3 .vuesbar{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:8px }
+.meq3 .vchip{ display:inline-flex; align-items:center; border:1px solid var(--line); border-radius:999px; background:#fff; overflow:hidden }
+.meq3 .vchip button{ background:none; border:none; font-size:11.5px; font-weight:650; color:var(--navy); padding:4px 4px 4px 10px; cursor:pointer }
+.meq3 .vchip .vx{ padding:4px 8px 4px 4px; color:var(--silver) }
+.meq3 .vsave{ background:none; border:1px dashed var(--line); border-radius:999px; padding:4px 11px; font-size:11.5px; font-weight:650; color:#5b6470; cursor:pointer }
+.meq3 .batchbar{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; background:var(--navy); color:#fff; border-radius:11px; padding:8px 12px; margin-bottom:8px }
+.meq3 .batchbar b{ margin-right:auto }
+.meq3 .batchbar button{ background:rgba(255,255,255,.14); border:none; color:#fff; border-radius:8px; padding:5px 11px; font-size:12px; font-weight:700; cursor:pointer }
+.meq3 .batchbar .bclear{ background:none; text-decoration:underline }
+.meq3 th.ck,.meq3 td.ck{ width:26px; text-align:center; padding:0 }
+.meq3 .foyerh td{ background:#F3EFE6; font-weight:750; color:var(--navy); font-size:11.5px }
+.meq3 .sigdot{ color:#B4453B; font-size:9px; margin-left:5px; vertical-align:middle }
+.meq3 .sigdot.veille2{ color:#5b6470; font-size:11px }
+.meq3 .p2.ailleurs{ background:#fff; border:1.5px solid var(--gold); color:var(--gold-dk); line-height:11px }
+.meq3 .st.ailleurs{ background:#FBF6EC; color:var(--gold-dk) }
+.meq3 .dnav{ display:flex; align-items:center; gap:4px }
+.meq3 .dnav button{ border:1px solid var(--line); background:#fff; border-radius:6px; width:22px; height:22px; cursor:pointer; color:#5b6470; font-size:14px; line-height:1 }
+.meq3 .debrief{ display:flex; flex-direction:column; gap:4px; margin-bottom:6px }
+.meq3 .debrow{ display:flex; align-items:center; gap:4px; flex-wrap:wrap }
+.meq3 .dbfam{ flex:1; min-width:90px; font-size:11.5px; font-weight:600; color:var(--navy) }
+.meq3 .debrow button{ border:1px solid var(--line); background:#fff; border-radius:6px; padding:3px 7px; font-size:10.5px; font-weight:650; color:#5b6470; cursor:pointer }
+.meq3 .debrow button:hover{ border-color:var(--gold); color:var(--gold-dk) }
+.meq3 .frise{ display:flex; flex-wrap:wrap; gap:5px; margin-bottom:6px }
+.meq3 .frstep{ font-size:10.5px; font-weight:700; color:var(--gold-dk); background:#FBF6EC; border:1px solid var(--gold); border-radius:999px; padding:2px 9px }
+.meq3 .planed{ background:#FBFAF7; border:1px solid var(--line); border-radius:9px; padding:8px 10px; margin-bottom:6px }
+.meq3 .plrow{ display:flex; align-items:center; justify-content:space-between; font-size:12px; padding:2px 0 }
+.meq3 .planadd{ display:flex; gap:5px; margin:6px 0; flex-wrap:wrap }
+.meq3 .planadd select{ border:1px solid var(--line); border-radius:7px; padding:4px 6px; font-size:11.5px; background:#fff }
+.meq3 .planed .pri{ width:100%; padding:6px; font-size:12px }
+.meq3 .profiltags{ display:flex; flex-wrap:wrap; gap:5px; margin-bottom:6px }
+.meq3 .ptag{ border:1px solid var(--line); background:#fff; border-radius:999px; padding:4px 11px; font-size:11.5px; font-weight:650; color:#5b6470; cursor:pointer }
+.meq3 .ptag.on{ border-color:var(--navy); background:var(--navy); color:#fff }
+.meq3 .sigrow{ display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:11.5px; color:#5b6470; padding:2px 0 }
+.meq3 .sigadd{ display:flex; gap:5px; flex-wrap:wrap; margin-top:5px }
+.meq3 .sigadd input{ flex:1; min-width:120px; border:1px solid var(--line); border-radius:7px; padding:5px 8px; font-size:11.5px }
+.meq3 .sigadd select{ border:1px solid var(--line); border-radius:7px; padding:5px 6px; font-size:11.5px; background:#fff }
+.meq3 .pmangle{ margin-top:9px; font-size:11.5px; color:#5B4B8A; background:#F3F0FA; border:1px solid #DCD4EE; border-radius:9px; padding:7px 10px }
 
 .meq3 .mx2 .segs{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px }
 .meq3 .seg{ padding:6px 12px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:12px; font-weight:650; color:#5b6470; cursor:pointer }
