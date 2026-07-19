@@ -118,8 +118,12 @@ export function computeCockpit({ mois, deals, clients, equip, missions, team = [
     const baseline = precedents.length ? precedents.reduce((s, v) => s + v, 0) / precedents.length : 0
 
     // Portefeuille et taux de multi equipement.
-    const nbClients = clients.filter((c) => c.advisor_code === code).length
+    // « clients » = VRAIS clients (contrat signe ou equipement declare, via
+    // client_equipment), pas les prospects RDV poses par les telepros. Sans ca,
+    // un telepro comme ARTHUR affiche 57 clients (des fiches de RDV), ce qui est
+    // faux : il n a aucun portefeuille signe (retour Louis).
     const eqCode = equip.filter((e) => e.advisor_code === code)
+    const nbClients = eqCode.length
     const multi = eqCode.filter((e) => Number(e.nb_familles || 0) >= 2).length
     const tauxMulti = eqCode.length ? Math.round((100 * multi) / eqCode.length) : 0
 
@@ -146,9 +150,15 @@ export function computeCockpit({ mois, deals, clients, equip, missions, team = [
       reportees,
     })
   }
+  // On ecarte les lignes purement telepro / vides : aucun vrai client, aucune
+  // collecte sur la fenetre, aucune mission. Ce sont des poseurs de RDV, pas des
+  // conseillers de portefeuille ; les afficher avec des zeros n a pas de sens.
+  const actives = lignes.filter((l) =>
+    l.nbClients > 0 || l.gagneesMois > 0 || l.reportees > 0 || l.serie.some((v) => v > 0),
+  )
   // Tri alphabetique, jamais par performance : aucun classement entre pairs.
-  lignes.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
-  return { mois, moisCourant, lignes }
+  actives.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
+  return { mois, moisCourant, lignes: actives }
 }
 
 // ─── Completude des fiches clients (constructeur 3) ──────────────────────────
