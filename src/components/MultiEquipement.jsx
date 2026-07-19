@@ -37,8 +37,6 @@ import { genererMail, genererRecommandation, genererRelance, CABINET } from '../
 
 // Statuts pro (miroir de la fiche client) pour la capture inline.
 const STATUTS_PRO = ['Salarié', 'TNS', 'Chef d entreprise', 'Retraité', 'Profession libérale', 'Autre']
-// Motivations dominantes du foyer (#10 profil d approche).
-const PROFILS = ['Transmission', 'Fiscalité', 'Protection', 'ISR']
 // Jalons de relance (jours depuis la mise en cours) : cadence de suivi douce.
 function infoRelance(mi) {
   if (mi.statut !== 'en_cours' || !mi.updated_at) return { due: false, jours: 0, etape: 0 }
@@ -47,13 +45,6 @@ function infoRelance(mi) {
   return { due: etape > 0, jours, etape }
 }
 const LIB_RELANCE = { 1: 'à relancer', 2: 'relance ferme', 3: 'point de décision' }
-// #10 : familles mises en avant selon la motivation dominante du foyer.
-const PROFIL_BOOST = {
-  Transmission: ['av', 'scpi', 'immobilier'],
-  'Fiscalité': ['per', 'scpi', 'immobilier'],
-  Protection: ['prevoyance', 'mutuelle', 'emprunteur'],
-  ISR: ['av', 'structures'],
-}
 
 const fmtEur = (v) =>
   Number(v || 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
@@ -95,8 +86,8 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
   const [signaux, setSignaux] = useState([])     // signaux terrain (#8)
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
-  const [vue, setVue] = useState('matrice')        // matrice (defaut) | missions | reports
-  const [chip, setChip] = useState('a_attaquer')   // filtre d etat de la liste
+  const [vue, setVue] = useState('missions')       // missions (Ma journée, defaut) | matrice | reports
+  const [chip, setChip] = useState('journee')      // journee | a_attaquer | en_cours | ...
   const [campSeul, setCampSeul] = useState(false)  // ne montrer que la campagne
   const [reportPour, setReportPour] = useState(null) // mission ouverte dans la modale
   const [proposerPour, setProposerPour] = useState(null) // { client, preset, relance } de la modale Proposer
@@ -130,6 +121,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
         nb: Number(c.nb_familles || 0),
         nbEnfants: Number(c.nb_enfants || 0),
         situationFam: c.situation_familiale || '',
+        codePostal: c.code_postal || '',
         foyerId: c.foyer_id || null,
         prochainRdv: c.prochain_rdv || null,
         plan: Array.isArray(c.plan_equipement) ? c.plan_equipement : [],
@@ -291,12 +283,20 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
     let s = m.montant || 0
     if (m.confiance === 'fort') s *= 1.4
     else if (m.confiance === 'faible') s *= 0.6
-    if ((m.client.profil || []).some((t) => PROFIL_BOOST[t]?.includes(m.famille))) s *= 1.5
-    if (!m.client.pauseActive && infoRelance(m).due) s += 1000000
+    if (m.famille === camp) s *= 1.3            // campagne du mois en avant
+    if ((m.client.nb || 0) <= 1) s *= 1.2       // primo-équipés prioritaires
+    if (!m.client.pauseActive && infoRelance(m).due) s += 1000000 // relance due en tête
     return s
   }
-  // ── Liste affichée : chip d état (ou relance) + filtre campagne + tri ──────
+  // « Ma journée » : une seule file priorisée (relances dues, campagne, primo
+  // et fort potentiel), le conseiller n a pas à choisir un filtre, il déroule.
+  const journee = useMemo(() => {
+    const l = missionsAff.filter((m) => (m.statut === 'a_attaquer' || m.statut === 'en_cours') && !m.client.pauseActive)
+    return [...l].sort((a, b) => scoreConseil(b) - scoreConseil(a)).slice(0, 20)
+  }, [missionsAff, camp])
+  // ── Liste affichée : Ma journée, ou chip d état + filtre campagne + tri ────
   const liste = useMemo(() => {
+    if (chip === 'journee') return journee
     let l = chip === 'relance'
       ? missionsAff.filter((m) => m.statut === 'en_cours' && !m.client.pauseActive && infoRelance(m).due)
       : missionsAff.filter((m) => m.statut === chip)
@@ -305,7 +305,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
     if (chip === 'relance') return [...l].sort((a, b) => infoRelance(b).jours - infoRelance(a).jours)
     if (tri === 'conseil') return [...l].sort((a, b) => scoreConseil(b) - scoreConseil(a))
     return [...l].sort((a, b) => (b.montant || 0) - (a.montant || 0))
-  }, [missionsAff, chip, campSeul, camp, tri])
+  }, [missionsAff, chip, campSeul, camp, tri, journee])
 
   // ── Vue manager Reports : redevabilité par conseiller ────────────────────
   const reportsParConseiller = useMemo(() => {
@@ -428,6 +428,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
   }
 
   const chips = [
+    { k: 'journee', l: '★ Ma journée', n: journee.length },
     { k: 'a_attaquer', l: 'À proposer', n: nb('a_attaquer') },
     { k: 'en_cours', l: 'En cours', n: nb('en_cours') },
     ...(relanceDue.length > 0 ? [{ k: 'relance', l: 'À relancer', n: relanceDue.length, hot: true }] : []),
@@ -514,21 +515,28 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
           </div>
 
           {/* Liste de missions : le coeur du module */}
+          {chip === 'journee' && liste.length > 0 && (
+            <div className="aide">
+              <b>Votre journée, déjà priorisée</b> : relances dues, campagne du mois et clients à fort potentiel, dans l ordre. Déroulez et proposez, pas besoin de choisir un filtre.
+            </div>
+          )}
           {chip === 'a_attaquer' && liste.length > 0 && (
             <div className="aide">
               Chaque ligne = <b>un client</b> et le produit à lui proposer. Les <b>ronds</b> montrent son équipement (plein = détenu, ✕ = absence confirmée, rond doré = la famille à proposer).
               « Proposer » rédige le mail ou ouvre le dossier ; un montant affiché <b>en fourchette</b> (« à préciser ») = complétez la fiche en un clic pour un chiffre net.
             </div>
           )}
-          {chip === 'a_attaquer' && liste.length > 1 && (
+          {(chip === 'a_attaquer' || chip === 'journee') && liste.length > 1 && (
             <button className="revuebtn" onClick={() => setRevue(liste)}>▸ Revue par lot ({liste.length}) : enchaîner les propositions au clavier</button>
           )}
           <div className="cartes">
             {liste.length === 0 && (
               <div className="empty">
-                {chip === 'a_attaquer'
-                  ? 'Rien à proposer pour ces filtres. La vue matrice permet de déclarer l équipement et de faire émerger des missions.'
-                  : 'Aucune mission dans cet état.'}
+                {chip === 'journee'
+                  ? 'Rien à traiter aujourd hui, tout est à jour. Beau travail.'
+                  : chip === 'a_attaquer'
+                    ? 'Rien à proposer pour ces filtres. La vue matrice permet de déclarer l équipement et de faire émerger des missions.'
+                    : 'Aucune mission dans cet état.'}
               </div>
             )}
             {chip !== 'gagnee' && chip !== 'exclue' && liste.map((mi) => {
@@ -927,10 +935,6 @@ function ProposerModal({ client, preset, relance, matCols, famMap, conseiller, a
         {budget && budget.count >= 3 && (
           <div className="pmbudget">Ce client a déjà été sollicité {budget.count} fois ces six mois, la dernière le {fmtDate(new Date(budget.last).toISOString().slice(0, 10))}. Peut être vaut il mieux espacer.</div>
         )}
-        {client.profil?.length > 0 && mode !== 'reco' && (
-          <div className="pmangle">Angle conseillé pour ce foyer : {client.profil.join(', ')}</div>
-        )}
-
         <div className="mrlab">Objet</div>
         <input className="pmobj" value={objet} onChange={(e) => setObjet(e.target.value)} />
         <div className="mrlab">Message <span className="pmhint">relisez et ajustez avant envoi</span></div>
@@ -977,7 +981,6 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
   const [lastIdx, setLastIdx] = useState(null)    // #3 ancre du shift-clic
   const [debrief, setDebrief] = useState(false)   // #2 panneau débrief RDV
   const [outils, setOutils] = useState(false)     // outils avancés repliés par défaut
-  const [planEdit, setPlanEdit] = useState(false) // #7 édition du plan
   const [sigTxt, setSigTxt] = useState('')        // #8 signal terrain
   const [sigFam, setSigFam] = useState('')
   const [sigEch, setSigEch] = useState('30')
@@ -1043,6 +1046,18 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
     })()
     return () => { vivant = false }
   }, [selId])
+  // Navigation clavier : flèches pour changer de client, Entrée pour proposer
+  useEffect(() => {
+    const h = (e) => {
+      if (!selId) return
+      if (e.target && /input|textarea|select/i.test(e.target.tagName)) return
+      if (e.key === 'ArrowDown') { e.preventDefault(); navSel(1) }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); navSel(-1) }
+      else if (e.key === 'Enter') { const r = rows.find((x) => x.client_id === selId); if (r && onProposer) onProposer(r, null) }
+    }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  })
 
   async function declarer(famille, detenu) {
     if (!sel) return
@@ -1139,29 +1154,6 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
   }
   function applyView(v) { setSeg(v.config.seg); setCons(v.config.cons ?? 'all'); setQ(v.config.q ?? '') }
   function deleteView(name) { persistViews(views.filter((x) => x.name !== name)) }
-  // #6 pose ou efface le prochain RDV
-  async function poserRdv(dateIso) {
-    if (!sel) return
-    setSaving(true)
-    try { await patchClient(sel.client_id, { prochain_rdv: dateIso || null }); toast.success(dateIso ? 'RDV noté' : 'RDV retiré'); await reload() }
-    catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
-  }
-  // #7 enregistre le plan d équipement (étapes ordonnées)
-  async function savePlan(etapes) {
-    if (!sel) return
-    setSaving(true)
-    try { await patchClient(sel.client_id, { plan_equipement: etapes.length ? etapes : null }); toast.success('Plan enregistré'); setPlanEdit(false); await reload() }
-    catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
-  }
-  // #10 bascule un tag de profil d approche
-  async function toggleProfil(tag) {
-    if (!sel) return
-    const cur = Array.isArray(sel.profil) ? sel.profil : []
-    const next = cur.includes(tag) ? cur.filter((t) => t !== tag) : [...cur, tag]
-    setSaving(true)
-    try { await patchClient(sel.client_id, { profil_approche: next.length ? next : null }); await reload() }
-    catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
-  }
   // #8 signal terrain
   async function ajouterSignal() {
     if (!sel || !sigTxt.trim()) return
@@ -1231,6 +1223,13 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
     if (!sel) return
     setSaving(true)
     try { await patchClient(sel.client_id, { foyer_id: null }); toast.success('Détaché du foyer'); await reload() }
+    catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+  }
+  // Auto-enrichissement : porte le patrimoine au plancher déduit des contrats signés
+  async function appliquerPlancher(v) {
+    if (!sel) return
+    setSaving(true)
+    try { await updateClientInfo(sel.client_id, { patrimoine_estime: v }); toast.success('Patrimoine mis à jour depuis les contrats'); await reload() }
     catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
   }
   // #3 navigation client précédent / suivant dans la vue filtrée
@@ -1313,11 +1312,9 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
       </td>
       <td onClick={(e) => e.stopPropagation()}>
         {(() => {
-          const planHead = Array.isArray(r.plan) && r.plan[0]?.famille
           const sug = suggestionPour(r)
-          const fam = planHead || sug?.famille_suggeree
-          if (!fam) return <span className="nbamute">à jour</span>
-          return <button className="nba" title={planHead ? 'Tête du plan d équipement' : sug?.raison} onClick={() => onProposer && onProposer(r, fam)}>{labelFam(fam)} ▸</button>
+          if (!sug) return <span className="nbamute">à jour</span>
+          return <button className="nba" title={sug.raison} onClick={() => onProposer && onProposer(r, sug.famille_suggeree)}>{labelFam(sug.famille_suggeree)} ▸</button>
         })()}
       </td>
     </tr>
@@ -1325,17 +1322,23 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
   // #4 regroupement par foyer
   const groupes = useMemo(() => {
     if (!foyerMode) return null
-    const byFoyer = new Map(); const solo = []
+    // Clé de foyer : lien manuel prioritaire, sinon auto (même nom + code postal)
+    const key = (r) => (r.foyerId
+      ? `id:${r.foyerId}`
+      : (r.nomSeul && r.codePostal ? `auto:${r.nomSeul.toLowerCase().trim()}|${String(r.codePostal).trim()}` : null))
+    const byKey = new Map(); const solo = []
     for (const r of visibles) {
-      if (r.foyerId) { const a = byFoyer.get(r.foyerId) || []; a.push(r); byFoyer.set(r.foyerId, a) } else solo.push(r)
+      const k = key(r)
+      if (k) { const a = byKey.get(k) || []; a.push(r); byKey.set(k, a) } else solo.push(r)
     }
     const out = []
-    for (const [fid, members] of byFoyer) {
+    for (const [k, members] of byKey) {
+      if (members.length < 2) { solo.push(members[0]); continue } // un seul membre = pas un foyer
       const cov = new Set(); members.forEach((m) => m.familles.forEach((f) => cov.add(f)))
-      out.push({ header: true, fid, nom: members.map((m) => m.nomSeul).filter(Boolean).join(' / ') || 'Foyer', cov: cov.size })
+      out.push({ header: true, nom: members.map((m) => m.nomSeul).filter(Boolean).join(' / ') || 'Foyer', cov: cov.size, auto: k.startsWith('auto') })
       members.forEach((m) => out.push({ row: m }))
     }
-    if (solo.length) { out.push({ header: true, fid: 'solo', nom: 'Hors foyer', cov: null }); solo.forEach((m) => out.push({ row: m })) }
+    if (solo.length) { out.push({ header: true, nom: 'Hors foyer', cov: null }); solo.forEach((m) => out.push({ row: m })) }
     return out
   }, [foyerMode, visibles])
 
@@ -1475,12 +1478,6 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
             </div>
             {outils && (
               <>
-            <div className="dsec">Prochain RDV</div>
-            <div className="dpause">
-              <input type="date" value={sel.prochainRdv || ''} onChange={(e) => poserRdv(e.target.value)} />
-              {sel.prochainRdv && <button className="lnk" disabled={saving} onClick={() => poserRdv(null)}>retirer</button>}
-            </div>
-
             <div className="dsec">Débrief RDV
               <button className="dseclnk" onClick={() => setDebrief((v) => !v)}>{debrief ? 'fermer' : '30 s ?'}</button>
             </div>
@@ -1498,27 +1495,6 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
                 {matCols.filter((f) => !sel.familles.includes(f.key)).length === 0 && <div className="pmnote">Client pleinement équipé.</div>}
               </div>
             )}
-
-            {sel.nb <= 2 && (
-              <>
-                <div className="dsec">Plan d équipement
-                  <button className="dseclnk" onClick={() => setPlanEdit((v) => !v)}>{planEdit ? 'fermer' : (sel.plan?.length ? 'modifier' : 'créer')}</button>
-                </div>
-                {!planEdit && sel.plan?.length > 0 && (
-                  <div className="frise">
-                    {sel.plan.map((e, i) => <span className="frstep" key={i}>{labelFam(e.famille)}{e.trimestre ? ` · ${e.trimestre}` : ''}</span>)}
-                  </div>
-                )}
-                {planEdit && <PlanEditor sel={sel} matCols={matCols} labelFam={labelFam} onSave={savePlan} />}
-              </>
-            )}
-
-            <div className="dsec">Profil d approche</div>
-            <div className="profiltags">
-              {PROFILS.map((t) => (
-                <button key={t} className={`ptag${(sel.profil || []).includes(t) ? ' on' : ''}`} disabled={saving} onClick={() => toggleProfil(t)}>{t}</button>
-              ))}
-            </div>
 
             <div className="dsec">Signaux terrain</div>
             {(sel.signaux || []).map((s) => (
@@ -1542,6 +1518,17 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
             </div>
               </>
             )}
+
+            {(() => {
+              const plancher = (detail?.deals || []).reduce((s, d) => s + (Number(d.pu) > 0 ? Number(d.pu) : 0), 0)
+              if (plancher <= (sel.patrimoine || 0)) return null
+              return (
+                <div className="plancher">
+                  <span>D après les contrats signés, patrimoine ≥ <b>{fmtEur(plancher)}</b></span>
+                  <button disabled={saving} onClick={() => appliquerPlancher(plancher)}>Appliquer</button>
+                </div>
+              )
+            })()}
 
             {[!sel.patrimoine, !sel.revenus, !sel.statut].filter(Boolean).length > 0 && (
               <>
@@ -1597,44 +1584,6 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
           </div>
         )}
       </div>
-    </div>
-  )
-}
-
-// ── Éditeur de plan d équipement (#7) ───────────────────────────────────────
-// Le conseiller ordonne 2 ou 3 briques cibles avec un trimestre indicatif. La
-// tête du plan alimente la colonne « prochaine action » de la matrice.
-function PlanEditor({ sel, matCols, labelFam, onSave }) {
-  const [etapes, setEtapes] = useState(Array.isArray(sel.plan) ? sel.plan : [])
-  const [fam, setFam] = useState('')
-  const [tri, setTri] = useState('')
-  const manquantes = matCols.filter((f) => !sel.familles.includes(f.key))
-  function add() {
-    if (!fam || etapes.some((e) => e.famille === fam)) return
-    setEtapes([...etapes, { famille: fam, trimestre: tri || null }])
-    setFam(''); setTri('')
-  }
-  return (
-    <div className="planed">
-      {etapes.map((e, i) => (
-        <div className="plrow" key={i}>
-          <span>{i + 1}. {labelFam(e.famille)}{e.trimestre ? ` · ${e.trimestre}` : ''}</span>
-          <button className="lnk" onClick={() => setEtapes(etapes.filter((_, j) => j !== i))}>✕</button>
-        </div>
-      ))}
-      <div className="planadd">
-        <select value={fam} onChange={(e) => setFam(e.target.value)}>
-          <option value="">brique…</option>
-          {manquantes.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
-        </select>
-        <select value={tri} onChange={(e) => setTri(e.target.value)}>
-          <option value="">quand…</option>
-          <option value="T1">T1</option><option value="T2">T2</option><option value="T3">T3</option><option value="T4">T4</option>
-          <option value="T+1an">T+1 an</option>
-        </select>
-        <button className="lnk" onClick={add}>+ étape</button>
-      </div>
-      <button className="pri" onClick={() => onSave(etapes)}>Enregistrer le plan</button>
     </div>
   )
 }
@@ -2089,8 +2038,9 @@ const styles = `
 .meq3 .sigadd input{ flex:1; min-width:120px; border:1px solid var(--line); border-radius:7px; padding:5px 8px; font-size:11.5px }
 .meq3 .sigadd select{ border:1px solid var(--line); border-radius:7px; padding:5px 6px; font-size:11.5px; background:#fff }
 .meq3 .pmangle{ margin-top:9px; font-size:11.5px; color:#5B4B8A; background:#F3F0FA; border:1px solid #DCD4EE; border-radius:9px; padding:7px 10px }
-.meq3 .focussel{ border-radius:999px; font-weight:650 }
-.meq3 .focussel.on{ background:var(--navy); color:#fff; border-color:var(--navy) }
+.meq3 .plancher{ display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:11.5px; color:#2C6B4E; background:#E9F4EE; border:1px solid #CBE5D6; border-radius:9px; padding:7px 10px; margin:6px 0 }
+.meq3 .plancher button{ border:1px solid #2C6B4E; background:#fff; color:#2C6B4E; border-radius:7px; padding:3px 10px; font-size:11.5px; font-weight:700; cursor:pointer; white-space:nowrap }
+.meq3 .plancher button:hover{ background:#2C6B4E; color:#fff }
 
 .meq3 .mx2 .segs{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px }
 .meq3 .seg{ padding:6px 12px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:12px; font-weight:650; color:#5b6470; cursor:pointer }
