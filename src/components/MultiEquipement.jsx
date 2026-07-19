@@ -1339,17 +1339,26 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
     return out
   }, [foyerMode, visibles])
 
-  const segs = [
-    { k: 'tous', l: 'Tous' }, { k: 'primo', l: 'Primo-équipés' }, { k: 'multi', l: 'Multi 2+' },
+  // Segments classiques en chips, filtres de niche rangés dans un menu discret
+  const segsBase = [
+    { k: 'tous', l: 'Tous' }, { k: 'primo', l: 'Primo-équipés' }, { k: 'multi', l: 'Multi 2+' }, { k: 'sans', l: 'Sans info' },
+  ]
+  const segsFocus = [
     { k: 'explorer', l: 'Angles morts' }, { k: 'couverture', l: 'Couverture' }, { k: 'rapatrier', l: 'À rapatrier' },
-    { k: 'rdv', l: 'RDV à venir' }, { k: 'signaux', l: 'Signaux' }, { k: 'sans', l: 'Sans info' },
+    { k: 'rdv', l: 'RDV à venir' }, { k: 'signaux', l: 'Signaux' },
   ]
   return (
     <div className="mx2">
       <div className="segs">
-        {segs.map((s) => (
+        {segsBase.map((s) => (
           <button key={s.k} className={`seg${seg === s.k ? ' on' : ''}`} onClick={() => setSeg(s.k)}>{s.l}</button>
         ))}
+        <select className={`mini focussel${segsFocus.some((f) => f.k === seg) ? ' on' : ''}`}
+          value={segsFocus.some((f) => f.k === seg) ? seg : ''}
+          onChange={(e) => e.target.value && setSeg(e.target.value)}>
+          <option value="">Focus…</option>
+          {segsFocus.map((f) => <option key={f.k} value={f.k}>{f.l}</option>)}
+        </select>
         <span className="sp" />
         <button className={`seg${foyerMode ? ' on' : ''}`} onClick={() => setFoyerMode((v) => !v)} title="Regrouper les clients par foyer">Par foyer</button>
         <input className="search" placeholder="Rechercher…" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -2083,6 +2092,8 @@ const styles = `
 .meq3 .sigadd input{ flex:1; min-width:120px; border:1px solid var(--line); border-radius:7px; padding:5px 8px; font-size:11.5px }
 .meq3 .sigadd select{ border:1px solid var(--line); border-radius:7px; padding:5px 6px; font-size:11.5px; background:#fff }
 .meq3 .pmangle{ margin-top:9px; font-size:11.5px; color:#5B4B8A; background:#F3F0FA; border:1px solid #DCD4EE; border-radius:9px; padding:7px 10px }
+.meq3 .focussel{ border-radius:999px; font-weight:650 }
+.meq3 .focussel.on{ background:var(--navy); color:#fff; border-color:var(--navy) }
 
 .meq3 .mx2 .segs{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px }
 .meq3 .seg{ padding:6px 12px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:12px; font-weight:650; color:#5b6470; cursor:pointer }
