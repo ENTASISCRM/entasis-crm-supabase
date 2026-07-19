@@ -976,6 +976,7 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
   const [multiSel, setMultiSel] = useState(() => new Set()) // #3 sélection multiple
   const [lastIdx, setLastIdx] = useState(null)    // #3 ancre du shift-clic
   const [debrief, setDebrief] = useState(false)   // #2 panneau débrief RDV
+  const [outils, setOutils] = useState(false)     // outils avancés repliés par défaut
   const [planEdit, setPlanEdit] = useState(false) // #7 édition du plan
   const [sigTxt, setSigTxt] = useState('')        // #8 signal terrain
   const [sigFam, setSigFam] = useState('')
@@ -1309,7 +1310,6 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
         <span className="comp">{r.nb}/{matCols.length}
           <span className="bar"><i style={{ width: `${Math.min(100, (100 * r.nb) / matCols.length)}%` }} /></span>
         </span>
-        {offCount(r) > 0 && <div className="explore">{offCount(r)} à explorer</div>}
       </td>
       <td onClick={(e) => e.stopPropagation()}>
         {(() => {
@@ -1339,13 +1339,9 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
     return out
   }, [foyerMode, visibles])
 
-  // Segments classiques en chips, filtres de niche rangés dans un menu discret
+  // Segments simples et lisibles, pas de filtres de niche qui surchargent
   const segsBase = [
     { k: 'tous', l: 'Tous' }, { k: 'primo', l: 'Primo-équipés' }, { k: 'multi', l: 'Multi 2+' }, { k: 'sans', l: 'Sans info' },
-  ]
-  const segsFocus = [
-    { k: 'explorer', l: 'Angles morts' }, { k: 'couverture', l: 'Couverture' }, { k: 'rapatrier', l: 'À rapatrier' },
-    { k: 'rdv', l: 'RDV à venir' }, { k: 'signaux', l: 'Signaux' },
   ]
   return (
     <div className="mx2">
@@ -1353,12 +1349,6 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
         {segsBase.map((s) => (
           <button key={s.k} className={`seg${seg === s.k ? ' on' : ''}`} onClick={() => setSeg(s.k)}>{s.l}</button>
         ))}
-        <select className={`mini focussel${segsFocus.some((f) => f.k === seg) ? ' on' : ''}`}
-          value={segsFocus.some((f) => f.k === seg) ? seg : ''}
-          onChange={(e) => e.target.value && setSeg(e.target.value)}>
-          <option value="">Focus…</option>
-          {segsFocus.map((f) => <option key={f.k} value={f.k}>{f.l}</option>)}
-        </select>
         <span className="sp" />
         <button className={`seg${foyerMode ? ' on' : ''}`} onClick={() => setFoyerMode((v) => !v)} title="Regrouper les clients par foyer">Par foyer</button>
         <input className="search" placeholder="Rechercher…" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -1480,6 +1470,11 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
               )
             })()}
 
+            <div className="dsec">Outils
+              <button className="dseclnk" onClick={() => setOutils((v) => !v)}>{outils ? 'masquer' : 'afficher'}</button>
+            </div>
+            {outils && (
+              <>
             <div className="dsec">Prochain RDV</div>
             <div className="dpause">
               <input type="date" value={sel.prochainRdv || ''} onChange={(e) => poserRdv(e.target.value)} />
@@ -1545,6 +1540,8 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
                 ? <>👪 Rattaché à un foyer <button className="lnk" disabled={saving} onClick={detacherFoyer}>détacher</button></>
                 : <>Aucun foyer <button className="lnk" disabled={saving} onClick={rattacherFoyer}>rattacher</button></>}
             </div>
+              </>
+            )}
 
             {[!sel.patrimoine, !sel.revenus, !sel.statut].filter(Boolean).length > 0 && (
               <>
