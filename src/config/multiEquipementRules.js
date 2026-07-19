@@ -135,6 +135,50 @@ export function estimationCollecte(c, familleSuggeree) {
   return baseMontant(c, familleSuggeree).montant
 }
 
+// TMI marginale indicative (barème simplifié célibataire) à partir du revenu.
+function tmiApprox(revenus) {
+  const r = Number(revenus || 0)
+  if (r <= 11294) return 0
+  if (r <= 28797) return 0.11
+  if (r <= 82341) return 0.30
+  if (r <= 177106) return 0.41
+  return 0.45
+}
+
+// Chiffrage INDICATIF montrable au client par famille (#1). Jamais une
+// performance : chaque valeur porte une mention prudente et reste distincte de
+// l estimation interne de collecte. Renvoie { libelle, mention } ou null.
+export function simulationIndicative(c, famille) {
+  const rev = Number(c.revenus || 0)
+  const pat = Number(c.patrimoine || 0)
+  const eur = (n) => `${Math.round(n).toLocaleString('fr-FR')} €`
+  switch (famille) {
+    case 'per': {
+      if (rev <= 0) return null
+      const versement = Math.round(rev * 0.10)
+      const eco = Math.round(versement * tmiApprox(rev))
+      return { libelle: `Versement de ${eur(versement)} : environ ${eur(eco)} d économie d impôt cette année`, mention: 'Estimation indicative, selon votre tranche marginale' }
+    }
+    case 'prevoyance':
+      if (rev <= 0) return null
+      return { libelle: `En cas d arrêt de travail, environ ${eur(rev)} de revenus annuels à protéger`, mention: 'Ordre de grandeur, hors régime obligatoire' }
+    case 'av':
+      return { libelle: 'Jusqu à 152 500 € transmissibles par bénéficiaire, hors droits de succession', mention: 'Cadre fiscal en vigueur, sous conditions' }
+    case 'mutuelle':
+      return { libelle: 'Souvent une cotisation allégée à garanties égales, après comparatif', mention: 'À chiffrer sur votre contrat actuel' }
+    case 'emprunteur':
+      return { libelle: 'Délégation d assurance de prêt : économie fréquente à protection équivalente', mention: 'À chiffrer sur votre tableau d amortissement' }
+    case 'scpi':
+      if (pat <= 0) return null
+      return { libelle: 'Diversification en immobilier professionnel, sans gestion, sur une part de vos avoirs', mention: 'Aucune garantie de rendement ni de capital' }
+    case 'immobilier':
+      return { libelle: 'Location meublée : loyers dont l imposition reste contenue par l amortissement', mention: 'Selon votre situation' }
+    case 'structures':
+      return { libelle: 'Protection partielle du capital selon des conditions définies à l avance', mention: 'Aucune garantie de rendement' }
+    default: return null
+  }
+}
+
 // Score de potentiel d'une ligne (tri par defaut de la V2) : combine la
 // valeur estimee de la suggestion et la richesse du client. Echelle libre,
 // seul l'ordre compte.

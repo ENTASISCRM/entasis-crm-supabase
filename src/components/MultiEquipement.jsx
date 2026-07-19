@@ -20,17 +20,17 @@
 // (RLS alignée sur clients) + app_settings clé multiequipement (campagne).
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   listEquipment, listFamilies, upsertDeclare, removeDeclare,
   listDeclaresForClient, listSignedDealsForClient, getSettings, saveSettings,
-  getClientContact, updateClientInfo,
+  getClientContact, updateClientInfo, setClientPause, listActivePauses,
 } from '../services/equipment'
-import { listMissions, upsertMission, reconcileGagnees } from '../services/missions'
+import { listMissions, upsertMission, reconcileGagnees, listCollaboration } from '../services/missions'
 import {
   suggestionPour, ARGUMENTAIRES, estimationCollecte, baseMontant, REGLES,
-  RAISONS_REPORT, ECHEANCES_REPORT,
+  RAISONS_REPORT, ECHEANCES_REPORT, simulationIndicative,
 } from '../config/multiEquipementRules'
 import { genererMail, genererRecommandation, genererRelance, CABINET } from '../config/mailsProduits'
 
@@ -81,6 +81,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
   const [families, setFamilies] = useState([])
   const [settings, setSettings] = useState({ campagne_du_mois: 'prevoyance', objectif_taux_multi: 40 })
   const [missions, setMissions] = useState([])
+  const [collab, setCollab] = useState([])       // missions de collaboration adressées à ce conseiller
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
   const [vue, setVue] = useState('matrice')        // matrice (defaut) | missions | reports
@@ -91,29 +92,38 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
   const [editCamp, setEditCamp] = useState(false)
   const [capId, setCapId] = useState(null)         // ligne dont la capture inline est ouverte
   const [tri, setTri] = useState('montant')        // montant | conseil
+  const [revue, setRevue] = useState(null)         // missions ouvertes en pile de revue par lot
 
   async function reload() {
-    const [eq, fam, st, mis] = await Promise.all([
-      listEquipment(), listFamilies(), getSettings(), listMissions(),
+    const [eq, fam, st, mis, pauses] = await Promise.all([
+      listEquipment(), listFamilies(), getSettings(), listMissions(), listActivePauses(),
     ])
-    const mapped = eq.map((c) => ({
-      client_id: c.client_id,
-      nom: nomClient(c),
-      prenom: c.prenom || '', nomSeul: c.nom || '',
-      profession: c.profession || '',
-      statut: c.statut_pro || '',
-      advisor_code: c.advisor_code || '—',
-      revenus: Number(c.revenus_annuels || 0),
-      patrimoine: Number(c.patrimoine_estime || 0),
-      familles: Array.isArray(c.familles) ? c.familles : [],
-      absences: Array.isArray(c.absences_confirmees) ? c.absences_confirmees : [],
-      nb: Number(c.nb_familles || 0),
-    }))
+    const pauseMap = new Map((pauses || []).map((p) => [p.id, p]))
+    const mapped = eq.map((c) => {
+      const p = pauseMap.get(c.client_id)
+      return {
+        client_id: c.client_id,
+        nom: nomClient(c),
+        prenom: c.prenom || '', nomSeul: c.nom || '',
+        profession: c.profession || '',
+        statut: c.statut_pro || '',
+        advisor_code: c.advisor_code || '—',
+        revenus: Number(c.revenus_annuels || 0),
+        patrimoine: Number(c.patrimoine_estime || 0),
+        familles: Array.isArray(c.familles) ? c.familles : [],
+        absences: Array.isArray(c.absences_confirmees) ? c.absences_confirmees : [],
+        nb: Number(c.nb_familles || 0),
+        pauseJusqu: p?.pause_jusqu_au || null,
+        pauseMotif: p?.pause_motif || '',
+        pauseActive: !!p,
+      }
+    })
     setFamilies(fam)
     setSettings(st)
     setRows(mapped)
     // Reconciliation : coche les gagnees a la signature, reveille les reports echus
     try { setMissions(await reconcileGagnees(mapped, mis)) } catch { setMissions(mis) }
+    try { setCollab(await listCollaboration(profile?.advisor_code)) } catch { setCollab([]) }
   }
   useEffect(() => {
     let vivant = true
@@ -130,7 +140,8 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
   const famMap = useMemo(() => Object.fromEntries(families.map((f) => [f.key, f])), [families])
   const labelFam = (k) => famMap[k]?.label || k
   const couleurFam = (k) => famMap[k]?.couleur || '#8A95A8'
-  const matCols = useMemo(() => families.filter((f) => f.key !== 'autre'), [families])
+  // Private Equity retiré du module (décision Louis : « on ne fait pas »).
+  const matCols = useMemo(() => families.filter((f) => f.key !== 'autre' && f.key !== 'private_equity'), [families])
   const camp = settings.campagne_du_mois || null
 
   // ── Génération des missions à l affichage ────────────────────────────────
@@ -162,12 +173,16 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
         raison_report: db?.raison_report || null,
         retour_le: db?.retour_le || null,
         advisor_code: db?.advisor_code || r.advisor_code,
+        renfort_code: db?.renfort_code || null,
+        regard_avis: db?.regard_avis || null,
+        regard_avis_by: db?.regard_avis_by || null,
         created_at: db?.created_at || null,
         updated_at: db?.updated_at || null,
         enBase: !!db,
       })
     }
     for (const r of rows) {
+      if (r.pauseActive) continue // client en veille : aucune mission à proposer
       const sug = suggestionPour(r)
       if (sug) fusion(r, sug.famille_suggeree, sug.raison)
       // Règle Louis : la campagne cible tout client qui ne détient pas la famille
@@ -195,6 +210,9 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
         raison_report: m.raison_report || null,
         retour_le: m.retour_le || null,
         advisor_code: m.advisor_code || r.advisor_code,
+        renfort_code: m.renfort_code || null,
+        regard_avis: m.regard_avis || null,
+        regard_avis_by: m.regard_avis_by || null,
         created_at: m.created_at || null,
         updated_at: m.updated_at || null,
         enBase: true,
@@ -225,23 +243,39 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
     return { cibles, traitees, enJeu, objectif }
   }, [missionsAff, rows, camp, settings.objectif_campagne])
 
-  // Missions en cours dues pour une relance (cadence de suivi)
+  // Missions en cours dues pour une relance (cadence de suivi), hors clients en veille
   const relanceDue = useMemo(
-    () => missionsAff.filter((m) => m.statut === 'en_cours' && infoRelance(m).due),
+    () => missionsAff.filter((m) => m.statut === 'en_cours' && !m.client.pauseActive && infoRelance(m).due),
     [missionsAff],
   )
+  // Budget d attention (#4) : sollicitations récentes par client (proxy sur les
+  // missions touchées ces 6 mois), pour un garde-fou de sur-sollicitation.
+  const budgetMap = useMemo(() => {
+    const seuil = Date.now() - 183 * 86400000
+    const m = new Map()
+    for (const mi of missionsAff) {
+      if (!['en_cours', 'reportee', 'gagnee'].includes(mi.statut)) continue
+      const t = mi.updated_at ? new Date(mi.updated_at).getTime() : 0
+      if (!t || t < seuil) continue
+      const g = m.get(mi.client.client_id) || { count: 0, last: 0 }
+      g.count += 1
+      if (t > g.last) g.last = t
+      m.set(mi.client.client_id, g)
+    }
+    return m
+  }, [missionsAff])
   // Score « ordre conseillé » : euros, pondérés par la confiance, relance en tête
   const scoreConseil = (m) => {
     let s = m.montant || 0
     if (m.confiance === 'fort') s *= 1.4
     else if (m.confiance === 'faible') s *= 0.6
-    if (infoRelance(m).due) s += 1000000
+    if (!m.client.pauseActive && infoRelance(m).due) s += 1000000
     return s
   }
   // ── Liste affichée : chip d état (ou relance) + filtre campagne + tri ──────
   const liste = useMemo(() => {
     let l = chip === 'relance'
-      ? missionsAff.filter((m) => m.statut === 'en_cours' && infoRelance(m).due)
+      ? missionsAff.filter((m) => m.statut === 'en_cours' && !m.client.pauseActive && infoRelance(m).due)
       : missionsAff.filter((m) => m.statut === chip)
     if (campSeul && camp) l = l.filter((m) => m.famille === camp)
     if (chip === 'gagnee') return [...l].sort((a, b) => (b.montant_reel || 0) - (a.montant_reel || 0))
@@ -302,6 +336,36 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
       })
       await refreshMissions()
     } catch { /* la prochaine navigation rechargera l etat */ }
+  }
+  async function reloadCollab() {
+    try { setCollab(await listCollaboration(profile?.advisor_code)) } catch { /* rechargé plus tard */ }
+    await refreshMissions()
+  }
+  // #3 : l expert sollicité note son renfort (visible du conseiller titulaire)
+  async function repondreRenfort(m) {
+    const note = window.prompt('Votre note de renfort (visible du conseiller titulaire) :', m.renfort_note || '')
+    if (note === null) return
+    try { await upsertMission({ client_id: m.client_id, famille: m.famille, patch: { renfort_note: note } }); toast.success('Note de renfort enregistrée'); await reloadCollab() }
+    catch (e) { toast.error(e.message || 'Échec') }
+  }
+  // #9 : le pair donne son second regard sur la ligne
+  async function donnerAvis(m) {
+    const avis = window.prompt('Votre second regard (adéquation, angle, point de vigilance) :', '')
+    if (avis === null || !avis.trim()) return
+    try { await upsertMission({ client_id: m.client_id, famille: m.famille, patch: { regard_avis: avis.trim(), regard_avis_by: profile?.advisor_code || null } }); toast.success('Avis transmis'); await reloadCollab() }
+    catch (e) { toast.error(e.message || 'Échec') }
+  }
+  // Ouvre Proposer pour un client hors portefeuille (expert en renfort)
+  function proposerRenfort(m) {
+    setProposerPour({
+      client: {
+        client_id: m.client_id,
+        nom: `${m.clients?.prenom || ''} ${m.clients?.nom || ''}`.trim() || '(client)',
+        prenom: m.clients?.prenom || '', familles: [], absences: [],
+        patrimoine: 0, revenus: 0, statut: '', advisor_code: '',
+      },
+      preset: m.famille,
+    })
   }
   // Confirmation de la modale anti zap : report daté ou exclusion motivée
   async function confirmerReport(mi, { mode, raison, jours }) {
@@ -370,6 +434,9 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
 
       {!loading && !err && vue === 'missions' && (
         <>
+          <CollabPanel items={collab} myCode={profile?.advisor_code} famMap={famMap}
+            onRepondreRenfort={repondreRenfort} onDonnerAvis={donnerAvis} onProposer={proposerRenfort} />
+
           {/* Hero : combien d euros restent sur la table, combien sont rentrés */}
           <div className="hero">
             <div className="hbox navy">
@@ -430,6 +497,9 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
               « Proposer » rédige le mail ou ouvre le dossier ; un montant affiché <b>en fourchette</b> (« à préciser ») = complétez la fiche en un clic pour un chiffre net.
             </div>
           )}
+          {chip === 'a_attaquer' && liste.length > 1 && (
+            <button className="revuebtn" onClick={() => setRevue(liste)}>▸ Revue par lot ({liste.length}) : enchaîner les propositions au clavier</button>
+          )}
           <div className="cartes">
             {liste.length === 0 && (
               <div className="empty">
@@ -441,7 +511,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
             {chip !== 'gagnee' && chip !== 'exclue' && liste.map((mi) => {
               const age = chip === 'a_attaquer' ? ageJours(mi) : null
               const niveau = age != null && age > 14 ? 'rouge' : age != null && age > 7 ? 'orange' : ''
-              const rel = infoRelance(mi)
+              const rel = mi.client.pauseActive ? { due: false, jours: 0, etape: 0 } : infoRelance(mi)
               return (
                 <div key={mi.key}>
                   <div className={`row ${niveau}${rel.due ? ' relance' : ''}`}>
@@ -451,6 +521,8 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
                         {isManager && <span className="cons">{mi.advisor_code}</span>}
                         {age != null && age > 7 && <span className={`age ${niveau}`}>{age} j sans action</span>}
                         {rel.due && <span className={`age relb e${rel.etape}`}>{LIB_RELANCE[rel.etape]} · {rel.jours} j</span>}
+                        {mi.client.pauseActive && <span className="veille">en veille jusqu au {fmtDate(mi.client.pauseJusqu)}</span>}
+                        {mi.renfort_code && <span className="renfb">🤝 renfort {mi.renfort_code}</span>}
                         {mi.statut === 'reportee' && (
                           <span className="rep">🕰 revient le {fmtDate(mi.retour_le)}</span>
                         )}
@@ -458,6 +530,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
                       <EquipementDots client={mi.client} suggest={mi.famille} matCols={matCols}
                         couleurFam={couleurFam} labelFam={labelFam} />
                       <div className="raison">{mi.raison}</div>
+                      {mi.regard_avis && <div className="avisp">👁 {mi.regard_avis_by || 'Pair'} : {mi.regard_avis}</div>}
                     </div>
                     <span className="fam" style={{ borderColor: couleurFam(mi.famille) }}>{labelFam(mi.famille)}</span>
                     <div className="rmont">
@@ -565,8 +638,14 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
       {/* Vue matrice V2 allégée : correction des données d équipement */}
       {!loading && !err && vue === 'matrice' && (
         <MatriceV2 rows={rows} matCols={matCols} famMap={famMap} isManager={isManager}
-          profile={profile} onCreateDeal={onCreateDeal} reload={reload}
+          profile={profile} onCreateDeal={onCreateDeal} reload={reload} budgetMap={budgetMap}
           onProposer={(client, preset) => setProposerPour({ client, preset })} />
+      )}
+
+      {/* Pile de revue par lot */}
+      {revue && (
+        <RevueParLot items={revue} conseiller={profile?.full_name || ''} famMap={famMap}
+          onMark={marquerPropose} onClose={() => setRevue(null)} />
       )}
 
       {/* Modale anti zap */}
@@ -585,9 +664,12 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
           matCols={matCols}
           famMap={famMap}
           conseiller={profile?.full_name || ''}
+          advisorCode={profile?.advisor_code || ''}
+          budget={budgetMap.get(proposerPour.client.client_id)}
           onClose={() => setProposerPour(null)}
           onCreateDeal={onCreateDeal}
-          onMarkPropose={marquerPropose} />
+          onMarkPropose={marquerPropose}
+          onRefresh={refreshMissions} />
       )}
     </div>
   )
@@ -697,7 +779,7 @@ function ModaleReport({ mission, labelFam, onClose, onConfirm }) {
 // de recommandation, le mail type se genere aussitot, il le relit, l ajuste et
 // l ouvre dans sa messagerie (ou le copie). Marque la mission en cours au
 // passage a l action, pour que le suivi reflete l envoi.
-function ProposerModal({ client, preset, relance, matCols, famMap, conseiller, onClose, onCreateDeal, onMarkPropose }) {
+function ProposerModal({ client, preset, relance, matCols, famMap, conseiller, advisorCode, budget, onClose, onCreateDeal, onMarkPropose, onRefresh }) {
   const labelFam = (k) => famMap[k]?.label || k
   const couleurFam = (k) => famMap[k]?.couleur || '#8A95A8'
   const gaps = matCols.filter((f) => !client.familles.includes(f.key))
@@ -738,6 +820,7 @@ function ProposerModal({ client, preset, relance, matCols, famMap, conseiller, o
   }, [mode, famille, prenom, conseiller])
 
   const mailtoHref = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(objet)}&body=${encodeURIComponent(corps)}`
+  const sim = mode === 'reco' ? null : simulationIndicative(client, famille)
 
   function copier() {
     navigator.clipboard?.writeText(`Objet : ${objet}\n\n${corps}`)
@@ -754,6 +837,15 @@ function ProposerModal({ client, preset, relance, matCols, famMap, conseiller, o
     marquer()
     if (onCreateDeal) onCreateDeal(client)
     onClose()
+  }
+  async function demanderSecondRegard() {
+    const code = window.prompt('Second regard : code du pair que vous sollicitez :', '')
+    if (!code || !code.trim()) return
+    try {
+      await upsertMission({ client_id: client.client_id, famille, patch: { regard_demande_a: code.trim(), advisor_code: advisorCode || client.advisor_code || null } })
+      toast.success(`Second regard demandé à ${code.trim()}`)
+      onRefresh && onRefresh()
+    } catch (e) { toast.error(e.message || 'Échec') }
   }
 
   return (
@@ -801,6 +893,17 @@ function ProposerModal({ client, preset, relance, matCols, famMap, conseiller, o
           </div>
         )}
 
+        {sim && (
+          <div className="pmsim">
+            <div className="pmsimt">Chiffrage indicatif à montrer au client</div>
+            <div className="pmsimv">{sim.libelle}</div>
+            <div className="pmsimm">{sim.mention}</div>
+          </div>
+        )}
+        {budget && budget.count >= 3 && (
+          <div className="pmbudget">Ce client a déjà été sollicité {budget.count} fois ces six mois, la dernière le {fmtDate(new Date(budget.last).toISOString().slice(0, 10))}. Peut être vaut il mieux espacer.</div>
+        )}
+
         <div className="mrlab">Objet</div>
         <input className="pmobj" value={objet} onChange={(e) => setObjet(e.target.value)} />
         <div className="mrlab">Message <span className="pmhint">relisez et ajustez avant envoi</span></div>
@@ -819,6 +922,9 @@ function ProposerModal({ client, preset, relance, matCols, famMap, conseiller, o
         {mode === 'produit' && (
           <button className="pmdeal" onClick={creerDossier}>Créer le dossier pour ce client</button>
         )}
+        {mode !== 'reco' && (
+          <button className="pmsecond" onClick={demanderSecondRegard}>Demander un second regard à un pair</button>
+        )}
       </div>
     </div>
   )
@@ -828,15 +934,20 @@ function ProposerModal({ client, preset, relance, matCols, famMap, conseiller, o
 // Conservée pour corriger les données : matrice à pastilles + drawer de
 // déclarations (détenu, absence, historique signé). Radar, heatmap, export et
 // bloc opportunités de la V2 ont été retirés, les missions les remplacent.
-function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, reload, onProposer }) {
+function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, reload, onProposer, budgetMap }) {
   const [seg, setSeg] = useState('tous')
   const [cons, setCons] = useState('all')
   const [q, setQ] = useState('')
   const [selId, setSelId] = useState(null)
   const [detail, setDetail] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [pauseForm, setPauseForm] = useState(false)
+  const [pauseDur, setPauseDur] = useState('90')
+  const [pauseMotif, setPauseMotif] = useState('')
   const labelFam = (k) => famMap[k]?.label || k
   const couleurFam = (k) => famMap[k]?.couleur || '#8A95A8'
+  // Familles jamais explorées (ni détenues, ni absence confirmée) = angles morts (#7)
+  const offCount = (r) => matCols.reduce((n, f) => n + ((!r.familles.includes(f.key) && !r.absences.includes(f.key)) ? 1 : 0), 0)
 
   const conseillers = useMemo(
     () => Array.from(new Set(rows.map((r) => r.advisor_code).filter((x) => x && x !== '—'))).sort(),
@@ -844,14 +955,17 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
   )
   const visibles = useMemo(() => {
     const ql = q.trim().toLowerCase()
-    return rows.filter((r) => {
+    const l = rows.filter((r) => {
       if (cons !== 'all' && r.advisor_code !== cons) return false
       if (seg === 'mono' && r.nb !== 1) return false
       if (seg === 'multi' && r.nb < 2) return false
       if (seg === 'sans' && r.nb !== 0) return false
+      if (seg === 'explorer' && offCount(r) < 4) return false
       if (ql && !(`${r.nom} ${r.profession} ${r.advisor_code}`.toLowerCase().includes(ql))) return false
       return true
-    }).sort((a, b) => b.revenus - a.revenus)
+    })
+    if (seg === 'explorer') return l.sort((a, b) => offCount(b) - offCount(a))
+    return l.sort((a, b) => b.revenus - a.revenus)
   }, [rows, seg, cons, q])
 
   const sel = useMemo(() => rows.find((r) => r.client_id === selId) || null, [rows, selId])
@@ -899,9 +1013,64 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
     } catch (e) { toast.error(e.message || 'Échec') }
     finally { setSaving(false) }
   }
+  // #8 : mise en veille relationnelle datée du client
+  async function poserPause() {
+    if (!sel) return
+    const jours = Number(pauseDur) || 90
+    const d = new Date(); d.setDate(d.getDate() + jours)
+    setSaving(true)
+    try {
+      await setClientPause(sel.client_id, { pause_jusqu_au: d.toISOString().slice(0, 10), pause_motif: pauseMotif.trim() || null })
+      toast.success('Client mis en veille')
+      setPauseForm(false); setPauseMotif('')
+      await reload()
+    } catch (e) { toast.error(e.message || 'Échec (réservé au conseiller du client)') }
+    finally { setSaving(false) }
+  }
+  async function leverPause() {
+    if (!sel) return
+    setSaving(true)
+    try {
+      await setClientPause(sel.client_id, { pause_jusqu_au: null, pause_motif: null })
+      toast.success('Veille levée')
+      await reload()
+    } catch (e) { toast.error(e.message || 'Échec') }
+    finally { setSaving(false) }
+  }
+  // #10 : marque en une fois toutes les familles non renseignées comme absentes
+  async function marquerAbsencesEnLot() {
+    if (!sel) return
+    const cibles = matCols.filter((f) => !sel.familles.includes(f.key) && !sel.absences.includes(f.key))
+    if (cibles.length === 0) return
+    const raison = window.prompt(`Marquer ${cibles.length} famille(s) non renseignée(s) comme absentes. Raison :`, 'Hors cible pour ce client')
+    if (raison === null) return
+    setSaving(true)
+    try {
+      for (const f of cibles) {
+        await upsertDeclare({ client_id: sel.client_id, famille: f.key, detenu: false, note: raison || 'absence confirmée en lot', saisi_par: profile?.id || null })
+      }
+      toast.success(`${cibles.length} absence(s) confirmée(s)`)
+      await reload()
+      const declares = await listDeclaresForClient(sel.client_id)
+      setDetail((d) => ({ ...(d || { deals: [] }), declares }))
+    } catch (e) { toast.error(e.message || 'Échec') }
+    finally { setSaving(false) }
+  }
+  // #3 : demande de renfort à un référent sur une famille pointue
+  async function demanderRenfort(famille) {
+    if (!sel) return
+    const code = window.prompt(`Renfort sur ${labelFam(famille)} pour ${sel.nom}.\nCode du référent (ex. ${conseillers.slice(0, 3).join(', ') || 'DB'}) :`, '')
+    if (!code || !code.trim()) return
+    setSaving(true)
+    try {
+      await upsertMission({ client_id: sel.client_id, famille, patch: { renfort_code: code.trim(), advisor_code: sel.advisor_code } })
+      toast.success(`Renfort demandé à ${code.trim()}`)
+    } catch (e) { toast.error(e.message || 'Échec') }
+    finally { setSaving(false) }
+  }
 
   const segs = [
-    { k: 'tous', l: 'Tous' }, { k: 'mono', l: 'Mono' }, { k: 'multi', l: 'Multi 2+' }, { k: 'sans', l: 'Sans info' },
+    { k: 'tous', l: 'Tous' }, { k: 'mono', l: 'Mono' }, { k: 'multi', l: 'Multi 2+' }, { k: 'sans', l: 'Sans info' }, { k: 'explorer', l: 'Angles morts' },
   ]
   return (
     <div className="mx2">
@@ -952,6 +1121,7 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
                       <span className="comp">{r.nb}/{matCols.length}
                         <span className="bar"><i style={{ width: `${Math.min(100, (100 * r.nb) / matCols.length)}%` }} /></span>
                       </span>
+                      {offCount(r) > 0 && <div className="explore">{offCount(r)} à explorer</div>}
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
                       {(() => {
@@ -983,11 +1153,54 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
             </div>
             {(() => {
               const sug = suggestionPour(sel)
+              const sim = sug ? simulationIndicative(sel, sug.famille_suggeree) : null
+              const b = budgetMap && budgetMap.get(sel.client_id)
+              const conflits = matCols.filter((f) => sel.familles.includes(f.key) && sel.absences.includes(f.key))
               return (
-                <div className="dbrief">
-                  {sel.statut || 'statut à préciser'} · {sel.nb}/{matCols.length} familles · {sel.patrimoine ? `patrimoine ${fmtEur(sel.patrimoine)}` : 'patrimoine à compléter'}
-                  {sug ? <> · prochaine étape <b>{labelFam(sug.famille_suggeree)}</b></> : null}
-                </div>
+                <>
+                  <div className="dbrief">
+                    {sel.statut || 'statut à préciser'} · {sel.nb}/{matCols.length} familles · {sel.patrimoine ? `patrimoine ${fmtEur(sel.patrimoine)}` : 'patrimoine à compléter'}
+                    {sug ? <> · prochaine étape <b>{labelFam(sug.famille_suggeree)}</b></> : null}
+                    {b ? <> · {b.count} sollicitation{b.count > 1 ? 's' : ''} ces 6 mois</> : null}
+                  </div>
+
+                  <div className="dpause">
+                    {sel.pauseActive ? (
+                      <>🌙 En veille jusqu au {fmtDate(sel.pauseJusqu)}{sel.pauseMotif ? ` (${sel.pauseMotif})` : ''}
+                        <button className="lnk" disabled={saving} onClick={leverPause}>lever</button></>
+                    ) : (
+                      <>Relation active
+                        <button className="lnk" onClick={() => setPauseForm((v) => !v)}>{pauseForm ? 'annuler' : 'mettre en veille'}</button></>
+                    )}
+                  </div>
+                  {pauseForm && !sel.pauseActive && (
+                    <div className="dpause">
+                      <select value={pauseDur} onChange={(e) => setPauseDur(e.target.value)}>
+                        <option value="30">30 jours</option>
+                        <option value="90">3 mois</option>
+                        <option value="180">6 mois</option>
+                        <option value="365">1 an</option>
+                      </select>
+                      <input placeholder="motif privé (deuil, cession…)" value={pauseMotif} onChange={(e) => setPauseMotif(e.target.value)} />
+                      <button className="lnk" disabled={saving} onClick={poserPause}>confirmer</button>
+                    </div>
+                  )}
+
+                  {conflits.map((f) => (
+                    <div className="conflit" key={`c-${f.key}`}>
+                      ⚠ {labelFam(f.key)} : présent dans les contrats mais déclaré absent.
+                      <button disabled={saving} onClick={() => effacerDeclaration(f.key)}>Trancher : détenu</button>
+                    </div>
+                  ))}
+
+                  {sim && (
+                    <div className="pmsim">
+                      <div className="pmsimt">Chiffrage indicatif ({labelFam(sug.famille_suggeree)})</div>
+                      <div className="pmsimv">{sim.libelle}</div>
+                      <div className="pmsimm">{sim.mention}</div>
+                    </div>
+                  )}
+                </>
               )
             })()}
             {[!sel.patrimoine, !sel.revenus, !sel.statut].filter(Boolean).length > 0 && (
@@ -996,7 +1209,11 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
                 <CaptureInline client={sel} compact onSaved={async () => { await reload() }} />
               </>
             )}
-            <div className="dsec">Équipement</div>
+            <div className="dsec">Équipement
+              {offCount(sel) > 0 && (
+                <button className="dseclnk" disabled={saving} onClick={marquerAbsencesEnLot} title="Marque toutes les familles non renseignées comme absentes, une seule raison">nettoyer ({offCount(sel)})</button>
+              )}
+            </div>
             {matCols.map((f) => {
               const detenu = sel.familles.includes(f.key)
               const absent = sel.absences.includes(f.key)
@@ -1010,6 +1227,7 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
                   <span className="dactions">
                     {!detenu && <button disabled={saving} title="Déclarer détenu (souscrit ailleurs ou avant le CRM)" onClick={() => declarer(f.key, true)}>✓</button>}
                     {!detenu && !absent && <button disabled={saving} title="Confirmer l absence" onClick={() => declarer(f.key, false)}>✕</button>}
+                    {!detenu && <button disabled={saving} title="Demander un renfort expert sur cette famille" onClick={() => demanderRenfort(f.key)}>🤝</button>}
                     {decl && <button disabled={saving} title="Effacer la déclaration" onClick={() => effacerDeclaration(f.key)}>↺</button>}
                   </span>
                 </div>
@@ -1087,6 +1305,122 @@ function CaptureInline({ client, onSaved, onClose, compact }) {
         <span className="capprog">{rempli}/3 renseignés</span>
         <button className="pri" disabled={saving} onClick={save}>Enregistrer</button>
         {onClose && <button className="sec" onClick={onClose}>Fermer</button>}
+      </div>
+    </div>
+  )
+}
+
+// ── Collaboration : renforts et seconds regards adressés à ce conseiller ─────
+// #3 renfort expert, #9 second regard entre pairs. Panneau en tête de la vue
+// Missions, alimenté par listCollaboration (missions hors portefeuille).
+function CollabPanel({ items, myCode, famMap, onRepondreRenfort, onDonnerAvis, onProposer }) {
+  const labelFam = (k) => famMap[k]?.label || k
+  const nom = (m) => `${m.clients?.prenom || ''} ${m.clients?.nom || ''}`.trim() || '(client)'
+  const renforts = (items || []).filter((m) => m.renfort_code === myCode)
+  const regards = (items || []).filter((m) => m.regard_demande_a === myCode && !m.regard_avis)
+  if (renforts.length === 0 && regards.length === 0) return null
+  return (
+    <div className="collab">
+      {renforts.length > 0 && (
+        <div className="collabsec">
+          <div className="collabt">🤝 Renforts à traiter ({renforts.length})</div>
+          {renforts.map((m) => (
+            <div className="collabrow" key={`rf-${m.id}`}>
+              <span className="collabc">{nom(m)} · <b>{labelFam(m.famille)}</b>{m.renfort_note ? ` · « ${m.renfort_note} »` : ''}</span>
+              <span className="collabact">
+                <button onClick={() => onProposer(m)}>Proposer</button>
+                <button onClick={() => onRepondreRenfort(m)}>Noter</button>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      {regards.length > 0 && (
+        <div className="collabsec">
+          <div className="collabt">👁 Seconds regards à donner ({regards.length})</div>
+          {regards.map((m) => (
+            <div className="collabrow" key={`rg-${m.id}`}>
+              <span className="collabc">{nom(m)} · <b>{labelFam(m.famille)}</b></span>
+              <span className="collabact"><button onClick={() => onDonnerAvis(m)}>Donner mon avis</button></span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Pile de revue par lot (#2) ──────────────────────────────────────────────
+// Enchaine les propositions d une meme selection sans rouvrir la modale a chaque
+// fois. Le mail type se genere, le conseiller ouvre sa messagerie ou copie, la
+// mission passe en cours, on avance. Clavier : Entree ouvre le mail, C copie,
+// S passe, Echap ferme. Aucun envoi automatique, chaque piece reste validee.
+function RevueParLot({ items, conseiller, famMap, onMark, onClose }) {
+  const labelFam = (k) => famMap[k]?.label || k
+  const [i, setI] = useState(0)
+  const [contact, setContact] = useState(null)
+  const lienRef = useRef(null)
+  const cur = items[i]
+
+  useEffect(() => {
+    setContact(null)
+    if (!cur) return
+    let vivant = true
+    getClientContact(cur.client.client_id).then((c) => { if (vivant) setContact(c) }).catch(() => {})
+    return () => { vivant = false }
+  }, [i])
+
+  const prenom = (contact?.prenom || cur?.client.prenom || '').trim()
+  const email = (contact?.email || '').trim()
+  const mail = cur ? genererMail(cur.famille, { prenom, conseiller, cabinet: CABINET }) : null
+  const mailtoHref = mail ? `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(mail.objet)}&body=${encodeURIComponent(mail.corps)}` : '#'
+
+  function next() {
+    if (i + 1 >= items.length) onClose()
+    else setI(i + 1)
+  }
+  function copierEtSuivant() {
+    if (mail) navigator.clipboard?.writeText(`Objet : ${mail.objet}\n\n${mail.corps}`)
+    if (cur) onMark(cur.client, cur.famille)
+    toast.success('Copié, au suivant')
+    next()
+  }
+
+  useEffect(() => {
+    const h = (e) => {
+      if (e.key === 'Escape') { onClose(); return }
+      if (e.target && /input|textarea|select/i.test(e.target.tagName)) return
+      if (e.key === 'Enter') { e.preventDefault(); if (lienRef.current) lienRef.current.click() }
+      else if (e.key.toLowerCase() === 'c') copierEtSuivant()
+      else if (e.key.toLowerCase() === 's') next()
+    }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  })
+
+  if (!cur) return null
+  return (
+    <div className="mrOverlay" onClick={onClose}>
+      <div className="mr pmail rvl" onClick={(e) => e.stopPropagation()}>
+        <div className="mrhd">
+          <h3>Revue par lot</h3>
+          <button className="x" onClick={onClose}>✕</button>
+        </div>
+        <div className="rvlprog"><span>{i + 1} / {items.length}</span><span className="bar"><i style={{ width: `${(100 * (i + 1)) / items.length}%` }} /></span></div>
+        <div className="rvlcli">{cur.client.nom} · <b>{labelFam(cur.famille)}</b>{email ? ` · ${email}` : ' · email manquant sur la fiche'}</div>
+        {mail && (
+          <>
+            <div className="rvlobj">{mail.objet}</div>
+            <textarea className="pmcorps" rows={9} readOnly value={mail.corps} />
+          </>
+        )}
+        <div className="mrbtns pmbtns">
+          <a ref={lienRef} className="pri" href={mailtoHref}
+            onClick={() => { if (cur) onMark(cur.client, cur.famille); setTimeout(next, 60) }}>Ouvrir le mail</a>
+          <button className="sec" onClick={copierEtSuivant}>Copier</button>
+          <button className="sec" onClick={next}>Passer</button>
+        </div>
+        <div className="rvlhint">Entrée ouvre le mail · C copie · S passe · Échap ferme</div>
       </div>
     </div>
   )
@@ -1298,6 +1632,43 @@ const styles = `
 .meq3 .nbamute{ font-size:10.5px; color:#B7BDC4 }
 .meq3 .dbrief{ font-size:11px; color:#5b6470; background:#F6F4EF; border:1px solid var(--line); border-radius:8px; padding:6px 9px; margin-bottom:8px; line-height:1.4 }
 .meq3 .dbrief b{ color:var(--gold-dk) }
+.meq3 .veille{ font-size:10px; font-weight:700; color:#5b6470; background:#EEF1F4; border-radius:5px; padding:1px 6px }
+.meq3 .pmsim{ margin-top:10px; background:#F3F6FB; border:1px solid #D5E0EE; border-radius:10px; padding:10px 12px }
+.meq3 .pmsimt{ font-size:9.5px; text-transform:uppercase; letter-spacing:.04em; color:#4A6488; font-weight:750 }
+.meq3 .pmsimv{ font-size:13px; font-weight:700; color:var(--navy); margin-top:3px; line-height:1.35 }
+.meq3 .pmsimm{ font-size:10px; color:var(--silver); margin-top:3px; font-style:italic }
+.meq3 .pmbudget{ margin-top:9px; font-size:11.5px; color:#9A6A1B; background:#FBF4E4; border:1px solid rgba(201,169,97,.4); border-radius:9px; padding:8px 10px }
+.meq3 .dpause{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:11px; color:#5b6470; background:#EEF1F4; border-radius:8px; padding:6px 9px; margin-bottom:8px }
+.meq3 .dpause .lnk{ color:var(--gold-dk) }
+.meq3 .conflit{ font-size:11px; color:#B4453B; background:#FBECEC; border:1px solid #E8CFCB; border-radius:8px; padding:6px 9px; margin:6px 0; display:flex; align-items:center; gap:6px; flex-wrap:wrap }
+.meq3 .conflit button{ border:1px solid #D89B94; background:#fff; color:#B4453B; border-radius:6px; padding:2px 8px; font-size:11px; font-weight:700; cursor:pointer }
+.meq3 .explore{ color:#8A6A2F; font-weight:700; font-size:9.5px; margin-top:2px }
+.meq3 .segpin{ margin-left:auto }
+.meq3 .dseclnk{ float:right; background:none; border:none; color:var(--gold-dk); font-size:10px; font-weight:750; cursor:pointer; text-decoration:underline; text-transform:none; letter-spacing:0 }
+.meq3 .dpause select,.meq3 .dpause input{ border:1px solid var(--line); border-radius:7px; padding:4px 6px; font-size:11.5px; background:#fff }
+.meq3 .dpause input{ flex:1; min-width:90px }
+.meq3 .revuebtn{ display:block; width:100%; margin:2px 0 8px; background:var(--navy); color:#fff; border:none; border-radius:9px; padding:9px 12px; font-size:12.5px; font-weight:700; cursor:pointer; text-align:left }
+.meq3 .revuebtn:hover{ background:#12233b }
+.meq3 .rvl{ max-width:520px }
+.meq3 .rvlprog{ display:flex; align-items:center; gap:8px; margin:8px 0; font-size:11px; font-weight:700; color:var(--silver) }
+.meq3 .rvlprog .bar{ flex:1; width:auto; height:6px; background:#EEE5CC }
+.meq3 .rvlcli{ font-size:13px; color:var(--navy); font-weight:650; margin-bottom:8px }
+.meq3 .rvlcli b{ color:var(--gold-dk) }
+.meq3 .rvlobj{ font-size:13px; font-weight:700; color:var(--navy); margin-bottom:6px }
+.meq3 .rvlhint{ font-size:10.5px; color:var(--silver); margin-top:8px; text-align:center }
+.meq3 .collab{ display:flex; flex-direction:column; gap:8px; margin-bottom:10px }
+.meq3 .collabsec{ background:#F3F0FA; border:1px solid #DCD4EE; border-radius:11px; padding:9px 12px }
+.meq3 .collabt{ font-size:11px; font-weight:800; color:#5B4B8A; margin-bottom:5px }
+.meq3 .collabrow{ display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px; padding:3px 0; flex-wrap:wrap }
+.meq3 .collabc{ color:var(--ink) }
+.meq3 .collabc b{ color:#5B4B8A }
+.meq3 .collabact{ display:flex; gap:6px }
+.meq3 .collabact button{ border:1px solid #C9BEEB; background:#fff; color:#5B4B8A; border-radius:7px; padding:3px 10px; font-size:11.5px; font-weight:700; cursor:pointer }
+.meq3 .collabact button:hover{ background:#5B4B8A; color:#fff; border-color:#5B4B8A }
+.meq3 .renfb{ font-size:10px; font-weight:700; color:#5B4B8A; background:#EDE7F8; border-radius:5px; padding:1px 6px }
+.meq3 .avisp{ font-size:11px; color:#5B4B8A; background:#F3F0FA; border:1px solid #DCD4EE; border-radius:7px; padding:4px 8px; margin-top:4px; line-height:1.35 }
+.meq3 .pmsecond{ display:block; width:100%; margin-top:8px; background:none; border:1px dashed var(--line); border-radius:9px; padding:8px; font-size:11.5px; font-weight:650; color:#5b6470; cursor:pointer }
+.meq3 .pmsecond:hover{ border-color:#5B4B8A; color:#5B4B8A }
 
 .meq3 .mx2 .segs{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px }
 .meq3 .seg{ padding:6px 12px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:12px; font-weight:650; color:#5b6470; cursor:pointer }

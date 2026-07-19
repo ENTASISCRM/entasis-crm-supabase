@@ -97,6 +97,27 @@ export async function updateClientInfo(clientId, patch = {}) {
   if (error) throw error
 }
 
+// Mise en veille relationnelle d un client (#8, do not disturb daté) : tant que
+// pause_jusqu_au est dans le futur, le client sort des missions à proposer.
+export async function setClientPause(clientId, { pause_jusqu_au, pause_motif }) {
+  const { error } = await supabase
+    .from('clients')
+    .update({ pause_jusqu_au: pause_jusqu_au || null, pause_motif: pause_motif || null })
+    .eq('id', clientId)
+  if (error) throw error
+}
+
+// Pauses actives (échéance non dépassée), fusionnées dans les lignes du module.
+export async function listActivePauses() {
+  const today = new Date().toISOString().slice(0, 10)
+  const { data, error } = await supabase
+    .from('clients')
+    .select('id, pause_jusqu_au, pause_motif')
+    .gte('pause_jusqu_au', today)
+  if (error) throw error
+  return data || []
+}
+
 // Réglages cabinet du module (campagne du mois, objectif de taux multi).
 // Lecture ouverte à tous les connectés, écriture réservée aux managers (RLS).
 export async function getSettings() {

@@ -18,6 +18,20 @@ export async function listMissions() {
   return data || []
 }
 
+// Missions de COLLABORATION adressees a ce conseiller (#3 renfort, #9 second
+// regard) : missions ou il est l expert sollicite ou le pair a qui on demande
+// un avis, meme si le client n est pas dans son portefeuille. Le nom du client
+// est joint (RLS clients_select_collaboration l autorise).
+export async function listCollaboration(code) {
+  if (!code) return []
+  const { data, error } = await supabase
+    .from('me_missions')
+    .select('id, client_id, famille, statut, renfort_code, renfort_note, regard_demande_a, regard_avis, regard_avis_by, clients(nom, prenom)')
+    .or(`renfort_code.eq."${code}",regard_demande_a.eq."${code}"`)
+  if (error) throw error
+  return data || []
+}
+
 // Cree ou met a jour une mission sur la cle unique (client_id, famille).
 // patch ne contient que les colonnes a poser : sur conflit, PostgREST ne met
 // a jour que les colonnes presentes dans la charge, le reste est conserve.
