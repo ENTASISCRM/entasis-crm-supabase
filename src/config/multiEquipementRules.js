@@ -89,19 +89,35 @@ export const ARGUMENTAIRES = {
 // Estimation grossiere de collecte par opportunite (pour le KPI gisement et
 // le tri par potentiel). Ordres de grandeur cabinet, PAS un engagement :
 // affiches avec le prefixe « ~ » dans l interface.
-export function estimationCollecte(c, familleSuggeree) {
+// Montant estime AVEC sa base explicite (transparence demandee par Louis :
+// « pourquoi 10 k€, sur quelle base ? »). Renvoie { montant, base (texte
+// affiche sous le montant), parDefaut (true = valeur forfaitaire faute de
+// donnee, a afficher en grise pour ne pas faire croire a un vrai chiffre) }.
+// Quand revenus ou patrimoine manquent, on retombe sur un forfait honnete.
+export function baseMontant(c, famille) {
   const rev = Number(c.revenus || 0)
   const pat = Number(c.patrimoine || 0)
-  switch (familleSuggeree) {
-    case 'prevoyance': return 1800                        // PP ~150/mois annualisee
-    case 'mutuelle': return 1200
-    case 'per': return Math.max(2400, Math.round(rev * 0.06))   // ~6% du revenu en versements
-    case 'av': return Math.max(10000, Math.round(pat * 0.08))   // ~8% du patrimoine place
-    case 'scpi': return Math.max(20000, Math.round(pat * 0.10))
-    case 'immobilier': return 120000                      // ticket LMNP moyen
-    case 'structures': return 25000
-    default: return 5000
+  const k = (n) => `${Math.round(n / 1000)} k€`
+  switch (famille) {
+    case 'prevoyance': return { montant: 1800, base: 'prime type 150 €/mois', parDefaut: false }
+    case 'mutuelle': return { montant: 1200, base: 'prime type 100 €/mois', parDefaut: false }
+    case 'per': return rev > 0
+      ? { montant: Math.round(rev * 0.06), base: `6 % des revenus (${k(rev)})`, parDefaut: false }
+      : { montant: 2400, base: 'forfait, revenus non renseignés', parDefaut: true }
+    case 'av': return pat > 0
+      ? { montant: Math.round(pat * 0.08), base: `8 % du patrimoine (${k(pat)})`, parDefaut: false }
+      : { montant: 10000, base: 'forfait, patrimoine non renseigné', parDefaut: true }
+    case 'scpi': return pat > 0
+      ? { montant: Math.round(pat * 0.10), base: `10 % du patrimoine (${k(pat)})`, parDefaut: false }
+      : { montant: 20000, base: 'forfait, patrimoine non renseigné', parDefaut: true }
+    case 'immobilier': return { montant: 120000, base: 'ticket LMNP moyen', parDefaut: true }
+    case 'structures': return { montant: 25000, base: 'ticket moyen structuré', parDefaut: true }
+    default: return { montant: 5000, base: 'forfait', parDefaut: true }
   }
+}
+
+export function estimationCollecte(c, familleSuggeree) {
+  return baseMontant(c, familleSuggeree).montant
 }
 
 // Score de potentiel d'une ligne (tri par defaut de la V2) : combine la

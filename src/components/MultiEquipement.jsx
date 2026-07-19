@@ -28,7 +28,7 @@ import {
 } from '../services/equipment'
 import { listMissions, upsertMission, reconcileGagnees } from '../services/missions'
 import {
-  suggestionPour, ARGUMENTAIRES, estimationCollecte, REGLES,
+  suggestionPour, ARGUMENTAIRES, estimationCollecte, baseMontant, REGLES,
   RAISONS_REPORT, ECHEANCES_REPORT,
 } from '../config/multiEquipementRules'
 
@@ -135,10 +135,12 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
       if (vus.has(key)) return
       vus.add(key)
       const db = dbByKey.get(key)
+      const bm = baseMontant(r, famille)
       out.push({
         key, client: r, famille, raison,
         statut: db?.statut || 'a_attaquer',
-        montant: db?.montant_estime != null ? Number(db.montant_estime) : estimationCollecte(r, famille),
+        montant: db?.montant_estime != null ? Number(db.montant_estime) : bm.montant,
+        base: bm.base, parDefaut: bm.parDefaut && db?.montant_estime == null,
         montant_reel: db?.montant_reel != null ? Number(db.montant_reel) : null,
         raison_report: db?.raison_report || null,
         retour_le: db?.retour_le || null,
@@ -165,10 +167,12 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
       // Une mission active sur famille désormais détenue est gérée par la réconciliation
       if (ACTIFS.includes(m.statut) && r.familles.includes(m.famille)) continue
       vus.add(key)
+      const bm2 = baseMontant(r, m.famille)
       out.push({
         key, client: r, famille: m.famille, raison: raisonFallback(m.famille),
         statut: m.statut,
-        montant: m.montant_estime != null ? Number(m.montant_estime) : estimationCollecte(r, m.famille),
+        montant: m.montant_estime != null ? Number(m.montant_estime) : bm2.montant,
+        base: bm2.base, parDefaut: bm2.parDefaut && m.montant_estime == null,
         montant_reel: m.montant_reel != null ? Number(m.montant_reel) : null,
         raison_report: m.raison_report || null,
         retour_le: m.retour_le || null,
@@ -359,6 +363,12 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
           </div>
 
           {/* Liste de missions : le coeur du module */}
+          {chip === 'a_attaquer' && liste.length > 0 && (
+            <div className="aide">
+              Chaque ligne = <b>un client</b> à qui vendre <b>un produit</b>. « Attaquer » ouvre un dossier prérempli.
+              Les montants sont des estimations (base indiquée sous le chiffre) ; « ≈ défaut » = fiche à compléter pour un vrai chiffre.
+            </div>
+          )}
           <div className="cartes">
             {liste.length === 0 && (
               <div className="empty">
@@ -371,33 +381,28 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
               const age = chip === 'a_attaquer' ? ageJours(mi) : null
               const niveau = age != null && age > 14 ? 'rouge' : age != null && age > 7 ? 'orange' : ''
               return (
-                <div key={mi.key} className={`carte ${niveau}`}>
-                  <div className="c1">
+                <div key={mi.key} className={`row ${niveau}`}>
+                  <div className="rgauche">
                     <div className="qui">
                       <span className="nomcli">{mi.client.nom}</span>
                       {isManager && <span className="cons">{mi.advisor_code}</span>}
-                      {age != null && age > 0 && <span className={`age ${niveau}`}>{age} j</span>}
+                      {age != null && age > 7 && <span className={`age ${niveau}`}>{age} j sans action</span>}
+                      {mi.statut === 'reportee' && (
+                        <span className="rep">🕰 revient le {fmtDate(mi.retour_le)}</span>
+                      )}
                     </div>
-                    <div className="souscli">
-                      {mi.client.statut || mi.client.profession || '—'}
-                      {mi.client.revenus ? ` · ${Math.round(mi.client.revenus / 1000)} k€ de revenus` : ''}
-                    </div>
+                    <div className="raison">{mi.raison}</div>
                   </div>
-                  <div className="c2">
-                    <span className="fam" style={{ borderColor: couleurFam(mi.famille) }}>{labelFam(mi.famille)}</span>
-                    <span className="mont">~{fmtK(mi.montant)}</span>
+                  <span className="fam" style={{ borderColor: couleurFam(mi.famille) }}>{labelFam(mi.famille)}</span>
+                  <div className="rmont">
+                    <span className={`mont ${mi.parDefaut ? 'flou' : ''}`}>~{fmtK(mi.montant)}</span>
+                    <span className="base" title={mi.parDefaut ? 'Estimation par defaut, complete la fiche client pour un vrai chiffre' : 'Base de l estimation'}>
+                      {mi.parDefaut ? '≈ défaut' : mi.base}
+                    </span>
                   </div>
-                  <div className="raison">{mi.raison}</div>
-                  {niveau === 'rouge' && (
-                    <div className="dort">⏳ {age} jours sans action, ~{fmtK(mi.montant)} qui dorment</div>
-                  )}
-                  {mi.statut === 'reportee' && (
-                    <div className="repinfo">🕰 Reportée ({mi.raison_report || 'sans raison'}) · reviendra le {fmtDate(mi.retour_le)}</div>
-                  )}
-                  <div className="cbtns">
-                    <button className="pri" onClick={() => attaquer(mi)}>📞 Attaquer</button>
-                    {mi.statut !== 'reportee' && <button className="sec" onClick={() => setReportPour(mi)}>Plus tard</button>}
-                    {mi.statut === 'reportee' && <button className="sec" onClick={() => setReportPour(mi)}>Re-reporter</button>}
+                  <div className="ract">
+                    <button className="pri" onClick={() => attaquer(mi)} title="Ouvre un dossier prérempli">📞 Attaquer</button>
+                    <button className="sec" onClick={() => setReportPour(mi)}>{mi.statut === 'reportee' ? 'Re-reporter' : 'Plus tard'}</button>
                     {ARGUMENTAIRES[mi.famille] && (
                       <button className="ter" title="Copier l argumentaire d appel" onClick={() => copierArgumentaire(mi.famille)}>📋</button>
                     )}
@@ -819,12 +824,26 @@ const styles = `
 .meq3 .chip .extra{ margin-left:6px; font-size:10.5px; font-weight:700; color:var(--gold-dk) }
 .meq3 .chip.on .extra{ color:var(--gold) }
 
-.meq3 .cartes{ display:flex; flex-direction:column; gap:8px }
-.meq3 .carte{ background:#fff; border:1px solid var(--line); border-radius:13px; padding:12px 14px; display:grid; grid-template-columns:1fr auto; gap:2px 12px; box-shadow:0 1px 2px rgba(10,22,40,.04) }
-.meq3 .carte.orange{ border-color:#E4A23C; box-shadow:0 0 0 1px #E4A23C33 }
-.meq3 .carte.rouge{ border-color:#C4483C; box-shadow:0 0 0 1px #C4483C33 }
+.meq3 .aide{ font-size:11.5px; color:#5b6470; background:#F6F4EF; border:1px solid var(--line); border-radius:9px; padding:8px 12px; margin-bottom:8px }
+.meq3 .aide b{ color:var(--navy) }
+.meq3 .cartes{ display:flex; flex-direction:column; gap:6px }
+/* Ligne de mission dense : tout sur une ligne, beaucoup de missions visibles
+   sans scroll (retour Louis : cartes trop hautes, on ne voit rien). */
+.meq3 .row{ background:#fff; border:1px solid var(--line); border-left:3px solid var(--line); border-radius:10px; padding:9px 14px; display:flex; align-items:center; gap:14px; box-shadow:0 1px 2px rgba(10,22,40,.04) }
+.meq3 .row:hover{ border-color:var(--gold) }
+.meq3 .row.orange{ border-left-color:#E4A23C }
+.meq3 .row.rouge{ border-left-color:#C4483C }
+.meq3 .rgauche{ flex:1; min-width:0 }
+.meq3 .rmont{ display:flex; flex-direction:column; align-items:flex-end; line-height:1.1; flex-shrink:0; min-width:92px }
+.meq3 .rmont .mont{ font-size:19px; font-weight:800; color:var(--navy); letter-spacing:-.02em; font-variant-numeric:tabular-nums }
+.meq3 .rmont .mont.flou{ color:#AEB4BE; font-weight:750 }
+.meq3 .rmont .base{ font-size:9.5px; color:var(--silver); white-space:nowrap; margin-top:1px }
+.meq3 .ract{ display:flex; gap:6px; flex-shrink:0 }
+.meq3 .rgauche .raison{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; margin-top:1px }
+.meq3 .rep{ font-size:10px; font-weight:700; color:#8A6A2F; background:#FBF4E4; border-radius:5px; padding:1px 6px }
+@media(max-width:760px){ .meq3 .row{ flex-wrap:wrap } .meq3 .rgauche{ flex-basis:100% } .meq3 .ract{ width:100% } .meq3 .ract .pri{ flex:1 } }
 .meq3 .qui{ display:flex; align-items:center; gap:8px; flex-wrap:wrap }
-.meq3 .nomcli{ font-weight:750; font-size:14px; color:var(--navy) }
+.meq3 .nomcli{ font-weight:750; font-size:13.5px; color:var(--navy) }
 .meq3 .cons{ font-size:10px; font-weight:700; color:var(--silver); background:#F4F2ED; border-radius:5px; padding:1px 6px }
 .meq3 .age{ font-size:10px; font-weight:800; border-radius:5px; padding:1px 6px; background:#F4F2ED; color:#5b6470 }
 .meq3 .age.orange{ background:#FBEED8; color:#9A6A1B }
