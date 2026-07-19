@@ -10,13 +10,15 @@
 //   {conseiller} nom du conseiller (profile.full_name)
 //   {cabinet}    nom du cabinet
 //
-// Règles de conformité (ne jamais enfreindre) :
+// Ton : family office, naturel et discret, jamais commercial (demande Louis :
+// clients prestigieux, attentifs au ton). Ouverture systématique
+// « Bonjour {prenom}, / J'espère que vous allez bien. ».
+//
+// Conformité (ne jamais enfreindre) :
 //   - aucune mention de rémunération, commission, honoraires ou frais du cabinet
 //   - aucune promesse de rendement ni garantie de performance
-//   - une recommandation précise suit toujours une étude personnalisée
-//
-// Rédaction : registre banque privée, sobre, vouvoiement (rédigés en équipe
-// puis harmonisés). À faire relire par la conformité avant usage massif.
+//   - toute suite s appuie sur un échange ou une étude au regard de la situation
+// À faire valider par la conformité avant un usage massif.
 // ═══════════════════════════════════════════════════════════════════════════
 
 export const CABINET = 'Entasis Conseil'
@@ -24,108 +26,135 @@ export const CABINET = 'Entasis Conseil'
 // Objet + corps par clé de famille (voir product_families).
 export const MAILS_PRODUITS = {
   av: {
-    objet: 'Votre PER prépare demain, et vos projets proches ?',
+    objet: 'Une réflexion autour de votre épargne disponible',
     corps: `Bonjour {prenom},
+J'espère que vous allez bien.
 
-Votre PER prépare sereinement votre retraite, un horizon de long terme. Restent vos projets à moyen terme, plus proches et parfois imprévus. L'assurance vie vient les accompagner avec souplesse : une épargne disponible à tout moment, et une fiscalité qui s'allège après huit ans de détention. Les deux enveloppes se complètent sans se concurrencer, et leur juste articulation mérite une étude personnalisée de votre situation.
-
-Je vous propose volontiers un court échange, quinze minutes par téléphone ou en rendez-vous.
+Vous détenez déjà un PER et il remplit bien son rôle pour votre retraite.
+En marge de celui-ci, une assurance vie offre une épargne qui reste disponible pour vos projets à moyen terme.
+Son régime fiscal devient plus favorable une fois passé le cap des huit ans.
+C'est un sujet que la maison suit de près et je me tiens prêt à vous en dire un mot s'il retient votre attention.
+Rien ne presse et tout se dessinerait au regard de votre situation.
 
 Bien à vous,
 {conseiller}
 {cabinet}`,
   },
   scpi: {
-    objet: 'Faire travailler vos liquidités sans gestion locative',
+    objet: 'À propos de vos liquidités peu employées',
     corps: `Bonjour {prenom},
+J'espère que vous allez bien.
 
-Une réflexion me vient au sujet de votre situation. Vos liquidités disponibles restent aujourd'hui peu employées, tout en alourdissant votre fiscalité. La SCPI apporte une réponse mesurée à ce constat : vous percevez des revenus locatifs, sans aucune contrainte de gestion, la sélection et l'exploitation des immeubles étant entièrement déléguées. La pertinence d'une telle allocation, comme sa juste proportion, relève d'une étude personnalisée de votre patrimoine.
-
-Je vous propose que nous en parlions quinze minutes, par téléphone ou de vive voix.
+Je pensais à vous en revoyant la part de liquidités qui dort un peu sur vos comptes.
+Les SCPI permettent d'orienter cette trésorerie vers de l'immobilier professionnel, avec des revenus potentiels versés périodiquement.
+La gestion locative est entièrement déléguée, vous n'avez rien à en assumer.
+Un pôle dédié suit ces sujets chez nous et sélectionne les supports avec soin.
+Si vous souhaitez que nous regardions cela ensemble au regard de vos avoirs, je reste à votre disposition.
 
 Bien à vous,
 {conseiller}
 {cabinet}`,
   },
   structures: {
-    objet: 'Entre fonds euro et actions, une voie médiane',
+    objet: 'Un mot sur les produits structurés',
     corps: `Bonjour {prenom},
+J'espère que vous allez bien.
 
-Votre patrimoine appelle parfois une nuance, entre la prudence du fonds euro et l'exposition des marchés actions. Les produits structurés occupent précisément cet espace intermédiaire : un cadre de fonctionnement défini à l'avance, assorti d'une protection partielle du capital selon des conditions établies. Ils ne remplacent rien, ils complètent, avec mesure. Toute recommandation s'apprécie au regard de votre situation, après une étude personnalisée.
-
-Je vous propose d'en échanger, autour d'un rendez-vous ou d'un appel de quinze minutes.
+Entre la tranquillité du fonds euro et une exposition pleine aux actions, il existe un espace intermédiaire.
+Les produits structurés reposent sur un cadre défini à l'avance, avec une protection partielle du capital selon les conditions retenues.
+C'est une mécanique que nous étudions régulièrement pour les familles que nous accompagnons.
+Je serais heureux de vous en exposer le fonctionnement si le sujet vous intéresse.
+Toute mise en place s'appuierait sur une lecture attentive de votre situation.
 
 Bien à vous,
 {conseiller}
 {cabinet}`,
   },
   private_equity: {
-    objet: 'Le Private Equity, une diversification à considérer',
+    objet: 'Le non coté parmi vos actifs',
     corps: `Bonjour {prenom},
+J'espère que vous allez bien.
 
-Notre collaboration se poursuit, et une réflexion me vient pour vous. Le Private Equity permet d'investir dans des entreprises non cotées. Longtemps réservée aux investisseurs institutionnels, cette classe d'actifs s'ouvre aujourd'hui à une clientèle privée. Elle offre une diversification réelle, sur un horizon de long terme. Sa pertinence dépend de votre situation, et une recommandation précise suivra une étude personnalisée.
-
-Prenons quinze minutes ensemble, par téléphone ou de vive voix, pour en parler.
+Je souhaitais partager avec vous une réflexion autour du private equity.
+Il s'agit d'investir dans des entreprises non cotées, ce qui offre une diversification sur un horizon long.
+Longtemps réservée aux grands institutionnels, cette classe d'actifs devient accessible dans un cadre choisi.
+C'est un terrain que la maison connaît et sur lequel elle avance avec prudence.
+Nous pourrons en parler tranquillement quand cela vous conviendra, au regard de vos autres placements.
 
 Bien à vous,
 {conseiller}
 {cabinet}`,
   },
   prevoyance: {
-    objet: 'Vos revenus, protégés en cas d\'arrêt de travail',
+    objet: 'Votre protection en cas d\'arrêt de travail',
     corps: `Bonjour {prenom},
+J'espère que vous allez bien.
 
-Pour un indépendant, un arrêt de travail signifie souvent une perte de revenus immédiate. Une prévoyance Madelin apporte une réponse concrète : elle protège votre train de vie et vient, dans le cadre prévu par la loi, en déduction de votre bénéfice imposable. La formule adaptée dépend de votre situation, qu'une étude personnalisée permettra de préciser.
-
-Pourrions-nous en échanger lors d'un rendez-vous ou d'un appel de quinze minutes ?
+En tant qu'indépendant, votre activité repose beaucoup sur votre présence au quotidien.
+La prévoyance vient protéger vos revenus et vos proches si un arrêt de travail venait à survenir.
+Le cadre Madelin permet en outre de déduire cet effort de votre bénéfice imposable.
+C'est le type de sujet que nous aimons regarder posément avec ceux que nous suivons.
+Si vous le souhaitez, nous ferons le point ensemble sur votre couverture actuelle.
 
 Bien à vous,
 {conseiller}
 {cabinet}`,
   },
   mutuelle: {
-    objet: 'Votre couverture santé est-elle à votre mesure ?',
+    objet: 'Un regard sur votre mutuelle santé',
     corps: `Bonjour {prenom},
+J'espère que vous allez bien.
 
-Votre mutuelle actuelle épouse-t-elle vraiment votre statut ? Souvent, on cotise pour des garanties superflues, et l'on passe à côté d'un levier précieux : la déductibilité Madelin, selon votre situation. Chaque profil mérite une protection ajustée, qu'une étude personnalisée permettrait d'apprécier sereinement, sans aucun engagement.
-
-Seriez-vous disponible pour un échange de quinze minutes, par téléphone ou de vive voix ?
+Il m'arrive de constater que les contrats de mutuelle comportent des garanties dont on ne se sert jamais.
+L'idée serait d'ajuster votre couverture à votre statut réel et d'écarter celles devenues superflues.
+Selon votre situation, le cadre Madelin peut par ailleurs ouvrir droit à une déductibilité.
+Nous prenons le temps de regarder ces contrats dans le détail pour les familles que nous accompagnons.
+Je reste disponible pour en faire une lecture ensemble si vous le jugez utile.
 
 Bien à vous,
 {conseiller}
 {cabinet}`,
   },
   emprunteur: {
-    objet: 'Votre assurance emprunteur mérite un second regard',
+    objet: 'Votre assurance de prêt rarement revue',
     corps: `Bonjour {prenom},
+J'espère que vous allez bien.
 
-Un crédit immobilier s'accompagne presque toujours d'une assurance souscrite auprès de la banque. Ce contrat, rarement réexaminé, pèse souvent plus lourd qu'il ne le devrait. La déléguer à un autre assureur permet, dans bien des cas, de conserver une protection équivalente pour un budget nettement plus mesuré. L'intérêt réel dépend de votre situation, qu'une étude personnalisée viendra préciser.
-
-Je vous propose d'en échanger quinze minutes, au téléphone ou de vive voix, au moment qui vous conviendra.
+L'assurance adossée à votre prêt immobilier est souvent celle proposée par la banque, et on la réexamine rarement.
+La déléguer vers un autre contrat permet souvent de conserver une protection équivalente pour un budget plus mesuré.
+La démarche est simple et bien encadrée.
+C'est une vérification que nous menons volontiers pour les personnes que nous suivons.
+Dites-moi si vous souhaitez que je regarde votre contrat actuel de plus près.
 
 Bien à vous,
 {conseiller}
 {cabinet}`,
   },
   immobilier: {
-    objet: 'Votre immobilier, une fiscalité mieux maîtrisée',
+    objet: 'La location meublée et sa fiscalité',
     corps: `Bonjour {prenom},
+J'espère que vous allez bien.
 
-Votre patrimoine gagne à s'appuyer sur des leviers discrets et durables, et la location meublée en fait partie. Bien construite, elle procure des loyers dont l'imposition demeure très contenue, l'amortissement du bien absorbant une large part des revenus taxables. La mécanique est éprouvée, reste à la calibrer selon votre situation, ce qu'une étude personnalisée permettra de préciser.
-
-Puis-je vous proposer un échange de quinze minutes, en rendez-vous ou par téléphone ?
+Je pensais à vous à propos de l'immobilier locatif meublé.
+Ce cadre a la particularité de maintenir l'imposition des loyers à un niveau contenu, grâce à l'amortissement du bien.
+C'est une pièce qui trouve souvent sa place dans un patrimoine déjà construit.
+La maison étudie ces montages avec soin, du choix du bien à sa structuration.
+Nous pourrons en discuter au regard de vos revenus et de vos objectifs quand vous le voudrez.
 
 Bien à vous,
 {conseiller}
 {cabinet}`,
   },
   per: {
-    objet: 'Préparer votre retraite tout en allégeant votre impôt',
+    objet: 'Une réflexion fiscale de fin d\'année',
     corps: `Bonjour {prenom},
+J'espère que vous allez bien.
 
-Votre niveau d'imposition rend aujourd'hui le Plan d'Épargne Retraite particulièrement opportun. Chaque versement vient diminuer votre revenu imposable dès cette année, tout en constituant un capital pour votre retraite. Ce double effet, fiscal et patrimonial, mérite d'être calibré à votre situation. La recommandation précise découlera d'une étude personnalisée, au plus près de vos objectifs.
-
-Seriez-vous disponible pour un échange de quinze minutes, par téléphone ou de vive voix ?
+À l'approche de la clôture de l'année, je repensais à votre situation fiscale.
+Un versement sur un PER permet de diminuer votre revenu imposable dès cette année, tout en constituant un capital pour votre retraite.
+L'effort se calibre précisément selon votre tranche et vos objectifs.
+C'est un exercice que nous menons chaque année avec les familles que nous accompagnons.
+Si vous le souhaitez, nous déterminerons ensemble le montant le plus juste pour vous.
 
 Bien à vous,
 {conseiller}
@@ -135,14 +164,17 @@ Bien à vous,
 
 // Mail de demande de recommandation (parrainage), adressé à un client satisfait.
 export const MAIL_RECOMMANDATION = {
-  objet: 'Votre confiance, notre plus belle recommandation',
+  objet: 'Un mot de gratitude',
   corps: `Bonjour {prenom},
+J'espère que vous allez bien.
 
-Je tiens d'abord à vous remercier pour votre confiance, elle compte beaucoup. Notre cabinet se développe avant tout par le bouche à oreille, ce sont nos clients qui nous recommandent. Peut-être connaissez-vous un proche, dirigeant, cadre ou profession libérale, pour qui un regard sur son patrimoine serait utile. Chaque situation appelle une étude personnalisée, sans engagement.
+Je voulais avant tout vous remercier pour la confiance que vous nous accordez, elle compte beaucoup.
+Notre maison a la particularité de se développer presque uniquement par la recommandation de ceux qu'elle accompagne.
+Peut-être avez-vous autour de vous un proche qui gagnerait à être accompagné comme vous l'êtes.
+Si un nom vous vient, je serai heureux d'en échanger, sans le moindre engagement de votre part.
+Et si ce n'est pas le cas, votre confiance nous honore déjà pleinement.
 
-Si un nom vous vient à l'esprit, un mot de votre part suffit, et je lui proposerai volontiers un échange de quinze minutes.
-
-Avec toute ma reconnaissance,
+Bien à vous,
 {conseiller}
 {cabinet}`,
 }
