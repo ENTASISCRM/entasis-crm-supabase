@@ -36,6 +36,9 @@ const WeeklyReview = lazy(() => import('./components/WeeklyReview.jsx'))
 // Conformite embarque jspdf : lazy pour rester hors du bundle de login.
 const Conformite = lazy(() => import('./components/Conformite'))
 const MultiEquipement = lazy(() => import('./components/MultiEquipement'))
+// Opportunités du jour : lazy comme les autres onglets pour rester hors du
+// bundle de login.
+const OpportunitesDuJour = lazy(() => import('./components/OpportunitesDuJour'))
 import {
   annualize,
   isPipeline,
@@ -759,6 +762,7 @@ function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,prospects
     {key:'dossiers',  label:'Dossiers',  Icon:Icon.Dossiers},
     {key:'clients',   label:'Clients',   Icon:Icon.Team},
     {key:'multi-equipement', label:'Multi-équipement', Icon:Icon.Kanban},
+    {key:'opportunites', label:'Opportunités', Icon:Icon.Calendar},
     {key:'conformite', label:'Conformité', Icon:Icon.Dossiers},
     {key:'forecast',  label:isManager?'Management':'Prévisionnel', Icon:Icon.Forecast},
     {key:'agenda',    label:'Agenda',    Icon:Icon.Calendar},
@@ -858,7 +862,7 @@ function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,prospects
 /* ─────────────────────────────────────────────────────────────────────────────
    TOP BAR
 ───────────────────────────────────────────────────────────────────────────── */
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs',prospection:'Prospection LinkedIn','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA',remuneration:'Rémunération',outils:'Outils CGP','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️',editorial:'Agent éditorial ✍️'}
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs',prospection:'Prospection LinkedIn','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA',remuneration:'Rémunération',outils:'Outils CGP','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️',editorial:'Agent éditorial ✍️',opportunites:'Opportunités du jour'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu}){
   return (
@@ -2084,9 +2088,13 @@ const PIPELINE_COLS=[
   {id:'Annulé',   label:'Annulé',    cls:'col-cancelled'},
 ]
 
-function PipelineBoard({deals,month,profile,onEdit}){
+function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
   const [search,setSearch]=useState('')
   const [advisorF,setAdvisorF]=useState('Tous')
+  // Filtre spécial « brouillons périmés » (idée 38) : n'affiche que les
+  // dossiers Prévu ou En cours dont l'échéance est dépassée de plus de 14
+  // jours, tous mois confondus, pour purger le stock en quelques clics.
+  const [staleOnly,setStaleOnly]=useState(false)
   const isManager=profile?.role==='manager'
   // Filtre conseiller (manager seulement) : codes présents sur les dossiers du
   // mois affiché, principal et co conseiller confondus.
@@ -2096,15 +2104,23 @@ function PipelineBoard({deals,month,profile,onEdit}){
     deals.forEach(d=>{if(d.month!==month)return;if(d.advisor_code)set.add(d.advisor_code);if(d.co_advisor_code)set.add(d.co_advisor_code)})
     return[...set].sort()
   },[deals,month,isManager])
-  const visible=useMemo(()=>{
-    let list=deals.filter(d=>d.month===month)
+  // Échéance dépassée de plus de 14 jours : même comparaison ISO texte que le
+  // badge « prévu le » des cartes (date_expected stockée en texte).
+  const perimeCutoff=new Date(Date.now()-14*24*60*60*1000).toISOString().slice(0,10)
+  const isPerime=d=>(d.status==='Prévu'||d.status==='En cours')&&d.date_expected&&String(d.date_expected).slice(0,10)<perimeCutoff
+  // Périmètre commun (conseiller + filtre manager + recherche) SANS le filtre
+  // mois : le mode périmés croise les mois, la vue normale le rajoute.
+  const scoped=useMemo(()=>{
+    let list=deals
     if(!isManager&&profile?.advisor_code)list=list.filter(d=>dealMatchesAdvisor(d,profile.advisor_code))
     if(isManager&&advisorF!=='Tous')list=list.filter(d=>dealMatchesAdvisor(d,advisorF))
     // La recherche couvre aussi téléphone et email : retrouver un dossier en
     // tapant les derniers chiffres du numéro qui appelle.
     if(search)list=list.filter(d=>`${getClientName(d)} ${d.product} ${d.advisor_code} ${d.client_email||''} ${d.client_phone||''}`.toLowerCase().includes(search.toLowerCase()))
     return list
-  },[deals,month,profile,isManager,search,advisorF])
+  },[deals,profile,isManager,search,advisorF])
+  const staleCount=useMemo(()=>scoped.filter(isPerime).length,[scoped,perimeCutoff])
+  const visible=useMemo(()=>staleOnly?scoped.filter(isPerime):scoped.filter(d=>d.month===month),[scoped,month,staleOnly,perimeCutoff])
   const byStatus=useMemo(()=>{
     const m={}
     PIPELINE_COLS.forEach(c=>m[c.id]=[])
@@ -2124,7 +2140,7 @@ function PipelineBoard({deals,month,profile,onEdit}){
         <div>
           <div className="section-kicker">Vue kanban</div><div className="section-title">Pipeline commercial</div>
           <div className="section-sub" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-            <span>{visible.length} dossiers · {MONTHS[MONTHS.indexOf(month)]}</span>
+            <span>{visible.length} dossiers · {staleOnly?'échéances dépassées, tous mois':MONTHS[MONTHS.indexOf(month)]}</span>
             {ppTotalMois>0&&(
               <span style={{fontSize:11,fontWeight:700,padding:'2px 8px',borderRadius:4,background:'rgba(201,169,97,0.15)',color:'var(--gold-dk, #A6843F)',fontVariantNumeric:'tabular-nums'}}>PP totale {euro(ppTotalMois)}</span>
             )}
@@ -2143,7 +2159,28 @@ function PipelineBoard({deals,month,profile,onEdit}){
           <input className="search-input" data-global-search style={{maxWidth:260}} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher un dossier…"/>
         </div>
       </div>
-      <StalePipelineAlert deals={visible} onEdit={onEdit}/>
+      {/* La bannière de vieillissement fait doublon quand le filtre périmés
+          est actif, on la masque dans ce mode. */}
+      {!staleOnly&&<StalePipelineAlert deals={visible} onEdit={onEdit}/>}
+      {/* Réanimation des brouillons (idée 38) : bandeau discret quand des
+          dossiers Prévu ou En cours ont dépassé leur échéance de plus de 14
+          jours. « Voir » bascule le filtre spécial qui ne montre que ces
+          dossiers, avec actions rapides sur chaque carte. */}
+      {(staleCount>0||staleOnly)&&(
+        <div style={{
+          display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,
+          padding:'8px 14px',marginBottom:14,borderRadius:'var(--rad)',
+          background:staleCount>0?'var(--cancelled-bg)':'var(--bg)',
+          border:`1px solid ${staleCount>0?'var(--cancelled-bd)':'var(--bd)'}`,
+        }}>
+          <span style={{fontSize:12.5,fontWeight:600,color:staleCount>0?'var(--cancelled)':'var(--t2)'}}>
+            {staleCount>0?`⚠ ${staleCount} dossier${staleCount>1?'s':''} dont l'échéance est dépassée`:'✓ Plus aucun dossier périmé, pipeline à jour'}
+          </span>
+          <button className="btn btn-outline btn-sm" onClick={()=>setStaleOnly(v=>!v)}>
+            {staleOnly?'Revenir au mois':'Voir'}
+          </button>
+        </div>
+      )}
       <div className="pipeline-board">
         {PIPELINE_COLS.map(col=>{
           const items=byStatus[col.id]||[]
@@ -2242,6 +2279,23 @@ function PipelineBoard({deals,month,profile,onEdit}){
                         </div>
                       )
                     })()}
+                    {/* Actions rapides de purge : visibles uniquement dans le
+                        filtre périmés. Reprogrammer repousse l'échéance à
+                        aujourd'hui + 30 jours, Abandonner passe le dossier en
+                        Annulé après confirmation. stopPropagation pour ne pas
+                        ouvrir la modale. */}
+                    {staleOnly&&isPerime(deal)&&onQuickPatch&&(
+                      <div style={{display:'flex',gap:6,marginBottom:6}} onClick={e=>e.stopPropagation()}>
+                        <button className="btn btn-outline btn-sm" style={{fontSize:11,padding:'3px 8px',flex:1}}
+                          onClick={()=>onQuickPatch(deal,{date_expected:new Date(Date.now()+30*24*60*60*1000).toISOString().slice(0,10)},'Échéance reprogrammée à +30 jours')}>
+                          Reprogrammer +30j
+                        </button>
+                        <button className="btn btn-danger btn-sm" style={{fontSize:11,padding:'3px 8px',flex:1}}
+                          onClick={()=>{if(window.confirm(`Abandonner le dossier de ${getClientName(deal)} ? Il passera en Annulé.`))onQuickPatch(deal,{status:'Annulé'},'Dossier abandonné')}}>
+                          Abandonner
+                        </button>
+                      </div>
+                    )}
                     <div className="pipeline-deal-footer">
                       <span className={PRIORITY_CLASS[deal.priority]||'badge'}>{deal.priority}</span>
                       <div style={{display:'flex',alignItems:'center',gap:6}}>
@@ -5096,6 +5150,21 @@ export default function App(){
     }
   }
 
+  // Patch rapide d'un dossier depuis le kanban (réanimation des brouillons
+  // périmés : reprogrammation ou abandon) sans ouvrir la modale. Update
+  // partiel via dealsService + maj locale immédiate, le canal Realtime
+  // confirmera, même motif que deleteDeal.
+  async function quickPatchDeal(deal,patch,message){
+    try {
+      await dealsService.update(deal.id,patch)
+    } catch (e) {
+      alert(e.message)
+      return
+    }
+    setDeals(prev=>prev.map(d=>d.id===deal.id?{...d,...patch}:d))
+    if(message)toast.success(message)
+  }
+
   async function deleteDeal(deal){
     if(!window.confirm(`Supprimer définitivement le dossier de ${getClientName(deal)} ?`))return
     try {
@@ -5232,7 +5301,7 @@ export default function App(){
           {activeTab==='leads'&&<LeadRoomEmbed/>}
           {activeTab==='pilotage-rh'&&isManager&&<PilotageRH/>}
           {activeTab==='recrutement'&&isManager&&<Recrutement/>}
-          {activeTab==='pipeline'&&<PipelineBoard deals={deals} month={month} profile={profile} onEdit={startEdit}/>}
+          {activeTab==='pipeline'&&<PipelineBoard deals={deals} month={month} profile={profile} onEdit={startEdit} onQuickPatch={quickPatchDeal}/>}
           {activeTab==='dossiers'&&<DealsTable deals={deals} month={month} profile={profile} onEdit={startEdit} onDelete={deleteDeal} onRefresh={loadAll} onSelectClient={(clientId) => {
             setSelectedClientId(clientId)
             setActiveTab('clients')
@@ -5306,6 +5375,7 @@ export default function App(){
           {activeTab==='outils'&&<OutilsCGP profile={profile}/>}
           {activeTab==='conformite'&&<Conformite profile={profile}/>}
           {activeTab==='multi-equipement'&&<MultiEquipement profile={profile} onCreateDeal={startCreateForClient}/>}
+          {activeTab==='opportunites'&&<OpportunitesDuJour profile={profile}/>}
           </Suspense>
         </div>
       </div>
