@@ -2043,6 +2043,9 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
         )}
       </div>
       <div style={{marginTop:28}}>
+        <Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded/></Suspense>
+      </div>
+      <div style={{marginTop:28}}>
         <div className="section-header"><div><div className="section-kicker">Vue annuelle</div><div className="section-title">Saisonnalité — 12 mois</div><div className="section-sub">PP annualisée signée + pipeline par mois · mois courant mis en valeur</div></div></div>
         <AnnualChart deals={deals} objectifs={objectifs} currentMonth={month} advisorCode={code} title="PP annualisée — mon année" subtitle={`Conseiller ${code} · barres : signée (plein) + pipeline (transparent)`}/>
       </div>
@@ -2053,7 +2056,7 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
 /* ─────────────────────────────────────────────────────────────────────────────
    MANAGER DASHBOARD
 ───────────────────────────────────────────────────────────────────────────── */
-function ManagerDashboard({deals,objectifs,month,teamProfiles}){
+function ManagerDashboard({deals,objectifs,month,teamProfiles,profile}){
   // Switch metric pour la vue annuelle, PP financiere par défaut, PU,
   // Mutuelle/Prevoyance et Total dispo via mini tabs (demande Louis
   // 2026-06-08, vue Direction).
@@ -2109,6 +2112,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles}){
   return (
     <div>
       <div className="section-header"><div><div className="section-kicker">Vue direction · {month}</div><div className="section-title">Tableau de bord cabinet</div><div className="section-sub">{monthDeals.length} dossiers · {signed.length} signés · {pipeline.length} en pipeline{prevMonth&&<span style={{color:'var(--t3)'}}> · vs {prevMonth}</span>}</div></div></div>
+      <div style={{marginBottom:24}}><Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded/></Suspense></div>
       <div className="kpi-grid mb-24">
         <KpiCard label="PP financière signée" value={euro(ppS)} hint="PER, AV, SCPI, PS, PE" accent="gold" progressValue={pct(ppS,ppTarget)} delta={prevMonth?dPpS:null}/>
         <KpiCard label="PP financière prévisionnelle" value={euro(ppS+ppP)} hint="Atterrissage projeté" accent="amber" delta={prevMonth?dPpProj:null}/>
@@ -5408,9 +5412,8 @@ export default function App(){
           {!profile&&error&&<div className="notice notice-warn">Profil introuvable dans <span className="code">public.profiles</span>. Vérifie la table et les policies.</div>}
 
           <Suspense fallback={<div style={{padding:24,color:'var(--t3)',fontSize:13}}>Chargement…</div>}>
-          {activeTab==='dashboard'&&<OpportunitesDuJour profile={profile} embedded/>}
           {activeTab==='dashboard'&&isManager&&<EditorialPendingBanner count={editorialPending.count} nextDeadline={editorialPending.nextDeadline} onOpen={()=>setActiveTab('editorial')}/>}
-          {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile}/>)}
+          {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles} profile={profile}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile}/>)}
           {activeTab==='leads'&&<LeadRoomEmbed/>}
           {activeTab==='pilotage-rh'&&isManager&&<PilotageRH/>}
           {activeTab==='recrutement'&&isManager&&<Recrutement/>}
