@@ -41,7 +41,6 @@ const MultiEquipement = lazy(() => import('./components/MultiEquipement'))
 const OpportunitesDuJour = lazy(() => import('./components/OpportunitesDuJour'))
 // Briques V3 multi equipement construites en parallele (peuvent ne pas encore
 // exister a la compilation) : chargees a la demande comme les autres onglets.
-const PlaybooksOffres = lazy(() => import('./components/PlaybooksOffres'))
 const CockpitRatios = lazy(() => import('./components/CockpitRatios'))
 const Temoignages = lazy(() => import('./components/Temoignages'))
 const CertificationsProduit = lazy(() => import('./components/CertificationsProduit'))
@@ -770,7 +769,6 @@ function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,prospects
     {key:'multi-equipement', label:'Multi-équipement', Icon:Icon.Kanban},
     {key:'opportunites', label:'Opportunités', Icon:Icon.Calendar},
     {key:'conformite', label:'Conformité', Icon:Icon.Dossiers},
-    {key:'playbooks', label:'Offres', Icon:Icon.Catalogue},
     {key:'cockpit', label:'Cockpit', Icon:Icon.Forecast},
     {key:'temoignages', label:'Témoignages', Icon:Icon.Outils},
     {key:'forecast',  label:isManager?'Management':'Prévisionnel', Icon:Icon.Forecast},
@@ -973,7 +971,7 @@ async function genererFicheParrainage(profile){
 /* ─────────────────────────────────────────────────────────────────────────────
    TOP BAR
 ───────────────────────────────────────────────────────────────────────────── */
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs',prospection:'Prospection LinkedIn','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA',remuneration:'Rémunération',outils:'Outils CGP','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️',editorial:'Agent éditorial ✍️',opportunites:'Opportunités du jour',playbooks:'Offres & Playbooks',cockpit:'Cockpit ratios',temoignages:'Témoignages clients',certifications:'Certifications produit'}
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs',prospection:'Prospection LinkedIn','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA',remuneration:'Rémunération',outils:'Outils CGP','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️',editorial:'Agent éditorial ✍️',opportunites:'Opportunités du jour',cockpit:'Cockpit ratios',temoignages:'Témoignages clients',certifications:'Certifications produit'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile}){
   return (
@@ -5493,7 +5491,6 @@ export default function App(){
           {activeTab==='conformite'&&<Conformite profile={profile}/>}
           {activeTab==='multi-equipement'&&<MultiEquipement profile={profile} onCreateDeal={startCreateForClient}/>}
           {activeTab==='opportunites'&&<OpportunitesDuJour profile={profile}/>}
-          {activeTab==='playbooks'&&<PlaybooksOffres profile={profile}/>}
           {activeTab==='cockpit'&&<CockpitRatios profile={profile}/>}
           {activeTab==='temoignages'&&<Temoignages profile={profile}/>}
           {activeTab==='certifications'&&isManager&&<CertificationsProduit profile={profile}/>}
