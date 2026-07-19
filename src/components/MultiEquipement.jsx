@@ -127,9 +127,10 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
     return {
       ...r, sug, pot, collecte,
       aRevoir: moisDepuisDernier != null && moisDepuisDernier >= 12,
-      campagneCible: settings.campagne_du_mois
-        && !r.familles.includes(settings.campagne_du_mois)
-        && (r.absences.includes(settings.campagne_du_mois) || (sug && sug.famille_suggeree === settings.campagne_du_mois)),
+      // Regle Louis (20/07) : la campagne du mois cible TOUT client qui ne
+      // detient pas la famille, pas seulement les absences confirmees.
+      campagneCible: !!settings.campagne_du_mois
+        && !r.familles.includes(settings.campagne_du_mois),
     }
   }), [rows, settings.campagne_du_mois])
 
