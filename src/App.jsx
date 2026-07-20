@@ -26,6 +26,7 @@ const LinkedInPro = lazy(() => import('./components/LinkedInPro'))
 const EditorialHub = lazy(() => import('./components/EditorialHub'))
 const PilotageRH = lazy(() => import('./components/PilotageRH'))
 const Recrutement = lazy(() => import('./components/Recrutement'))
+const SmartRH = lazy(() => import('./components/SmartRH'))
 const Remuneration = lazy(() => import('./components/Remuneration'))
 const ManagementView = lazy(() => import('./components/ManagementView'))
 const UcsStructures = lazy(() => import('./components/UcsStructures'))
@@ -770,6 +771,7 @@ function Sidebar({profile,activeTab,setActiveTab,onSignOut,deals,month,prospects
     {key:'cockpit', label:'Cockpit', Icon:Icon.Forecast},
     {key:'forecast',  label:isManager?'Management':'Prévisionnel', Icon:Icon.Forecast},
     {key:'agenda',    label:'Agenda',    Icon:Icon.Calendar},
+    {key:'smart-rh',  label:'Smart RH',  Icon:Icon.Calendar},
     {key:'market',    label:'Marchés',   Icon:Icon.Market},
     {key:'ucs-structures', label:'UCS Produits Structurés', Icon:Icon.Ucs, badgeGold:true},
     ...(isManager?[
@@ -968,7 +970,7 @@ async function genererFicheParrainage(profile){
 /* ─────────────────────────────────────────────────────────────────────────────
    TOP BAR
 ───────────────────────────────────────────────────────────────────────────── */
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs',prospection:'Prospection LinkedIn','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA',remuneration:'Rémunération',outils:'Outils CGP','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️',editorial:'Agent éditorial ✍️',cockpit:'Cockpit ratios',certifications:'Certifications produit'}
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs',prospection:'Prospection LinkedIn','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️',editorial:'Agent éditorial ✍️',cockpit:'Cockpit ratios',certifications:'Certifications produit'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile}){
   return (
@@ -5420,6 +5422,7 @@ export default function App(){
           {activeTab==='dashboard'&&isManager&&<EditorialPendingBanner count={editorialPending.count} nextDeadline={editorialPending.nextDeadline} onOpen={()=>setActiveTab('editorial')}/>}
           {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles} profile={profile}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile}/>)}
           {activeTab==='leads'&&<LeadRoomEmbed/>}
+          {activeTab==='smart-rh'&&<SmartRH profile={profile}/>}
           {activeTab==='pilotage-rh'&&isManager&&<PilotageRH/>}
           {activeTab==='recrutement'&&isManager&&<Recrutement/>}
           {activeTab==='pipeline'&&<PipelineBoard deals={deals} month={month} profile={profile} onEdit={startEdit} onQuickPatch={quickPatchDeal}/>}
