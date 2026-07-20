@@ -391,6 +391,93 @@ function PackageDetail({ pkg, onBack, onModerated }) {
   )
 }
 
+/* ── Encart configuration Newsletter (liste Brevo) ─────────────────────── */
+
+async function authFetch(url, options = {}) {
+  const { data: { session } } = await supabase.auth.getSession()
+  return fetch(url, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}`, ...options.headers },
+  })
+}
+
+function NewsletterConfig() {
+  const [lists, setLists] = useState(null)      // null = pas encore chargé, [] = chargé vide
+  const [current, setCurrent] = useState(null)  // { id, name } configuré
+  const [loadErr, setLoadErr] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const cfgRes = await authFetch('/api/editorial/config')
+        if (cfgRes.ok) setCurrent((await cfgRes.json()).brevo_list_id || null)
+        const listRes = await authFetch('/api/editorial/brevo-lists')
+        const body = await listRes.json().catch(() => ({}))
+        if (listRes.ok) setLists(body.lists || [])
+        else { setLists([]); setLoadErr(body.error || `Erreur ${listRes.status}`) }
+      } catch (e) {
+        setLists([]); setLoadErr(e.message)
+      }
+    })()
+  }, [])
+
+  async function onSelect(e) {
+    const id = Number(e.target.value)
+    if (!id) return
+    const list = (lists || []).find((l) => l.id === id)
+    setSaving(true)
+    try {
+      const res = await authFetch('/api/editorial/config', {
+        method: 'PUT',
+        body: JSON.stringify({ id, name: list?.name || '' }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || `Erreur ${res.status}`)
+      setCurrent(body.brevo_list_id)
+      toast.success('Liste de la newsletter enregistrée')
+    } catch (err) {
+      toast.error(`Échec : ${err.message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div style={{ background: 'var(--card)', border: '1px solid var(--line, rgba(60,60,67,0.12))', borderRadius: 'var(--rad-lg)', padding: '16px 20px', marginBottom: 18 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div>
+          <div className="section-kicker" style={{ marginBottom: 2 }}>Newsletter mensuelle</div>
+          <div style={{ fontSize: 13, color: 'var(--t2, #3A3A3C)' }}>
+            Liste de destinataires Brevo :{' '}
+            {current
+              ? <strong>{current.name || `liste n° ${current.id}`}</strong>
+              : <span style={{ color: 'var(--progress)', fontWeight: 600 }}>non configurée</span>}
+          </div>
+        </div>
+        <div style={{ minWidth: 240 }}>
+          {lists === null && <span style={{ fontSize: 12.5, color: 'var(--t3)' }}>Chargement des listes Brevo…</span>}
+          {lists !== null && loadErr && <span style={{ fontSize: 12.5, color: 'var(--cancelled)' }}>{loadErr}</span>}
+          {lists !== null && !loadErr && (
+            <select
+              className="month-select" style={{ width: '100%' }} disabled={saving}
+              value={current?.id || ''} onChange={onSelect}
+            >
+              <option value="">— Choisir une liste —</option>
+              {lists.map((l) => (
+                <option key={l.id} value={l.id}>{l.name} ({l.totalSubscribers} abonnés)</option>
+              ))}
+            </select>
+          )}
+        </div>
+      </div>
+      <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 10, lineHeight: 1.5 }}>
+        La newsletter est générée en brouillon dans Brevo le 1er de chaque mois ; vous la relisez et l'envoyez depuis Brevo.
+      </div>
+    </div>
+  )
+}
+
 /* ── Composant principal ───────────────────────────────────────────────── */
 
 export default function EditorialHub({ onPendingChange }) {
@@ -443,6 +530,9 @@ export default function EditorialHub({ onPendingChange }) {
         </div>
         <button className="btn btn-outline btn-sm" onClick={load}>Rafraîchir</button>
       </div>
+
+      <NewsletterConfig />
+
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
         <Pill active={statutFilter === 'tous'} onClick={() => setStatutFilter('tous')}>Tous statuts</Pill>

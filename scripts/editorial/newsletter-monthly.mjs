@@ -16,10 +16,12 @@
 //   ANTHROPIC_API_KEY                        édito d'intro (appel court)
 //   BREVO_API_KEY                            création de la campagne + notification
 //   EDITORIAL_REVIEWER_EMAIL                 notification « newsletter prête »
-//   BREVO_LIST_ID          optionnel — id numérique de la liste de destinataires
-//                          (Brevo → Contacts → Listes, l'ID est dans l'URL et la
-//                          colonne ID). Absent : brouillon créé SANS liste (à
-//                          sélectionner dans Brevo avant envoi).
+//   BREVO_LIST_ID          optionnel — repli de transition. La liste est
+//                          désormais configurée depuis le CRM (onglet Éditorial
+//                          → editorial_config, clé 'brevo_list_id'). Ordre de
+//                          résolution : config CRM, puis BREVO_LIST_ID, puis
+//                          aucune (brouillon SANS liste, à sélectionner dans
+//                          Brevo avant envoi).
 //   BREVO_SENDER_EMAIL     optionnel — expéditeur vérifié (défaut journal@…)
 
 import { createClient } from '@supabase/supabase-js'
@@ -159,15 +161,37 @@ const html = `<!doctype html>
 
 const campaignName = `Newsletter Entasis — ${moisAnnee}`
 
+// Liste destinataire : d'abord la config CRM (editorial_config, réglée par le
+// gérant depuis l'onglet Éditorial), sinon le secret BREVO_LIST_ID (transition,
+// ne rien casser), sinon aucune (brouillon sans liste + warning).
+async function resolveListId() {
+  const { data, error } = await admin
+    .from('editorial_config')
+    .select('value')
+    .eq('key', 'brevo_list_id')
+    .maybeSingle()
+  // Table absente (migration non exécutée) → on ignore et on tombe sur l'env.
+  if (!error && Number.isInteger(data?.value?.id) && data.value.id > 0) {
+    return { id: data.value.id, source: `config CRM${data.value.name ? ` (« ${data.value.name} »)` : ''}` }
+  }
+  if (process.env.BREVO_LIST_ID) {
+    const envId = Number(process.env.BREVO_LIST_ID)
+    if (Number.isInteger(envId) && envId > 0) return { id: envId, source: 'secret BREVO_LIST_ID' }
+  }
+  return { id: null, source: null }
+}
+const resolved = await resolveListId()
+
 if (dryRun) {
-  log(`DRY-RUN — campagne qui serait créée : « ${campaignName} » (brouillon, liste ${process.env.BREVO_LIST_ID || 'NON DÉFINIE'})`)
+  log(`DRY-RUN — campagne qui serait créée : « ${campaignName} » (brouillon, liste ${resolved.id ? `${resolved.id} — ${resolved.source}` : 'NON DÉFINIE'})`)
   log('HTML complet ci-dessous (aucune création) :')
   console.log(html)
   process.exit(0)
 }
 
 // ── 5. Création de la campagne Brevo en BROUILLON (aucun envoi) ─────────────
-const listId = process.env.BREVO_LIST_ID ? Number(process.env.BREVO_LIST_ID) : null
+const listId = resolved.id
+if (listId) log(`Liste destinataire : ${listId} (${resolved.source})`)
 const campaignBody = {
   name: campaignName,
   subject: `La lettre patrimoniale de ${moisAnnee} — Entasis Conseil`,
