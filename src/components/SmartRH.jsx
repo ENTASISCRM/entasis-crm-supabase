@@ -98,7 +98,7 @@ export default function SmartRH({ profile }) {
       <div className="hd">
         <div>
           <h1>Smart RH</h1>
-          <div className="sub">Posez vos congés, la direction valide</div>
+          <div className="sub">{isManager ? 'Validez les demandes de congés de l équipe' : 'Posez vos congés, la direction valide'}</div>
         </div>
         {aValider.length > 0 && isManager && <span className="kpi">{aValider.length} à valider</span>}
       </div>
@@ -108,7 +108,8 @@ export default function SmartRH({ profile }) {
 
       {!loading && !err && (
         <div className="cols">
-          {/* Colonne gauche : demander + mes demandes */}
+          {/* Colonne gauche : demander + mes demandes (pas pour la direction) */}
+          {!isManager && (
           <div className="col">
             <div className="card">
               <div className="ctit">Poser un congé</div>
@@ -151,10 +152,11 @@ export default function SmartRH({ profile }) {
               </div>
             ))}
           </div>
+          )}
 
           {/* Colonne droite : validation + planning (direction) */}
           {isManager && (
-            <div className="col">
+            <div className="col mgr">
               <div className="ctit2">À valider {aValider.length > 0 && <span className="pill">{aValider.length}</span>}</div>
               {aValider.length === 0 && <div className="vide ok">Aucune demande en attente.</div>}
               {aValider.map((c) => (
@@ -198,6 +200,7 @@ const styles = `
 .srh .err{ color:#B4453B }
 .srh .cols{ display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap }
 .srh .col{ flex:1; min-width:300px }
+.srh .col.mgr{ max-width:760px }
 .srh .card{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:14px 16px; box-shadow:0 1px 2px rgba(10,22,40,.04); margin-bottom:16px }
 .srh .ctit{ font-size:14px; font-weight:750; color:var(--navy); margin-bottom:10px }
 .srh .ctit2{ font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--silver); font-weight:750; margin:14px 0 8px; display:flex; align-items:center; gap:8px }
