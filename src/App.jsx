@@ -5128,11 +5128,16 @@ export default function App(){
         }, user.id)
       }
 
-      // Enregistre / complète la data structurée sur la fiche CLIENT (statut,
-      // profession, revenus, patrimoine), pour un nouveau comme pour un client
-      // existant. Ne touche que les champs renseignés (pas d'écrasement).
+      // Enregistre / complète la data structurée sur la fiche CLIENT (email,
+      // téléphone, statut, profession, revenus, patrimoine), pour un nouveau
+      // comme pour un client existant. Ne touche que les champs renseignés.
+      // email et telephone sont indispensables ici : sans eux, la fiche d'un
+      // client EXISTANT restait vide et le verrou de signature bloquait alors
+      // que le conseiller avait bien rempli la modale.
       if (clientId) {
         await clientsService.updateInfoIfProvided(clientId, {
+          email: cleanDeals[0].client_email,
+          telephone: cleanDeals[0].client_phone,
           statut_pro: cleanDeals[0].client_statut_pro,
           profession: cleanDeals[0].client_profession,
           revenus_annuels: cleanDeals[0].client_revenus,

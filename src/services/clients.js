@@ -25,13 +25,22 @@ export async function searchByQuery(query) {
 }
 
 /**
- * Met à jour la data structurée d'un client (statut, profession, revenus,
- * patrimoine) UNIQUEMENT pour les champs fournis (non vides). Sert à compléter
- * une fiche au passage d'un deal en « Signé » sans écraser l'existant.
+ * Met à jour la data structurée d'un client (email, téléphone, statut,
+ * profession, revenus, patrimoine) UNIQUEMENT pour les champs fournis (non
+ * vides). Sert à compléter une fiche au passage d'un deal en « Signé » sans
+ * écraser l'existant.
+ *
+ * email et telephone sont saisis dans la modale dossier (client_email /
+ * client_phone) : ils n'étaient recopiés sur la fiche qu'à la CRÉATION d'un
+ * client. Pour un client existant, la fiche restait sans téléphone et le verrou
+ * de signature en base bloquait alors que le conseiller avait bien rempli le
+ * champ. On les propage donc ici aussi.
  */
 export async function updateInfoIfProvided(clientId, fields) {
   if (!clientId || !fields) return
   const patch = {}
+  if (fields.email != null && String(fields.email).trim() !== '') patch.email = String(fields.email).trim()
+  if (fields.telephone != null && String(fields.telephone).trim() !== '') patch.telephone = String(fields.telephone).trim()
   if (fields.statut_pro != null && String(fields.statut_pro).trim() !== '') patch.statut_pro = fields.statut_pro
   if (fields.profession != null && String(fields.profession).trim() !== '') patch.profession = fields.profession
   if (fields.revenus_annuels != null && String(fields.revenus_annuels).trim() !== '') patch.revenus_annuels = Number(fields.revenus_annuels)
