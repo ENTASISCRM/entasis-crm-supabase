@@ -8,7 +8,8 @@
 # Secrets requis (Settings → Secrets and variables → Actions) :
 #   ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
 #   EDITORIAL_SECRET, EDITORIAL_GH_TOKEN, BREVO_API_KEY,
-#   EDITORIAL_REVIEWER_EMAIL, CRM_URL, (optionnel) BREVO_SENDER_EMAIL
+#   EDITORIAL_REVIEWER_EMAIL, VEILLE_RECIPIENT_EMAIL, CRM_URL,
+#   (optionnel) BREVO_SENDER_EMAIL
 
 name: Agent éditorial
 
@@ -23,12 +24,15 @@ on:
     # newsletter : le 1er du mois à 06h00 UTC — crée un BROUILLON Brevo,
     # l'envoi reste manuel depuis Brevo.
     - cron: '0 6 1 * *'
+    # veille : chaque vendredi à 15h00 UTC — note de veille réglementaire des
+    # 7 derniers jours, envoyée par email (l'email part toujours).
+    - cron: '0 15 * * 5'
   workflow_dispatch:
     inputs:
       job:
         description: 'Job à lancer'
         type: choice
-        options: [generate, publish, newsletter]
+        options: [generate, publish, newsletter, veille]
         required: true
       theme:
         # Menu déroulant : évite les fautes de saisie (un run a échoué en
@@ -119,3 +123,27 @@ jobs:
           BREVO_LIST_ID: ${{ secrets.BREVO_LIST_ID }}
           EDITORIAL_REVIEWER_EMAIL: ${{ secrets.EDITORIAL_REVIEWER_EMAIL }}
         run: node scripts/editorial/newsletter-monthly.mjs
+
+  veille:
+    if: >-
+      (github.event_name == 'schedule' && github.event.schedule == '0 15 * * 5') ||
+      (github.event_name == 'workflow_dispatch' && inputs.job == 'veille')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20 # un appel web search, marge large
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Produire et envoyer la note de veille hebdomadaire
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          BREVO_SENDER_EMAIL: ${{ secrets.BREVO_SENDER_EMAIL }}
+          VEILLE_RECIPIENT_EMAIL: ${{ secrets.VEILLE_RECIPIENT_EMAIL }}
+          EDITORIAL_REVIEWER_EMAIL: ${{ secrets.EDITORIAL_REVIEWER_EMAIL }}
+        run: node scripts/editorial/veille-weekly.mjs
