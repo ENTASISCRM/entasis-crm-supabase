@@ -737,7 +737,7 @@ function AuthScreen() {
 /* ─────────────────────────────────────────────────────────────────────────────
    SIDEBAR
 ───────────────────────────────────────────────────────────────────────────── */
-function Sidebar({profile,isAlternant,activeTab,setActiveTab,onSignOut,deals,month,prospectsNew,dossiersImmoCount,editorialCount,mobileOpen,onCloseMobile}){
+function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,month,prospectsNew,dossiersImmoCount,editorialCount,mobileOpen,onCloseMobile}){
   // Au clic d'une entrée nav en mobile, on ferme le drawer après navigation
   const handleNavClick = (key) => {
     setActiveTab(key)
@@ -771,9 +771,8 @@ function Sidebar({profile,isAlternant,activeTab,setActiveTab,onSignOut,deals,mon
     {key:'cockpit', label:'Cockpit', Icon:Icon.Forecast},
     {key:'forecast',  label:isManager?'Management':'Prévisionnel', Icon:Icon.Forecast},
     {key:'agenda',    label:'Agenda',    Icon:Icon.Calendar},
-    // Smart RH (congés) : reserve aux ALTERNANTS (ils posent) et a la direction
-    // (elle valide). Pas pour stagiaires, mandataires ni conseillers.
-    ...((isManager||isAlternant)?[{key:'smart-rh', label:'Smart RH', Icon:Icon.Calendar}]:[]),
+    // Smart RH (congés) : tout le monde SAUF stagiaires et mandataires.
+    ...(canSmartRh?[{key:'smart-rh', label:'Smart RH', Icon:Icon.Calendar}]:[]),
     {key:'market',    label:'Marchés',   Icon:Icon.Market},
     {key:'ucs-structures', label:'UCS Produits Structurés', Icon:Icon.Ucs, badgeGold:true},
     ...(isManager?[
@@ -5406,13 +5405,14 @@ export default function App(){
   if(!session && !isDesignPreview)return<AuthScreen/>
 
   const isManager = effectiveProfile?.role === 'manager'
-  const isAlternant = String(contractType||'').toUpperCase()==='ALTERNANT'
+  // Smart RH pour tout le monde SAUF stagiaires et mandataires (règle Louis).
+  const canSmartRh = isManager || !['STAGIAIRE','MANDATAIRE'].includes(String(contractType||'').toUpperCase())
 
   return (
     <div className="app-shell">
       <Sidebar
         profile={effectiveProfile}
-        isAlternant={isAlternant}
+        canSmartRh={canSmartRh}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onSignOut={signOut}
@@ -5434,7 +5434,7 @@ export default function App(){
           {activeTab==='dashboard'&&isManager&&<EditorialPendingBanner count={editorialPending.count} nextDeadline={editorialPending.nextDeadline} onOpen={()=>setActiveTab('editorial')}/>}
           {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles} profile={profile}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile}/>)}
           {activeTab==='leads'&&<LeadRoomEmbed/>}
-          {activeTab==='smart-rh'&&(isManager||isAlternant)&&<SmartRH profile={profile}/>}
+          {activeTab==='smart-rh'&&canSmartRh&&<SmartRH profile={profile}/>}
           {activeTab==='pilotage-rh'&&isManager&&<PilotageRH/>}
           {activeTab==='recrutement'&&isManager&&<Recrutement/>}
           {activeTab==='pipeline'&&<PipelineBoard deals={deals} month={month} profile={profile} onEdit={startEdit} onQuickPatch={quickPatchDeal}/>}
