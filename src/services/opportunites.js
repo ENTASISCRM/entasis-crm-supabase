@@ -41,7 +41,7 @@ export function listClients() {
 export function listDeals() {
   return fetchTout(() => supabase
     .from('deals')
-    .select('id, client_id, client, product, notes, status, date_signed, advisor_code')
+    .select('id, client_id, client, product, notes, status, date_signed, advisor_code, pp_m, pu')
     .order('created_at', { ascending: true }))
 }
 
@@ -424,8 +424,20 @@ export function construireSections({ clients = [], deals = [], equipement = [], 
   //    devant car ils vont devoir signer bientot. Le libelle rouge des champs
   //    manquants est porte tel quel dans raison pour que « Copier la liste »
   //    et le rendu partagent la meme source.
-  const dealActif = (c) => dealsDuClient(c).some((d) => STATUTS_ACTIFS.has(d.status))
-  const fiches = fichesIncompletes(clients).map(({ client, manquants, bonus }) => {
+  // On ne demande de completer QUE les VRAIS clients : contrat signe, ou dossier
+  // reel en cours. Une fiche creee par un RDV pose porte un dossier « Prevu »
+  // sans produit ni montant : c est un PROSPECT, pas un client. Sans ce filtre,
+  // un conseiller se voyait reclamer 38 fiches dont zero vrai client (retour
+  // Louis 20/07/2026 : « demande juste a renseigner les clients »).
+  const dossierReel = (d) => {
+    const p = String(d.product || '').trim()
+    return (p !== '' && p !== 'Autre') || Number(d.pp_m || 0) > 0 || Number(d.pu || 0) > 0
+  }
+  const estClientReel = (c) => dealsDuClient(c).some(
+    (d) => d.status === 'Signé' || (STATUTS_ACTIFS.has(d.status) && dossierReel(d)),
+  )
+  const dealActif = (c) => dealsDuClient(c).some((d) => STATUTS_ACTIFS.has(d.status) && dossierReel(d))
+  const fiches = fichesIncompletes(clients.filter(estClientReel)).map(({ client, manquants, bonus }) => {
     const actif = dealActif(client)
     return {
       ...item(client, { section: 'fiches' }),
@@ -441,7 +453,7 @@ export function construireSections({ clients = [], deals = [], equipement = [], 
   sections.unshift({
     key: 'fiches-incompletes',
     titre: 'Fiches à compléter',
-    regle: 'fiches dont un champ obligatoire à la signature manque : email, téléphone, statut, profession, revenus, patrimoine',
+    regle: 'vrais clients uniquement (contrat signé ou dossier réel en cours, les prospects issus d un RDV posé sont exclus) dont un champ obligatoire manque : email, téléphone, statut, profession, revenus, patrimoine',
     fiches: true,
     accroche: 'Sans ces infos, impossible de signer et les modules de vente sont aveugles.',
     items: fiches,
