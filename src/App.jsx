@@ -43,7 +43,6 @@ const OpportunitesDuJour = lazy(() => import('./components/OpportunitesDuJour'))
 // Briques V3 multi equipement construites en parallele (peuvent ne pas encore
 // exister a la compilation) : chargees a la demande comme les autres onglets.
 const CockpitRatios = lazy(() => import('./components/CockpitRatios'))
-const CertificationsProduit = lazy(() => import('./components/CertificationsProduit'))
 import {
   annualize,
   isPipeline,
@@ -781,9 +780,6 @@ function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,mont
       {key:'weekly-review', label:'Revue hebdo', Icon:Icon.Forecast},
       {key:'pilotage-rh', label:'Pilotage RH', Icon:Icon.Team, manager:true},
       {key:'recrutement', label:'Recrutement', Icon:Icon.Team, manager:true},
-      // Certifications produit : manager uniquement (habilitation des conseillers
-      // par famille). Double barrière avec le RLS de certifications_produit.
-      {key:'certifications', label:'Certifications', Icon:Icon.Team, manager:true},
       // Éditorial : manager uniquement (double barrière avec le RLS
       // manager-only de editorial_packages). Badge = packages en attente de veto.
       {key:'editorial', label:'Éditorial', Icon:Icon.Editorial, manager:true, badge:editorialCount}
@@ -971,7 +967,7 @@ async function genererFicheParrainage(profile){
 /* ─────────────────────────────────────────────────────────────────────────────
    TOP BAR
 ───────────────────────────────────────────────────────────────────────────── */
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs',prospection:'Prospection LinkedIn','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️',editorial:'Agent éditorial ✍️',cockpit:'Cockpit ratios',certifications:'Certifications produit'}
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs',prospection:'Prospection LinkedIn','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️',editorial:'Agent éditorial ✍️',cockpit:'Cockpit ratios'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile}){
   return (
@@ -5512,7 +5508,6 @@ export default function App(){
           {activeTab==='conformite'&&<Conformite profile={profile}/>}
           {activeTab==='multi-equipement'&&<MultiEquipement profile={profile} onCreateDeal={startCreateForClient}/>}
           {activeTab==='cockpit'&&<CockpitRatios profile={profile}/>}
-          {activeTab==='certifications'&&isManager&&<CertificationsProduit profile={profile}/>}
           </Suspense>
         </div>
       </div>
