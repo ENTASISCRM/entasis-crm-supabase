@@ -25,15 +25,46 @@ const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '—')
 // qui pilote les projections (fin de contrat, fin des aides, remplacement).
 const TYPES_BORNES = ['ALTERNANT', 'CDD', 'STAGIAIRE']
 
+// Parse une date YYYY-MM-DD en minuit LOCAL. new Date('YYYY-MM-DD') donne
+// minuit UTC, soit 1 à 2 h de décalage en France : un contrat qui commence
+// aujourd hui serait « à venir » jusqu à 2 h du matin.
+const dateLocale = (s) => {
+  const [y, m, d] = String(s).slice(0, 10).split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+// Fin de journée locale : un contrat reste en poste jusqu au soir de sa date de fin.
+const finDeJour = (s) => {
+  const d = dateLocale(s)
+  d.setHours(23, 59, 59, 999)
+  return d
+}
+
 // Temps restant avant la fin de contrat, en clair (« dans 8 mois », « terminé »).
 const resteAvant = (dateFin) => {
   if (!dateFin) return null
-  const jours = Math.round((new Date(dateFin) - new Date()) / 86400000)
+  const jours = Math.round((finDeJour(dateFin) - new Date()) / 86400000)
   if (jours < 0) return { texte: 'terminé', alerte: false, passe: true }
   if (jours <= 31) return { texte: `dans ${jours} j`, alerte: true, passe: false }
   const mois = Math.round(jours / 30.4)
   return { texte: `dans ${mois} mois`, alerte: mois <= 3, passe: false }
 }
+
+// Statut temporel d un contrat : en poste aujourd hui, arrivée à venir, ou
+// déjà terminé. C est la clé de lecture de tout l onglet (KPIs, projection,
+// regroupement du tableau) : un contrat de septembre ne coûte rien en juillet.
+const statutContrat = (c) => {
+  const now = new Date()
+  if (c.date_fin && finDeJour(c.date_fin) < now) return 'termine'
+  if (c.date_debut && dateLocale(c.date_debut) > now) return 'avenir'
+  return 'enposte'
+}
+
+// Coût réel mensuel d un contrat : le reste à charge quand il est saisi
+// (aides déduites), le brut sinon.
+const coutMensuel = (c) =>
+  c.reste_a_charge_mensuel != null && c.reste_a_charge_mensuel !== ''
+    ? Number(c.reste_a_charge_mensuel)
+    : Number(c.salaire_brut_mensuel || 0)
 
 const TYPE_COLORS = {
   GERANT:     { bg: 'var(--gold-soft, rgba(201,169,97,0.12))', fg: 'var(--gold-dk, #A6843F)' },
@@ -161,27 +192,61 @@ export default function PilotageRH() {
     })
   }, [contrats, filterType, filterActif, search])
 
+  // Toutes les stats sont calculées sur les contrats EN POSTE aujourd hui :
+  // les embauches futures et les contrats terminés ne comptent ni dans
+  // l effectif ni dans la masse (même règle que l onglet Rémunération).
   const stats = useMemo(() => {
     const actifs = contrats.filter(c => c.actif)
+    const enPoste = actifs.filter(c => statutContrat(c) === 'enposte')
+    const aVenir = actifs.filter(c => statutContrat(c) === 'avenir')
+    const termines = actifs.filter(c => statutContrat(c) === 'termine')
     return {
-      total: actifs.length,
-      cdi: actifs.filter(c => c.type_contrat === 'CDI').length,
-      cdd: actifs.filter(c => c.type_contrat === 'CDD').length,
-      alternants: actifs.filter(c => c.type_contrat === 'ALTERNANT').length,
-      stagiaires: actifs.filter(c => c.type_contrat === 'STAGIAIRE').length,
-      mandataires: actifs.filter(c => c.type_contrat === 'MANDATAIRE').length,
-      masseSalarialeMensuelle: actifs.reduce((sum, c) => sum + Number(c.salaire_brut_mensuel || 0), 0),
-      // Coût réel : le reste à charge quand il est saisi, sinon le brut. C est
-      // ce chiffre qui sert aux projections financières (les alternants coûtent
-      // bien moins que leur brut une fois les aides déduites).
-      coutReelMensuel: actifs.reduce((sum, c) => sum + (
-        c.reste_a_charge_mensuel != null && c.reste_a_charge_mensuel !== ''
-          ? Number(c.reste_a_charge_mensuel)
-          : Number(c.salaire_brut_mensuel || 0)
-      ), 0),
-      // Nombre de contrats pour lesquels le reste à charge n est pas encore saisi
-      sansResteACharge: actifs.filter(c => (c.reste_a_charge_mensuel == null || c.reste_a_charge_mensuel === '') && Number(c.salaire_brut_mensuel || 0) > 0).length,
+      total: enPoste.length,
+      aVenir: aVenir.length,
+      termines: termines.length,
+      cdi: enPoste.filter(c => c.type_contrat === 'CDI').length,
+      cdd: enPoste.filter(c => c.type_contrat === 'CDD').length,
+      alternants: enPoste.filter(c => c.type_contrat === 'ALTERNANT').length,
+      stagiaires: enPoste.filter(c => c.type_contrat === 'STAGIAIRE').length,
+      mandataires: enPoste.filter(c => c.type_contrat === 'MANDATAIRE').length,
+      masseSalarialeMensuelle: enPoste.reduce((sum, c) => sum + Number(c.salaire_brut_mensuel || 0), 0),
+      coutReelMensuel: enPoste.reduce((sum, c) => sum + coutMensuel(c), 0),
+      // Nombre de contrats en poste pour lesquels le reste à charge manque
+      sansResteACharge: enPoste.filter(c => (c.reste_a_charge_mensuel == null || c.reste_a_charge_mensuel === '') && Number(c.salaire_brut_mensuel || 0) > 0).length,
     }
+  }, [contrats])
+
+  // Projection 12 mois du coût réel entreprise. Chaque contrat compte au
+  // PRORATA de ses jours de présence dans le mois (un CDD qui finit le 10
+  // coûte un tiers de mois, une arrivée le 25 coûte une semaine). L effectif
+  // affiché est celui en poste au dernier jour du mois.
+  const projection = useMemo(() => {
+    const now = new Date()
+    const out = []
+    for (let i = 0; i < 12; i++) {
+      const mStart = new Date(now.getFullYear(), now.getMonth() + i, 1)
+      const mEnd = new Date(now.getFullYear(), now.getMonth() + i + 1, 0, 23, 59, 59, 999)
+      const joursMois = new Date(now.getFullYear(), now.getMonth() + i + 1, 0).getDate()
+      let cout = 0, brut = 0, nb = 0, arrivees = 0, departs = 0
+      for (const c of contrats) {
+        if (!c.actif) continue
+        const debut = c.date_debut ? dateLocale(c.date_debut) : null
+        const fin = c.date_fin ? finDeJour(c.date_fin) : null
+        if (debut && debut > mEnd) continue
+        if (fin && fin < mStart) continue
+        const de = debut && debut > mStart ? debut : mStart
+        const a = fin && fin < mEnd ? fin : mEnd
+        const part = Math.min(1, Math.max(0, Math.round((a - de) / 86400000 + 0.5) / joursMois))
+        brut += Number(c.salaire_brut_mensuel || 0) * part
+        cout += coutMensuel(c) * part
+        // En poste au dernier jour du mois
+        if (!fin || fin >= mEnd) nb++
+        if (debut && debut >= mStart && debut <= mEnd) arrivees++
+        if (fin && fin >= mStart && fin <= mEnd) departs++
+      }
+      out.push({ mois: mStart, cout: Math.round(cout), brut: Math.round(brut), nb, arrivees, departs })
+    }
+    return out
   }, [contrats])
 
   const handleSave = async (payload) => {
@@ -199,6 +264,19 @@ export default function PilotageRH() {
     } catch (e) {
       toast.error('Erreur : ' + (e.message || ''))
     }
+  }
+
+  // Désactive en un clic tous les contrats terminés encore actifs (fin de
+  // stage ou de CDD passée) : ils sortent des listes mais restent
+  // consultables via le filtre Inactifs.
+  const handleDesactiverTermines = async (list) => {
+    if (!confirm(`Désactiver ${list.length} contrat(s) terminé(s) ? Ils restent consultables via le filtre Inactifs.`)) return
+    let ok = 0
+    for (const c of list) {
+      try { await service.setActif(c.id, false); ok++ } catch (e) { console.error('[PilotageRH] désactiver terminés', e) }
+    }
+    toast.success(`${ok}/${list.length} contrat(s) désactivé(s)`)
+    reload()
   }
 
   const handleToggleActif = async (contrat) => {
@@ -251,33 +329,41 @@ export default function PilotageRH() {
         <button className="btn btn-primary" onClick={() => setCreating(true)}>+ Nouveau contrat</button>
       </div>
 
-      {/* KPIs */}
+      {/* KPIs : tout est calculé sur les contrats en poste aujourd hui */}
       <div className="kpi-grid mb-24">
         <div className="kpi-card kpi-card-blue">
-          <div className="kpi-label">Effectif actif</div>
+          <div className="kpi-label">En poste aujourd'hui</div>
           <div className="kpi-value">{stats.total}</div>
-          <div className="kpi-hint">{stats.cdi} CDI · {stats.cdd} CDD · {stats.alternants} alt. · {stats.stagiaires} stag. · {stats.mandataires} mand.</div>
+          <div className="kpi-hint">
+            {stats.cdi} CDI · {stats.cdd} CDD · {stats.alternants} alt. · {stats.stagiaires} stag. · {stats.mandataires} mand.
+            {stats.aVenir > 0 ? ` · +${stats.aVenir} à venir` : ''}
+          </div>
         </div>
         <div className="kpi-card kpi-card-gold">
           <div className="kpi-label">Masse salariale brute / mois</div>
           <div className="kpi-value">{fmtEur(stats.masseSalarialeMensuelle)}</div>
-          <div className="kpi-hint">Hors charges patronales et variables</div>
+          <div className="kpi-hint">Contrats en poste, hors charges patronales et variables</div>
         </div>
         <div className="kpi-card kpi-card-green">
           <div className="kpi-label">Coût réel entreprise / mois</div>
           <div className="kpi-value">{fmtEur(stats.coutReelMensuel)}</div>
           <div className="kpi-hint">
-            {fmtEur(stats.coutReelMensuel * 12)} / an
             {stats.masseSalarialeMensuelle > stats.coutReelMensuel
-              ? ` · ${fmtEur(stats.masseSalarialeMensuelle - stats.coutReelMensuel)} d aides / mois`
-              : ''}
+              ? `${fmtEur(stats.masseSalarialeMensuelle - stats.coutReelMensuel)} d aides / mois`
+              : 'Aides non déduites'}
             {stats.sansResteACharge > 0 ? ` · ${stats.sansResteACharge} contrat(s) au brut faute de saisie` : ''}
           </div>
         </div>
         <div className="kpi-card kpi-card-amber">
-          <div className="kpi-label">Mandataires</div>
-          <div className="kpi-value">{stats.mandataires}</div>
-          <div className="kpi-hint">Indépendants — facturent Entasis</div>
+          <div className="kpi-label">Coût réel dans 3 mois</div>
+          <div className="kpi-value">{fmtEur(projection[3]?.cout || 0)}</div>
+          <div className="kpi-hint">
+            {(() => {
+              const delta = (projection[3]?.cout || 0) - (projection[0]?.cout || 0)
+              const signe = delta > 0 ? '+' : delta < 0 ? '−' : ''
+              return `${signe}${fmtEur(Math.abs(delta))} vs ce mois · ${projection[3]?.nb || 0} en poste`
+            })()}
+          </div>
         </div>
       </div>
 
@@ -397,6 +483,9 @@ export default function PilotageRH() {
       {/* Frise chronologique — vue d'ensemble des échéances RH */}
       <TimelineRH contrats={contrats} />
 
+      {/* Projection financière : coût réel entreprise sur 12 mois */}
+      <ProjectionCout projection={projection} />
+
       {/* Toolbar filtres */}
       <div className="table-toolbar mb-16" style={{ marginBottom: 16 }}>
         <input className="search-input" placeholder="Rechercher un conseiller…"
@@ -436,7 +525,21 @@ export default function PilotageRH() {
                 <div className="empty-title">Aucun contrat trouvé</div>
                 <div className="empty-sub">Ajuste les filtres ou ajoute un nouveau contrat</div>
               </td></tr>
-            ) : filtered.map(c => {
+            ) : (() => {
+              // Regroupe par statut temporel : c est ce qui rend la page
+              // lisible (le mélange embauches futures / terminés faussait
+              // la lecture de l effectif).
+              // Un contrat désactivé est rangé avec les terminés même sans
+              // date de fin (départ non daté) : il ne doit jamais apparaître
+              // sous la pastille verte En poste.
+              const parStatut = { enposte: [], avenir: [], termine: [] }
+              for (const c of filtered) parStatut[c.actif ? statutContrat(c) : 'termine'].push(c)
+              const groupes = [
+                { key: 'enposte', titre: 'En poste', dot: VERT, list: parStatut.enposte },
+                { key: 'avenir', titre: 'Arrivées à venir', dot: '#0071E3', list: parStatut.avenir },
+                { key: 'termine', titre: 'Terminés ou archivés', dot: 'var(--t3)', list: parStatut.termine },
+              ].filter(g => g.list.length > 0)
+              const rowFor = (c) => {
               const col = TYPE_COLORS[c.type_contrat] || TYPE_COLORS.CDI
               return (
                 <tr key={c.id} style={{ opacity: c.actif ? 1 : 0.5 }}>
@@ -457,7 +560,17 @@ export default function PilotageRH() {
                   <td className="cell-mono" style={{ textAlign: 'right' }}>
                     {c.reste_a_charge_mensuel != null && c.reste_a_charge_mensuel !== ''
                       ? fmtEur(c.reste_a_charge_mensuel)
-                      : <span style={{ color: 'var(--t3)' }}>à saisir</span>}
+                      : (
+                        <button
+                          onClick={() => setEditing(c)}
+                          title="Saisir le reste à charge (ouvre la fiche du contrat)"
+                          style={{
+                            background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                            color: 'var(--t3)', fontSize: 'inherit', fontFamily: 'inherit',
+                            textDecoration: 'underline dotted', textUnderlineOffset: 3,
+                          }}
+                        >à saisir</button>
+                      )}
                   </td>
                   <td className="cell-mono" style={{ textAlign: 'right' }}>{c.palier_pp_mensuel > 0 ? fmtEur(c.palier_pp_mensuel) : '—'}</td>
                   <td className="cell-mono" style={{ textAlign: 'right' }}>{c.palier_pu_mensuel > 0 ? fmtEur(c.palier_pu_mensuel) : '—'}</td>
@@ -497,7 +610,37 @@ export default function PilotageRH() {
                   </td>
                 </tr>
               )
-            })}
+              }
+              return groupes.flatMap(g => {
+                const terminesActifs = g.key === 'termine' ? g.list.filter(c => c.actif) : []
+                return [
+                  <tr key={`head-${g.key}`}>
+                    <td colSpan={9} style={{ background: 'rgba(0,0,0,0.02)', padding: '7px 14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 7,
+                          fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
+                          textTransform: 'uppercase', color: 'var(--t3)',
+                        }}>
+                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: g.dot }} />
+                          {g.titre} · {g.list.length}
+                        </span>
+                        {terminesActifs.length > 0 && (
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => handleDesactiverTermines(terminesActifs)}
+                            title="Les contrats terminés encore actifs faussent les listes : un clic pour les archiver"
+                          >
+                            Désactiver les {terminesActifs.length} terminé{terminesActifs.length > 1 ? 's' : ''}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>,
+                  ...g.list.map(rowFor),
+                ]
+              })
+            })()}
           </tbody>
         </table>
       </div>
@@ -745,6 +888,82 @@ function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose,
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Projection du coût réel entreprise sur 12 mois
+// Une barre par mois : reste à charge quand il est saisi, brut sinon.
+// Les arrivées et fins de contrat entrent et sortent à leur date, c est
+// l outil de projection financière de la direction.
+// ─────────────────────────────────────────────────────────────────────────
+function ProjectionCout({ projection }) {
+  const moisCourt = ['janv.', 'févr.', 'mars', 'avril', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
+  const max = Math.max(...projection.map(p => p.cout), 1)
+  const fmtCompact = (v) => v >= 10000
+    ? `${(v / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} k€`
+    : fmtEur(v)
+  return (
+    <div className="card mb-24">
+      <div className="panel-head">
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--gold)' }}>
+            Projection financière
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t1)', marginTop: 4 }}>
+            Coût réel entreprise sur 12 mois
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>
+            Reste à charge quand il est saisi, brut sinon, au prorata des jours de présence. Effectif compté au dernier jour du mois.
+          </div>
+        </div>
+      </div>
+      <div className="panel-body" style={{ overflowX: 'auto', padding: '18px 20px 14px' }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'stretch', minWidth: 12 * 74 }}>
+          {projection.map((p, i) => {
+            const estCourant = i === 0
+            const hPct = Math.max(4, (p.cout / max) * 100)
+            return (
+              <div
+                key={i}
+                title={`${moisCourt[p.mois.getMonth()]} ${p.mois.getFullYear()} : ${fmtEur(p.cout)} de coût réel (${fmtEur(p.brut)} brut), ${p.nb} en poste`}
+                style={{ flex: 1, minWidth: 68, textAlign: 'center' }}
+              >
+                <div style={{
+                  fontSize: 10.5, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
+                  color: estCourant ? 'var(--gold-dk)' : 'var(--t2)', marginBottom: 4, whiteSpace: 'nowrap',
+                }}>
+                  {fmtCompact(p.cout)}
+                </div>
+                <div style={{ height: 110, display: 'flex', alignItems: 'flex-end' }}>
+                  <div style={{
+                    width: '100%',
+                    height: `${hPct}%`,
+                    borderRadius: '7px 7px 3px 3px',
+                    background: estCourant
+                      ? 'linear-gradient(180deg, var(--gold) 0%, rgba(201,169,97,0.75) 100%)'
+                      : 'linear-gradient(180deg, rgba(201,169,97,0.42) 0%, rgba(201,169,97,0.22) 100%)',
+                    transition: 'height 300ms ease',
+                  }} />
+                </div>
+                <div style={{
+                  marginTop: 6, fontSize: 10, fontWeight: estCourant ? 700 : 600,
+                  letterSpacing: '0.06em', textTransform: 'uppercase',
+                  color: estCourant ? 'var(--gold-dk)' : 'var(--t3)', whiteSpace: 'nowrap',
+                }}>
+                  {moisCourt[p.mois.getMonth()]}{p.mois.getMonth() === 0 ? ` ${p.mois.getFullYear()}` : ''}
+                </div>
+                <div style={{ fontSize: 9.5, color: 'var(--t3)', marginTop: 1, whiteSpace: 'nowrap' }}>
+                  {p.nb} pers.
+                  {p.arrivees > 0 && <span style={{ color: VERT, fontWeight: 700 }}> +{p.arrivees}</span>}
+                  {p.departs > 0 && <span style={{ color: ROUGE, fontWeight: 700 }}> −{p.departs}</span>}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Frise chronologique RH
 // Une colonne par mois : les arrivées (embauches) au dessus de la ligne,
 // les fins de contrat en dessous. Le regroupement par mois garantit zéro
@@ -779,7 +998,7 @@ function TimelineRH({ contrats }) {
       if (!c.actif && !c.date_fin) continue
       const pushEv = (dateStr, type) => {
         if (!dateStr) return
-        const d = new Date(dateStr)
+        const d = dateLocale(dateStr)
         if (d < startMonth || d > endMonth) return
         out.push({
           date: d,
@@ -826,7 +1045,11 @@ function TimelineRH({ contrats }) {
   const puce = (ev) => {
     const isStart = ev.type === 'start'
     const color = isStart ? VERT : ROUGE
-    const isPast = ev.date < now
+    // Une fin de contrat n est « passée » qu une fois la journée écoulée
+    const limite = isStart
+      ? ev.date
+      : new Date(ev.date.getFullYear(), ev.date.getMonth(), ev.date.getDate(), 23, 59, 59)
+    const isPast = limite < now
     const jours = Math.ceil((ev.date - now) / 86400000)
     const compteARebours = !isStart && !isPast && jours <= 45 ? `J-${jours}` : null
     return (
