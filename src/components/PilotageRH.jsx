@@ -21,6 +21,20 @@ import { TYPES_CONTRAT, LIBELLE_TYPE_CONTRAT } from '../lib/contrat-enums'
 const fmtEur = (v) => Number(v || 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '—')
 
+// Contrats bornés dans le temps : la date de fin est obligatoire, c est elle
+// qui pilote les projections (fin de contrat, fin des aides, remplacement).
+const TYPES_BORNES = ['ALTERNANT', 'CDD', 'STAGIAIRE']
+
+// Temps restant avant la fin de contrat, en clair (« dans 8 mois », « terminé »).
+const resteAvant = (dateFin) => {
+  if (!dateFin) return null
+  const jours = Math.round((new Date(dateFin) - new Date()) / 86400000)
+  if (jours < 0) return { texte: 'terminé', alerte: false, passe: true }
+  if (jours <= 31) return { texte: `dans ${jours} j`, alerte: true, passe: false }
+  const mois = Math.round(jours / 30.4)
+  return { texte: `dans ${mois} mois`, alerte: mois <= 3, passe: false }
+}
+
 const TYPE_COLORS = {
   GERANT:     { bg: 'var(--gold-soft, rgba(201,169,97,0.12))', fg: 'var(--gold-dk, #A6843F)' },
   CDI:        { bg: 'rgba(0,113,227,0.10)',                    fg: '#0071E3' },
@@ -448,7 +462,24 @@ export default function PilotageRH() {
                   <td className="cell-mono" style={{ textAlign: 'right' }}>{c.palier_pp_mensuel > 0 ? fmtEur(c.palier_pp_mensuel) : '—'}</td>
                   <td className="cell-mono" style={{ textAlign: 'right' }}>{c.palier_pu_mensuel > 0 ? fmtEur(c.palier_pu_mensuel) : '—'}</td>
                   <td>{fmtDate(c.date_debut)}</td>
-                  <td>{fmtDate(c.date_fin)}</td>
+                  <td>
+                    {c.date_fin ? (
+                      <>
+                        <div>{fmtDate(c.date_fin)}</div>
+                        {(() => {
+                          const r = c.actif ? resteAvant(c.date_fin) : null
+                          if (!r) return null
+                          return (
+                            <div className="cell-sub" style={{ color: r.alerte ? 'var(--danger, #c0392b)' : undefined }}>
+                              {r.texte}
+                            </div>
+                          )
+                        })()}
+                      </>
+                    ) : TYPES_BORNES.includes(c.type_contrat) && c.actif ? (
+                      <span style={{ color: 'var(--danger, #c0392b)', fontSize: 12 }}>à saisir</span>
+                    ) : '—'}
+                  </td>
                   <td style={{ textAlign: 'right' }}>
                     <div className="table-actions" style={{ justifyContent: 'flex-end' }}>
                       {c.profile_id && c.actif && c.type_contrat !== 'GERANT' && (
@@ -521,6 +552,12 @@ function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose,
     if (!form.full_name?.trim()) return toast.error('Nom requis')
     if (!form.type_contrat) return toast.error('Type de contrat requis')
     if (!form.date_debut) return toast.error('Date de début requise')
+    if (TYPES_BORNES.includes(form.type_contrat) && !form.date_fin) {
+      return toast.error(`Date de fin requise pour un contrat ${LIBELLE_TYPE_CONTRAT[form.type_contrat] || form.type_contrat}`)
+    }
+    if (form.date_fin && form.date_debut && form.date_fin < form.date_debut) {
+      return toast.error('La date de fin doit être après la date de début')
+    }
     onSave(form)
   }
 
@@ -650,11 +687,31 @@ function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose,
                        onChange={e => handleChange('date_debut', e.target.value)} required />
               </div>
               <div className="form-group">
-                <label className="form-label">Date de fin (optionnel)</label>
-                <input className="form-input" type="date"
-                       value={form.date_fin || ''}
-                       onChange={e => handleChange('date_fin', e.target.value || null)} />
-                <div className="form-hint">CDD, fin de stage, etc.</div>
+                {(() => {
+                  const borne = TYPES_BORNES.includes(form.type_contrat)
+                  const duree = (() => {
+                    if (!form.date_debut || !form.date_fin) return null
+                    const d = new Date(form.date_debut); const f = new Date(form.date_fin)
+                    if (f < d) return null
+                    const mois = Math.max(0, Math.round((f - d) / 2629800000))
+                    return mois > 0 ? `${mois} mois de contrat` : null
+                  })()
+                  return (
+                    <>
+                      <label className="form-label">Date de fin {borne ? '(obligatoire)' : '(optionnel)'}</label>
+                      <input className="form-input" type="date"
+                             value={form.date_fin || ''}
+                             min={form.date_debut || undefined}
+                             required={borne}
+                             onChange={e => handleChange('date_fin', e.target.value || null)} />
+                      <div className="form-hint">
+                        {borne
+                          ? `Contrat borné : la fin pilote les projections${duree ? ` · ${duree}` : ''}`
+                          : 'CDI et gérant : laisser vide'}
+                      </div>
+                    </>
+                  )
+                })()}
               </div>
             </div>
 
