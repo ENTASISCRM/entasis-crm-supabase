@@ -35,6 +35,7 @@ const EMPTY_CONTRAT = {
   full_name: '',
   type_contrat: 'CDI',
   salaire_brut_mensuel: 0,
+  reste_a_charge_mensuel: '',
   palier_pp_mensuel: 0,
   palier_pu_mensuel: 0,
   date_debut: new Date().toISOString().slice(0, 10),
@@ -156,6 +157,16 @@ export default function PilotageRH() {
       stagiaires: actifs.filter(c => c.type_contrat === 'STAGIAIRE').length,
       mandataires: actifs.filter(c => c.type_contrat === 'MANDATAIRE').length,
       masseSalarialeMensuelle: actifs.reduce((sum, c) => sum + Number(c.salaire_brut_mensuel || 0), 0),
+      // Coût réel : le reste à charge quand il est saisi, sinon le brut. C est
+      // ce chiffre qui sert aux projections financières (les alternants coûtent
+      // bien moins que leur brut une fois les aides déduites).
+      coutReelMensuel: actifs.reduce((sum, c) => sum + (
+        c.reste_a_charge_mensuel != null && c.reste_a_charge_mensuel !== ''
+          ? Number(c.reste_a_charge_mensuel)
+          : Number(c.salaire_brut_mensuel || 0)
+      ), 0),
+      // Nombre de contrats pour lesquels le reste à charge n est pas encore saisi
+      sansResteACharge: actifs.filter(c => (c.reste_a_charge_mensuel == null || c.reste_a_charge_mensuel === '') && Number(c.salaire_brut_mensuel || 0) > 0).length,
     }
   }, [contrats])
 
@@ -239,9 +250,15 @@ export default function PilotageRH() {
           <div className="kpi-hint">Hors charges patronales et variables</div>
         </div>
         <div className="kpi-card kpi-card-green">
-          <div className="kpi-label">Masse salariale brute / an</div>
-          <div className="kpi-value">{fmtEur(stats.masseSalarialeMensuelle * 12)}</div>
-          <div className="kpi-hint">Sur 12 mois constants</div>
+          <div className="kpi-label">Coût réel entreprise / mois</div>
+          <div className="kpi-value">{fmtEur(stats.coutReelMensuel)}</div>
+          <div className="kpi-hint">
+            {fmtEur(stats.coutReelMensuel * 12)} / an
+            {stats.masseSalarialeMensuelle > stats.coutReelMensuel
+              ? ` · ${fmtEur(stats.masseSalarialeMensuelle - stats.coutReelMensuel)} d aides / mois`
+              : ''}
+            {stats.sansResteACharge > 0 ? ` · ${stats.sansResteACharge} contrat(s) au brut faute de saisie` : ''}
+          </div>
         </div>
         <div className="kpi-card kpi-card-amber">
           <div className="kpi-label">Mandataires</div>
@@ -389,6 +406,7 @@ export default function PilotageRH() {
               <th>Conseiller</th>
               <th>Type</th>
               <th style={{ textAlign: 'right' }}>Brut / mois</th>
+              <th style={{ textAlign: 'right' }}>Reste à charge</th>
               <th style={{ textAlign: 'right' }}>Palier PP</th>
               <th style={{ textAlign: 'right' }}>Palier PU</th>
               <th>Début</th>
@@ -398,9 +416,9 @@ export default function PilotageRH() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--t3)' }}>Chargement…</td></tr>
+              <tr><td colSpan={9} style={{ textAlign: 'center', padding: 40, color: 'var(--t3)' }}>Chargement…</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={8} className="table-empty-state">
+              <tr><td colSpan={9} className="table-empty-state">
                 <div className="empty-title">Aucun contrat trouvé</div>
                 <div className="empty-sub">Ajuste les filtres ou ajoute un nouveau contrat</div>
               </td></tr>
@@ -422,6 +440,11 @@ export default function PilotageRH() {
                     </span>
                   </td>
                   <td className="cell-mono" style={{ textAlign: 'right' }}>{fmtEur(c.salaire_brut_mensuel)}</td>
+                  <td className="cell-mono" style={{ textAlign: 'right' }}>
+                    {c.reste_a_charge_mensuel != null && c.reste_a_charge_mensuel !== ''
+                      ? fmtEur(c.reste_a_charge_mensuel)
+                      : <span style={{ color: 'var(--t3)' }}>à saisir</span>}
+                  </td>
                   <td className="cell-mono" style={{ textAlign: 'right' }}>{c.palier_pp_mensuel > 0 ? fmtEur(c.palier_pp_mensuel) : '—'}</td>
                   <td className="cell-mono" style={{ textAlign: 'right' }}>{c.palier_pu_mensuel > 0 ? fmtEur(c.palier_pu_mensuel) : '—'}</td>
                   <td>{fmtDate(c.date_debut)}</td>
@@ -574,6 +597,31 @@ function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose,
                        value={form.salaire_brut_mensuel}
                        onChange={e => handleChange('salaire_brut_mensuel', e.target.value)} />
                 <div className="form-hint">0 pour mandataire / gérant</div>
+              </div>
+            </div>
+
+            <div className="form-row form-row-2">
+              <div className="form-group">
+                <label className="form-label">Reste à charge entreprise (€ / mois)</label>
+                <input className="form-input" type="number" step="0.01" min="0"
+                       placeholder="ce que l entreprise paie réellement"
+                       value={form.reste_a_charge_mensuel ?? ''}
+                       onChange={e => handleChange('reste_a_charge_mensuel', e.target.value)} />
+                <div className="form-hint">
+                  Coût réel après aides et exonérations (surtout alternants). Vide = on retient le brut.
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Aide mensuelle estimée</label>
+                <input className="form-input" type="text" readOnly tabIndex={-1}
+                       value={(() => {
+                         const brut = Number(form.salaire_brut_mensuel || 0)
+                         const rac = String(form.reste_a_charge_mensuel ?? '').trim()
+                         if (rac === '' || brut <= 0) return '—'
+                         const ecart = brut - Number(rac)
+                         return ecart > 0 ? `${fmtEur(ecart)} / mois (${fmtEur(ecart * 12)} / an)` : '—'
+                       })()} />
+                <div className="form-hint">Écart entre le brut et le reste à charge, calculé.</div>
               </div>
             </div>
 

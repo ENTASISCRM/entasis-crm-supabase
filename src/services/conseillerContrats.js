@@ -114,6 +114,12 @@ function sanitize(payload) {
   if (payload.full_name !== undefined) out.full_name = String(payload.full_name || '').trim()
   if (payload.type_contrat !== undefined) out.type_contrat = payload.type_contrat
   if (payload.salaire_brut_mensuel !== undefined) out.salaire_brut_mensuel = Number(payload.salaire_brut_mensuel) || 0
+  // Reste a charge reel pour l entreprise (apres aides / exonerations). null
+  // si non renseigne, pour distinguer « pas saisi » de « zero ».
+  if (payload.reste_a_charge_mensuel !== undefined) {
+    const v = String(payload.reste_a_charge_mensuel ?? '').trim()
+    out.reste_a_charge_mensuel = v === '' ? null : (Number(v) || 0)
+  }
   if (payload.palier_pp_mensuel !== undefined) out.palier_pp_mensuel = Number(payload.palier_pp_mensuel) || 0
   if (payload.palier_pu_mensuel !== undefined) out.palier_pu_mensuel = Number(payload.palier_pu_mensuel) || 0
   if (payload.date_debut !== undefined) out.date_debut = payload.date_debut || null
