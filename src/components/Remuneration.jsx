@@ -592,7 +592,7 @@ function VueManager({ month }) {
         <div className="kpi-card kpi-card-gold">
           <div className="kpi-label">Masse fixe brute / mois</div>
           <div className="kpi-value">{fmtEur(totals.fixe)}</div>
-          <div className="kpi-hint">{lignes.length} conseiller{lignes.length !== 1 ? 's' : ''} actif{lignes.length !== 1 ? 's' : ''}</div>
+          <div className="kpi-hint">{lignes.length} conseiller{lignes.length !== 1 ? 's' : ''} en poste ce mois</div>
         </div>
         <div className="kpi-card kpi-card-green">
           <div className="kpi-label">Variable {month}</div>

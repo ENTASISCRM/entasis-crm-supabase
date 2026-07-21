@@ -64,6 +64,15 @@ export default async function handler(req, res) {
     .from('profiles').select('id, role, advisor_code, full_name').eq('id', user.id).maybeSingle()
   const isManager = prof?.role === 'manager'
 
+  // Un contrat compte pour le mois de reference s il est EN POSTE sur ce mois :
+  // commence au plus tard a la fin du mois, et pas termine avant le debut du mois.
+  // Sans ce filtre, une embauche de septembre gonflait la masse fixe de juillet.
+  const moisStart = new Date(dateRef.getFullYear(), dateRef.getMonth(), 1)
+  const moisEnd = new Date(dateRef.getFullYear(), dateRef.getMonth() + 1, 0, 23, 59, 59)
+  const enPosteCeMois = (c) =>
+    (!c.date_debut || new Date(c.date_debut) <= moisEnd) &&
+    (!c.date_fin || new Date(c.date_fin) >= moisStart)
+
   // Deals : la RLS cloisonne (conseiller = les siens, manager = tous).
   const { data: deals, error: dErr } = await sb
     .from('deals').select(`*, clients(${CLIENT_JOIN})`).order('created_at', { ascending: false })
@@ -93,7 +102,7 @@ export default async function handler(req, res) {
         .select('*, profile:profile_id(id, advisor_code, email, full_name)')
       if (cErr) return res.status(500).json({ error: 'Contrats: ' + cErr.message })
       const lignes = (contrats || [])
-        .filter(c => c.actif && c.type_contrat !== 'GERANT')
+        .filter(c => c.actif && c.type_contrat !== 'GERANT' && enPosteCeMois(c))
         .map(c => calcLigne(c, c.profile || null))
       const totals = {
         fixe: lignes.reduce((s, l) => s + Number(l.contrat.salaire_brut_mensuel || 0), 0),
