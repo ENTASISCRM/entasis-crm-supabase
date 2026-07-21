@@ -11,7 +11,7 @@
 // Migration BDD : supabase/migrations/20260525130000_conseiller_contrats.sql
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import * as service from '../services/conseillerContrats'
 import * as profilesService from '../services/profiles'
@@ -746,13 +746,18 @@ function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose,
 
 // ─────────────────────────────────────────────────────────────────────────
 // Frise chronologique RH
-// Affiche les événements clés (embauches, fins de contrat, échéances)
-// regroupés par mois sur une fenêtre de M-2 à M+6.
+// Une colonne par mois : les arrivées (embauches) au dessus de la ligne,
+// les fins de contrat en dessous. Le regroupement par mois garantit zéro
+// chevauchement, même quand plusieurs événements tombent le même jour.
+// Fenêtre affichée : M moins 2 à M plus 5 (8 mois).
 // ─────────────────────────────────────────────────────────────────────────
+const VERT = '#34C759'
+const ROUGE = '#FF3B30'
+
 function TimelineRH({ contrats }) {
   const MOIS_AVANT = 2
-  const MOIS_APRES = 5    // → 8 mois affichés au total (M-2 → M+5)
-  const moisFr = ['Janv.', 'Févr.', 'Mars', 'Avril', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.']
+  const MOIS_APRES = 5
+  const moisFr = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
 
   const { events, mois, currentIdx } = useMemo(() => {
     const now = new Date()
@@ -787,33 +792,21 @@ function TimelineRH({ contrats }) {
       pushEv(c.date_fin, 'end')
     }
     out.sort((a, b) => a.date - b.date)
+    out.forEach((ev, i) => { ev.idx = i })
     const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
     const currentIdx = mois.findIndex(m => m.key === currentKey)
     return { events: out, mois, currentIdx }
   }, [contrats])
 
-  // Position 0→100% sur la frise pour une date donnée
-  function dateToPercent(date) {
-    if (mois.length === 0) return 0
-    const start = mois[0].date.getTime()
-    const end = new Date(mois[mois.length - 1].date.getFullYear(), mois[mois.length - 1].date.getMonth() + 1, 0).getTime()
-    return Math.max(0, Math.min(100, ((date.getTime() - start) / (end - start)) * 100))
-  }
-
-  // Empilage vertical : on alterne haut/bas, et on évite que 2 events trop proches se chevauchent
-  const placed = useMemo(() => {
-    const arr = events.map((ev, i) => ({ ...ev, pct: dateToPercent(ev.date), i }))
-    const lanes = { top: [], bottom: [] }   // pct des events déjà posés
-    return arr.map((ev) => {
-      // Choisit le côté avec le moins d'events à proximité (<8% d'écart)
-      const proche = (side) => lanes[side].filter(p => Math.abs(p - ev.pct) < 8).length
-      const side = proche('top') <= proche('bottom') ? 'top' : 'bottom'
-      // Niveau d'empilage sur ce côté
-      const niveau = proche(side)
-      lanes[side].push(ev.pct)
-      return { ...ev, side, niveau }
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Regroupe les événements par mois, arrivées et fins séparées
+  const parMois = useMemo(() => {
+    const map = new Map(mois.map(m => [m.key, { starts: [], ends: [] }]))
+    for (const ev of events) {
+      const key = `${ev.date.getFullYear()}-${String(ev.date.getMonth() + 1).padStart(2, '0')}`
+      const slot = map.get(key)
+      if (slot) slot[ev.type === 'start' ? 'starts' : 'ends'].push(ev)
+    }
+    return map
   }, [events, mois])
 
   if (events.length === 0) {
@@ -824,182 +817,179 @@ function TimelineRH({ contrats }) {
     )
   }
 
-  const todayPct = dateToPercent(new Date())
-  const CARD_H = 56     // hauteur d'une carte d'événement
-  const CARD_GAP = 6    // espace entre 2 niveaux
-  const maxNiveauTop = Math.max(0, ...placed.filter(p => p.side === 'top').map(p => p.niveau))
-  const maxNiveauBottom = Math.max(0, ...placed.filter(p => p.side === 'bottom').map(p => p.niveau))
-  const hautTop = (maxNiveauTop + 1) * (CARD_H + CARD_GAP) + 18
-  const hautBottom = (maxNiveauBottom + 1) * (CARD_H + CARD_GAP) + 18
+  const now = new Date()
+  const nbArrivees = events.filter(e => e.type === 'start').length
+  const nbFins = events.length - nbArrivees
+  const AXE = 26    // position verticale de la ligne dans la cellule axe
+
+  // Une puce événement : jour en gros, nom, type de contrat
+  const puce = (ev) => {
+    const isStart = ev.type === 'start'
+    const color = isStart ? VERT : ROUGE
+    const isPast = ev.date < now
+    const jours = Math.ceil((ev.date - now) / 86400000)
+    const compteARebours = !isStart && !isPast && jours <= 45 ? `J-${jours}` : null
+    return (
+      <div
+        key={`${ev.contrat.id}-${ev.type}`}
+        className="tlm-chip"
+        title={`${ev.contrat.full_name} : ${isStart ? 'embauche' : 'fin de contrat'} le ${ev.date.toLocaleDateString('fr-FR')} (${ev.sub})`}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          background: '#fff',
+          border: '0.5px solid var(--bd)',
+          borderLeft: `3px solid ${color}`,
+          borderRadius: 10,
+          padding: '6px 9px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          animationDelay: `${(ev.idx || 0) * 45}ms`,
+          '--tl-opacity': isPast ? 0.55 : 1,
+          opacity: isPast ? 0.55 : 1,
+          minWidth: 0,
+        }}
+      >
+        <div style={{ minWidth: 24, textAlign: 'center', flexShrink: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+            {String(ev.date.getDate()).padStart(2, '0')}
+          </div>
+          <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--t3)', marginTop: 2 }}>
+            {isStart ? 'arr.' : 'fin'}
+          </div>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {ev.contrat.full_name}
+          </div>
+          <div style={{ fontSize: 10.5, color: 'var(--t3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {ev.sub}
+          </div>
+        </div>
+        {compteARebours && (
+          <div style={{
+            fontSize: 9, fontWeight: 700, color: ROUGE, flexShrink: 0,
+            background: 'rgba(255,59,48,0.10)', padding: '2px 6px', borderRadius: 999,
+          }}>
+            {compteARebours}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="card mb-24 timeline-rh">
-      <div className="panel-head">
+      <div className="panel-head" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
         <div>
           <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--gold)' }}>
             Frise chronologique
           </div>
           <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t1)', marginTop: 4 }}>
-            Échéances RH · {events.length} événement{events.length !== 1 ? 's' : ''} sur {mois.length} mois
+            Échéances RH sur {mois.length} mois
           </div>
           <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>
-            Embauches et fins de contrat — survol pour les détails.
+            Arrivées en haut, fins de contrat en bas.
           </div>
         </div>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center', fontSize: 12, fontWeight: 600, color: 'var(--t2)', paddingTop: 4, flexShrink: 0 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: VERT }} />
+            {nbArrivees} arrivée{nbArrivees > 1 ? 's' : ''}
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: ROUGE }} />
+            {nbFins} fin{nbFins > 1 ? 's' : ''}
+          </span>
+        </div>
       </div>
-      <div className="panel-body" style={{ padding: '28px 36px 20px' }}>
-        <div className="timeline-wrap" style={{
-          position: 'relative',
-          height: hautTop + 28 + hautBottom,
+      <div className="panel-body" style={{ padding: '18px 16px 14px', overflowX: 'auto' }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${mois.length}, minmax(148px, 1fr))`,
+          minWidth: mois.length * 148,
         }}>
-          {/* Ligne horizontale principale */}
-          <div style={{
-            position: 'absolute',
-            left: 0, right: 0,
-            top: hautTop + 14,
-            height: 2,
-            background: 'linear-gradient(90deg, rgba(0,0,0,0.04) 0%, rgba(201,169,97,0.25) 50%, rgba(0,0,0,0.04) 100%)',
-            borderRadius: 1,
-          }} />
-          {/* Marqueur "aujourd'hui" — petit triangle + halo */}
-          <div className="timeline-today" style={{
-            position: 'absolute',
-            left: `${todayPct}%`,
-            top: hautTop - 4,
-            transform: 'translateX(-50%)',
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-          }}>
-            <div style={{
-              fontSize: 9, fontWeight: 700, letterSpacing: '0.1em',
-              color: 'var(--gold-dk)', textTransform: 'uppercase',
-              marginBottom: 4,
-            }}>aujourd'hui</div>
-            <div style={{
-              width: 0, height: 0,
-              borderLeft: '5px solid transparent',
-              borderRight: '5px solid transparent',
-              borderTop: '6px solid var(--gold)',
-            }} />
-          </div>
-          {/* Marqueurs des mois (ronds + label) */}
           {mois.map((m, i) => {
-            const pct = (i + 0.5) / mois.length * 100
+            const slot = parMois.get(m.key) || { starts: [], ends: [] }
             const isCurrent = i === currentIdx
-            const isPast = i < currentIdx
+            const isPastM = i < currentIdx
+            const colBg = isCurrent ? 'rgba(201,169,97,0.06)' : 'transparent'
+            // Position du repère aujourd'hui dans le mois courant (bornée pour rester lisible)
+            const joursDansMois = new Date(m.date.getFullYear(), m.date.getMonth() + 1, 0).getDate()
+            const todayPct = Math.min(86, Math.max(14, (now.getDate() / joursDansMois) * 100))
             return (
-              <div key={m.key} style={{
-                position: 'absolute',
-                left: `${pct}%`,
-                top: hautTop + 8,
-                transform: 'translateX(-50%)',
-                display: 'flex', flexDirection: 'column', alignItems: 'center',
-              }}>
-                <div className={isCurrent ? 'timeline-dot-current' : ''} style={{
-                  width: isCurrent ? 14 : 10,
-                  height: isCurrent ? 14 : 10,
-                  borderRadius: '50%',
-                  background: isCurrent ? 'var(--gold)' : isPast ? '#D0D0D5' : '#fff',
-                  border: isCurrent ? '2px solid #fff' : `2px solid ${isPast ? '#D0D0D5' : 'var(--bd-strong)'}`,
-                  boxShadow: isCurrent
-                    ? '0 0 0 4px rgba(201,169,97,0.15), 0 2px 6px rgba(201,169,97,0.35)'
-                    : '0 1px 2px rgba(0,0,0,0.04)',
-                }} />
+              <Fragment key={m.key}>
+                {/* Zone haute : les arrivées du mois */}
                 <div style={{
-                  marginTop: 8,
-                  fontSize: 10,
-                  fontWeight: isCurrent ? 700 : 600,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  color: isCurrent ? 'var(--gold-dk)' : isPast ? 'var(--t3)' : 'var(--t2)',
-                  whiteSpace: 'nowrap',
+                  gridColumn: i + 1, gridRow: 1,
+                  display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+                  gap: 6, padding: '6px 5px 14px',
+                  background: colBg,
+                  borderRadius: isCurrent ? '12px 12px 0 0' : 0,
                 }}>
-                  {m.label}
+                  {slot.starts.map(puce)}
                 </div>
-                {(i === 0 || m.date.getMonth() === 0) && (
+                {/* Cellule axe : segment de ligne, point du mois, label */}
+                <div style={{ gridColumn: i + 1, gridRow: 2, position: 'relative', height: 66, background: colBg }}>
                   <div style={{
-                    fontSize: 9, color: 'var(--t3)', marginTop: 1,
-                    fontVariantNumeric: 'tabular-nums',
-                  }}>{m.annee}</div>
-                )}
-              </div>
-            )
-          })}
-          {/* Événements — cartes flottantes */}
-          {placed.map((ev, i) => {
-            const isStart = ev.type === 'start'
-            const isPast = ev.date < new Date()
-            const lineColor = isStart ? '#34C759' : '#FF3B30'
-            const offset = ev.niveau * (CARD_H + CARD_GAP)
-            const top = ev.side === 'top'
-              ? hautTop - 18 - CARD_H - offset
-              : hautTop + 20 + offset
-            const lineTop = ev.side === 'top'
-              ? top + CARD_H
-              : hautTop + 16
-            const lineHeight = ev.side === 'top'
-              ? hautTop + 14 - lineTop
-              : top - lineTop
-            return (
-              <div
-                key={i}
-                className="timeline-event"
-                style={{
-                  position: 'absolute',
-                  left: `${ev.pct}%`,
-                  top,
-                  transform: 'translateX(-50%)',
-                  width: 180,
-                  animationDelay: `${i * 60}ms`,
-                  opacity: isPast ? 0.7 : 1,
-                }}
-              >
-                {/* Connecteur vertical vers la timeline */}
+                    position: 'absolute', left: 0, right: 0, top: AXE, height: 2,
+                    background: isPastM ? 'rgba(0,0,0,0.06)' : 'rgba(201,169,97,0.30)',
+                  }} />
+                  <div
+                    className={isCurrent ? 'timeline-dot-current' : ''}
+                    style={{
+                      position: 'absolute', left: '50%', top: AXE + 1,
+                      transform: 'translate(-50%, -50%)',
+                      width: isCurrent ? 14 : 10, height: isCurrent ? 14 : 10,
+                      borderRadius: '50%',
+                      background: isCurrent ? 'var(--gold)' : isPastM ? '#D0D0D5' : '#fff',
+                      border: isCurrent ? '2px solid #fff' : `2px solid ${isPastM ? '#D0D0D5' : 'var(--bd-strong)'}`,
+                      boxShadow: isCurrent
+                        ? '0 0 0 4px rgba(201,169,97,0.15), 0 2px 6px rgba(201,169,97,0.35)'
+                        : '0 1px 2px rgba(0,0,0,0.04)',
+                    }}
+                  />
+                  <div style={{
+                    position: 'absolute', left: '50%', top: AXE + 12, transform: 'translateX(-50%)',
+                    fontSize: 10.5, fontWeight: isCurrent ? 700 : 600,
+                    letterSpacing: '0.08em', textTransform: 'uppercase', whiteSpace: 'nowrap',
+                    color: isCurrent ? 'var(--gold-dk)' : isPastM ? 'var(--t3)' : 'var(--t2)',
+                  }}>
+                    {m.label}
+                    {(i === 0 || m.date.getMonth() === 0) && (
+                      <span style={{ fontWeight: 500, color: 'var(--t3)', marginLeft: 4 }}>{m.annee}</span>
+                    )}
+                  </div>
+                  {isCurrent && (
+                    <div style={{
+                      position: 'absolute', left: `${todayPct}%`, top: 0,
+                      transform: 'translateX(-50%)',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    }}>
+                      <div style={{
+                        fontSize: 8.5, fontWeight: 700, letterSpacing: '0.09em',
+                        color: 'var(--gold-dk)', textTransform: 'uppercase', marginBottom: 3, whiteSpace: 'nowrap',
+                      }}>
+                        aujourd'hui
+                      </div>
+                      <div style={{
+                        width: 0, height: 0,
+                        borderLeft: '5px solid transparent',
+                        borderRight: '5px solid transparent',
+                        borderTop: '6px solid var(--gold)',
+                      }} />
+                    </div>
+                  )}
+                </div>
+                {/* Zone basse : les fins de contrat du mois */}
                 <div style={{
-                  position: 'absolute',
-                  left: '50%',
-                  top: lineTop - top,
-                  width: 1.5,
-                  height: lineHeight,
-                  background: `linear-gradient(${ev.side === 'top' ? '180deg' : '0deg'}, ${lineColor}66 0%, ${lineColor}00 100%)`,
-                  transform: 'translateX(-50%)',
-                }} />
-                <div style={{
-                  background: '#fff',
-                  border: `0.5px solid var(--bd)`,
-                  borderLeft: `3px solid ${lineColor}`,
-                  borderRadius: 10,
-                  padding: '8px 12px',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03)',
-                  height: CARD_H,
-                  overflow: 'hidden',
+                  gridColumn: i + 1, gridRow: 3,
+                  display: 'flex', flexDirection: 'column', justifyContent: 'flex-start',
+                  gap: 6, padding: '14px 5px 6px',
+                  background: colBg,
+                  borderRadius: isCurrent ? '0 0 12px 12px' : 0,
                 }}>
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    fontSize: 9, fontWeight: 700,
-                    letterSpacing: '0.06em', textTransform: 'uppercase',
-                    color: lineColor,
-                    marginBottom: 2,
-                  }}>
-                    <span>{isStart ? 'Embauche' : 'Fin'}</span>
-                    <span style={{ color: 'var(--t3)', fontWeight: 600 }}>·</span>
-                    <span style={{ color: 'var(--t2)', fontWeight: 600, letterSpacing: '0.02em', textTransform: 'none' }}>
-                      {ev.date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
-                    </span>
-                  </div>
-                  <div style={{
-                    fontSize: 13, fontWeight: 600, color: 'var(--t1)',
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>
-                    {ev.contrat.full_name}
-                  </div>
-                  <div style={{
-                    fontSize: 11, color: 'var(--t3)',
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>
-                    {ev.sub}
-                  </div>
+                  {slot.ends.map(puce)}
                 </div>
-              </div>
+              </Fragment>
             )
           })}
         </div>
