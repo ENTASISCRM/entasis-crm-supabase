@@ -15,6 +15,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import * as service from '../services/conseillerContrats'
 import * as profilesService from '../services/profiles'
+import * as contratDocs from '../services/contratDocs'
 import { impersonate } from '../services/impersonation'
 import { TYPES_CONTRAT, LIBELLE_TYPE_CONTRAT } from '../lib/contrat-enums'
 
@@ -99,6 +100,12 @@ export default function PilotageRH() {
   const [filterType, setFilterType] = useState('all')
   const [filterActif, setFilterActif] = useState('actifs')
   const [search, setSearch] = useState('')
+  // Ids des contrats qui ont au moins un document joint (contrat de travail scanné)
+  const [avecDocs, setAvecDocs] = useState(new Set())
+
+  const refreshDocs = async () => {
+    try { setAvecDocs(await contratDocs.contratsAvecDocs()) } catch { /* non bloquant */ }
+  }
 
   const reload = async () => {
     setLoading(true)
@@ -109,6 +116,7 @@ export default function PilotageRH() {
       ])
       setContrats(data)
       setProfiles(prof)
+      refreshDocs()
     } catch (e) {
       toast.error('Erreur de chargement : ' + (e.message || ''))
     } finally {
@@ -544,8 +552,26 @@ export default function PilotageRH() {
               return (
                 <tr key={c.id} style={{ opacity: c.actif ? 1 : 0.5 }}>
                   <td>
-                    <div className="cell-primary">{c.full_name}</div>
-                    <div className="cell-sub">{c.matricule ? `Mat. ${c.matricule}` : 'Sans matricule'}</div>
+                    <div className="cell-primary">
+                      {c.full_name}
+                      {avecDocs.has(String(c.id)) && (
+                        <span title="Contrat de travail archivé dans la fiche" style={{ marginLeft: 6, fontSize: 12 }}>📎</span>
+                      )}
+                    </div>
+                    <div className="cell-sub">
+                      {c.matricule ? `Mat. ${c.matricule}` : 'Sans matricule'}
+                      {!avecDocs.has(String(c.id)) && c.actif && (
+                        <button
+                          onClick={() => setEditing(c)}
+                          title="Aucun contrat de travail archivé : clique pour joindre le document"
+                          style={{
+                            background: 'none', border: 'none', padding: 0, marginLeft: 8, cursor: 'pointer',
+                            color: 'var(--warning, #FF9500)', fontSize: 11, fontFamily: 'inherit',
+                            textDecoration: 'underline dotted', textUnderlineOffset: 3,
+                          }}
+                        >contrat à joindre</button>
+                      )}
+                    </div>
                   </td>
                   <td>
                     <span style={{
@@ -662,6 +688,7 @@ export default function PilotageRH() {
           }
           profiles={profiles}
           contratsExistants={contrats}
+          onDocsChange={refreshDocs}
           onClose={() => { setEditing(null); setCreating(false); setPrefillProfile(null) }}
           onSave={handleSave}
         />
@@ -673,7 +700,122 @@ export default function PilotageRH() {
 // ─────────────────────────────────────────────────────────────────────────
 // Modale d'édition / création de contrat
 // ─────────────────────────────────────────────────────────────────────────
-function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose, onSave }) {
+// ─────────────────────────────────────────────────────────────────────────
+// Documents du contrat (contrat de travail signé, avenants)
+// Upload, ouverture via URL signée temporaire, suppression. Bucket privé
+// 'contrats-rh', accès manager uniquement via les policies storage.
+// ─────────────────────────────────────────────────────────────────────────
+function DocsContrat({ contratId, onChange }) {
+  const [docs, setDocs] = useState(null)
+  const [busy, setBusy] = useState(false)
+
+  const reloadDocs = async () => {
+    try { setDocs(await contratDocs.listDocs(contratId)) } catch { setDocs([]) }
+  }
+  useEffect(() => { reloadDocs() }, [contratId])   // eslint-disable-line react-hooks/exhaustive-deps
+
+  const onUpload = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (file.size > 20 * 1024 * 1024) return toast.error('Fichier trop lourd (20 Mo max)')
+    setBusy(true)
+    try {
+      await contratDocs.uploadDoc(contratId, file)
+      toast.success('Document archivé dans la fiche')
+      await reloadDocs()
+      onChange && onChange()
+    } catch (err) {
+      toast.error('Envoi impossible : ' + (err.message || ''))
+    } finally { setBusy(false) }
+  }
+
+  const ouvrir = async (name) => {
+    try {
+      const url = await contratDocs.urlDoc(contratId, name)
+      window.open(url, '_blank', 'noopener')
+    } catch (err) { toast.error('Ouverture impossible : ' + (err.message || '')) }
+  }
+
+  const supprimer = async (name) => {
+    if (!confirm(`Supprimer « ${contratDocs.nomAffiche(name)} » ? Le fichier sera définitivement effacé.`)) return
+    setBusy(true)
+    try {
+      await contratDocs.deleteDoc(contratId, name)
+      toast.success('Document supprimé')
+      await reloadDocs()
+      onChange && onChange()
+    } catch (err) { toast.error('Suppression impossible : ' + (err.message || '')) }
+    finally { setBusy(false) }
+  }
+
+  const fmtTaille = (o) => {
+    const n = Number(o?.metadata?.size || 0)
+    if (n <= 0) return ''
+    return n >= 1048576 ? `${(n / 1048576).toFixed(1)} Mo` : `${Math.max(1, Math.round(n / 1024))} Ko`
+  }
+
+  return (
+    <div className="form-group" style={{ marginBottom: 16 }}>
+      <label className="form-label">Contrat de travail et documents</label>
+      <div style={{
+        border: '0.5px solid var(--bd)', borderRadius: 12, padding: '10px 12px',
+        background: 'rgba(0,0,0,0.015)',
+      }}>
+        {docs === null ? (
+          <div style={{ fontSize: 12, color: 'var(--t3)' }}>Chargement…</div>
+        ) : docs.length === 0 ? (
+          <div style={{ fontSize: 12, color: 'var(--t3)' }}>
+            Aucun document. Joins le contrat signé (PDF, scan ou Word) pour ne plus le perdre.
+          </div>
+        ) : docs.map((d) => (
+          <div key={d.name} style={{
+            display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0',
+            borderBottom: '0.5px solid var(--bd)',
+          }}>
+            <span style={{ fontSize: 13 }}>📎</span>
+            <button
+              type="button"
+              onClick={() => ouvrir(d.name)}
+              title="Ouvrir le document (lien sécurisé temporaire)"
+              style={{
+                background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                fontSize: 12.5, fontWeight: 600, color: 'var(--t1)', fontFamily: 'inherit',
+                textAlign: 'left', flex: 1, minWidth: 0,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}
+            >
+              {contratDocs.nomAffiche(d.name)}
+            </button>
+            <span style={{ fontSize: 11, color: 'var(--t3)', flexShrink: 0 }}>{fmtTaille(d)}</span>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              disabled={busy}
+              onClick={() => supprimer(d.name)}
+              style={{ flexShrink: 0 }}
+            >✕</button>
+          </div>
+        ))}
+        <label className="btn btn-ghost btn-sm" style={{ marginTop: 8, cursor: 'pointer', display: 'inline-flex' }}>
+          {busy ? 'Envoi…' : '+ Joindre un document'}
+          <input
+            type="file"
+            accept=".pdf,.png,.jpg,.jpeg,.heic,.doc,.docx"
+            onChange={onUpload}
+            disabled={busy}
+            style={{ display: 'none' }}
+          />
+        </label>
+        <div className="form-hint" style={{ marginTop: 6 }}>
+          Stockage sécurisé, visible uniquement par la direction. 20 Mo max par fichier.
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose, onSave, onDocsChange }) {
   const [form, setForm] = useState(contrat)
   const isNew = !contrat.id
 
@@ -857,6 +999,15 @@ function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose,
                 })()}
               </div>
             </div>
+
+            {/* Contrat de travail : le document signé vit dans la fiche */}
+            {form.id ? (
+              <DocsContrat contratId={form.id} onChange={onDocsChange} />
+            ) : (
+              <div className="form-hint" style={{ marginBottom: 12 }}>
+                📎 Enregistre la fiche une première fois pour pouvoir joindre le contrat de travail signé.
+              </div>
+            )}
 
             <div className="form-group">
               <label className="form-label">Notes manager (privées)</label>
