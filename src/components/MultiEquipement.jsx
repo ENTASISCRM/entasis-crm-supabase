@@ -86,7 +86,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
   const [signaux, setSignaux] = useState([])     // signaux terrain (#8)
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
-  const [vue, setVue] = useState('missions')       // missions (Ma journée, defaut) | matrice | reports
+  const [vue, setVue] = useState('matrice')       // matrice (defaut, demande Louis) | missions | reports
   const [chip, setChip] = useState('journee')      // journee | a_attaquer | en_cours | ...
   const [campSeul, setCampSeul] = useState(false)  // ne montrer que la campagne
   const [reportPour, setReportPour] = useState(null) // mission ouverte dans la modale
@@ -459,9 +459,9 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
           <div className="sub">l équipement patrimonial de vos clients, famille par famille</div>
         </div>
         <div className="vues">
+          <button className={vue === 'matrice' ? 'on' : ''} onClick={() => setVue('matrice')}>Vue matrice</button>
           <button className={vue === 'missions' ? 'on' : ''} onClick={() => setVue('missions')}>Missions</button>
           {isManager && <button className={vue === 'reports' ? 'on' : ''} onClick={() => setVue('reports')}>Reports</button>}
-          <button className={vue === 'matrice' ? 'on' : ''} onClick={() => setVue('matrice')}>Vue matrice</button>
         </div>
       </div>
 
@@ -2084,7 +2084,9 @@ const styles = `
 .meq3 .p2.no{ background:#fff; border:1.5px solid #D89B94; color:#B4453B }
 .meq3 .comp{ display:inline-flex; align-items:center; gap:5px; font-variant-numeric:tabular-nums; font-weight:700; font-size:11px; color:#5b6470 }
 .meq3 .legend{ font-size:10px; color:var(--silver); padding:7px 12px; border-top:1px solid #F4F2ED }
-.meq3 .drawer{ width:265px; flex-shrink:0; background:#fff; border:1px solid rgba(201,169,97,.45); border-radius:13px; padding:13px; box-shadow:0 6px 22px rgba(201,169,97,.14); position:sticky; top:10px }
+.meq3 .drawer{ width:265px; flex-shrink:0; background:#fff; border:1px solid rgba(201,169,97,.45); border-radius:13px; padding:13px; box-shadow:0 6px 22px rgba(201,169,97,.14); position:sticky; top:10px; max-height:calc(100vh - 84px); overflow-y:auto; overscroll-behavior:contain }
+.meq3 .drawer::-webkit-scrollbar{ width:6px }
+.meq3 .drawer::-webkit-scrollbar-thumb{ background:rgba(201,169,97,.35); border-radius:3px }
 .meq3 .dhd{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px }
 .meq3 .dhd h4{ margin:0; font-size:14px; color:var(--navy) }
 .meq3 .dsub{ font-size:10.5px; color:var(--silver) }
