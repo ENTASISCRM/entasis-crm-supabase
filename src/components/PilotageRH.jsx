@@ -356,9 +356,7 @@ export default function PilotageRH() {
           <div className="kpi-label">Coût réel entreprise / mois</div>
           <div className="kpi-value">{fmtEur(stats.coutReelMensuel)}</div>
           <div className="kpi-hint">
-            {stats.masseSalarialeMensuelle > stats.coutReelMensuel
-              ? `${fmtEur(stats.masseSalarialeMensuelle - stats.coutReelMensuel)} d aides / mois`
-              : 'Aides non déduites'}
+            {fmtEur(stats.coutReelMensuel * 12)} / an
             {stats.sansResteACharge > 0 ? ` · ${stats.sansResteACharge} contrat(s) au brut faute de saisie` : ''}
           </div>
         </div>
@@ -517,7 +515,7 @@ export default function PilotageRH() {
               <th>Conseiller</th>
               <th>Type</th>
               <th style={{ textAlign: 'right' }}>Brut / mois</th>
-              <th style={{ textAlign: 'right' }}>Reste à charge</th>
+              <th style={{ textAlign: 'right' }}>Reste à charge / an</th>
               <th style={{ textAlign: 'right' }}>Palier PP</th>
               <th style={{ textAlign: 'right' }}>Palier PU</th>
               <th>Début</th>
@@ -585,7 +583,7 @@ export default function PilotageRH() {
                   <td className="cell-mono" style={{ textAlign: 'right' }}>{fmtEur(c.salaire_brut_mensuel)}</td>
                   <td className="cell-mono" style={{ textAlign: 'right' }}>
                     {c.reste_a_charge_mensuel != null && c.reste_a_charge_mensuel !== ''
-                      ? fmtEur(c.reste_a_charge_mensuel)
+                      ? fmtEur(Number(c.reste_a_charge_mensuel) * 12)
                       : (
                         <button
                           onClick={() => setEditing(c)}
@@ -922,28 +920,19 @@ function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose,
               </div>
             </div>
 
-            <div className="form-row form-row-2">
-              <div className="form-group">
-                <label className="form-label">Reste à charge entreprise (€ / mois)</label>
-                <input className="form-input" type="number" step="0.01" min="0"
-                       placeholder="ce que l entreprise paie réellement"
-                       value={form.reste_a_charge_mensuel ?? ''}
-                       onChange={e => handleChange('reste_a_charge_mensuel', e.target.value)} />
-                <div className="form-hint">
-                  Coût réel après aides et exonérations (surtout alternants). Vide = on retient le brut.
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Aide mensuelle estimée</label>
-                <input className="form-input" type="text" readOnly tabIndex={-1}
-                       value={(() => {
-                         const brut = Number(form.salaire_brut_mensuel || 0)
-                         const rac = String(form.reste_a_charge_mensuel ?? '').trim()
-                         if (rac === '' || brut <= 0) return '—'
-                         const ecart = brut - Number(rac)
-                         return ecart > 0 ? `${fmtEur(ecart)} / mois (${fmtEur(ecart * 12)} / an)` : '—'
-                       })()} />
-                <div className="form-hint">Écart entre le brut et le reste à charge, calculé.</div>
+            {/* Saisie en ANNUEL (demande Louis : c est ce qui reste a payer pour
+                nous sur l annee, peu importe la prise en charge OPCO). Stocké en
+                mensuel en base pour que projections et KPIs restent en euros/mois. */}
+            <div className="form-group">
+              <label className="form-label">Reste à charge entreprise (€ / an)</label>
+              <input className="form-input" type="number" step="1" min="0"
+                     placeholder="ce qui nous reste à payer sur une année"
+                     value={form.reste_a_charge_mensuel == null || String(form.reste_a_charge_mensuel).trim() === ''
+                       ? ''
+                       : Math.round(Number(form.reste_a_charge_mensuel) * 12)}
+                     onChange={e => handleChange('reste_a_charge_mensuel', e.target.value === '' ? '' : String(Number(e.target.value) / 12))} />
+              <div className="form-hint">
+                Aides et prises en charge déjà déduites : ce que l entreprise décaisse réellement sur l année. Vide = on retient le brut.
               </div>
             </div>
 
