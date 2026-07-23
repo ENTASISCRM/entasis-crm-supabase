@@ -16,6 +16,8 @@ import toast from 'react-hot-toast'
 import * as service from '../services/conseillerContrats'
 import * as profilesService from '../services/profiles'
 import * as contratDocs from '../services/contratDocs'
+import * as congesService from '../services/conges'
+import { soldeConges, fmtJours, DEBUT_COMPTEUR } from '../lib/conges-solde'
 import { impersonate } from '../services/impersonation'
 import { TYPES_CONTRAT, LIBELLE_TYPE_CONTRAT } from '../lib/contrat-enums'
 
@@ -102,6 +104,21 @@ export default function PilotageRH() {
   const [search, setSearch] = useState('')
   // Ids des contrats qui ont au moins un document joint (contrat de travail scanné)
   const [avecDocs, setAvecDocs] = useState(new Set())
+  // Demandes de congés Smart RH (la RLS donne tout à la direction) : sert au
+  // calcul du solde acquis moins pris par personne
+  const [conges, setConges] = useState([])
+
+  // Congés groupés par demandeur pour le calcul du solde
+  const congesParPersonne = useMemo(() => {
+    const m = new Map()
+    for (const c of conges) {
+      if (!c.demandeur_id) continue
+      const l = m.get(c.demandeur_id) || []
+      l.push(c)
+      m.set(c.demandeur_id, l)
+    }
+    return m
+  }, [conges])
 
   const refreshDocs = async () => {
     try { setAvecDocs(await contratDocs.contratsAvecDocs()) } catch { /* non bloquant */ }
@@ -110,12 +127,14 @@ export default function PilotageRH() {
   const reload = async () => {
     setLoading(true)
     try {
-      const [data, prof] = await Promise.all([
+      const [data, prof, cg] = await Promise.all([
         service.list(),
         profilesService.listTeam().catch(() => []),
+        congesService.listConges().catch(() => []),
       ])
       setContrats(data)
       setProfiles(prof)
+      setConges(cg)
       refreshDocs()
     } catch (e) {
       toast.error('Erreur de chargement : ' + (e.message || ''))
@@ -520,14 +539,15 @@ export default function PilotageRH() {
               <th style={{ textAlign: 'right' }}>Palier PU</th>
               <th>Début</th>
               <th>Fin</th>
+              <th style={{ textAlign: 'right' }} title={`Congés payés : 2,5 j acquis par mois complet depuis le ${new Date(DEBUT_COMPTEUR).toLocaleDateString('fr-FR')}, moins les congés validés dans Smart RH`}>Congés</th>
               <th style={{ textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={9} style={{ textAlign: 'center', padding: 40, color: 'var(--t3)' }}>Chargement…</td></tr>
+              <tr><td colSpan={10} style={{ textAlign: 'center', padding: 40, color: 'var(--t3)' }}>Chargement…</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={9} className="table-empty-state">
+              <tr><td colSpan={10} className="table-empty-state">
                 <div className="empty-title">Aucun contrat trouvé</div>
                 <div className="empty-sub">Ajuste les filtres ou ajoute un nouveau contrat</div>
               </td></tr>
@@ -618,6 +638,22 @@ export default function PilotageRH() {
                     ) : '—'}
                   </td>
                   <td style={{ textAlign: 'right' }}>
+                    {(() => {
+                      const solde = c.profile_id
+                        ? soldeConges(c, congesParPersonne.get(c.profile_id) || [])
+                        : soldeConges(c, [])
+                      if (!solde) return <span style={{ color: 'var(--t3)' }}>—</span>
+                      return (
+                        <>
+                          <div className="cell-mono" style={{ color: solde.restant < 0 ? 'var(--danger, #c0392b)' : undefined }}>
+                            {fmtJours(solde.restant)}
+                          </div>
+                          <div className="cell-sub">{fmtJours(solde.acquis)} acquis · {fmtJours(solde.pris)} pris</div>
+                        </>
+                      )
+                    })()}
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
                     <div className="table-actions" style={{ justifyContent: 'flex-end' }}>
                       {c.profile_id && c.actif && c.type_contrat !== 'GERANT' && (
                         <button
@@ -639,7 +675,7 @@ export default function PilotageRH() {
                 const terminesActifs = g.key === 'termine' ? g.list.filter(c => c.actif) : []
                 return [
                   <tr key={`head-${g.key}`}>
-                    <td colSpan={9} style={{ background: 'rgba(0,0,0,0.02)', padding: '7px 14px' }}>
+                    <td colSpan={10} style={{ background: 'rgba(0,0,0,0.02)', padding: '7px 14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <span style={{
                           display: 'inline-flex', alignItems: 'center', gap: 7,

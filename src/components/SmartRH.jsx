@@ -10,6 +10,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { listConges, createConge, decideConge, cancelConge, contreProposer, repondreContreProposition } from '../services/conges'
+import { getOwn as getOwnContrat, list as listContrats } from '../services/conseillerContrats'
+import { soldeConges, joursDemande, fmtJours, DEBUT_COMPTEUR } from '../lib/conges-solde'
 
 const TYPES = ['Congé payé', 'RTT', 'Sans solde', 'Maladie', 'Autre']
 const STATUT_LIB = {
@@ -22,12 +24,8 @@ function fmt(iso) {
   const d = new Date(`${String(iso).slice(0, 10)}T00:00:00`)
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
 }
-function nbJours(c) {
-  if (c.demi_journee) return 0.5
-  const a = new Date(`${c.date_debut}T00:00:00`); const b = new Date(`${c.date_fin}T00:00:00`)
-  return Math.max(1, Math.round((b - a) / 86400000) + 1)
-}
 const todayIso = () => new Date().toISOString().slice(0, 10)
+const fmtEpoch = () => new Date(`${DEBUT_COMPTEUR}T00:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
 
 export default function SmartRH({ profile }) {
   const isManager = profile?.role === 'manager'
@@ -50,16 +48,57 @@ export default function SmartRH({ profile }) {
   const [cpDemi, setCpDemi] = useState(false)
   const [cpMsg, setCpMsg] = useState('')
 
+  // Contrat(s) : le mien pour afficher mon solde, tous pour la direction
+  // (le solde du demandeur s affiche au moment de valider).
+  const [monContrat, setMonContrat] = useState(null)
+  const [contrats, setContrats] = useState([])
+
   async function reload() {
-    try { setConges(await listConges()) } catch (e) { setErr(e.message || 'Erreur de chargement') }
+    try {
+      const [cg, contratData] = await Promise.all([
+        listConges(),
+        isManager ? listContrats().catch(() => []) : getOwnContrat().catch(() => null),
+      ])
+      setConges(cg)
+      if (isManager) setContrats(contratData || [])
+      else setMonContrat(contratData)
+    } catch (e) { setErr(e.message || 'Erreur de chargement') }
     finally { setLoading(false) }
   }
-  useEffect(() => { reload() }, [])
+  useEffect(() => { reload() }, [])   // eslint-disable-line react-hooks/exhaustive-deps
 
   const mesDemandes = useMemo(
     () => (isManager ? conges.filter((c) => c.demandeur_id === profile?.id) : conges),
     [conges, isManager, profile?.id],
   )
+
+  // Mon solde de congés payés (non manager) : acquis depuis le 1er septembre
+  // moins les congés validés. null si le type de contrat n acquiert pas de CP.
+  const monSolde = useMemo(
+    () => (!isManager && monContrat ? soldeConges(monContrat, mesDemandes) : null),
+    [isManager, monContrat, mesDemandes],
+  )
+
+  // Direction : congés groupés par demandeur + contrat actif par demandeur
+  const congesParPersonne = useMemo(() => {
+    const m = new Map()
+    for (const c of conges) {
+      if (!c.demandeur_id) continue
+      const l = m.get(c.demandeur_id) || []
+      l.push(c)
+      m.set(c.demandeur_id, l)
+    }
+    return m
+  }, [conges])
+  const contratDe = (demandeurId) => contrats.find((k) => k.profile_id === demandeurId && k.actif)
+
+  // Solde du demandeur pour une demande donnée (affiché à la validation)
+  const soldeDemandeur = (c) => {
+    if (c.type !== 'Congé payé' || !c.demandeur_id) return null
+    const k = contratDe(c.demandeur_id)
+    if (!k) return null
+    return soldeConges(k, congesParPersonne.get(c.demandeur_id) || [])
+  }
   const aValider = useMemo(() => conges.filter((c) => c.statut === 'en_attente'), [conges])
   const enAttenteReponse = useMemo(() => conges.filter((c) => c.statut === 'contre_proposee'), [conges])
   const planning = useMemo(
@@ -146,6 +185,17 @@ export default function SmartRH({ profile }) {
           {/* Colonne gauche : demander + mes demandes (pas pour la direction) */}
           {!isManager && (
           <div className="col">
+            {monSolde && (
+              <div className="solde">
+                <div className="sv" style={monSolde.restant < 0 ? { color: '#FF3B30' } : undefined}>
+                  {fmtJours(monSolde.restant)}
+                </div>
+                <div className="sl">de congés payés disponibles</div>
+                <div className="sd">
+                  {fmtJours(monSolde.acquis)} acquis (2,5 j par mois complet depuis le {fmtEpoch()}) · {fmtJours(monSolde.pris)} pris
+                </div>
+              </div>
+            )}
             <div className="card">
               <div className="ctit">Poser un congé</div>
               <div className="frm">
@@ -170,6 +220,16 @@ export default function SmartRH({ profile }) {
                 <label>Motif (facultatif)
                   <input type="text" placeholder="Ex. vacances, rendez-vous…" value={motif} onChange={(e) => setMotif(e.target.value)} />
                 </label>
+                {type === 'Congé payé' && du && (demi || au) && monSolde && (() => {
+                  const n = joursDemande({ date_debut: du, date_fin: demi ? du : au, demi_journee: demi })
+                  const depasse = n > monSolde.restant
+                  return (
+                    <div className={`frmnote${depasse ? ' warn' : ''}`}>
+                      Cette demande : {fmtJours(n)} ouvrés
+                      {depasse ? ` · dépasse ton solde (${fmtJours(monSolde.restant)} disponibles), la direction tranchera` : ''}
+                    </div>
+                  )
+                })()}
                 <button className="pri" disabled={saving} onClick={envoyer}>Envoyer la demande</button>
               </div>
             </div>
@@ -180,7 +240,7 @@ export default function SmartRH({ profile }) {
               <div className={`row ${c.statut}`} key={c.id}>
                 <div className="rmain">
                   <div className="rl1">{c.type} {badge(c.statut)}</div>
-                  <div className="rl2">{c.demi_journee ? `${fmt(c.date_debut)} (demi-journée)` : `${fmt(c.date_debut)} au ${fmt(c.date_fin)}`} · {nbJours(c)} j</div>
+                  <div className="rl2">{c.demi_journee ? `${fmt(c.date_debut)} (demi-journée)` : `${fmt(c.date_debut)} au ${fmt(c.date_fin)}`} · {fmtJours(joursDemande(c))} ouvrés</div>
                   {c.statut === 'refuse' && c.decision_motif && <div className="rmotif">Motif : {c.decision_motif}</div>}
                   {c.statut === 'contre_proposee' && (
                     <div className="cpprop">
@@ -213,7 +273,18 @@ export default function SmartRH({ profile }) {
                   <div className="row en_attente">
                     <div className="rmain">
                       <div className="rl1">{c.demandeur_nom || c.advisor_code || 'Collaborateur'} · {c.type}</div>
-                      <div className="rl2">{c.demi_journee ? `${fmt(c.date_debut)} (demi-journée)` : `${fmt(c.date_debut)} au ${fmt(c.date_fin)}`} · {nbJours(c)} j{c.motif ? ` · ${c.motif}` : ''}</div>
+                      <div className="rl2">{c.demi_journee ? `${fmt(c.date_debut)} (demi-journée)` : `${fmt(c.date_debut)} au ${fmt(c.date_fin)}`} · {fmtJours(joursDemande(c))} ouvrés{c.motif ? ` · ${c.motif}` : ''}</div>
+                      {(() => {
+                        const s = soldeDemandeur(c)
+                        if (!s) return null
+                        const apres = s.restant - joursDemande(c)
+                        return (
+                          <div className={`rsolde${apres < 0 ? ' neg' : ''}`}>
+                            Solde : {fmtJours(s.restant)} disponibles · après validation : {fmtJours(apres)}
+                            {apres < 0 ? ' (congés par anticipation)' : ''}
+                          </div>
+                        )
+                      })()}
                     </div>
                     <div className="ract">
                       <button className="ok" disabled={saving} onClick={() => decider(c, 'valide')}>Valider</button>
@@ -333,6 +404,14 @@ const styles = `
 .srh .cpprop{ font-size:11.5px; color:#5B4B8A; background:#F3F0FA; border:1px solid #DCD4EE; border-radius:8px; padding:6px 9px; margin-top:5px; line-height:1.4 }
 .srh .vide{ font-size:12px; color:var(--silver); padding:8px 2px }
 .srh .vide.ok{ color:#4a7a52 }
+.srh .solde{ background:linear-gradient(135deg,#FBF4E4,#fff); border:1px solid rgba(201,169,97,.5); border-radius:14px; padding:16px 18px; margin-bottom:14px }
+.srh .solde .sv{ font-size:30px; font-weight:800; letter-spacing:-0.02em; color:var(--gold-dk,#A6843F); line-height:1 }
+.srh .solde .sl{ font-size:13px; font-weight:650; color:var(--t1,#1c1c1e); margin-top:4px }
+.srh .solde .sd{ font-size:11.5px; color:var(--t3,#8a8a8e); margin-top:4px }
+.srh .frmnote{ font-size:12px; color:var(--t2,#555); background:rgba(0,0,0,.03); border-radius:8px; padding:7px 10px }
+.srh .frmnote.warn{ color:#8a5a00; background:rgba(255,149,0,.10) }
+.srh .rsolde{ font-size:11.5px; color:var(--gold-dk,#A6843F); margin-top:3px; font-weight:600 }
+.srh .rsolde.neg{ color:#FF3B30 }
 .srh .prow{ display:flex; align-items:center; gap:10px; padding:6px 2px; border-bottom:1px solid #F4F2ED; font-size:12.5px }
 .srh .prow .pn{ font-weight:700; color:var(--navy); min-width:120px }
 .srh .prow .pd{ color:#5b6470; flex:1; font-variant-numeric:tabular-nums }
