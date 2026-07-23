@@ -735,28 +735,34 @@ export default function PilotageRH() {
 // Modale d'édition / création de contrat
 // ─────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────
-// Documents du contrat (contrat de travail signé, avenants)
+// Dossier documents du salarié : une case par catégorie (contrat de
+// travail, CERFA pour les alternants, pièce d identité, sécurité sociale).
 // Upload, ouverture via URL signée temporaire, suppression. Bucket privé
 // 'contrats-rh', accès manager uniquement via les policies storage.
 // ─────────────────────────────────────────────────────────────────────────
-function DocsContrat({ contratId, onChange }) {
+function DocsContrat({ contratId, typeContrat, onChange }) {
   const [docs, setDocs] = useState(null)
   const [busy, setBusy] = useState(false)
 
   const reloadDocs = async () => {
-    try { setDocs(await contratDocs.listDocs(contratId)) } catch { setDocs([]) }
+    try { setDocs(await contratDocs.listDocsParCategorie(contratId)) } catch { setDocs({}) }
   }
   useEffect(() => { reloadDocs() }, [contratId])   // eslint-disable-line react-hooks/exhaustive-deps
 
-  const onUpload = async (e) => {
+  // CERFA : uniquement pour les alternants, les autres cases pour tous
+  const categories = contratDocs.CATEGORIES.filter(
+    (c) => c.key !== 'cerfa' || typeContrat === 'ALTERNANT'
+  )
+
+  const onUpload = async (categorie, e) => {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
     if (file.size > 20 * 1024 * 1024) return toast.error('Fichier trop lourd (20 Mo max)')
     setBusy(true)
     try {
-      await contratDocs.uploadDoc(contratId, file)
-      toast.success('Document archivé dans la fiche')
+      await contratDocs.uploadDoc(contratId, file, categorie)
+      toast.success('Document archivé')
       await reloadDocs()
       onChange && onChange()
     } catch (err) {
@@ -764,18 +770,18 @@ function DocsContrat({ contratId, onChange }) {
     } finally { setBusy(false) }
   }
 
-  const ouvrir = async (name) => {
+  const ouvrir = async (path) => {
     try {
-      const url = await contratDocs.urlDoc(contratId, name)
+      const url = await contratDocs.urlPath(path)
       window.open(url, '_blank', 'noopener')
     } catch (err) { toast.error('Ouverture impossible : ' + (err.message || '')) }
   }
 
-  const supprimer = async (name) => {
-    if (!confirm(`Supprimer « ${contratDocs.nomAffiche(name)} » ? Le fichier sera définitivement effacé.`)) return
+  const supprimer = async (d) => {
+    if (!confirm(`Supprimer « ${contratDocs.nomAffiche(d.name)} » ? Le fichier sera définitivement effacé.`)) return
     setBusy(true)
     try {
-      await contratDocs.deleteDoc(contratId, name)
+      await contratDocs.deletePath(d.path)
       toast.success('Document supprimé')
       await reloadDocs()
       onChange && onChange()
@@ -783,65 +789,94 @@ function DocsContrat({ contratId, onChange }) {
     finally { setBusy(false) }
   }
 
-  const fmtTaille = (o) => {
-    const n = Number(o?.metadata?.size || 0)
-    if (n <= 0) return ''
-    return n >= 1048576 ? `${(n / 1048576).toFixed(1)} Mo` : `${Math.max(1, Math.round(n / 1024))} Ko`
+  const fmtTaille = (n) => {
+    const v = Number(n || 0)
+    if (v <= 0) return ''
+    return v >= 1048576 ? `${(v / 1048576).toFixed(1)} Mo` : `${Math.max(1, Math.round(v / 1024))} Ko`
   }
+
+  const nbFournis = docs ? categories.filter((c) => (docs[c.key] || []).length > 0).length : 0
 
   return (
     <div className="form-group" style={{ marginBottom: 16 }}>
-      <label className="form-label">Contrat de travail et documents</label>
+      <label className="form-label">
+        Dossier documents
+        {docs && (
+          <span style={{
+            marginLeft: 8, fontSize: 11, fontWeight: 700,
+            color: nbFournis === categories.length ? 'var(--signed, #34C759)' : 'var(--warning, #FF9500)',
+          }}>
+            {nbFournis}/{categories.length} fournis
+          </span>
+        )}
+      </label>
       <div style={{
-        border: '0.5px solid var(--bd)', borderRadius: 12, padding: '10px 12px',
+        border: '0.5px solid var(--bd)', borderRadius: 12, padding: '4px 12px 10px',
         background: 'rgba(0,0,0,0.015)',
       }}>
         {docs === null ? (
-          <div style={{ fontSize: 12, color: 'var(--t3)' }}>Chargement…</div>
-        ) : docs.length === 0 ? (
-          <div style={{ fontSize: 12, color: 'var(--t3)' }}>
-            Aucun document. Joins le contrat signé (PDF, scan ou Word) pour ne plus le perdre.
-          </div>
-        ) : docs.map((d) => (
-          <div key={d.name} style={{
-            display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0',
-            borderBottom: '0.5px solid var(--bd)',
-          }}>
-            <span style={{ fontSize: 13 }}>📎</span>
-            <button
-              type="button"
-              onClick={() => ouvrir(d.name)}
-              title="Ouvrir le document (lien sécurisé temporaire)"
-              style={{
-                background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-                fontSize: 12.5, fontWeight: 600, color: 'var(--t1)', fontFamily: 'inherit',
-                textAlign: 'left', flex: 1, minWidth: 0,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}
-            >
-              {contratDocs.nomAffiche(d.name)}
-            </button>
-            <span style={{ fontSize: 11, color: 'var(--t3)', flexShrink: 0 }}>{fmtTaille(d)}</span>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              disabled={busy}
-              onClick={() => supprimer(d.name)}
-              style={{ flexShrink: 0 }}
-            >✕</button>
-          </div>
-        ))}
-        <label className="btn btn-ghost btn-sm" style={{ marginTop: 8, cursor: 'pointer', display: 'inline-flex' }}>
-          {busy ? 'Envoi…' : '+ Joindre un document'}
-          <input
-            type="file"
-            accept=".pdf,.png,.jpg,.jpeg,.heic,.doc,.docx"
-            onChange={onUpload}
-            disabled={busy}
-            style={{ display: 'none' }}
-          />
-        </label>
-        <div className="form-hint" style={{ marginTop: 6 }}>
+          <div style={{ fontSize: 12, color: 'var(--t3)', padding: '8px 0' }}>Chargement…</div>
+        ) : categories.map((cat) => {
+          const fichiers = docs[cat.key] || []
+          const fourni = fichiers.length > 0
+          return (
+            <div key={cat.key} style={{ padding: '8px 0', borderBottom: '0.5px solid var(--bd)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{
+                  width: 18, height: 18, borderRadius: 5, flexShrink: 0,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 12, fontWeight: 700,
+                  background: fourni ? 'rgba(52,199,89,0.15)' : 'rgba(0,0,0,0.05)',
+                  color: fourni ? 'var(--signed, #34C759)' : 'var(--t3)',
+                  border: `1px solid ${fourni ? 'rgba(52,199,89,0.4)' : 'var(--bd)'}`,
+                }}>{fourni ? '✓' : ''}</span>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--t1)', flex: 1 }}>
+                  {cat.label}
+                  {!fourni && <span style={{ fontWeight: 500, color: 'var(--t3)' }}> · {cat.hint}</span>}
+                </span>
+                <label className="btn btn-ghost btn-sm" style={{ cursor: 'pointer', flexShrink: 0 }}>
+                  {busy ? '…' : '+ Joindre'}
+                  <input
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg,.heic,.doc,.docx"
+                    onChange={(e) => onUpload(cat.key, e)}
+                    disabled={busy}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+              </div>
+              {fichiers.map((d) => (
+                <div key={d.path} style={{
+                  display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0 3px 26px',
+                }}>
+                  <span style={{ fontSize: 12 }}>📎</span>
+                  <button
+                    type="button"
+                    onClick={() => ouvrir(d.path)}
+                    title="Ouvrir le document (lien sécurisé temporaire)"
+                    style={{
+                      background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                      fontSize: 12, fontWeight: 600, color: 'var(--t1)', fontFamily: 'inherit',
+                      textAlign: 'left', flex: 1, minWidth: 0,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {contratDocs.nomAffiche(d.name)}
+                  </button>
+                  <span style={{ fontSize: 11, color: 'var(--t3)', flexShrink: 0 }}>{fmtTaille(d.size)}</span>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    disabled={busy}
+                    onClick={() => supprimer(d)}
+                    style={{ flexShrink: 0 }}
+                  >✕</button>
+                </div>
+              ))}
+            </div>
+          )
+        })}
+        <div className="form-hint" style={{ marginTop: 8 }}>
           Stockage sécurisé, visible uniquement par la direction. 20 Mo max par fichier.
         </div>
       </div>
@@ -1027,10 +1062,10 @@ function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose,
 
             {/* Contrat de travail : le document signé vit dans la fiche */}
             {form.id ? (
-              <DocsContrat contratId={form.id} onChange={onDocsChange} />
+              <DocsContrat contratId={form.id} typeContrat={form.type_contrat} onChange={onDocsChange} />
             ) : (
               <div className="form-hint" style={{ marginBottom: 12 }}>
-                📎 Enregistre la fiche une première fois pour pouvoir joindre le contrat de travail signé.
+                📎 Enregistre la fiche une première fois pour pouvoir joindre les documents (contrat, CERFA, identité, sécu).
               </div>
             )}
 
