@@ -81,7 +81,7 @@ export default async function handler(req, res) {
   // Calcule une ligne (rentab + comm) pour un contrat, moteur inchange.
   const calcLigne = (contrat, profileLie) => {
     const codes = codesContrat(contrat, profileLie)
-    const dealsConseiller = dealsDuConseiller(deals || [], codes)
+    const dealsConseiller = dealsDuConseiller(deals || [], codes, profileLie?.id || null)
     const dealsMois = dealsDuMois(dealsConseiller, month)
     const rentab = evaluerRentabilite(contrat, dealsConseiller, profileLie, dateRef)
     const comm = commissionsMois(dealsMois, contrat, rentab, profileLie)

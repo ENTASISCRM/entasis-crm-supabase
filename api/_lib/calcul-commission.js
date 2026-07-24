@@ -279,13 +279,19 @@ export function commissionsDeal(deal, contrat, part = 1) {
  * @param {string|string[]} codes - code(s) à tester (advisor_code ou full_name)
  * @returns {number} 0 (pas concerné), 0.5 (split) ou 1 (seul)
  */
-export function partDeal(deal, codes) {
+export function partDeal(deal, codes, profileId = null) {
   const list = Array.isArray(codes) ? codes : [codes]
   const norm = (s) => (s || '').toString().trim().toUpperCase()
   const codesNorm = list.map(norm).filter(Boolean)
   const principal = norm(deal.advisor_code)
   const co = norm(deal.co_advisor_code)
-  const isPrincipal = codesNorm.includes(principal)
+  // Identifiant stable prioritaire : quand le deal ET le contrat portent un
+  // profile id, c est lui qui fait foi (immunise contre les fautes de frappe
+  // et les matricules errones). Sinon, matching texte historique a l identique.
+  const idDeal = deal.advisor_profile_id || null
+  const isPrincipal = (profileId && idDeal)
+    ? idDeal === profileId
+    : codesNorm.includes(principal)
   const isCo = co && codesNorm.includes(co)
   if (!isPrincipal && !isCo) return 0
   if (co) return 0.5
@@ -412,7 +418,7 @@ export function evaluerRentabilite(contrat, dealsHistoriques = [], profile = nul
     // de référence (année + mois identiques).
     if (ds.getFullYear() !== anneeRef || ds.getMonth() !== moisRef) return sum
     if (deal.status !== 'Signé') return sum
-    const part = partDeal(deal, codes)
+    const part = partDeal(deal, codes, profile?.id || null)
     if (!part) return sum
     return sum + valeurCabinetDeal(deal, part)
   }, 0)
@@ -499,7 +505,7 @@ export function commissionsMois(dealsMois = [], contrat, rentab, profile = null)
   // (= taux qui sert à la valeur cabinet), montantEffectif = 0.
   if (!rentabilise) {
     for (const deal of dealsMois) {
-      const part = partDeal(deal, codes)
+      const part = partDeal(deal, codes, profile?.id || null)
       if (!part) continue
       // ctx avec rentabilise=false → mandataire automatiquement
       const calcs = commissionsDeal(deal, { ...contrat, rentabilise: false }, part)
@@ -560,7 +566,7 @@ export function commissionsMois(dealsMois = [], contrat, rentab, profile = null)
   // remboursé en début de mois). On la déduit du total - ce qui est sur
   // le mois courant.
   const valeurMoisTotale = dealsMois.reduce((sum, deal) => {
-    const part = partDeal(deal, codes)
+    const part = partDeal(deal, codes, profile?.id || null)
     if (!part) return sum
     return sum + valeurCabinetDeal(deal, part)
   }, 0)
@@ -579,7 +585,7 @@ export function commissionsMois(dealsMois = [], contrat, rentab, profile = null)
 
   let cumulCourant = valeurAvantCeMois   // valeur cabinet cumulée, évolue ligne par ligne
   for (const deal of dealsTries) {
-    const part = partDeal(deal, codes)
+    const part = partDeal(deal, codes, profile?.id || null)
     if (!part) continue
     // On calcule à la fois la version mandataire (référence pour seuil) et CDI
     // (qui s'appliquera pour les deals strictement après franchissement).
@@ -689,15 +695,22 @@ export function dealsDuMois(deals, monthStr) {
  * @param {string|string[]} codes - code(s) du conseiller (matricule, full_name,
  *                                  advisor_code...)
  */
-export function dealsDuConseiller(deals, codes) {
+export function dealsDuConseiller(deals, codes, profileId = null) {
   if (!deals || !codes) return []
   const list = Array.isArray(codes) ? codes : [codes]
   const norm = (s) => (s || '').toString().trim().toUpperCase()
   const codesNorm = list.map(norm).filter(Boolean)
-  if (codesNorm.length === 0) return []
+  if (codesNorm.length === 0 && !profileId) return []
   return deals.filter(d => {
     const a = norm(d.advisor_code)
     const c = norm(d.co_advisor_code)
-    return codesNorm.includes(a) || (c && codesNorm.includes(c))
+    // Meme regle que partDeal : id stable prioritaire quand les deux cotes
+    // le portent, matching texte historique sinon (contrats non relies,
+    // vieux deals sans identifiant).
+    const idDeal = d.advisor_profile_id || null
+    const principalOk = (profileId && idDeal)
+      ? idDeal === profileId
+      : codesNorm.includes(a)
+    return principalOk || (c && codesNorm.includes(c))
   })
 }
