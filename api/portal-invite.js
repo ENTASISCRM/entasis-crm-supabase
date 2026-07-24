@@ -61,12 +61,25 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'La fiche client n\'a pas d\'email valide' })
   }
 
+  // Un email de membre de l'équipe ne peut pas devenir un compte client :
+  // les deux mondes (profiles / client_accounts) doivent rester disjoints.
+  const { data: staffExistant } = await admin
+    .from('profiles')
+    .select('id')
+    .ilike('email', email)
+    .maybeSingle()
+  if (staffExistant) {
+    return res.status(400).json({ error: 'Cet email appartient à un compte conseiller — utilisez l\'email personnel du client' })
+  }
+
   // Utilisateur auth : créé, ou retrouvé s'il existe déjà (generateLink
-  // renvoie l'utilisateur sans envoyer d'email).
+  // renvoie l'utilisateur sans envoyer d'email). La metadata portal_client
+  // empêche le trigger handle_new_user de créer un profil staff.
   let userId = null
   const { data: created, error: createErr } = await admin.auth.admin.createUser({
     email,
     email_confirm: true,
+    user_metadata: { portal_client: 'true' },
   })
   if (!createErr) {
     userId = created?.user?.id
