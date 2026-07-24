@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { listConges, createConge, decideConge, cancelConge, contreProposer, repondreContreProposition } from '../services/conges'
 import { getOwn as getOwnContrat, list as listContrats } from '../services/conseillerContrats'
-import { soldeConges, joursDemande, fmtJours, DEBUT_COMPTEUR } from '../lib/conges-solde'
+import { soldeConges, joursDemande, fmtJours } from '../lib/conges-solde'
 
 const TYPES = ['Congé payé', 'RTT', 'Sans solde', 'Maladie', 'Autre']
 const STATUT_LIB = {
@@ -25,7 +25,6 @@ function fmt(iso) {
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 const todayIso = () => new Date().toISOString().slice(0, 10)
-const fmtEpoch = () => new Date(`${DEBUT_COMPTEUR}T00:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
 
 export default function SmartRH({ profile }) {
   const isManager = profile?.role === 'manager'
@@ -192,7 +191,8 @@ export default function SmartRH({ profile }) {
                 </div>
                 <div className="sl">de congés payés disponibles</div>
                 <div className="sd">
-                  {fmtJours(monSolde.acquis)} acquis (2,5 j par mois complet depuis le {fmtEpoch()}) · {fmtJours(monSolde.pris)} pris
+                  {fmtJours(monSolde.acquis)} acquis (2,5 j par mois complet depuis le début du contrat) · {fmtJours(monSolde.pris)} pris
+                  {monSolde.dejaPris > 0 ? ` (dont ${fmtJours(monSolde.dejaPris)} avant Smart RH)` : ''}
                 </div>
               </div>
             )}

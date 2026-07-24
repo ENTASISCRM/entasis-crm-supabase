@@ -120,6 +120,8 @@ function sanitize(payload) {
     const v = String(payload.reste_a_charge_mensuel ?? '').trim()
     out.reste_a_charge_mensuel = v === '' ? null : (Number(v) || 0)
   }
+  // Jours de conges poses avant Smart RH (regularisation d historique)
+  if (payload.conges_deja_pris !== undefined) out.conges_deja_pris = Number(payload.conges_deja_pris) || 0
   if (payload.palier_pp_mensuel !== undefined) out.palier_pp_mensuel = Number(payload.palier_pp_mensuel) || 0
   if (payload.palier_pu_mensuel !== undefined) out.palier_pu_mensuel = Number(payload.palier_pu_mensuel) || 0
   if (payload.date_debut !== undefined) out.date_debut = payload.date_debut || null

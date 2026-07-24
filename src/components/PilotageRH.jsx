@@ -17,7 +17,7 @@ import * as service from '../services/conseillerContrats'
 import * as profilesService from '../services/profiles'
 import * as contratDocs from '../services/contratDocs'
 import * as congesService from '../services/conges'
-import { soldeConges, fmtJours, DEBUT_COMPTEUR } from '../lib/conges-solde'
+import { soldeConges, fmtJours } from '../lib/conges-solde'
 import { impersonate } from '../services/impersonation'
 import { TYPES_CONTRAT, LIBELLE_TYPE_CONTRAT } from '../lib/contrat-enums'
 
@@ -84,6 +84,7 @@ const EMPTY_CONTRAT = {
   type_contrat: 'CDI',
   salaire_brut_mensuel: 0,
   reste_a_charge_mensuel: '',
+  conges_deja_pris: 0,
   palier_pp_mensuel: 0,
   palier_pu_mensuel: 0,
   date_debut: new Date().toISOString().slice(0, 10),
@@ -539,7 +540,7 @@ export default function PilotageRH() {
               <th style={{ textAlign: 'right' }}>Palier PU</th>
               <th>Début</th>
               <th>Fin</th>
-              <th style={{ textAlign: 'right' }} title={`Congés payés : 2,5 j acquis par mois complet depuis le ${new Date(DEBUT_COMPTEUR).toLocaleDateString('fr-FR')}, moins les congés validés dans Smart RH`}>Congés</th>
+              <th style={{ textAlign: 'right' }} title="Congés payés : 2,5 j acquis par mois complet depuis le début du contrat, moins les congés validés dans Smart RH et l historique saisi dans la fiche">Congés</th>
               <th style={{ textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
@@ -1004,6 +1005,17 @@ function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose,
                      onChange={e => handleChange('reste_a_charge_mensuel', e.target.value === '' ? '' : String(Number(e.target.value) / 12))} />
               <div className="form-hint">
                 Aides et prises en charge déjà déduites : ce que l entreprise décaisse réellement sur l année. Vide = on retient le brut.
+              </div>
+            </div>
+
+            {/* Régularisation d historique : jours posés avant Smart RH */}
+            <div className="form-group">
+              <label className="form-label">Congés déjà pris hors Smart RH (jours)</label>
+              <input className="form-input" type="number" step="0.5" min="0"
+                     value={form.conges_deja_pris ?? 0}
+                     onChange={e => handleChange('conges_deja_pris', e.target.value)} />
+              <div className="form-hint">
+                Jours ouvrés posés avant la mise en place de Smart RH : ils sont déduits du solde pour partir d un compteur juste.
               </div>
             </div>
 
