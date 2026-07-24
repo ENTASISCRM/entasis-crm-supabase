@@ -3,6 +3,7 @@ import { toast } from 'react-hot-toast'
 import { statusLabel } from '../../lib/ui-shared'
 import ClientModal from './ClientModal.jsx'
 import ClientEquipementCard from './ClientEquipementCard.jsx'
+import ClientContratsCard from './ClientContratsCard.jsx'
 
 // Copie une valeur dans le presse papiers avec retour visuel
 function copier(valeur, label) {
@@ -681,6 +682,10 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
           )}
         </div>
       </div>
+
+      {/* Section Patrimoine : referentiel contrats (vie du contrat, timeline,
+          valorisations), alimente automatiquement par les deals signes */}
+      <ClientContratsCard clientId={client.id} client={client} profile={profile} />
 
       {/* Section Equipement : familles detenues, absences et suggestion */}
       <ClientEquipementCard clientId={client.id} client={client} supabase={supabase} />
