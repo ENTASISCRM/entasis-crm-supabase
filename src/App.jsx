@@ -53,6 +53,8 @@ import {
   advisorMetrics,
   monthFromDate,
   alignedMonthForDeal,
+  anneeDuDeal,
+  dealDuMois,
 } from './lib/metrics'
 import {
   MONTHS,
@@ -747,10 +749,10 @@ function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,mont
   const hotCount=useMemo(()=>{
     const code=profile?.advisor_code
     if(!code)return 0
-    return deals.filter(d=>d.month===month&&dealMatchesAdvisor(d,code)&&(d.priority==='Urgente'||d.priority==='Haute')&&isPipeline(d.status)).length
+    return deals.filter(d=>dealDuMois(d,month)&&dealMatchesAdvisor(d,code)&&(d.priority==='Urgente'||d.priority==='Haute')&&isPipeline(d.status)).length
   },[deals,month,profile])
 
-  const pipelineCount=useMemo(()=>deals.filter(d=>d.month===month&&isPipeline(d.status)).length,[deals,month])
+  const pipelineCount=useMemo(()=>deals.filter(d=>dealDuMois(d,month)&&isPipeline(d.status)).length,[deals,month])
 
   const navItems = [
     {key:'dashboard', label: isManager?'Vue cabinet':'Mon mois', Icon:Icon.Dashboard},
@@ -1810,7 +1812,7 @@ function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle,me
   // (assurance personnes), total pour la consolidation PP+PU+Mutuelle.
   // Décision Louis 2026-06-08, séparation PP patrimoine vs assurance.
   const data=MONTHS.map(m=>{
-    const scope=advisorCode?deals.filter(d=>d.month===m&&dealMatchesAdvisor(d,advisorCode)):deals.filter(d=>d.month===m)
+    const scope=advisorCode?deals.filter(d=>dealDuMois(d,m)&&dealMatchesAdvisor(d,advisorCode)):deals.filter(d=>dealDuMois(d,m))
     const signed=scope.filter(d=>d.status==='Signé')
     const pipeline=scope.filter(d=>isPipeline(d.status))
     let signedVal,pipelineVal,target
@@ -2060,7 +2062,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile}){
   // Mutuelle/Prevoyance et Total dispo via mini tabs (demande Louis
   // 2026-06-08, vue Direction).
   const [annualMetric,setAnnualMetric]=useState('pp')
-  const monthDeals=deals.filter(d=>d.month===month)
+  const monthDeals=deals.filter(d=>dealDuMois(d,month))
   const signed=monthDeals.filter(d=>d.status==='Signé'),pipeline=monthDeals.filter(d=>isPipeline(d.status))
   // Total cabinet, on compte chaque deal une seule fois (pas de 50/50 ici)
   // car on veut le CA total du cabinet, pas par conseiller. Separation PP
@@ -2084,7 +2086,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile}){
   const ppTarget=Number(targets.pp_target||0),puTarget=Number(targets.pu_target||0)
   const activeAdvisors=teamProfiles.filter(p=>p.is_active&&p.advisor_code)
   const prevIdx=MONTHS.indexOf(month)-1,prevMonth=prevIdx>=0?MONTHS[prevIdx]:null
-  const prevDeals=prevMonth?deals.filter(d=>d.month===prevMonth):[]
+  const prevDeals=prevMonth?deals.filter(d=>dealDuMois(d,prevMonth)):[]
   const prevSigned=prevDeals.filter(d=>d.status==='Signé'),prevPipeline=prevDeals.filter(d=>isPipeline(d.status))
   // Même filtre financier/mutuelle pour le mois precedent (delta coherent).
   const prevSignedFin = prevSigned.filter(d => !isMut(d))
@@ -2216,7 +2218,7 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
   const advisorCodes=useMemo(()=>{
     if(!isManager)return[]
     const set=new Set()
-    deals.forEach(d=>{if(d.month!==month)return;if(d.advisor_code)set.add(d.advisor_code);if(d.co_advisor_code)set.add(d.co_advisor_code)})
+    deals.forEach(d=>{if(!dealDuMois(d,month))return;if(d.advisor_code)set.add(d.advisor_code);if(d.co_advisor_code)set.add(d.co_advisor_code)})
     return[...set].sort()
   },[deals,month,isManager])
   // Échéance dépassée de plus de 14 jours : même comparaison ISO texte que le
@@ -2235,7 +2237,7 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
     return list
   },[deals,profile,isManager,search,advisorF])
   const staleCount=useMemo(()=>scoped.filter(isPerime).length,[scoped,perimeCutoff])
-  const visible=useMemo(()=>staleOnly?scoped.filter(isPerime):scoped.filter(d=>d.month===month),[scoped,month,staleOnly,perimeCutoff])
+  const visible=useMemo(()=>staleOnly?scoped.filter(isPerime):scoped.filter(d=>dealDuMois(d,month)),[scoped,month,staleOnly,perimeCutoff])
   const byStatus=useMemo(()=>{
     const m={}
     PIPELINE_COLS.forEach(c=>m[c.id]=[])
@@ -2448,7 +2450,7 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
   const [expandedGroups,setExpandedGroups]=useState(new Set())
   // La recherche couvre aussi téléphone et email : retrouver un dossier en
   // tapant les derniers chiffres du numéro qui appelle.
-  const filtered=useMemo(()=>deals.filter(d=>allMonths||d.month===month).filter(d=>statusF==='Tous'||d.status===statusF).filter(d=>productF==='Tous'||d.product===productF).filter(d=>priorityF==='Tous'||d.priority===priorityF).filter(d=>`${getClientName(d)} ${d.product} ${d.company} ${d.advisor_code} ${d.co_advisor_code||''} ${d.client_email||''} ${d.client_phone||''}`.toLowerCase().includes(search.toLowerCase())),[deals,month,allMonths,search,statusF,productF,priorityF])
+  const filtered=useMemo(()=>deals.filter(d=>allMonths||dealDuMois(d,month)).filter(d=>statusF==='Tous'||d.status===statusF).filter(d=>productF==='Tous'||d.product===productF).filter(d=>priorityF==='Tous'||d.priority===priorityF).filter(d=>`${getClientName(d)} ${d.product} ${d.company} ${d.advisor_code} ${d.co_advisor_code||''} ${d.client_email||''} ${d.client_phone||''}`.toLowerCase().includes(search.toLowerCase())),[deals,month,allMonths,search,statusF,productF,priorityF])
 
   // Fonction helper pour générer clé de regroupement
   const groupKey = (deal) => {
@@ -2616,7 +2618,7 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
                         <td style={{ paddingLeft: '40px' }}>
                           <div className="cell-sub">└─ {deal.product}</div>
                         </td>
-                        <td><span style={{fontSize:12,color:'var(--t3)'}}>{deal.month}</span></td>
+                        <td><span style={{fontSize:12,color:'var(--t3)'}}>{deal.month}{anneeDuDeal(deal)!==new Date().getFullYear()?` ${anneeDuDeal(deal)}`:''}</span></td>
                         <td className="cell-mono">
                           <strong>{euro(annualize(deal.pp_m))}</strong>
                           <div className="cell-sub">{euro(deal.pp_m)}/mois</div>
@@ -3623,7 +3625,7 @@ function TeamView({deals,objectifs,teamProfiles,month,profile}){
       {rows.map((row,i)=>{
         const ppProjPct=pct(row.ppProjected,ppTarget)
         const isExpanded=expandedAdvisors.has(row.advisor_code)
-        const hasCoDeals=deals.some(d=>d.month===month&&dealMatchesAdvisor(d,row.advisor_code)&&d.co_advisor_code)
+        const hasCoDeals=deals.some(d=>dealDuMois(d,month)&&dealMatchesAdvisor(d,row.advisor_code)&&d.co_advisor_code)
         const miniKpi=(label,value,color,accent)=>(
           <div style={{minWidth:0}}>
             <div style={{fontSize:10,color:'var(--t3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:2,whiteSpace:'nowrap'}}>{label}</div>

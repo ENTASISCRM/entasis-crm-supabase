@@ -690,9 +690,18 @@ export function commissionsMois(dealsMois = [], contrat, rentab, profile = null)
  * à la sauvegarde (cf. saveDeal dans App.jsx), donc filtrer sur d.month
  * suffit — c'est exactement ce que fait advisorMetrics dans lib/metrics.js.
  */
-export function dealsDuMois(deals, monthStr) {
+export function dealsDuMois(deals, monthStr, year = null) {
   if (!deals || !monthStr) return []
-  return deals.filter(d => d.status === 'Signé' && d.month === monthStr)
+  return deals.filter(d => {
+    if (d.status !== 'Signé' || d.month !== monthStr) return false
+    if (!year) return true
+    // Garde d annee : un deal « Novembre » signe en 2025 ne doit pas entrer
+    // dans le variable de novembre 2026. Fallback sur created_at pour les
+    // vieux signes sans date_signed (30 en base au 24/07/2026).
+    const src = d.date_signed || d.created_at
+    const y = src ? new Date(src).getFullYear() : null
+    return !y || y === year
+  })
 }
 
 /**

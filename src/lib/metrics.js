@@ -90,7 +90,7 @@ export function sumPu(deals, advisorCode) {
 // colonne month du deal ait déjà été alignée sur date_signed à la sauvegarde
 // (cf saveDeal dans App.jsx). Cette fonction filtre simplement sur month.
 export function advisorMetrics(deals, month, code) {
-  const scoped = deals.filter(d => d.month === month && dealMatchesAdvisor(d, code));
+  const scoped = deals.filter(d => dealDuMois(d, month) && dealMatchesAdvisor(d, code));
   const signed = scoped.filter(d => d.status === 'Signé');
   const pipeline = scoped.filter(d => isPipeline(d.status));
 
@@ -146,4 +146,25 @@ export function alignedMonthForDeal(deal) {
     if (aligned) return aligned;
   }
   return deal?.month || null;
+}
+
+// Année de rattachement d'un deal : la date de signature fait foi pour un
+// dossier signé, la date prévue sinon, created_at en dernier recours.
+// Sert à ne pas mélanger « Novembre 2025 » et « Novembre 2026 » dans les
+// vues mensuelles (bug signalé par Gianni le 24/07/2026 : impossible de
+// saisir les clients signés avant la mise en place du CRM).
+export function anneeDuDeal(deal) {
+  const src = (deal?.status === 'Signé' && deal?.date_signed)
+    ? deal.date_signed
+    : (deal?.date_expected || deal?.created_at);
+  const y = src ? new Date(src).getFullYear() : NaN;
+  return Number.isFinite(y) ? y : new Date().getFullYear();
+}
+
+// Un deal appartient au mois affiché si son libellé de mois correspond ET
+// que son année est celle demandée (la navigation de l'app est dans
+// l'année courante). Les dossiers historiques restent visibles dans la vue
+// « Tous les mois », les fiches clients et le Multi-équipement.
+export function dealDuMois(deal, monthStr, year = new Date().getFullYear()) {
+  return deal?.month === monthStr && anneeDuDeal(deal) === year;
 }

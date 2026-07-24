@@ -82,7 +82,7 @@ export default async function handler(req, res) {
   const calcLigne = (contrat, profileLie) => {
     const codes = codesContrat(contrat, profileLie)
     const dealsConseiller = dealsDuConseiller(deals || [], codes, profileLie?.id || null)
-    const dealsMois = dealsDuMois(dealsConseiller, month)
+    const dealsMois = dealsDuMois(dealsConseiller, month, dateRef.getFullYear())
     const rentab = evaluerRentabilite(contrat, dealsConseiller, profileLie, dateRef)
     const comm = commissionsMois(dealsMois, contrat, rentab, profileLie)
     return {

@@ -19,6 +19,7 @@ import {
   MONTHS,
   annualize,
   dealMatchesAdvisor,
+  dealDuMois,
   isPipeline,
 } from '../lib/metrics'
 import { supabase } from '../lib/supabase'
@@ -164,7 +165,7 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
   // sont des managers exclus de la liste (ex: Louis co-conseiller d'Alexis
   // → la moitié du deal disparaissait du total cabinet).
   const cabinet = useMemo(() => {
-    const ofMonth = (deals || []).filter(d => d.month === month)
+    const ofMonth = (deals || []).filter(d => dealDuMois(d, month))
     const signed = ofMonth.filter(d => d.status === 'Signé')
     const pipeline = ofMonth.filter(d => isPipeline(d.status))
     const ppSigned = signed.reduce((s, d) => s + annualize(d.pp_m), 0)
