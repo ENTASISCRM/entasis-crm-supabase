@@ -45,8 +45,16 @@ export function mapProduitDeal(deal) {
     return 'per_swisslife_abeille_n4'
   }
 
-  // Assurance Vie
-  if (produit.includes('assurance vie') || produit === 'av') {
+  // Assurance de prêt (emprunteur) : frais de dossier partagés 50/50 avec
+  // Entasis. Testé AVANT l assurance vie et la prévoyance pour éviter toute
+  // capture par un autre motif.
+  if (produit.includes('assurance de pr') || produit.includes('emprunteur')) {
+    return 'assurance_pret'
+  }
+
+  // Assurance Vie, et contrat de capitalisation payé comme une assurance vie
+  // (Louis 24/07/2026)
+  if (produit.includes('assurance vie') || produit === 'av' || produit.includes('capitalisation')) {
     return 'av'
   }
 

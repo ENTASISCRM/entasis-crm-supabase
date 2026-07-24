@@ -90,6 +90,19 @@ export const BAREME_PRODUITS = {
     cdi: (frais) => frais / 2 + 1,
     mandataire: (frais) => frais + 2,
   },
+  // Le contrat de capitalisation se rémunère comme l assurance vie
+  // (décision Louis 24/07/2026). Le mapping mapProduitDeal renvoie 'av',
+  // cette entrée n existe que pour la lisibilité du barème.
+
+  // Assurance de prêt (emprunteur) : la rémunération = les frais de dossier,
+  // partagés à parts égales entre le conseiller et Entasis (Louis 24/07/2026).
+  // Le montant des frais de dossier se saisit dans le champ PU du dossier,
+  // d où l assiette pu et le taux de 50 % des deux côtés. Hors palier :
+  // commission dès le premier euro.
+  assurance_pret: {
+    libelle: 'Assurance de Prêt', categorie: 'prevoyance', assiette: 'pu', horsPalier: true,
+    cdi: () => 50.0, mandataire: () => 50.0,
+  },
 
   // PU (Prime Unique) — palier PU séparé
   // Louis 27/05 (révision après calcul à la main) :
