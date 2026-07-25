@@ -43,6 +43,129 @@ function couleurPersonne(cle) {
   return COULEURS_PERS[h % COULEURS_PERS.length]
 }
 
+// Planning ÉQUIPE pour la direction : une ligne par personne en poste
+// (même sans absence, on voit qui est là), une colonne par jour du mois.
+// Validé = barre pleine, en attente = barre pointillée. La dernière ligne
+// compte les absents du jour.
+function PlanningEquipe({ conges, contrats }) {
+  const [mois, setMois] = useState(() => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1) })
+  const aujourd = todayIso()
+
+  const nbJoursMois = new Date(mois.getFullYear(), mois.getMonth() + 1, 0).getDate()
+  const jours = useMemo(
+    () => Array.from({ length: nbJoursMois }, (_, i) => new Date(mois.getFullYear(), mois.getMonth(), i + 1)),
+    [mois, nbJoursMois],
+  )
+  const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+  // Une ligne par personne : contrats actifs non terminés, dédupliqués
+  // (Nans a un contrat alternant puis un CDI : une seule ligne).
+  const personnes = useMemo(() => {
+    const vus = new Map()
+    for (const c of (contrats || [])) {
+      if (!c.actif) continue
+      if (c.date_fin && c.date_fin < aujourd && !(c.date_debut > aujourd)) continue
+      const cle = c.profile_id || (c.full_name || '').toLowerCase().trim()
+      if (!cle || vus.has(cle)) continue
+      vus.set(cle, { id: c.profile_id, nom: c.full_name || '?', type: c.type_contrat })
+    }
+    return Array.from(vus.values()).sort((a, b) => a.nom.localeCompare(b.nom))
+  }, [contrats, aujourd])
+
+  const pertinents = useMemo(
+    () => (conges || []).filter((c) => c.statut === 'valide' || c.statut === 'en_attente'),
+    [conges],
+  )
+  const congesDe = (p) => pertinents.filter((c) => c.demandeur_id && c.demandeur_id === p.id)
+
+  const nav = (delta) => setMois((m) => new Date(m.getFullYear(), m.getMonth() + delta, 1))
+
+  // Absents validés par jour (pour la ligne du bas)
+  const absentsDuJour = (jIso) => {
+    const ids = new Set()
+    for (const c of pertinents) {
+      if (c.statut !== 'valide') continue
+      if (c.date_debut <= jIso && jIso <= (c.date_fin || c.date_debut)) ids.add(c.demandeur_id)
+    }
+    return ids.size
+  }
+
+  return (
+    <div className="cal">
+      <div className="calhd">
+        <div className="caltit">Planning équipe · {MOIS_LONGS[mois.getMonth()]} {mois.getFullYear()}</div>
+        <div className="calleg">
+          <span className="calleg1">Validé</span>
+          <span className="calleg2">En attente</span>
+        </div>
+        <div className="calnav">
+          <button onClick={() => nav(-1)} title="Mois précédent">‹</button>
+          <button onClick={() => setMois(() => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1) })}>Auj.</button>
+          <button onClick={() => nav(1)} title="Mois suivant">›</button>
+        </div>
+      </div>
+      <div className="plwrap">
+        <table className="pltable">
+          <thead>
+            <tr>
+              <th className="plnom" />
+              {jours.map((d) => {
+                const we = d.getDay() === 0 || d.getDay() === 6
+                const auj = iso(d) === aujourd
+                return (
+                  <th key={iso(d)} className={`plj${we ? ' we' : ''}${auj ? ' auj' : ''}`}>
+                    <div className="pljl">{JOURS_COURTS[(d.getDay() + 6) % 7][0]}</div>
+                    <div className="pljn">{d.getDate()}</div>
+                  </th>
+                )
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {personnes.map((p) => {
+              const cg = congesDe(p)
+              return (
+                <tr key={p.id || p.nom}>
+                  <td className="plnom" title={p.nom}>{p.nom}</td>
+                  {jours.map((d) => {
+                    const jIso = iso(d)
+                    const we = d.getDay() === 0 || d.getDay() === 6
+                    const c = cg.find((k) => k.date_debut <= jIso && jIso <= (k.date_fin || k.date_debut))
+                    const debutSeg = c && jIso === c.date_debut
+                    const finSeg = c && jIso === (c.date_fin || c.date_debut)
+                    return (
+                      <td key={jIso} className={`plc${we ? ' we' : ''}${jIso === aujourd ? ' auj' : ''}`}>
+                        {c && (
+                          <div
+                            className={`plbar${c.statut === 'en_attente' ? ' att' : ''}${debutSeg ? ' deb' : ''}${finSeg ? ' fin' : ''}`}
+                            title={`${p.nom} · ${c.type} du ${fmt(c.date_debut)} au ${fmt(c.date_fin)}${c.statut === 'en_attente' ? ' (en attente)' : ''}${c.demi_journee ? ' · demi-journée' : ''}`}
+                          />
+                        )}
+                      </td>
+                    )
+                  })}
+                </tr>
+              )
+            })}
+            <tr className="plabs">
+              <td className="plnom">Absents</td>
+              {jours.map((d) => {
+                const n = absentsDuJour(iso(d))
+                const we = d.getDay() === 0 || d.getDay() === 6
+                return (
+                  <td key={iso(d)} className={`plc${we ? ' we' : ''}`}>
+                    {n > 0 && <span className={`plabsn${n >= 3 ? ' beaucoup' : ''}`}>{n}</span>}
+                  </td>
+                )
+              })}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 function CalendrierAbsences({ conges }) {
   const [mois, setMois] = useState(() => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1) })
   const aujourd = todayIso()
@@ -280,7 +403,9 @@ export default function SmartRH({ profile }) {
 
       {!loading && !err && (
         <div className="card calcard">
-          <CalendrierAbsences conges={conges} />
+          {isManager
+            ? <PlanningEquipe conges={conges} contrats={contrats} />
+            : <CalendrierAbsences conges={conges} />}
         </div>
       )}
 
@@ -531,6 +656,25 @@ const styles = `
 .srh .calchip.att{ border-style:dashed }
 .srh .calplus{ font-size:9px; color:var(--t3,#8a8a8e); font-weight:700 }
 @media(max-width:700px){ .srh .calc{ min-height:44px } .srh .calchip{ font-size:8.5px; padding:1px 3px } }
+.srh .plwrap{ overflow-x:auto }
+.srh .pltable{ border-collapse:collapse; width:100%; min-width:900px }
+.srh .pltable .plnom{ text-align:left; font-size:12px; font-weight:600; color:var(--t1,#1c1c1e); padding:4px 8px 4px 2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:150px; width:150px }
+.srh .plj{ padding:2px 0; text-align:center }
+.srh .pljl{ font-size:8.5px; font-weight:700; color:var(--t3,#8a8a8e); text-transform:uppercase }
+.srh .pljn{ font-size:10.5px; font-weight:600; color:var(--t2,#555); font-variant-numeric:tabular-nums }
+.srh .plj.auj .pljn{ color:var(--gold-dk,#A6843F); font-weight:800 }
+.srh .plc{ height:26px; padding:0; border-top:0.5px solid rgba(0,0,0,.05); position:relative }
+.srh .plc.we{ background:rgba(0,0,0,.03) }
+.srh .plc.auj{ box-shadow:inset 2px 0 0 var(--gold,#C9A961), inset -2px 0 0 var(--gold,#C9A961) }
+.srh .plbar{ position:absolute; inset:6px -0.5px 6px -0.5px; background:#0071E3; opacity:.85 }
+.srh .plbar.deb{ border-radius:7px 0 0 7px; left:3px }
+.srh .plbar.fin{ border-radius:0 7px 7px 0; right:3px }
+.srh .plbar.deb.fin{ border-radius:7px }
+.srh .plbar.att{ background:repeating-linear-gradient(45deg, rgba(255,149,0,.55) 0 5px, rgba(255,149,0,.18) 5px 10px); opacity:1 }
+.srh .plabs .plnom{ font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--t3,#8a8a8e) }
+.srh .plabs .plc{ height:22px; text-align:center }
+.srh .plabsn{ font-size:10px; font-weight:800; color:#0071E3 }
+.srh .plabsn.beaucoup{ color:#FF3B30 }
 .srh .solde{ background:linear-gradient(135deg,#FBF4E4,#fff); border:1px solid rgba(201,169,97,.5); border-radius:14px; padding:16px 18px; margin-bottom:14px }
 .srh .solde .sv{ font-size:30px; font-weight:800; letter-spacing:-0.02em; color:var(--gold-dk,#A6843F); line-height:1 }
 .srh .solde .sl{ font-size:13px; font-weight:650; color:var(--t1,#1c1c1e); margin-top:4px }
