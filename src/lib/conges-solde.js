@@ -53,6 +53,23 @@ export function joursOuvres(debutStr, finStr) {
   return n
 }
 
+// Jours ouvrés SIMPLES (lundi à vendredi = 1 chacun) : sert aux feuilles de
+// temps (jours travaillés). À ne pas confondre avec joursOuvres ci dessus qui
+// applique la règle de DÉCOMPTE des congés (vendredi = 2).
+export function joursOuvresSimples(debutStr, finStr) {
+  const debut = dl(debutStr)
+  const fin = dl(finStr || debutStr)
+  if (fin < debut) return 0
+  let n = 0
+  const d = new Date(debut)
+  while (d <= fin) {
+    const j = d.getDay()
+    if (j >= 1 && j <= 5) n += 1
+    d.setDate(d.getDate() + 1)
+  }
+  return n
+}
+
 // Jours décomptés pour UNE demande (jours ouvrés, demi journée = 0,5)
 export function joursDemande(conge) {
   const brut = joursOuvres(conge.date_debut, conge.date_fin)

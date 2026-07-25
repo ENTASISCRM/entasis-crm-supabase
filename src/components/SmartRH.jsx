@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { listConges, createConge, decideConge, cancelConge, contreProposer, repondreContreProposition } from '../services/conges'
 import { getOwn as getOwnContrat, list as listContrats } from '../services/conseillerContrats'
-import { soldeConges, joursDemande, fmtJours } from '../lib/conges-solde'
+import { soldeConges, joursDemande, joursOuvres, joursOuvresSimples, fmtJours } from '../lib/conges-solde'
 
 const TYPES = ['Congé payé', 'RTT', 'Sans solde', 'Maladie', 'Autre']
 const STATUT_LIB = {
@@ -152,6 +152,166 @@ export default function SmartRH({ profile }) {
   // (le solde du demandeur s affiche au moment de valider).
   const [monContrat, setMonContrat] = useState(null)
   const [contrats, setContrats] = useState([])
+
+  // Feuille de temps PDF pour la comptable : mois choisi + generation en cours
+  const [moisFeuille, setMoisFeuille] = useState(() => new Date().toISOString().slice(0, 7))
+  const [pdfBusy, setPdfBusy] = useState(false)
+
+  // ── Feuille de temps mensuelle (PDF, direction) ──────────────────────────
+  // Une ligne par salarié en poste sur le mois : jours ouvrés du contrat,
+  // absences validées (clippées au mois), jours travaillés, CP décomptés
+  // (vendredi = 2) et solde CP en fin de mois. Sans accents (police jsPDF).
+  async function genererFeuilleTemps() {
+    setPdfBusy(true)
+    try {
+      const sa = (x) => String(x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+      const [annee, moisNum] = moisFeuille.split('-').map(Number)
+      const nbJ = new Date(annee, moisNum, 0).getDate()
+      const mDeb = `${moisFeuille}-01`
+      const mFin = `${moisFeuille}-${String(nbJ).padStart(2, '0')}`
+      const finDeMois = new Date(annee, moisNum - 1, nbJ, 23, 59)
+      const nomMois = MOIS_LONGS[moisNum - 1]
+
+      // Personnes en poste au moins un jour du mois (dédupliquées, contrat du mois)
+      const vus = new Map()
+      for (const k of contrats) {
+        if (!k.actif) continue
+        if (k.date_debut && k.date_debut > mFin) continue
+        if (k.date_fin && k.date_fin < mDeb) continue
+        const cle = k.profile_id || (k.full_name || '').toLowerCase().trim()
+        if (!cle || vus.has(cle)) continue
+        vus.set(cle, k)
+      }
+      const clip = (a, b) => [a < mDeb ? mDeb : a, (!b || b > mFin) ? mFin : b]
+      const lignes = Array.from(vus.values()).map((k) => {
+        const [pDeb, pFin] = clip(k.date_debut || mDeb, k.date_fin)
+        const ouvres = joursOuvresSimples(pDeb, pFin)
+        const absPerso = conges.filter((c) =>
+          c.statut === 'valide' && c.demandeur_id && c.demandeur_id === k.profile_id &&
+          c.date_debut <= mFin && (c.date_fin || c.date_debut) >= mDeb)
+        let absOuvres = 0, cpDecomptes = 0
+        const details = []
+        for (const c of absPerso) {
+          const [aDeb, aFin] = clip(c.date_debut, c.date_fin || c.date_debut)
+          let jo = joursOuvresSimples(aDeb, aFin)
+          if (c.demi_journee && jo > 0) jo = Math.max(0.5, jo - 0.5)
+          let jd = joursOuvres(aDeb, aFin)
+          if (c.demi_journee && jd > 0) jd = Math.max(0.5, jd - 0.5)
+          absOuvres += jo
+          if (c.type === 'Congé payé') cpDecomptes += jd
+          details.push({ nom: k.full_name, type: c.type, du: aDeb, au: aFin, jo, jd })
+        }
+        const solde = soldeConges(k, conges.filter((c) => c.demandeur_id === k.profile_id), finDeMois)
+        return { k, ouvres, absOuvres, travailles: ouvres - absOuvres, cpDecomptes, solde, details }
+      }).sort((a, b) => (a.k.full_name || '').localeCompare(b.k.full_name || ''))
+
+      const { jsPDF } = await import('jspdf')
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+      const navy = [10, 22, 40]; const gold = [201, 169, 97]; const gris = [110, 120, 135]
+      const W = 210
+      let y = 0
+
+      // Bandeau
+      doc.setFillColor(...navy); doc.rect(0, 0, W, 26, 'F')
+      doc.setTextColor(...gold); doc.setFontSize(9); doc.setFont('helvetica', 'bold')
+      doc.text('ENTASIS CONSEIL', 14, 9)
+      doc.setTextColor(255, 255, 255); doc.setFontSize(15)
+      doc.text(sa(`Feuille de temps equipe · ${nomMois} ${annee}`), 14, 17)
+      doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(200, 205, 215)
+      doc.text(sa(`Document comptabilite · genere le ${new Date().toLocaleDateString('fr-FR')}`), 14, 22.5)
+      y = 34
+
+      // Tableau recap
+      const cols = [
+        { t: 'Salarie', x: 14, w: 46 },
+        { t: 'Contrat', x: 60, w: 22 },
+        { t: 'J. ouvres', x: 82, w: 20, r: true },
+        { t: 'Absences', x: 102, w: 20, r: true },
+        { t: 'Travailles', x: 122, w: 22, r: true },
+        { t: 'CP decomptes', x: 144, w: 26, r: true },
+        { t: 'Solde CP', x: 170, w: 26, r: true },
+      ]
+      const rowH = 7
+      const drawHead = () => {
+        doc.setFillColor(...navy); doc.rect(14, y, 182, rowH, 'F')
+        doc.setTextColor(255, 255, 255); doc.setFontSize(7.5); doc.setFont('helvetica', 'bold')
+        for (const c of cols) doc.text(c.t, c.r ? c.x + c.w - 2 : c.x + 2, y + 4.8, c.r ? { align: 'right' } : undefined)
+        y += rowH
+      }
+      drawHead()
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8)
+      let tot = { ouvres: 0, abs: 0, trav: 0, cp: 0 }
+      lignes.forEach((l, i) => {
+        if (y > 265) { doc.addPage(); y = 20; drawHead(); doc.setFont('helvetica', 'normal'); doc.setFontSize(8) }
+        if (i % 2 === 0) { doc.setFillColor(246, 244, 239); doc.rect(14, y, 182, rowH, 'F') }
+        doc.setTextColor(30, 35, 45)
+        doc.text(sa(l.k.full_name).slice(0, 30), 16, y + 4.8)
+        doc.setTextColor(...gris)
+        doc.text(sa({ ALTERNANT: 'Alternant', STAGIAIRE: 'Stagiaire', MANDATAIRE: 'Mandataire' }[l.k.type_contrat] || l.k.type_contrat), 62, y + 4.8)
+        doc.setTextColor(30, 35, 45)
+        doc.text(String(l.ouvres), 100, y + 4.8, { align: 'right' })
+        doc.text(String(l.absOuvres), 120, y + 4.8, { align: 'right' })
+        doc.text(String(l.travailles), 142, y + 4.8, { align: 'right' })
+        doc.text(String(l.cpDecomptes), 168, y + 4.8, { align: 'right' })
+        doc.text(l.solde ? String(l.solde.restant) : '-', 194, y + 4.8, { align: 'right' })
+        tot.ouvres += l.ouvres; tot.abs += l.absOuvres; tot.trav += l.travailles; tot.cp += l.cpDecomptes
+        y += rowH
+      })
+      doc.setFont('helvetica', 'bold'); doc.setTextColor(...navy)
+      doc.setDrawColor(...gold); doc.setLineWidth(0.5); doc.line(14, y, 196, y)
+      doc.text('Total', 16, y + 4.8)
+      doc.text(String(tot.ouvres), 100, y + 4.8, { align: 'right' })
+      doc.text(String(tot.abs), 120, y + 4.8, { align: 'right' })
+      doc.text(String(tot.trav), 142, y + 4.8, { align: 'right' })
+      doc.text(String(tot.cp), 168, y + 4.8, { align: 'right' })
+      y += 14
+
+      // Detail des absences
+      const tousDetails = lignes.flatMap((l) => l.details)
+      doc.setFontSize(10); doc.setTextColor(...navy)
+      doc.text('Detail des absences du mois', 14, y); y += 6
+      doc.setFontSize(8); doc.setFont('helvetica', 'normal')
+      if (tousDetails.length === 0) {
+        doc.setTextColor(...gris); doc.text('Aucune absence validee sur le mois.', 14, y); y += 6
+      } else {
+        for (const d of tousDetails) {
+          if (y > 275) { doc.addPage(); y = 20 }
+          doc.setTextColor(30, 35, 45)
+          const du = new Date(`${d.du}T00:00:00`).toLocaleDateString('fr-FR')
+          const au = new Date(`${d.au}T00:00:00`).toLocaleDateString('fr-FR')
+          doc.text(sa(`${d.nom} · ${d.type} · du ${du} au ${au} · ${d.jo} j ouvres${d.type === 'Congé payé' ? ` (${d.jd} decomptes)` : ''}`), 14, y)
+          y += 5
+        }
+        y += 3
+      }
+
+      // Mouvements du mois
+      const arrivees = contrats.filter((k) => k.actif && k.date_debut >= mDeb && k.date_debut <= mFin)
+      const departs = contrats.filter((k) => k.actif && k.date_fin && k.date_fin >= mDeb && k.date_fin <= mFin)
+      if (arrivees.length > 0 || departs.length > 0) {
+        if (y > 260) { doc.addPage(); y = 20 }
+        doc.setFontSize(10); doc.setTextColor(...navy); doc.setFont('helvetica', 'bold')
+        doc.text('Mouvements du mois', 14, y); y += 6
+        doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 35, 45)
+        for (const k of arrivees) {
+          doc.text(sa(`Arrivee : ${k.full_name} (${k.type_contrat}) le ${new Date(`${k.date_debut}T00:00:00`).toLocaleDateString('fr-FR')}`), 14, y); y += 5
+        }
+        for (const k of departs) {
+          doc.text(sa(`Fin de contrat : ${k.full_name} (${k.type_contrat}) le ${new Date(`${k.date_fin}T00:00:00`).toLocaleDateString('fr-FR')}`), 14, y); y += 5
+        }
+      }
+
+      // Pied de page avec la regle de decompte
+      doc.setFontSize(7); doc.setTextColor(...gris)
+      doc.text(sa('Decompte CP : lundi a jeudi = 1 j, vendredi = 2 j (il emporte le samedi), week-ends non decomptes. Genere par le CRM Entasis.'), 14, 290)
+
+      doc.save(`feuille-temps-entasis-${moisFeuille}.pdf`)
+      toast.success('Feuille de temps telechargee')
+    } catch (e) {
+      console.error('[SmartRH] feuille de temps', e)
+      toast.error('Generation impossible : ' + (e.message || ''))
+    } finally { setPdfBusy(false) }
+  }
 
   async function reload() {
     try {
@@ -539,6 +699,26 @@ export default function SmartRH({ profile }) {
                 })
               })()}
               </div>
+
+              {/* Bloc 3 : export comptabilite */}
+              <div className="card">
+                <div className="blochd">
+                  <div className="bk">Comptabilité</div>
+                  <div className="bt">Feuille de temps mensuelle</div>
+                  <div className="bs">PDF récapitulatif de toute l équipe : jours travaillés, absences détaillées, CP décomptés, soldes et mouvements du mois.</div>
+                </div>
+                <div className="ftrow">
+                  <input
+                    type="month"
+                    value={moisFeuille}
+                    onChange={(e) => setMoisFeuille(e.target.value)}
+                    aria-label="Mois de la feuille de temps"
+                  />
+                  <button className="pri" disabled={pdfBusy || !moisFeuille} onClick={genererFeuilleTemps}>
+                    {pdfBusy ? 'Génération…' : '📄 Télécharger le PDF'}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -639,6 +819,8 @@ const styles = `
 .srh .prow .pn{ font-weight:700; color:var(--navy); min-width:120px }
 .srh .prow .pd{ color:#5b6470; flex:1; font-variant-numeric:tabular-nums }
 .srh .prow .pt{ font-size:10.5px; font-weight:700; color:var(--gold-dk); background:#FBF4E4; border-radius:5px; padding:1px 7px }
+.srh .ftrow{ display:flex; gap:10px; align-items:center; margin-top:10px }
+.srh .ftrow input[type=month]{ border:1px solid rgba(0,0,0,.14); border-radius:9px; padding:7px 10px; font-size:13px; font-family:inherit; color:var(--t1,#1c1c1e); background:#fff }
 .srh .blochd{ margin-bottom:6px }
 .srh .blochd .bk{ font-size:10.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--gold,#C9A961) }
 .srh .blochd .bt{ font-size:14px; font-weight:700; color:var(--t1,#1c1c1e); margin-top:3px }
