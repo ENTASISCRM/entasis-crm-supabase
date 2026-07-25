@@ -117,6 +117,14 @@ export function joursDemande(conge) {
   return conge.demi_journee ? Math.max(0.5, brut - 0.5) : brut
 }
 
+// Jours OUVRÉS SIMPLES pour une demande (École/CFA, maladie, sans solde…) :
+// la règle du vendredi double ne concerne que les congés payés.
+export function joursDemandeSimples(conge) {
+  const brut = joursOuvresSimples(conge.date_debut, conge.date_fin || conge.date_debut)
+  if (brut === 0) return 0
+  return conge.demi_journee ? Math.max(0.5, brut - 0.5) : brut
+}
+
 // Jours acquis par un contrat à aujourd hui (null si le type n acquiert pas)
 export function joursAcquis(contrat, aujourd = new Date()) {
   if (!contrat || !TYPES_AVEC_CP.includes(contrat.type_contrat)) return null

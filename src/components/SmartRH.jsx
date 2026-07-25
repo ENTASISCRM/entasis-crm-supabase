@@ -11,9 +11,15 @@ import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { listConges, createConge, decideConge, cancelConge, contreProposer, repondreContreProposition } from '../services/conges'
 import { getOwn as getOwnContrat, list as listContrats } from '../services/conseillerContrats'
-import { soldeConges, joursDemande, joursOuvres, joursOuvresSimples, fmtJours, estFerie } from '../lib/conges-solde'
+import { soldeConges, joursDemande, joursDemandeSimples, joursOuvres, joursOuvresSimples, fmtJours, estFerie } from '../lib/conges-solde'
 
 const TYPES = ['Congé payé', 'RTT', 'Sans solde', 'Maladie', 'Autre']
+// Jours de formation des alternants : ni travailles au cabinet, ni conges.
+// Reserve aux contrats ALTERNANT (choix visible seulement pour eux).
+const TYPE_ECOLE = 'École / CFA'
+// Affichage du nombre de jours d une demande : regle du vendredi double pour
+// les conges payes, jours ouvres simples pour tout le reste (ecole, maladie).
+const nbJoursAffiche = (c) => (c.type === 'Congé payé' ? joursDemande(c) : joursDemandeSimples(c))
 const STATUT_LIB = {
   en_attente: 'En attente', valide: 'Validé', refuse: 'Refusé',
   annule: 'Annulé', contre_proposee: 'Contre-proposition',
@@ -119,7 +125,7 @@ function CalendrierAbsences({ conges }) {
                     style={{ background: attente ? 'transparent' : couleurPersonne(c.demandeur_id), borderColor: couleurPersonne(c.demandeur_id), color: attente ? couleurPersonne(c.demandeur_id) : '#fff' }}
                     title={`${c.demandeur_nom || ''} · ${c.type}${attente ? ' (en attente de validation)' : ''}${c.demi_journee ? ' · demi-journée' : ''}`}
                   >
-                    {prenom}
+                    {c.type === TYPE_ECOLE ? '\u{1F393} ' : ''}{prenom}
                   </div>
                 )
               })}
@@ -199,7 +205,7 @@ export default function SmartRH({ profile }) {
         const absPerso = conges.filter((c) =>
           c.statut === 'valide' && c.demandeur_id && c.demandeur_id === k.profile_id &&
           c.date_debut <= mFin && (c.date_fin || c.date_debut) >= mDeb)
-        let absOuvres = 0, cpDecomptes = 0
+        let absOuvres = 0, ecoleOuvres = 0, cpDecomptes = 0
         const details = []
         for (const c of absPerso) {
           const [aDeb, aFin] = clip(c.date_debut, c.date_fin || c.date_debut)
@@ -207,12 +213,15 @@ export default function SmartRH({ profile }) {
           if (c.demi_journee && jo > 0) jo = Math.max(0.5, jo - 0.5)
           let jd = joursOuvres(aDeb, aFin)
           if (c.demi_journee && jd > 0) jd = Math.max(0.5, jd - 0.5)
-          absOuvres += jo
+          // Les jours d ecole ne sont ni des absences ni des conges : ils
+          // sortent des jours travailles au cabinet mais restent a part.
+          if (c.type === TYPE_ECOLE) ecoleOuvres += jo
+          else absOuvres += jo
           if (c.type === 'Congé payé') cpDecomptes += jd
           details.push({ nom: k.full_name, type: c.type, du: aDeb, au: aFin, jo, jd })
         }
         const solde = soldeConges(k, conges.filter((c) => c.demandeur_id === k.profile_id), finDeMois)
-        return { k, ouvres, absOuvres, travailles: ouvres - absOuvres, cpDecomptes, solde, details }
+        return { k, ouvres, absOuvres, ecoleOuvres, travailles: ouvres - absOuvres - ecoleOuvres, cpDecomptes, solde, details }
       }).sort((a, b) =>
         (ORDRE_PDF[a.k.type_contrat] - ORDRE_PDF[b.k.type_contrat]) ||
         (a.k.full_name || '').localeCompare(b.k.full_name || ''))
@@ -235,13 +244,14 @@ export default function SmartRH({ profile }) {
 
       // Tableau recap
       const cols = [
-        { t: 'Salarie', x: 14, w: 46 },
-        { t: 'Contrat', x: 60, w: 22 },
-        { t: 'J. ouvres', x: 82, w: 20, r: true },
-        { t: 'Absences', x: 102, w: 20, r: true },
-        { t: 'Travailles', x: 122, w: 22, r: true },
-        { t: 'CP decomptes', x: 144, w: 26, r: true },
-        { t: 'Solde CP', x: 170, w: 26, r: true },
+        { t: 'Salarie', x: 14, w: 38 },
+        { t: 'Contrat', x: 52, w: 18 },
+        { t: 'J. ouvres', x: 70, w: 16, r: true },
+        { t: 'Ecole', x: 86, w: 14, r: true },
+        { t: 'Absences', x: 100, w: 18, r: true },
+        { t: 'Travailles', x: 118, w: 20, r: true },
+        { t: 'CP decomptes', x: 138, w: 28, r: true },
+        { t: 'Solde CP', x: 166, w: 30, r: true },
       ]
       const rowH = 7
       const drawHead = () => {
@@ -256,14 +266,15 @@ export default function SmartRH({ profile }) {
         if (y > 265) { doc.addPage(); y = 20; drawHead(); doc.setFont('helvetica', 'normal'); doc.setFontSize(8) }
         if (i % 2 === 0) { doc.setFillColor(246, 244, 239); doc.rect(14, y, 182, rowH, 'F') }
         doc.setTextColor(30, 35, 45)
-        doc.text(sa(l.k.full_name).slice(0, 30), 16, y + 4.8)
+        doc.text(sa(l.k.full_name).slice(0, 26), 16, y + 4.8)
         doc.setTextColor(...gris)
-        doc.text(sa({ ALTERNANT: 'Alternant', STAGIAIRE: 'Stagiaire', MANDATAIRE: 'Mandataire' }[l.k.type_contrat] || l.k.type_contrat), 62, y + 4.8)
+        doc.text(sa({ ALTERNANT: 'Alternant', STAGIAIRE: 'Stagiaire' }[l.k.type_contrat] || l.k.type_contrat), 54, y + 4.8)
         doc.setTextColor(30, 35, 45)
-        doc.text(String(l.ouvres), 100, y + 4.8, { align: 'right' })
-        doc.text(String(l.absOuvres), 120, y + 4.8, { align: 'right' })
-        doc.text(String(l.travailles), 142, y + 4.8, { align: 'right' })
-        doc.text(String(l.cpDecomptes), 168, y + 4.8, { align: 'right' })
+        doc.text(String(l.ouvres), 84, y + 4.8, { align: 'right' })
+        doc.text(l.ecoleOuvres > 0 ? String(l.ecoleOuvres) : '-', 98, y + 4.8, { align: 'right' })
+        doc.text(String(l.absOuvres), 116, y + 4.8, { align: 'right' })
+        doc.text(String(l.travailles), 136, y + 4.8, { align: 'right' })
+        doc.text(String(l.cpDecomptes), 164, y + 4.8, { align: 'right' })
         doc.text(l.solde ? String(l.solde.restant) : '-', 194, y + 4.8, { align: 'right' })
         y += rowH
       })
@@ -471,7 +482,7 @@ export default function SmartRH({ profile }) {
               <div className="frm">
                 <label>Type
                   <select value={type} onChange={(e) => setType(e.target.value)}>
-                    {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                    {(monContrat?.type_contrat === 'ALTERNANT' ? [...TYPES, TYPE_ECOLE] : TYPES).map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </label>
                 <label className="chk">
@@ -510,7 +521,7 @@ export default function SmartRH({ profile }) {
               <div className={`row ${c.statut}`} key={c.id}>
                 <div className="rmain">
                   <div className="rl1">{c.type} {badge(c.statut)}</div>
-                  <div className="rl2">{c.demi_journee ? `${fmt(c.date_debut)} (demi-journée)` : `${fmt(c.date_debut)} au ${fmt(c.date_fin)}`} · {fmtJours(joursDemande(c))} décomptés</div>
+                  <div className="rl2">{c.demi_journee ? `${fmt(c.date_debut)} (demi-journée)` : `${fmt(c.date_debut)} au ${fmt(c.date_fin)}`} · {fmtJours(nbJoursAffiche(c))}{c.type === 'Congé payé' ? ' décomptés' : ''}</div>
                   {c.statut === 'refuse' && c.decision_motif && <div className="rmotif">Motif : {c.decision_motif}</div>}
                   {c.statut === 'contre_proposee' && (
                     <div className="cpprop">
@@ -549,7 +560,7 @@ export default function SmartRH({ profile }) {
                   <div className="row en_attente">
                     <div className="rmain">
                       <div className="rl1">{c.demandeur_nom || c.advisor_code || 'Collaborateur'} · {c.type}</div>
-                      <div className="rl2">{c.demi_journee ? `${fmt(c.date_debut)} (demi-journée)` : `${fmt(c.date_debut)} au ${fmt(c.date_fin)}`} · {fmtJours(joursDemande(c))} décomptés{c.motif ? ` · ${c.motif}` : ''}</div>
+                      <div className="rl2">{c.demi_journee ? `${fmt(c.date_debut)} (demi-journée)` : `${fmt(c.date_debut)} au ${fmt(c.date_fin)}`} · {fmtJours(nbJoursAffiche(c))}{c.type === 'Congé payé' ? ' décomptés' : ''}{c.motif ? ` · ${c.motif}` : ''}</div>
                       {(() => {
                         const s = soldeDemandeur(c)
                         if (!s) return null
@@ -616,7 +627,7 @@ export default function SmartRH({ profile }) {
                     <span className="pn">{c.demandeur_nom || c.advisor_code}</span>
                     <span className="pd">{c.demi_journee ? `${fmt(c.date_debut)} (½)` : `${fmt(c.date_debut)} → ${fmt(c.date_fin)}`}</span>
                     <span className="pt">{c.type}</span>
-                    <span className="pj">{fmtJours(joursDemande(c))} pris</span>
+                    <span className="pj">{fmtJours(nbJoursAffiche(c))}{c.type === 'Congé payé' ? ' pris' : ''}</span>
                     {s && (
                       <span className={`ps${s.restant < 0 ? ' neg' : ''}`}>
                         reste {fmtJours(s.restant)}
