@@ -346,6 +346,35 @@ export default function SmartRH({ profile }) {
         y += 3
       }
 
+      // Absences validees APRES le mois : elles sont deja deduites de la
+      // colonne Solde CP (un conge valide est engage), on les liste pour que
+      // la comptable comprenne le solde du tableau.
+      const futurs = []
+      for (const l of lignes) {
+        const fut = conges.filter((c) =>
+          c.statut === 'valide' && c.type === 'Congé payé' &&
+          c.demandeur_id && c.demandeur_id === l.k.profile_id &&
+          c.date_debut > mFin)
+        for (const c of fut) {
+          futurs.push({ nom: l.k.full_name, du: c.date_debut, au: c.date_fin || c.date_debut, jd: joursDemande(c) })
+        }
+      }
+      if (futurs.length > 0) {
+        if (y > 260) { doc.addPage(); y = 20 }
+        doc.setFontSize(10); doc.setTextColor(...navy); doc.setFont('helvetica', 'bold')
+        doc.text('Absences validees a venir (deja deduites du solde CP)', 14, y); y += 6
+        doc.setFontSize(8); doc.setFont('helvetica', 'normal')
+        for (const f of futurs.sort((a, b) => a.du.localeCompare(b.du))) {
+          if (y > 275) { doc.addPage(); y = 20 }
+          doc.setTextColor(30, 35, 45)
+          const du = new Date(`${f.du}T00:00:00`).toLocaleDateString('fr-FR')
+          const au = new Date(`${f.au}T00:00:00`).toLocaleDateString('fr-FR')
+          doc.text(sa(`${f.nom} · du ${du} au ${au} · ${f.jd} j decomptes`), 14, y)
+          y += 5
+        }
+        y += 3
+      }
+
       // Mouvements du mois
       const arrivees = contrats.filter((k) => k.actif && (k.type_contrat in ORDRE_PDF) && k.date_debut >= mDeb && k.date_debut <= mFin)
       const departs = contrats.filter((k) => k.actif && (k.type_contrat in ORDRE_PDF) && k.date_fin && k.date_fin >= mDeb && k.date_fin <= mFin)
