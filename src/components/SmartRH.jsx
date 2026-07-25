@@ -176,6 +176,9 @@ export default function SmartRH({ profile }) {
       const vus = new Map()
       for (const k of contrats) {
         if (!k.actif) continue
+        // Les mandataires sont independants (ils facturent) : pas de feuille
+        // de temps, ils ne concernent pas la paie (demande Louis 25/07).
+        if (k.type_contrat === 'MANDATAIRE') continue
         if (k.date_debut && k.date_debut > mFin) continue
         if (k.date_fin && k.date_fin < mDeb) continue
         const cle = k.profile_id || (k.full_name || '').toLowerCase().trim()
@@ -286,8 +289,8 @@ export default function SmartRH({ profile }) {
       }
 
       // Mouvements du mois
-      const arrivees = contrats.filter((k) => k.actif && k.date_debut >= mDeb && k.date_debut <= mFin)
-      const departs = contrats.filter((k) => k.actif && k.date_fin && k.date_fin >= mDeb && k.date_fin <= mFin)
+      const arrivees = contrats.filter((k) => k.actif && k.type_contrat !== 'MANDATAIRE' && k.date_debut >= mDeb && k.date_debut <= mFin)
+      const departs = contrats.filter((k) => k.actif && k.type_contrat !== 'MANDATAIRE' && k.date_fin && k.date_fin >= mDeb && k.date_fin <= mFin)
       if (arrivees.length > 0 || departs.length > 0) {
         if (y > 260) { doc.addPage(); y = 20 }
         doc.setFontSize(10); doc.setTextColor(...navy); doc.setFont('helvetica', 'bold')
