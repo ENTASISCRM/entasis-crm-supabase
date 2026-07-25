@@ -319,7 +319,10 @@ export default function SmartRH({ profile }) {
         doc.text(sa({ ALTERNANT: 'Alternant', STAGIAIRE: 'Stagiaire' }[l.k.type_contrat] || l.k.type_contrat), 62, y + 4.8)
         doc.setTextColor(30, 35, 45)
         doc.text(String(l.ouvres), 100, y + 4.8, { align: 'right' })
+        // Absences en rouge des qu il y en a : reperage immediat
+        if (l.absOuvres > 0) { doc.setTextColor(255, 59, 48); doc.setFont('helvetica', 'bold') }
         doc.text(String(l.absOuvres), 120, y + 4.8, { align: 'right' })
+        doc.setTextColor(30, 35, 45); doc.setFont('helvetica', 'normal')
         doc.text(String(l.travailles), 142, y + 4.8, { align: 'right' })
         doc.text(String(l.cpDecomptes), 168, y + 4.8, { align: 'right' })
         doc.text(l.solde ? String(l.solde.restant) : '-', 194, y + 4.8, { align: 'right' })
