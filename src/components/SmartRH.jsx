@@ -247,7 +247,6 @@ export default function SmartRH({ profile }) {
       }
       drawHead()
       doc.setFont('helvetica', 'normal'); doc.setFontSize(8)
-      let tot = { ouvres: 0, abs: 0, trav: 0, cp: 0 }
       lignes.forEach((l, i) => {
         if (y > 265) { doc.addPage(); y = 20; drawHead(); doc.setFont('helvetica', 'normal'); doc.setFontSize(8) }
         if (i % 2 === 0) { doc.setFillColor(246, 244, 239); doc.rect(14, y, 182, rowH, 'F') }
@@ -261,17 +260,10 @@ export default function SmartRH({ profile }) {
         doc.text(String(l.travailles), 142, y + 4.8, { align: 'right' })
         doc.text(String(l.cpDecomptes), 168, y + 4.8, { align: 'right' })
         doc.text(l.solde ? String(l.solde.restant) : '-', 194, y + 4.8, { align: 'right' })
-        tot.ouvres += l.ouvres; tot.abs += l.absOuvres; tot.trav += l.travailles; tot.cp += l.cpDecomptes
         y += rowH
       })
-      doc.setFont('helvetica', 'bold'); doc.setTextColor(...navy)
       doc.setDrawColor(...gold); doc.setLineWidth(0.5); doc.line(14, y, 196, y)
-      doc.text('Total', 16, y + 4.8)
-      doc.text(String(tot.ouvres), 100, y + 4.8, { align: 'right' })
-      doc.text(String(tot.abs), 120, y + 4.8, { align: 'right' })
-      doc.text(String(tot.trav), 142, y + 4.8, { align: 'right' })
-      doc.text(String(tot.cp), 168, y + 4.8, { align: 'right' })
-      y += 14
+      y += 10
 
       // Detail des absences
       const tousDetails = lignes.flatMap((l) => l.details)
