@@ -439,8 +439,11 @@ export default function SmartRH({ profile }) {
   }
   useEffect(() => { reload() }, [])   // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Les jours d ecole ne sont pas listes dans les demandes ni le planning :
+  // ils vivent sur le calendrier (badge diplome) et la feuille de temps.
   const mesDemandes = useMemo(
-    () => (isManager ? conges.filter((c) => c.demandeur_id === profile?.id) : conges),
+    () => (isManager ? conges.filter((c) => c.demandeur_id === profile?.id) : conges)
+      .filter((c) => c.type !== TYPE_ECOLE),
     [conges, isManager, profile?.id],
   )
 
@@ -474,7 +477,7 @@ export default function SmartRH({ profile }) {
   const aValider = useMemo(() => conges.filter((c) => c.statut === 'en_attente'), [conges])
   const enAttenteReponse = useMemo(() => conges.filter((c) => c.statut === 'contre_proposee'), [conges])
   const planning = useMemo(
-    () => conges.filter((c) => c.statut === 'valide' && c.date_fin >= todayIso())
+    () => conges.filter((c) => c.statut === 'valide' && c.date_fin >= todayIso() && c.type !== TYPE_ECOLE)
       .sort((a, b) => a.date_debut.localeCompare(b.date_debut)),
     [conges],
   )
