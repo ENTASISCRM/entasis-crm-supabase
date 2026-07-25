@@ -373,6 +373,12 @@ export default function SmartRH({ profile }) {
           {/* Colonne droite : validation + planning (direction) */}
           {isManager && (
             <div className="col mgr">
+              {/* Bloc 1 : la file de decision (a valider + absences a venir) */}
+              <div className="card">
+              <div className="blochd">
+                <div className="bk">Demandes</div>
+                <div className="bt">À valider et absences à venir</div>
+              </div>
               <div className="ctit2">À valider {aValider.length > 0 && <span className="pill">{aValider.length}</span>}</div>
               {aValider.length === 0 && <div className="vide ok">Aucune demande en attente.</div>}
               {aValider.map((c) => (
@@ -457,11 +463,18 @@ export default function SmartRH({ profile }) {
                 )
               })}
 
-              {/* Soldes de toute l équipe : une ligne par personne qui
-                  acquiert des congés payés (CDI, CDD, alternants). Pour les
-                  doubles contrats (alternance puis CDI), on prend le contrat
-                  en cours. */}
-              <div className="ctit2">Soldes de l équipe</div>
+              </div>
+
+              {/* Bloc 2, a part : les compteurs de conges de toute l equipe.
+                  Une ligne par personne qui acquiert des conges payes (CDI,
+                  CDD, alternants), stagiaires listes sans compteur. Pour les
+                  doubles contrats (alternance puis CDI), contrat en cours. */}
+              <div className="card">
+              <div className="blochd">
+                <div className="bk">Compteurs</div>
+                <div className="bt">Soldes de l équipe</div>
+                <div className="bs">2,5 j acquis par mois travaillé, le vendredi compte double, mis à jour à chaque validation.</div>
+              </div>
               {(() => {
                 const aujourdhui = todayIso()
                 const vus = new Map()
@@ -529,6 +542,7 @@ export default function SmartRH({ profile }) {
                   ]
                 })
               })()}
+              </div>
             </div>
           )}
         </div>
@@ -629,6 +643,10 @@ const styles = `
 .srh .prow .pn{ font-weight:700; color:var(--navy); min-width:120px }
 .srh .prow .pd{ color:#5b6470; flex:1; font-variant-numeric:tabular-nums }
 .srh .prow .pt{ font-size:10.5px; font-weight:700; color:var(--gold-dk); background:#FBF4E4; border-radius:5px; padding:1px 7px }
+.srh .blochd{ margin-bottom:6px }
+.srh .blochd .bk{ font-size:10.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--gold,#C9A961) }
+.srh .blochd .bt{ font-size:14px; font-weight:700; color:var(--t1,#1c1c1e); margin-top:3px }
+.srh .blochd .bs{ font-size:11.5px; color:var(--t3,#8a8a8e); margin-top:2px }
 .srh .pgroupe{ font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--gold-dk,#A6843F); margin:14px 0 4px; padding-bottom:4px; border-bottom:1px solid rgba(201,169,97,.25) }
 .srh .srow{ display:flex; align-items:center; gap:10px; padding:8px 2px; border-bottom:1px solid #F4F2ED }
 .srh .srow:last-child{ border-bottom:none }
