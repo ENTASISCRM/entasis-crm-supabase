@@ -395,6 +395,24 @@ export default function SmartRH({ profile }) {
         }
       }
 
+      // Arrivees prevues APRES le mois de la feuille : toujours listees
+      // (demande Louis) pour que la comptable anticipe les futures paies.
+      const arriveesFutures = contrats
+        .filter((k) => k.actif && (k.type_contrat in ORDRE_PDF) && k.date_debut && k.date_debut > mFin)
+        .sort((a, b) => a.date_debut.localeCompare(b.date_debut))
+      if (arriveesFutures.length > 0) {
+        if (y > 255) { doc.addPage(); y = 20 } else { y += 3 }
+        doc.setFontSize(10); doc.setTextColor(...navy); doc.setFont('helvetica', 'bold')
+        doc.text('Arrivees prevues', 14, y); y += 6
+        doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 35, 45)
+        for (const k of arriveesFutures) {
+          if (y > 275) { doc.addPage(); y = 20 }
+          const lib = { ALTERNANT: 'Alternant', STAGIAIRE: 'Stagiaire' }[k.type_contrat] || k.type_contrat
+          doc.text(sa(`${k.full_name} (${lib}) : arrivee le ${new Date(`${k.date_debut}T00:00:00`).toLocaleDateString('fr-FR')}`), 14, y)
+          y += 5
+        }
+      }
+
       // Pied de page avec la regle de decompte
       doc.setFontSize(7); doc.setTextColor(...gris)
       doc.text(sa('Decompte CP : lundi a jeudi = 1 j, vendredi = 2 j (il emporte le samedi), week-ends non decomptes. Genere par le CRM Entasis.'), 14, 290)
