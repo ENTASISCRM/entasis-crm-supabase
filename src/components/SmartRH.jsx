@@ -289,15 +289,17 @@ export default function SmartRH({ profile }) {
       y = 34
 
       // Tableau recap
+      // Les jours d ecole ne sont pas une colonne (demande Louis) : ils
+      // restent deduits des jours travailles et detailles dans la section
+      // des absences du mois.
       const cols = [
-        { t: 'Salarie', x: 14, w: 38 },
-        { t: 'Contrat', x: 52, w: 18 },
-        { t: 'J. ouvres', x: 70, w: 16, r: true },
-        { t: 'Ecole', x: 86, w: 14, r: true },
-        { t: 'Absences', x: 100, w: 18, r: true },
-        { t: 'Travailles', x: 118, w: 20, r: true },
-        { t: 'CP decomptes', x: 138, w: 28, r: true },
-        { t: 'Solde CP', x: 166, w: 30, r: true },
+        { t: 'Salarie', x: 14, w: 46 },
+        { t: 'Contrat', x: 60, w: 22 },
+        { t: 'J. ouvres', x: 82, w: 20, r: true },
+        { t: 'Absences', x: 102, w: 20, r: true },
+        { t: 'Travailles', x: 122, w: 22, r: true },
+        { t: 'CP decomptes', x: 144, w: 26, r: true },
+        { t: 'Solde CP', x: 170, w: 26, r: true },
       ]
       const rowH = 7
       const drawHead = () => {
@@ -312,15 +314,14 @@ export default function SmartRH({ profile }) {
         if (y > 265) { doc.addPage(); y = 20; drawHead(); doc.setFont('helvetica', 'normal'); doc.setFontSize(8) }
         if (i % 2 === 0) { doc.setFillColor(246, 244, 239); doc.rect(14, y, 182, rowH, 'F') }
         doc.setTextColor(30, 35, 45)
-        doc.text(sa(l.k.full_name).slice(0, 26), 16, y + 4.8)
+        doc.text(sa(l.k.full_name).slice(0, 30), 16, y + 4.8)
         doc.setTextColor(...gris)
-        doc.text(sa({ ALTERNANT: 'Alternant', STAGIAIRE: 'Stagiaire' }[l.k.type_contrat] || l.k.type_contrat), 54, y + 4.8)
+        doc.text(sa({ ALTERNANT: 'Alternant', STAGIAIRE: 'Stagiaire' }[l.k.type_contrat] || l.k.type_contrat), 62, y + 4.8)
         doc.setTextColor(30, 35, 45)
-        doc.text(String(l.ouvres), 84, y + 4.8, { align: 'right' })
-        doc.text(l.ecoleOuvres > 0 ? String(l.ecoleOuvres) : '-', 98, y + 4.8, { align: 'right' })
-        doc.text(String(l.absOuvres), 116, y + 4.8, { align: 'right' })
-        doc.text(String(l.travailles), 136, y + 4.8, { align: 'right' })
-        doc.text(String(l.cpDecomptes), 164, y + 4.8, { align: 'right' })
+        doc.text(String(l.ouvres), 100, y + 4.8, { align: 'right' })
+        doc.text(String(l.absOuvres), 120, y + 4.8, { align: 'right' })
+        doc.text(String(l.travailles), 142, y + 4.8, { align: 'right' })
+        doc.text(String(l.cpDecomptes), 168, y + 4.8, { align: 'right' })
         doc.text(l.solde ? String(l.solde.restant) : '-', 194, y + 4.8, { align: 'right' })
         y += rowH
       })
