@@ -478,26 +478,36 @@ export default function SmartRH({ profile }) {
                     k,
                     solde: soldeConges(k, k.profile_id ? (congesParPersonne.get(k.profile_id) || []) : []),
                   }))
-                  .filter((l) => l.solde !== null)
+                  .filter((l) => l.solde !== null || l.k.type_contrat === 'STAGIAIRE')
                   .sort((a, b) => (a.k.full_name || '').localeCompare(b.k.full_name || ''))
                 if (lignes.length === 0) return <div className="vide">Aucun salarié avec compteur de congés.</div>
                 // Groupé par type de contrat (demande Louis) : alternants,
-                // puis CDI, puis CDD. Stagiaires et mandataires n ont pas de
-                // compteur, ils n apparaissent pas.
-                const ORDRE = ['ALTERNANT', 'CDI', 'CDD']
-                const LIBELLES = { ALTERNANT: 'Alternants', CDI: 'CDI', CDD: 'CDD' }
+                // CDI, CDD, puis les stagiaires (listés pour la visibilité
+                // mais sans compteur : la gratification n ouvre pas de CP).
+                const ORDRE = ['ALTERNANT', 'CDI', 'CDD', 'STAGIAIRE']
+                const LIBELLES = { ALTERNANT: 'Alternants', CDI: 'CDI', CDD: 'CDD', STAGIAIRE: 'Stagiaires' }
                 return ORDRE.flatMap((type) => {
                   const groupe = lignes.filter((l) => l.k.type_contrat === type)
                   if (groupe.length === 0) return []
                   return [
                     <div className="pgroupe" key={`g-${type}`}>{LIBELLES[type]} · {groupe.length}</div>,
-                    ...groupe.map(({ k, solde }) => (
-                      <div className="prow" key={k.id}>
-                        <span className="pn">{k.full_name}</span>
-                        <span className="pd">{fmtJours(solde.acquis)} acquis · {fmtJours(solde.pris)} pris</span>
-                        <span className={`ps${solde.restant < 0 ? ' neg' : ''}`}>reste {fmtJours(solde.restant)}</span>
-                      </div>
-                    )),
+                    ...groupe.map(({ k, solde }) => {
+                      const arrive = k.date_debut && k.date_debut > aujourdhui
+                      return (
+                        <div className="prow" key={k.id}>
+                          <span className="pn">{k.full_name}</span>
+                          <span className="pd">
+                            {solde
+                              ? `${fmtJours(solde.acquis)} acquis · ${fmtJours(solde.pris)} pris`
+                              : 'sans compteur de congés payés'}
+                            {arrive ? ` · arrive le ${fmt(k.date_debut)}` : ''}
+                          </span>
+                          {solde && (
+                            <span className={`ps${solde.restant < 0 ? ' neg' : ''}`}>reste {fmtJours(solde.restant)}</span>
+                          )}
+                        </div>
+                      )
+                    }),
                   ]
                 })
               })()}
