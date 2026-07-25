@@ -27,6 +27,26 @@ export async function createConge({ demandeur_nom, advisor_code, type, date_debu
   if (error) throw error
 }
 
+// Absence enregistrée directement par la direction AU NOM d un salarié
+// (arrêt maladie, imprévu) : validée d office, tracée via decision_par.
+// La RLS n autorise ce chemin qu aux managers.
+export async function createCongeDirection({ demandeur_id, demandeur_nom, advisor_code, type, date_debut, date_fin, demi_journee, motif, decision_par }) {
+  const { error } = await supabase.from('rh_conges').insert({
+    demandeur_id,
+    demandeur_nom: demandeur_nom || null,
+    advisor_code: advisor_code || null,
+    type: type || 'Maladie',
+    date_debut,
+    date_fin,
+    demi_journee: !!demi_journee,
+    motif: motif || null,
+    statut: 'valide',
+    decision_par: decision_par || 'Direction',
+    decision_le: new Date().toISOString(),
+  })
+  if (error) throw error
+}
+
 // Décision de la direction : valide ou refuse (motif conseillé sur un refus).
 export async function decideConge(id, statut, decision_par, decision_motif) {
   const { error } = await supabase.from('rh_conges').update({

@@ -9,7 +9,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
-import { listConges, createConge, decideConge, cancelConge, contreProposer, repondreContreProposition } from '../services/conges'
+import { listConges, createConge, createCongeDirection, decideConge, cancelConge, contreProposer, repondreContreProposition } from '../services/conges'
 import { getOwn as getOwnContrat, list as listContrats } from '../services/conseillerContrats'
 import { soldeConges, joursDemande, joursDemandeSimples, joursOuvres, joursOuvresSimples, fmtJours, estFerie } from '../lib/conges-solde'
 
@@ -163,6 +163,52 @@ export default function SmartRH({ profile }) {
   // (le solde du demandeur s affiche au moment de valider).
   const [monContrat, setMonContrat] = useState(null)
   const [contrats, setContrats] = useState([])
+
+  // Absence enregistree par la direction (arret maladie, imprevu) : posee au
+  // nom du salarie et validee d office.
+  const [abOpen, setAbOpen] = useState(false)
+  const [abQui, setAbQui] = useState('')
+  const [abType, setAbType] = useState('Maladie')
+  const [abDu, setAbDu] = useState('')
+  const [abAu, setAbAu] = useState('')
+  const [abDemi, setAbDemi] = useState(false)
+  const [abMotif, setAbMotif] = useState('')
+
+  // Salaries selectionnables : contrats actifs relies a un compte, hors
+  // mandataires et gerant, dedupliques par personne
+  const salariesAbsence = useMemo(() => {
+    const vus = new Map()
+    for (const k of contrats) {
+      if (!k.actif || !k.profile_id) continue
+      if (!['ALTERNANT', 'STAGIAIRE', 'CDI', 'CDD'].includes(k.type_contrat)) continue
+      if (!vus.has(k.profile_id)) vus.set(k.profile_id, k)
+    }
+    return Array.from(vus.values()).sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''))
+  }, [contrats])
+  const abContrat = salariesAbsence.find((k) => k.profile_id === abQui) || null
+
+  async function enregistrerAbsence() {
+    if (!abQui) { toast.error('Choisis le salarié concerné'); return }
+    if (!abDu || (!abDemi && !abAu)) { toast.error('Renseigne les dates'); return }
+    if (!abDemi && abAu < abDu) { toast.error('La date de fin doit être après le début'); return }
+    setSaving(true)
+    try {
+      await createCongeDirection({
+        demandeur_id: abQui,
+        demandeur_nom: abContrat?.full_name || null,
+        advisor_code: abContrat?.profile?.advisor_code || abContrat?.matricule || null,
+        type: abType,
+        date_debut: abDu,
+        date_fin: abDemi ? abDu : abAu,
+        demi_journee: abDemi,
+        motif: abMotif,
+        decision_par: profile?.full_name || 'Direction',
+      })
+      toast.success('Absence enregistrée et validée')
+      setAbOpen(false); setAbQui(''); setAbType('Maladie'); setAbDu(''); setAbAu(''); setAbDemi(false); setAbMotif('')
+      await reload()
+    } catch (e) { toast.error(e.message || 'Échec de l enregistrement') } finally { setSaving(false) }
+  }
 
   // Feuille de temps PDF pour la comptable : mois choisi + generation en cours
   const [moisFeuille, setMoisFeuille] = useState(() => new Date().toISOString().slice(0, 7))
@@ -553,6 +599,52 @@ export default function SmartRH({ profile }) {
                 <div className="bk">Demandes</div>
                 <div className="bt">À valider et absences à venir</div>
               </div>
+
+              {/* Absence saisie directement par la direction (arret maladie…) */}
+              <div className="ctit2">
+                Enregistrer une absence
+                <button className="lien" onClick={() => setAbOpen((v) => !v)}>{abOpen ? 'fermer' : '+ saisir'}</button>
+              </div>
+              {abOpen && (
+                <div className="frm abfrm">
+                  <label>Salarié
+                    <select value={abQui} onChange={(e) => setAbQui(e.target.value)}>
+                      <option value="">— choisir —</option>
+                      {salariesAbsence.map((k) => (
+                        <option key={k.profile_id} value={k.profile_id}>{k.full_name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>Type
+                    <select value={abType} onChange={(e) => setAbType(e.target.value)}>
+                      {(abContrat?.type_contrat === 'ALTERNANT' ? ['Maladie', 'Congé payé', 'RTT', 'Sans solde', TYPE_ECOLE, 'Autre'] : ['Maladie', 'Congé payé', 'RTT', 'Sans solde', 'Autre'])
+                        .map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </label>
+                  <label className="chk">
+                    <input type="checkbox" checked={abDemi} onChange={(e) => setAbDemi(e.target.checked)} /> Demi-journée
+                  </label>
+                  <div className="dates">
+                    <label>Du<input type="date" value={abDu} onChange={(e) => setAbDu(e.target.value)} /></label>
+                    {!abDemi && <label>Au<input type="date" value={abAu} min={abDu || undefined} onChange={(e) => setAbAu(e.target.value)} /></label>}
+                  </div>
+                  <label>Motif (facultatif)
+                    <input type="text" placeholder="Ex. arrêt maladie reçu ce matin" value={abMotif} onChange={(e) => setAbMotif(e.target.value)} />
+                  </label>
+                  {abType === 'Congé payé' && abContrat && abDu && (abDemi || abAu) && (() => {
+                    const s = soldeConges(abContrat, congesParPersonne.get(abQui) || [])
+                    if (!s) return null
+                    const n = joursDemande({ date_debut: abDu, date_fin: abDemi ? abDu : abAu, demi_journee: abDemi })
+                    return (
+                      <div className={`frmnote${n > s.restant ? ' warn' : ''}`}>
+                        {fmtJours(n)} décomptés · solde après : {fmtJours(s.restant - n)}
+                      </div>
+                    )
+                  })()}
+                  <button className="pri" disabled={saving} onClick={enregistrerAbsence}>Enregistrer (validée d office)</button>
+                </div>
+              )}
+
               <div className="ctit2">À valider {aValider.length > 0 && <span className="pill">{aValider.length}</span>}</div>
               {aValider.length === 0 && <div className="vide ok">Aucune demande en attente.</div>}
               {aValider.map((c) => (
