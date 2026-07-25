@@ -575,7 +575,11 @@ export default function PilotageRH() {
                     <div className="cell-primary">
                       {c.full_name}
                       {avecDocs.has(String(c.id)) && (
-                        <span title="Contrat de travail archivé dans la fiche" style={{ marginLeft: 6, fontSize: 12 }}>📎</span>
+                        <button
+                          onClick={() => setEditing(c)}
+                          title="Des documents sont archivés : clique pour les voir, en ajouter ou les remplacer"
+                          style={{ background: 'none', border: 'none', padding: 0, marginLeft: 6, fontSize: 12, cursor: 'pointer' }}
+                        >📎</button>
                       )}
                     </div>
                     <div className="cell-sub">
@@ -745,9 +749,18 @@ export default function PilotageRH() {
 function DocsContrat({ contratId, typeContrat, onChange }) {
   const [docs, setDocs] = useState(null)
   const [busy, setBusy] = useState(false)
+  // Erreur de chargement VISIBLE : sans ça, un échec affichait des cases
+  // vides comme si les documents déjà déposés avaient disparu.
+  const [erreur, setErreur] = useState(null)
 
   const reloadDocs = async () => {
-    try { setDocs(await contratDocs.listDocsParCategorie(contratId)) } catch { setDocs({}) }
+    setErreur(null)
+    try { setDocs(await contratDocs.listDocsParCategorie(contratId)) }
+    catch (e) {
+      console.error('[DocsContrat] chargement', e)
+      setErreur(e.message || 'Erreur de chargement des documents')
+      setDocs(null)
+    }
   }
   useEffect(() => { reloadDocs() }, [contratId])   // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -816,7 +829,16 @@ function DocsContrat({ contratId, typeContrat, onChange }) {
         border: '0.5px solid var(--bd)', borderRadius: 12, padding: '4px 12px 10px',
         background: 'rgba(0,0,0,0.015)',
       }}>
-        {docs === null ? (
+        {erreur ? (
+          <div style={{ fontSize: 12, color: 'var(--danger, #c0392b)', padding: '8px 0' }}>
+            Impossible de charger les documents ({erreur}).{' '}
+            <button
+              type="button"
+              onClick={reloadDocs}
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'inherit', fontFamily: 'inherit', fontSize: 'inherit', textDecoration: 'underline' }}
+            >Réessayer</button>
+          </div>
+        ) : docs === null ? (
           <div style={{ fontSize: 12, color: 'var(--t3)', padding: '8px 0' }}>Chargement…</div>
         ) : categories.map((cat) => {
           const fichiers = docs[cat.key] || []
