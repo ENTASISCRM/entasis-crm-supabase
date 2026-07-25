@@ -456,6 +456,39 @@ export default function SmartRH({ profile }) {
                   </div>
                 )
               })}
+
+              {/* Soldes de toute l équipe : une ligne par personne qui
+                  acquiert des congés payés (CDI, CDD, alternants). Pour les
+                  doubles contrats (alternance puis CDI), on prend le contrat
+                  en cours. */}
+              <div className="ctit2">Soldes de l équipe</div>
+              {(() => {
+                const aujourdhui = todayIso()
+                const vus = new Map()
+                for (const k of contrats) {
+                  if (!k.actif) continue
+                  const cle = k.profile_id || (k.full_name || '').toLowerCase().trim()
+                  if (!cle) continue
+                  const dejaVu = vus.get(cle)
+                  const enPoste = (!k.date_debut || k.date_debut <= aujourdhui) && (!k.date_fin || k.date_fin >= aujourdhui)
+                  if (!dejaVu || (enPoste && !dejaVu.enPoste)) vus.set(cle, { contrat: k, enPoste })
+                }
+                const lignes = Array.from(vus.values())
+                  .map(({ contrat: k }) => ({
+                    k,
+                    solde: soldeConges(k, k.profile_id ? (congesParPersonne.get(k.profile_id) || []) : []),
+                  }))
+                  .filter((l) => l.solde !== null)
+                  .sort((a, b) => (a.k.full_name || '').localeCompare(b.k.full_name || ''))
+                if (lignes.length === 0) return <div className="vide">Aucun salarié avec compteur de congés.</div>
+                return lignes.map(({ k, solde }) => (
+                  <div className="prow" key={k.id}>
+                    <span className="pn">{k.full_name}</span>
+                    <span className="pd">{fmtJours(solde.acquis)} acquis · {fmtJours(solde.pris)} pris</span>
+                    <span className={`ps${solde.restant < 0 ? ' neg' : ''}`}>reste {fmtJours(solde.restant)}</span>
+                  </div>
+                ))
+              })()}
             </div>
           )}
         </div>
