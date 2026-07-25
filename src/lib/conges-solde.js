@@ -187,6 +187,22 @@ export function soldeConges(contrat, congesDeLaPersonne, aujourd = new Date()) {
   }
 }
 
+// Projection du solde AU RETOUR de la dernière absence CP validée (calculé
+// au dernier jour d absence : l acquisition des mois d ici là est créditée,
+// tous les congés validés sont déduits). Renvoie null si aucune absence
+// validée ne se termine après aujourd hui, ou si le solde ne change pas.
+export function soldeAuRetour(contrat, congesDeLaPersonne, aujourd = new Date()) {
+  const isoAujourd = `${aujourd.getFullYear()}-${String(aujourd.getMonth() + 1).padStart(2, '0')}-${String(aujourd.getDate()).padStart(2, '0')}`
+  const futures = (congesDeLaPersonne || []).filter((c) =>
+    c.statut === 'valide' && c.type === 'Congé payé' && String(c.date_fin || c.date_debut) > isoAujourd)
+  if (futures.length === 0) return null
+  const derniere = futures.map((c) => String(c.date_fin || c.date_debut)).sort().pop()
+  const d = dl(derniere)
+  const s = soldeConges(contrat, congesDeLaPersonne, new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59))
+  if (!s) return null
+  return { date: derniere, restant: s.restant }
+}
+
 // Formatage : 2.5 -> « 2,5 j », 3 -> « 3 j »
 export const fmtJours = (n) =>
   `${Number(n).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} j`

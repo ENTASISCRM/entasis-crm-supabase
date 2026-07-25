@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { listConges, createConge, createCongeDirection, decideConge, cancelConge, contreProposer, repondreContreProposition } from '../services/conges'
 import { getOwn as getOwnContrat, list as listContrats } from '../services/conseillerContrats'
-import { soldeConges, joursDemande, joursDemandeSimples, joursOuvres, joursOuvresSimples, fmtJours, estFerie } from '../lib/conges-solde'
+import { soldeConges, soldeAuRetour, joursDemande, joursDemandeSimples, joursOuvres, joursOuvresSimples, fmtJours, estFerie } from '../lib/conges-solde'
 
 const TYPES = ['Congé payé', 'RTT', 'Sans solde', 'Maladie', 'Autre']
 // Jours de formation des alternants : ni travailles au cabinet, ni conges.
@@ -571,6 +571,12 @@ export default function SmartRH({ profile }) {
                 <div className="sl">de congés payés disponibles</div>
                 <div className="sd">
                   Période du 1er juin au 31 mai : {fmtJours(monSolde.acquisPeriode)} acquis · {fmtJours(monSolde.prisPeriode)} pris · report {fmtJours(monSolde.report)}
+                  {(() => {
+                    const proj = soldeAuRetour(monContrat, mesDemandes)
+                    return proj && proj.restant !== monSolde.restant
+                      ? ` · au retour de vos congés (${fmt(proj.date)}) : ${fmtJours(proj.restant)}`
+                      : ''
+                  })()}
                 </div>
               </div>
             )}
@@ -862,7 +868,16 @@ export default function SmartRH({ profile }) {
                             </span>
                           )}
                           {solde
-                            ? <span className={`sreste${negatif ? ' neg' : ''}`}>{fmtJours(solde.restant)}<small>restants</small></span>
+                            ? (() => {
+                                const proj = soldeAuRetour(k, congesParPersonne.get(k.profile_id) || [])
+                                const projDiff = proj && proj.restant !== solde.restant
+                                return (
+                                  <span className={`sreste${negatif ? ' neg' : ''}`}>
+                                    {fmtJours(solde.restant)}<small>restants</small>
+                                    {projDiff && <small className="sproj">{fmtJours(proj.restant)} au retour ({fmt(proj.date)})</small>}
+                                  </span>
+                                )
+                              })()
                             : <span className="sreste vide2">—</span>}
                         </div>
                       )
@@ -1011,6 +1026,7 @@ const styles = `
 .srh .sreste{ flex-shrink:0; min-width:66px; text-align:right; font-size:14px; font-weight:800; color:var(--navy,#162443); font-variant-numeric:tabular-nums }
 .srh .sreste small{ display:block; font-size:8.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--t3,#8a8a8e) }
 .srh .sreste.neg{ color:#FF3B30 }
+.srh .sreste .sproj{ color:var(--gold-dk,#A6843F); font-size:8.5px; text-transform:none; letter-spacing:0 }
 .srh .sreste.vide2{ color:var(--t3,#8a8a8e); font-weight:500 }
 .srh .prow .pj{ font-size:11px; font-weight:700; color:#0071E3; background:rgba(0,113,227,.08); border-radius:5px; padding:1px 7px; white-space:nowrap }
 .srh .prow .ps{ font-size:11px; font-weight:700; color:#34C759; background:rgba(52,199,89,.10); border-radius:5px; padding:1px 7px; white-space:nowrap }
