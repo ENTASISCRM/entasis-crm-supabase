@@ -26,6 +26,105 @@ function fmt(iso) {
 }
 const todayIso = () => new Date().toISOString().slice(0, 10)
 
+// ─────────────────────────────────────────────────────────────────────────
+// Calendrier mensuel des absences. La donnée est déjà cloisonnée par la
+// RLS : la direction voit toute l équipe, un conseiller voit ses congés.
+// Validé = bandeau plein, en attente = pointillé (utile pour repérer les
+// chevauchements avant de valider).
+// ─────────────────────────────────────────────────────────────────────────
+const MOIS_LONGS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+const JOURS_COURTS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+const COULEURS_PERS = ['#0071E3', '#34C759', '#AF52DE', '#FF9500', '#5AC8FA', '#FF2D55', '#A2845E', '#00C7BE']
+
+function couleurPersonne(cle) {
+  let h = 0
+  const s = String(cle || '?')
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
+  return COULEURS_PERS[h % COULEURS_PERS.length]
+}
+
+function CalendrierAbsences({ conges }) {
+  const [mois, setMois] = useState(() => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1) })
+  const aujourd = todayIso()
+
+  const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+  // Semaines du mois affiché, du lundi au dimanche
+  const semaines = useMemo(() => {
+    const premier = new Date(mois)
+    const decalage = (premier.getDay() + 6) % 7
+    const debut = new Date(premier)
+    debut.setDate(premier.getDate() - decalage)
+    const out = []
+    const cur = new Date(debut)
+    while (true) {
+      const semaine = []
+      for (let i = 0; i < 7; i++) { semaine.push(new Date(cur)); cur.setDate(cur.getDate() + 1) }
+      out.push(semaine)
+      if (cur.getMonth() !== mois.getMonth() && cur > mois) break
+      if (out.length > 6) break
+    }
+    return out
+  }, [mois])
+
+  const pertinents = useMemo(
+    () => (conges || []).filter((c) => c.statut === 'valide' || c.statut === 'en_attente'),
+    [conges],
+  )
+
+  const absencesDuJour = (jIso) => pertinents.filter((c) => c.date_debut <= jIso && jIso <= (c.date_fin || c.date_debut))
+
+  const nav = (delta) => setMois((m) => new Date(m.getFullYear(), m.getMonth() + delta, 1))
+
+  return (
+    <div className="cal">
+      <div className="calhd">
+        <div className="caltit">{MOIS_LONGS[mois.getMonth()]} {mois.getFullYear()}</div>
+        <div className="calleg">
+          <span className="calleg1">Validé</span>
+          <span className="calleg2">En attente</span>
+        </div>
+        <div className="calnav">
+          <button onClick={() => nav(-1)} title="Mois précédent">‹</button>
+          <button onClick={() => setMois(() => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1) })}>Auj.</button>
+          <button onClick={() => nav(1)} title="Mois suivant">›</button>
+        </div>
+      </div>
+      <div className="calgrid calent">
+        {JOURS_COURTS.map((j) => <div key={j} className="calj">{j}</div>)}
+      </div>
+      <div className="calgrid">
+        {semaines.flat().map((d) => {
+          const jIso = iso(d)
+          const horsMois = d.getMonth() !== mois.getMonth()
+          const weekend = d.getDay() === 0 || d.getDay() === 6
+          const abs = horsMois ? [] : absencesDuJour(jIso)
+          return (
+            <div key={jIso} className={`calc${horsMois ? ' hors' : ''}${weekend ? ' we' : ''}${jIso === aujourd ? ' auj' : ''}`}>
+              <div className="calnum">{d.getDate()}</div>
+              {abs.slice(0, 3).map((c) => {
+                const prenom = String(c.demandeur_nom || c.advisor_code || '?').split(' ')[0]
+                const attente = c.statut === 'en_attente'
+                return (
+                  <div
+                    key={c.id}
+                    className={`calchip${attente ? ' att' : ''}`}
+                    style={{ background: attente ? 'transparent' : couleurPersonne(c.demandeur_id), borderColor: couleurPersonne(c.demandeur_id), color: attente ? couleurPersonne(c.demandeur_id) : '#fff' }}
+                    title={`${c.demandeur_nom || ''} · ${c.type}${attente ? ' (en attente de validation)' : ''}${c.demi_journee ? ' · demi-journée' : ''}`}
+                  >
+                    {prenom}
+                  </div>
+                )
+              })}
+              {abs.length > 3 && <div className="calplus">+{abs.length - 3}</div>}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function SmartRH({ profile }) {
   const isManager = profile?.role === 'manager'
   const [conges, setConges] = useState([])
@@ -178,6 +277,12 @@ export default function SmartRH({ profile }) {
 
       {loading && <div className="empty">Chargement…</div>}
       {err && <div className="empty err">Erreur : {err}</div>}
+
+      {!loading && !err && (
+        <div className="card calcard">
+          <CalendrierAbsences conges={conges} />
+        </div>
+      )}
 
       {!loading && !err && (
         <div className="cols">
@@ -404,6 +509,28 @@ const styles = `
 .srh .cpprop{ font-size:11.5px; color:#5B4B8A; background:#F3F0FA; border:1px solid #DCD4EE; border-radius:8px; padding:6px 9px; margin-top:5px; line-height:1.4 }
 .srh .vide{ font-size:12px; color:var(--silver); padding:8px 2px }
 .srh .vide.ok{ color:#4a7a52 }
+.srh .calcard{ margin-bottom:18px; padding:14px 16px }
+.srh .calhd{ display:flex; align-items:center; gap:12px; margin-bottom:10px }
+.srh .caltit{ font-size:14px; font-weight:700; color:var(--t1,#1c1c1e); flex:1 }
+.srh .calleg{ display:flex; gap:10px; font-size:10.5px; color:var(--t3,#8a8a8e); align-items:center }
+.srh .calleg1::before{ content:''; display:inline-block; width:14px; height:8px; border-radius:4px; background:#0071E3; margin-right:4px; vertical-align:middle }
+.srh .calleg2::before{ content:''; display:inline-block; width:14px; height:8px; border-radius:4px; border:1.5px dashed #0071E3; margin-right:4px; vertical-align:middle }
+.srh .calnav{ display:flex; gap:4px }
+.srh .calnav button{ border:1px solid rgba(0,0,0,.12); background:#fff; border-radius:8px; padding:3px 10px; font-size:12px; cursor:pointer; color:var(--t1,#1c1c1e) }
+.srh .calnav button:hover{ background:rgba(0,0,0,.04) }
+.srh .calgrid{ display:grid; grid-template-columns:repeat(7,1fr); gap:3px }
+.srh .calent{ margin-bottom:3px }
+.srh .calj{ font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--t3,#8a8a8e); text-align:center; padding:2px 0 }
+.srh .calc{ min-height:58px; border:0.5px solid rgba(0,0,0,.07); border-radius:8px; padding:3px 4px; background:#fff; overflow:hidden }
+.srh .calc.we{ background:rgba(0,0,0,.02) }
+.srh .calc.hors{ background:transparent; border-color:transparent }
+.srh .calc.auj{ border-color:var(--gold,#C9A961); box-shadow:0 0 0 1px var(--gold,#C9A961) inset }
+.srh .calc.auj .calnum{ color:var(--gold-dk,#A6843F); font-weight:800 }
+.srh .calnum{ font-size:10.5px; font-weight:600; color:var(--t3,#8a8a8e); margin-bottom:2px; font-variant-numeric:tabular-nums }
+.srh .calchip{ font-size:9.5px; font-weight:700; border-radius:5px; padding:1px 5px; margin-bottom:2px; border:1.5px solid transparent; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.srh .calchip.att{ border-style:dashed }
+.srh .calplus{ font-size:9px; color:var(--t3,#8a8a8e); font-weight:700 }
+@media(max-width:700px){ .srh .calc{ min-height:44px } .srh .calchip{ font-size:8.5px; padding:1px 3px } }
 .srh .solde{ background:linear-gradient(135deg,#FBF4E4,#fff); border:1px solid rgba(201,169,97,.5); border-radius:14px; padding:16px 18px; margin-bottom:14px }
 .srh .solde .sv{ font-size:30px; font-weight:800; letter-spacing:-0.02em; color:var(--gold-dk,#A6843F); line-height:1 }
 .srh .solde .sl{ font-size:13px; font-weight:650; color:var(--t1,#1c1c1e); margin-top:4px }
