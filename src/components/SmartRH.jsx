@@ -506,16 +506,12 @@ export default function SmartRH({ profile }) {
                     <div className="pgroupe" key={`g-${type}`}>{LIBELLES[type]} · {groupe.length}</div>,
                     ...groupe.map(({ k, solde }) => {
                       const arrive = k.date_debut && k.date_debut > aujourdhui
-                      const couleur = couleurPersonne(k.profile_id || k.full_name)
-                      const initiales = String(k.full_name || '?')
-                        .split(/\s+/).slice(0, 2).map((m) => m[0] || '').join('').toUpperCase()
                       const pct = solde && solde.acquis > 0
                         ? Math.min(100, Math.max(0, (solde.pris / solde.acquis) * 100))
                         : 0
                       const negatif = solde && solde.restant < 0
                       return (
                         <div className="srow" key={k.id}>
-                          <span className="savat" style={{ background: couleur }}>{initiales}</span>
                           <span className="sinfo">
                             <span className="snom">{k.full_name}</span>
                             <span className="ssub">
@@ -650,7 +646,6 @@ const styles = `
 .srh .pgroupe{ font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--gold-dk,#A6843F); margin:14px 0 4px; padding-bottom:4px; border-bottom:1px solid rgba(201,169,97,.25) }
 .srh .srow{ display:flex; align-items:center; gap:10px; padding:8px 2px; border-bottom:1px solid #F4F2ED }
 .srh .srow:last-child{ border-bottom:none }
-.srh .savat{ width:32px; height:32px; border-radius:50%; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; color:#fff; font-size:11px; font-weight:800; letter-spacing:.02em; box-shadow:0 1px 3px rgba(0,0,0,.12) }
 .srh .sinfo{ display:flex; flex-direction:column; min-width:0; flex:1 }
 .srh .snom{ font-size:12.5px; font-weight:700; color:var(--navy,#162443); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 .srh .ssub{ font-size:10.5px; color:var(--t3,#8a8a8e); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
