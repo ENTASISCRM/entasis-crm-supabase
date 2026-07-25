@@ -438,13 +438,24 @@ export default function SmartRH({ profile }) {
 
               <div className="ctit2">Absences à venir</div>
               {planning.length === 0 && <div className="vide">Personne d absent pour l instant.</div>}
-              {planning.map((c) => (
-                <div className="prow" key={c.id}>
-                  <span className="pn">{c.demandeur_nom || c.advisor_code}</span>
-                  <span className="pd">{c.demi_journee ? `${fmt(c.date_debut)} (½)` : `${fmt(c.date_debut)} → ${fmt(c.date_fin)}`}</span>
-                  <span className="pt">{c.type}</span>
-                </div>
-              ))}
+              {planning.map((c) => {
+                // Jours décomptés par cette absence + solde restant du salarié
+                // (le solde inclut déjà cette absence puisqu elle est validée)
+                const s = soldeDemandeur(c)
+                return (
+                  <div className="prow" key={c.id}>
+                    <span className="pn">{c.demandeur_nom || c.advisor_code}</span>
+                    <span className="pd">{c.demi_journee ? `${fmt(c.date_debut)} (½)` : `${fmt(c.date_debut)} → ${fmt(c.date_fin)}`}</span>
+                    <span className="pt">{c.type}</span>
+                    <span className="pj">{fmtJours(joursDemande(c))} pris</span>
+                    {s && (
+                      <span className={`ps${s.restant < 0 ? ' neg' : ''}`}>
+                        reste {fmtJours(s.restant)}
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
@@ -545,5 +556,8 @@ const styles = `
 .srh .prow .pn{ font-weight:700; color:var(--navy); min-width:120px }
 .srh .prow .pd{ color:#5b6470; flex:1; font-variant-numeric:tabular-nums }
 .srh .prow .pt{ font-size:10.5px; font-weight:700; color:var(--gold-dk); background:#FBF4E4; border-radius:5px; padding:1px 7px }
+.srh .prow .pj{ font-size:11px; font-weight:700; color:#0071E3; background:rgba(0,113,227,.08); border-radius:5px; padding:1px 7px; white-space:nowrap }
+.srh .prow .ps{ font-size:11px; font-weight:700; color:#34C759; background:rgba(52,199,89,.10); border-radius:5px; padding:1px 7px; white-space:nowrap }
+.srh .prow .ps.neg{ color:#FF3B30; background:rgba(255,59,48,.10) }
 @media(max-width:760px){ .srh .cols{ flex-direction:column } }
 `
