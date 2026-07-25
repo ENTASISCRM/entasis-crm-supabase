@@ -98,7 +98,9 @@ function CalendrierAbsences({ conges }) {
           const jIso = iso(d)
           const horsMois = d.getMonth() !== mois.getMonth()
           const weekend = d.getDay() === 0 || d.getDay() === 6
-          const abs = horsMois ? [] : absencesDuJour(jIso)
+          // Pas de badge le week end : samedi et dimanche ne sont pas
+          // décomptés, les cases restent neutres même au milieu d un congé
+          const abs = (horsMois || weekend) ? [] : absencesDuJour(jIso)
           return (
             <div key={jIso} className={`calc${horsMois ? ' hors' : ''}${weekend ? ' we' : ''}${jIso === aujourd ? ' auj' : ''}`}>
               <div className="calnum">{d.getDate()}</div>
