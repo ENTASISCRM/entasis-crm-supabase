@@ -766,7 +766,13 @@ export default function SmartRH({ profile }) {
                 const ORDRE = ['ALTERNANT', 'CDI', 'CDD', 'STAGIAIRE']
                 const LIBELLES = { ALTERNANT: 'Alternants', CDI: 'CDI', CDD: 'CDD', STAGIAIRE: 'Stagiaires' }
                 return ORDRE.flatMap((type) => {
-                  const groupe = lignes.filter((l) => l.k.type_contrat === type)
+                  // Dans chaque catégorie, tri par date d arrivée (les plus
+                  // anciens d abord), le nom départage
+                  const groupe = lignes
+                    .filter((l) => l.k.type_contrat === type)
+                    .sort((a, b) =>
+                      String(a.k.date_debut || '9999').localeCompare(String(b.k.date_debut || '9999')) ||
+                      (a.k.full_name || '').localeCompare(b.k.full_name || ''))
                   if (groupe.length === 0) return []
                   return [
                     <div className="pgroupe" key={`g-${type}`}>{LIBELLES[type]} · {groupe.length}</div>,
