@@ -481,13 +481,25 @@ export default function SmartRH({ profile }) {
                   .filter((l) => l.solde !== null)
                   .sort((a, b) => (a.k.full_name || '').localeCompare(b.k.full_name || ''))
                 if (lignes.length === 0) return <div className="vide">Aucun salarié avec compteur de congés.</div>
-                return lignes.map(({ k, solde }) => (
-                  <div className="prow" key={k.id}>
-                    <span className="pn">{k.full_name}</span>
-                    <span className="pd">{fmtJours(solde.acquis)} acquis · {fmtJours(solde.pris)} pris</span>
-                    <span className={`ps${solde.restant < 0 ? ' neg' : ''}`}>reste {fmtJours(solde.restant)}</span>
-                  </div>
-                ))
+                // Groupé par type de contrat (demande Louis) : alternants,
+                // puis CDI, puis CDD. Stagiaires et mandataires n ont pas de
+                // compteur, ils n apparaissent pas.
+                const ORDRE = ['ALTERNANT', 'CDI', 'CDD']
+                const LIBELLES = { ALTERNANT: 'Alternants', CDI: 'CDI', CDD: 'CDD' }
+                return ORDRE.flatMap((type) => {
+                  const groupe = lignes.filter((l) => l.k.type_contrat === type)
+                  if (groupe.length === 0) return []
+                  return [
+                    <div className="pgroupe" key={`g-${type}`}>{LIBELLES[type]} · {groupe.length}</div>,
+                    ...groupe.map(({ k, solde }) => (
+                      <div className="prow" key={k.id}>
+                        <span className="pn">{k.full_name}</span>
+                        <span className="pd">{fmtJours(solde.acquis)} acquis · {fmtJours(solde.pris)} pris</span>
+                        <span className={`ps${solde.restant < 0 ? ' neg' : ''}`}>reste {fmtJours(solde.restant)}</span>
+                      </div>
+                    )),
+                  ]
+                })
               })()}
             </div>
           )}
@@ -589,6 +601,7 @@ const styles = `
 .srh .prow .pn{ font-weight:700; color:var(--navy); min-width:120px }
 .srh .prow .pd{ color:#5b6470; flex:1; font-variant-numeric:tabular-nums }
 .srh .prow .pt{ font-size:10.5px; font-weight:700; color:var(--gold-dk); background:#FBF4E4; border-radius:5px; padding:1px 7px }
+.srh .pgroupe{ font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--t3,#8a8a8e); margin:10px 0 2px; padding-bottom:3px; border-bottom:1px solid #EFECE5 }
 .srh .prow .pj{ font-size:11px; font-weight:700; color:#0071E3; background:rgba(0,113,227,.08); border-radius:5px; padding:1px 7px; white-space:nowrap }
 .srh .prow .ps{ font-size:11px; font-weight:700; color:#34C759; background:rgba(52,199,89,.10); border-radius:5px; padding:1px 7px; white-space:nowrap }
 .srh .prow .ps.neg{ color:#FF3B30; background:rgba(255,59,48,.10) }
