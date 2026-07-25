@@ -308,6 +308,31 @@ export default function PilotageRH() {
     reload()
   }
 
+  // Suppression definitive (mauvaise saisie) : confirmation obligatoire,
+  // les documents archives du bucket sont effaces avec la fiche pour ne
+  // pas laisser d orphelins. Pour un depart, le bon geste reste Desactiver.
+  const handleSupprimer = async (contrat) => {
+    const ok = confirm(
+      `Supprimer définitivement la fiche de ${contrat.full_name} ?\n\n` +
+      `Cette action est irréversible : le contrat, son historique et ses documents archivés seront effacés.\n` +
+      `Pour un départ ou une fin de contrat, utilise plutôt Désactiver.`
+    )
+    if (!ok) return
+    try {
+      try {
+        const docs = await contratDocs.listDocsParCategorie(contrat.id)
+        for (const fichiers of Object.values(docs)) {
+          for (const d of fichiers) await contratDocs.deletePath(d.path)
+        }
+      } catch (e) { console.error('[PilotageRH] purge documents', e) }
+      await service.remove(contrat.id)
+      toast.success('Fiche supprimée')
+      reload()
+    } catch (e) {
+      toast.error('Erreur : ' + (e.message || ''))
+    }
+  }
+
   const handleToggleActif = async (contrat) => {
     if (!confirm(`${contrat.actif ? 'Désactiver' : 'Réactiver'} le contrat de ${contrat.full_name} ?`)) return
     try {
@@ -671,6 +696,14 @@ export default function PilotageRH() {
                       <button className="btn btn-ghost btn-sm" onClick={() => setEditing(c)}>Éditer</button>
                       <button className="btn btn-danger btn-sm" onClick={() => handleToggleActif(c)}>
                         {c.actif ? 'Désactiver' : 'Réactiver'}
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{ color: 'var(--danger, #c0392b)' }}
+                        title="Supprimer définitivement cette fiche (mauvaise saisie). Confirmation demandée."
+                        onClick={() => handleSupprimer(c)}
+                      >
+                        Supprimer
                       </button>
                     </div>
                   </td>
