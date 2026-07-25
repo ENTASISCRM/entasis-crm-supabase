@@ -678,11 +678,19 @@ export default function SmartRH({ profile }) {
                         <div className="srow" key={k.id}>
                           <span className="sinfo">
                             <span className="snom">{k.full_name}</span>
+                            {k.date_debut && (
+                              <span className="ssub sdates">
+                                {k.date_fin
+                                  ? `du ${fmt(k.date_debut)} au ${fmt(k.date_fin)}`
+                                  : arrive
+                                    ? `à partir du ${fmt(k.date_debut)}`
+                                    : `depuis le ${fmt(k.date_debut)}`}
+                              </span>
+                            )}
                             <span className="ssub">
                               {solde
                                 ? `période : ${fmtJours(solde.acquisPeriode)} acquis · ${fmtJours(solde.prisPeriode)} pris · report ${fmtJours(solde.report)}`
                                 : 'sans compteur de congés payés'}
-                              {arrive ? ` · arrive le ${fmt(k.date_debut)}` : ''}
                             </span>
                           </span>
                           {solde && (
@@ -836,6 +844,7 @@ const styles = `
 .srh .sinfo{ display:flex; flex-direction:column; min-width:0; flex:1 }
 .srh .snom{ font-size:12.5px; font-weight:700; color:var(--navy,#162443); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 .srh .ssub{ font-size:10.5px; color:var(--t3,#8a8a8e); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.srh .ssub.sdates{ color:var(--t2,#555); font-weight:600 }
 .srh .sgauge{ width:90px; height:6px; flex-shrink:0; background:rgba(0,0,0,.06); border-radius:3px; overflow:hidden }
 .srh .sfill{ display:block; height:100%; border-radius:3px; background:linear-gradient(90deg,var(--gold,#C9A961),var(--gold-dk,#A6843F)); transition:width 300ms ease }
 .srh .sfill.neg{ background:#FF3B30 }
