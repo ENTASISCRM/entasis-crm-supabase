@@ -328,9 +328,11 @@ export default function PilotageRH() {
       await service.remove(contrat.id)
       toast.success('Fiche supprimée')
       reload()
+      return true
     } catch (e) {
       toast.error('Erreur : ' + (e.message || ''))
     }
+    return false
   }
 
   const handleToggleActif = async (contrat) => {
@@ -762,6 +764,7 @@ export default function PilotageRH() {
           profiles={profiles}
           contratsExistants={contrats}
           onDocsChange={refreshDocs}
+          onSupprimer={editing ? async () => { if (await handleSupprimer(editing)) setEditing(null) } : null}
           onClose={() => { setEditing(null); setCreating(false); setPrefillProfile(null) }}
           onSave={handleSave}
         />
@@ -941,7 +944,7 @@ function DocsContrat({ contratId, typeContrat, onChange }) {
   )
 }
 
-function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose, onSave, onDocsChange }) {
+function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose, onSave, onDocsChange, onSupprimer }) {
   const [form, setForm] = useState(contrat)
   const isNew = !contrat.id
 
@@ -1168,9 +1171,24 @@ function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose,
             )}
           </div>
 
-          <div className="modal-foot">
-            <button type="button" className="btn btn-ghost" onClick={onClose}>Annuler</button>
-            <button type="submit" className="btn btn-primary">{isNew ? 'Créer' : 'Enregistrer'}</button>
+          <div className="modal-foot" style={{ justifyContent: 'space-between' }}>
+            <div>
+              {!isNew && onSupprimer && (
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ color: 'var(--danger, #c0392b)' }}
+                  title="Supprimer définitivement cette fiche (confirmation demandée)"
+                  onClick={onSupprimer}
+                >
+                  Supprimer cette fiche
+                </button>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" className="btn btn-ghost" onClick={onClose}>Annuler</button>
+              <button type="submit" className="btn btn-primary">{isNew ? 'Créer' : 'Enregistrer'}</button>
+            </div>
           </div>
         </form>
       </div>
