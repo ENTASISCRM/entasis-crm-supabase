@@ -85,6 +85,7 @@ const EMPTY_CONTRAT = {
   salaire_brut_mensuel: 0,
   reste_a_charge_mensuel: '',
   conges_deja_pris: 0,
+  conges_report: '',
   palier_pp_mensuel: 0,
   palier_pu_mensuel: 0,
   date_debut: new Date().toISOString().slice(0, 10),
@@ -1016,6 +1017,18 @@ function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose,
                      onChange={e => handleChange('conges_deja_pris', e.target.value)} />
               <div className="form-hint">
                 Jours décomptés posés avant la mise en place de Smart RH (vendredi = 2 j) : ils sont déduits du solde pour partir d un compteur juste.
+              </div>
+            </div>
+
+            {/* Période de référence : report figé par la direction au 1er juin */}
+            <div className="form-group">
+              <label className="form-label">Report au 1er juin (jours)</label>
+              <input className="form-input" type="number" step="0.5"
+                     placeholder="vide = report automatique intégral"
+                     value={form.conges_report ?? ''}
+                     onChange={e => handleChange('conges_report', e.target.value)} />
+              <div className="form-hint">
+                Solde reporté de la période précédente (les congés se comptent du 1er juin au 31 mai). Vide = tout le solde non pris se reporte automatiquement ; saisis un nombre à la bascule pour le figer ou le plafonner.
               </div>
             </div>
 

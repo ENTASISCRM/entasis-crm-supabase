@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { listConges, createConge, decideConge, cancelConge, contreProposer, repondreContreProposition } from '../services/conges'
 import { getOwn as getOwnContrat, list as listContrats } from '../services/conseillerContrats'
-import { soldeConges, joursDemande, joursOuvres, joursOuvresSimples, fmtJours } from '../lib/conges-solde'
+import { soldeConges, joursDemande, joursOuvres, joursOuvresSimples, fmtJours, estFerie } from '../lib/conges-solde'
 
 const TYPES = ['Congé payé', 'RTT', 'Sans solde', 'Maladie', 'Autre']
 const STATUT_LIB = {
@@ -98,12 +98,17 @@ function CalendrierAbsences({ conges }) {
           const jIso = iso(d)
           const horsMois = d.getMonth() !== mois.getMonth()
           const weekend = d.getDay() === 0 || d.getDay() === 6
-          // Pas de badge le week end : samedi et dimanche ne sont pas
-          // décomptés, les cases restent neutres même au milieu d un congé
-          const abs = (horsMois || weekend) ? [] : absencesDuJour(jIso)
+          const ferie = !horsMois && estFerie(d)
+          // Pas de badge le week end ni les jours fériés : non décomptés,
+          // les cases restent neutres même au milieu d un congé
+          const abs = (horsMois || weekend || ferie) ? [] : absencesDuJour(jIso)
           return (
-            <div key={jIso} className={`calc${horsMois ? ' hors' : ''}${weekend ? ' we' : ''}${jIso === aujourd ? ' auj' : ''}`}>
-              <div className="calnum">{d.getDate()}</div>
+            <div
+              key={jIso}
+              className={`calc${horsMois ? ' hors' : ''}${weekend || ferie ? ' we' : ''}${jIso === aujourd ? ' auj' : ''}`}
+              title={ferie ? 'Jour férié' : undefined}
+            >
+              <div className="calnum">{d.getDate()}{ferie ? <span className="calfer"> férié</span> : ''}</div>
               {abs.slice(0, 3).map((c) => {
                 const prenom = String(c.demandeur_nom || c.advisor_code || '?').split(' ')[0]
                 const attente = c.statut === 'en_attente'
@@ -457,8 +462,7 @@ export default function SmartRH({ profile }) {
                 </div>
                 <div className="sl">de congés payés disponibles</div>
                 <div className="sd">
-                  {fmtJours(monSolde.acquis)} acquis (2,5 j par mois complet depuis le début du contrat) · {fmtJours(monSolde.pris)} pris
-                  {monSolde.dejaPris > 0 ? ` (dont ${fmtJours(monSolde.dejaPris)} avant Smart RH)` : ''}
+                  Période du 1er juin au 31 mai : {fmtJours(monSolde.acquisPeriode)} acquis · {fmtJours(monSolde.prisPeriode)} pris · report {fmtJours(monSolde.report)}
                 </div>
               </div>
             )}
@@ -665,8 +669,9 @@ export default function SmartRH({ profile }) {
                     <div className="pgroupe" key={`g-${type}`}>{LIBELLES[type]} · {groupe.length}</div>,
                     ...groupe.map(({ k, solde }) => {
                       const arrive = k.date_debut && k.date_debut > aujourdhui
-                      const pct = solde && solde.acquis > 0
-                        ? Math.min(100, Math.max(0, (solde.pris / solde.acquis) * 100))
+                      const dispo = solde ? solde.report + solde.acquisPeriode : 0
+                      const pct = solde && dispo > 0
+                        ? Math.min(100, Math.max(0, (solde.prisPeriode / dispo) * 100))
                         : 0
                       const negatif = solde && solde.restant < 0
                       return (
@@ -675,7 +680,7 @@ export default function SmartRH({ profile }) {
                             <span className="snom">{k.full_name}</span>
                             <span className="ssub">
                               {solde
-                                ? `${fmtJours(solde.acquis)} acquis · ${fmtJours(solde.pris)} pris`
+                                ? `période : ${fmtJours(solde.acquisPeriode)} acquis · ${fmtJours(solde.prisPeriode)} pris · report ${fmtJours(solde.report)}`
                                 : 'sans compteur de congés payés'}
                               {arrive ? ` · arrive le ${fmt(k.date_debut)}` : ''}
                             </span>
@@ -805,6 +810,7 @@ const styles = `
 .srh .calchip{ font-size:9.5px; font-weight:700; border-radius:5px; padding:1px 5px; margin-bottom:2px; border:1.5px solid transparent; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 .srh .calchip.att{ border-style:dashed }
 .srh .calplus{ font-size:9px; color:var(--t3,#8a8a8e); font-weight:700 }
+.srh .calfer{ font-size:8px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--gold-dk,#A6843F) }
 @media(max-width:700px){ .srh .calc{ min-height:44px } .srh .calchip{ font-size:8.5px; padding:1px 3px } }
 .srh .solde{ background:linear-gradient(135deg,#FBF4E4,#fff); border:1px solid rgba(201,169,97,.5); border-radius:14px; padding:16px 18px; margin-bottom:14px }
 .srh .solde .sv{ font-size:30px; font-weight:800; letter-spacing:-0.02em; color:var(--gold-dk,#A6843F); line-height:1 }

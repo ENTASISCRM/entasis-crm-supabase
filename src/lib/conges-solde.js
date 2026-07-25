@@ -28,6 +28,46 @@ const dl = (s) => {
   return new Date(y, m - 1, d)
 }
 
+// ── Jours fériés français ────────────────────────────────────────────────
+// Dimanche de Pâques (algorithme de Butcher), base des fériés mobiles.
+function paques(y) {
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25)
+  const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30
+  const i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7
+  const m = Math.floor((a + 11 * h + 22 * l) / 451)
+  const mois = Math.floor((h + l - 7 * m + 114) / 31)
+  const jour = ((h + l - 7 * m + 114) % 31) + 1
+  return new Date(y, mois - 1, jour)
+}
+const plusJours = (date, n) => new Date(date.getFullYear(), date.getMonth(), date.getDate() + n)
+const memeJour = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+
+// Vrai si la date est un jour férié français (fixes + Pâques, Ascension,
+// Pentecôte). Un férié n est jamais décompté ni compté travaillé.
+export function estFerie(d) {
+  const cle = `${d.getMonth() + 1}-${d.getDate()}`
+  if (['1-1', '5-1', '5-8', '7-14', '8-15', '11-1', '11-11', '12-25'].includes(cle)) return true
+  const p = paques(d.getFullYear())
+  return memeJour(d, plusJours(p, 1)) || memeJour(d, plusJours(p, 39)) || memeJour(d, plusJours(p, 50))
+}
+
+// ── Période de référence des congés payés ────────────────────────────────
+// Du 1er juin au 31 mai (règle légale française). Le solde affiché =
+// report de la période précédente + acquis de la période, moins pris de
+// la période. Par défaut le report est automatique et intégral (rien ne
+// se perd) ; la direction peut le figer via conseiller_contrats.
+// conges_report (saisi au 1er juin pour plafonner ou ajuster).
+export function periodeReference(aujourd = new Date()) {
+  const y = aujourd.getMonth() >= 5 ? aujourd.getFullYear() : aujourd.getFullYear() - 1
+  return {
+    debut: new Date(y, 5, 1),
+    fin: new Date(y + 1, 4, 31, 23, 59, 59),
+    debutIso: `${y}-06-01`,
+    finIso: `${y + 1}-05-31`,
+  }
+}
+
 // Nombre de mois COMPLETS écoulés entre deux dates
 export function moisComplets(debut, fin) {
   if (fin <= debut) return 0
@@ -37,7 +77,8 @@ export function moisComplets(debut, fin) {
 }
 
 // Jours décomptés entre deux dates INCLUSES : lundi à jeudi = 1 jour,
-// vendredi = 2 jours (il emporte le samedi), samedi et dimanche = 0.
+// vendredi = 2 jours (il emporte le samedi), samedi, dimanche et jours
+// FÉRIÉS = 0.
 export function joursOuvres(debutStr, finStr) {
   const debut = dl(debutStr)
   const fin = dl(finStr || debutStr)
@@ -46,16 +87,15 @@ export function joursOuvres(debutStr, finStr) {
   const d = new Date(debut)
   while (d <= fin) {
     const j = d.getDay()
-    if (j >= 1 && j <= 4) n += 1
-    else if (j === 5) n += 2
+    if (j >= 1 && j <= 5 && !estFerie(d)) n += (j === 5 ? 2 : 1)
     d.setDate(d.getDate() + 1)
   }
   return n
 }
 
-// Jours ouvrés SIMPLES (lundi à vendredi = 1 chacun) : sert aux feuilles de
-// temps (jours travaillés). À ne pas confondre avec joursOuvres ci dessus qui
-// applique la règle de DÉCOMPTE des congés (vendredi = 2).
+// Jours ouvrés SIMPLES (lundi à vendredi = 1 chacun, fériés exclus) : sert
+// aux feuilles de temps (jours travaillés). À ne pas confondre avec
+// joursOuvres ci dessus qui applique la règle de DÉCOMPTE (vendredi = 2).
 export function joursOuvresSimples(debutStr, finStr) {
   const debut = dl(debutStr)
   const fin = dl(finStr || debutStr)
@@ -64,7 +104,7 @@ export function joursOuvresSimples(debutStr, finStr) {
   const d = new Date(debut)
   while (d <= fin) {
     const j = d.getDay()
-    if (j >= 1 && j <= 5) n += 1
+    if (j >= 1 && j <= 5 && !estFerie(d)) n += 1
     d.setDate(d.getDate() + 1)
   }
   return n
@@ -97,15 +137,46 @@ export function joursPris(congesDeLaPersonne) {
     .reduce((s, c) => s + joursDemande(c), 0)
 }
 
-// Solde complet d une personne : { acquis, pris, dejaPris, restant } ou null
-// si non concernée. dejaPris = historique saisi par la direction (jours posés
-// avant Smart RH), inclus dans pris.
+// Solde complet d une personne, ventilé par PÉRIODE DE RÉFÉRENCE (1er juin
+// au 31 mai). Renvoie null si le type de contrat n acquiert pas de CP.
+//   - report : solde au 31 mai précédent (automatique et intégral par
+//     défaut, figé par contrat.conges_report si la direction l a saisi)
+//   - acquisPeriode / prisPeriode : sur la période en cours
+//   - restant = report + acquisPeriode - prisPeriode
+//   - acquis / pris : cumuls depuis le début du contrat (compatibilité)
 export function soldeConges(contrat, congesDeLaPersonne, aujourd = new Date()) {
   const acquis = joursAcquis(contrat, aujourd)
   if (acquis === null) return null
   const dejaPris = Number(contrat?.conges_deja_pris || 0)
-  const pris = joursPris(congesDeLaPersonne) + dejaPris
-  return { acquis, pris, dejaPris, restant: acquis - pris }
+  const per = periodeReference(aujourd)
+
+  // Acquis ventilé : avant la période (au 31 mai) et pendant. La somme des
+  // deux vaut toujours l acquis total, même si l anniversaire mensuel du
+  // contrat ne tombe pas un 1er du mois.
+  const finPrecedente = new Date(per.debut.getFullYear(), per.debut.getMonth(), 0, 23, 59, 59)
+  const acquisAvant = joursAcquis(contrat, finPrecedente) || 0
+  const acquisPeriode = acquis - acquisAvant
+
+  const cp = (congesDeLaPersonne || []).filter((c) => c.statut === 'valide' && c.type === 'Congé payé')
+  const prisPeriode = cp
+    .filter((c) => String(c.date_debut) >= per.debutIso)
+    .reduce((s, c) => s + joursDemande(c), 0)
+  // L historique saisi a la main (avant Smart RH) est par nature anterieur
+  // a la periode en cours.
+  const prisAvant = cp
+    .filter((c) => String(c.date_debut) < per.debutIso)
+    .reduce((s, c) => s + joursDemande(c), 0) + dejaPris
+
+  const report = contrat?.conges_report != null && contrat.conges_report !== ''
+    ? Number(contrat.conges_report)
+    : acquisAvant - prisAvant
+
+  const pris = prisPeriode + prisAvant
+  return {
+    acquis, pris, dejaPris,
+    report, acquisPeriode, prisPeriode, periode: per,
+    restant: report + acquisPeriode - prisPeriode,
+  }
 }
 
 // Formatage : 2.5 -> « 2,5 j », 3 -> « 3 j »
