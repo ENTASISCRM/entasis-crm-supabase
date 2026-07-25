@@ -493,18 +493,36 @@ export default function SmartRH({ profile }) {
                     <div className="pgroupe" key={`g-${type}`}>{LIBELLES[type]} · {groupe.length}</div>,
                     ...groupe.map(({ k, solde }) => {
                       const arrive = k.date_debut && k.date_debut > aujourdhui
+                      const couleur = couleurPersonne(k.profile_id || k.full_name)
+                      const initiales = String(k.full_name || '?')
+                        .split(/\s+/).slice(0, 2).map((m) => m[0] || '').join('').toUpperCase()
+                      const pct = solde && solde.acquis > 0
+                        ? Math.min(100, Math.max(0, (solde.pris / solde.acquis) * 100))
+                        : 0
+                      const negatif = solde && solde.restant < 0
                       return (
-                        <div className="prow" key={k.id}>
-                          <span className="pn">{k.full_name}</span>
-                          <span className="pd">
-                            {solde
-                              ? `${fmtJours(solde.acquis)} acquis · ${fmtJours(solde.pris)} pris`
-                              : 'sans compteur de congés payés'}
-                            {arrive ? ` · arrive le ${fmt(k.date_debut)}` : ''}
+                        <div className="srow" key={k.id}>
+                          <span className="savat" style={{ background: couleur }}>{initiales}</span>
+                          <span className="sinfo">
+                            <span className="snom">{k.full_name}</span>
+                            <span className="ssub">
+                              {solde
+                                ? `${fmtJours(solde.acquis)} acquis · ${fmtJours(solde.pris)} pris`
+                                : 'sans compteur de congés payés'}
+                              {arrive ? ` · arrive le ${fmt(k.date_debut)}` : ''}
+                            </span>
                           </span>
                           {solde && (
-                            <span className={`ps${solde.restant < 0 ? ' neg' : ''}`}>reste {fmtJours(solde.restant)}</span>
+                            <span className="sgauge" title={`${Math.round(pct)} % des congés acquis déjà pris`}>
+                              <span
+                                className={`sfill${negatif ? ' neg' : ''}`}
+                                style={{ width: `${negatif ? 100 : pct}%` }}
+                              />
+                            </span>
                           )}
+                          {solde
+                            ? <span className={`sreste${negatif ? ' neg' : ''}`}>{fmtJours(solde.restant)}<small>restants</small></span>
+                            : <span className="sreste vide2">—</span>}
                         </div>
                       )
                     }),
@@ -611,7 +629,20 @@ const styles = `
 .srh .prow .pn{ font-weight:700; color:var(--navy); min-width:120px }
 .srh .prow .pd{ color:#5b6470; flex:1; font-variant-numeric:tabular-nums }
 .srh .prow .pt{ font-size:10.5px; font-weight:700; color:var(--gold-dk); background:#FBF4E4; border-radius:5px; padding:1px 7px }
-.srh .pgroupe{ font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--t3,#8a8a8e); margin:10px 0 2px; padding-bottom:3px; border-bottom:1px solid #EFECE5 }
+.srh .pgroupe{ font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--gold-dk,#A6843F); margin:14px 0 4px; padding-bottom:4px; border-bottom:1px solid rgba(201,169,97,.25) }
+.srh .srow{ display:flex; align-items:center; gap:10px; padding:8px 2px; border-bottom:1px solid #F4F2ED }
+.srh .srow:last-child{ border-bottom:none }
+.srh .savat{ width:32px; height:32px; border-radius:50%; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; color:#fff; font-size:11px; font-weight:800; letter-spacing:.02em; box-shadow:0 1px 3px rgba(0,0,0,.12) }
+.srh .sinfo{ display:flex; flex-direction:column; min-width:0; flex:1 }
+.srh .snom{ font-size:12.5px; font-weight:700; color:var(--navy,#162443); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.srh .ssub{ font-size:10.5px; color:var(--t3,#8a8a8e); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.srh .sgauge{ width:90px; height:6px; flex-shrink:0; background:rgba(0,0,0,.06); border-radius:3px; overflow:hidden }
+.srh .sfill{ display:block; height:100%; border-radius:3px; background:linear-gradient(90deg,var(--gold,#C9A961),var(--gold-dk,#A6843F)); transition:width 300ms ease }
+.srh .sfill.neg{ background:#FF3B30 }
+.srh .sreste{ flex-shrink:0; min-width:66px; text-align:right; font-size:14px; font-weight:800; color:var(--navy,#162443); font-variant-numeric:tabular-nums }
+.srh .sreste small{ display:block; font-size:8.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--t3,#8a8a8e) }
+.srh .sreste.neg{ color:#FF3B30 }
+.srh .sreste.vide2{ color:var(--t3,#8a8a8e); font-weight:500 }
 .srh .prow .pj{ font-size:11px; font-weight:700; color:#0071E3; background:rgba(0,113,227,.08); border-radius:5px; padding:1px 7px; white-space:nowrap }
 .srh .prow .ps{ font-size:11px; font-weight:700; color:#34C759; background:rgba(52,199,89,.10); border-radius:5px; padding:1px 7px; white-space:nowrap }
 .srh .prow .ps.neg{ color:#FF3B30; background:rgba(255,59,48,.10) }
