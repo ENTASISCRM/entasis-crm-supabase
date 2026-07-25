@@ -455,7 +455,7 @@ export default function SmartRH({ profile }) {
                   const depasse = n > monSolde.restant
                   return (
                     <div className={`frmnote${depasse ? ' warn' : ''}`}>
-                      Cette demande : {fmtJours(n)} ouvrés
+                      Cette demande : {fmtJours(n)} décomptés (le vendredi vaut 2 j)
                       {depasse ? ` · dépasse ton solde (${fmtJours(monSolde.restant)} disponibles), la direction tranchera` : ''}
                     </div>
                   )
@@ -470,7 +470,7 @@ export default function SmartRH({ profile }) {
               <div className={`row ${c.statut}`} key={c.id}>
                 <div className="rmain">
                   <div className="rl1">{c.type} {badge(c.statut)}</div>
-                  <div className="rl2">{c.demi_journee ? `${fmt(c.date_debut)} (demi-journée)` : `${fmt(c.date_debut)} au ${fmt(c.date_fin)}`} · {fmtJours(joursDemande(c))} ouvrés</div>
+                  <div className="rl2">{c.demi_journee ? `${fmt(c.date_debut)} (demi-journée)` : `${fmt(c.date_debut)} au ${fmt(c.date_fin)}`} · {fmtJours(joursDemande(c))} décomptés</div>
                   {c.statut === 'refuse' && c.decision_motif && <div className="rmotif">Motif : {c.decision_motif}</div>}
                   {c.statut === 'contre_proposee' && (
                     <div className="cpprop">
@@ -503,7 +503,7 @@ export default function SmartRH({ profile }) {
                   <div className="row en_attente">
                     <div className="rmain">
                       <div className="rl1">{c.demandeur_nom || c.advisor_code || 'Collaborateur'} · {c.type}</div>
-                      <div className="rl2">{c.demi_journee ? `${fmt(c.date_debut)} (demi-journée)` : `${fmt(c.date_debut)} au ${fmt(c.date_fin)}`} · {fmtJours(joursDemande(c))} ouvrés{c.motif ? ` · ${c.motif}` : ''}</div>
+                      <div className="rl2">{c.demi_journee ? `${fmt(c.date_debut)} (demi-journée)` : `${fmt(c.date_debut)} au ${fmt(c.date_fin)}`} · {fmtJours(joursDemande(c))} décomptés{c.motif ? ` · ${c.motif}` : ''}</div>
                       {(() => {
                         const s = soldeDemandeur(c)
                         if (!s) return null

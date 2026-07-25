@@ -9,10 +9,12 @@
 // - Seuls CDI, CDD et alternants acquièrent des congés payés (stagiaires
 //   sont en gratification, mandataires sont indépendants).
 // - Déduction : demandes VALIDÉES de type « Congé payé » (toutes, y compris
-//   futures : un congé validé est engagé), comptées en jours ouvrés (lundi
-//   à vendredi), demi journée = 0,5. S y ajoute conseiller_contrats.
-//   conges_deja_pris : les jours posés AVANT la mise en place de Smart RH,
-//   saisis par la direction pour partir d un solde juste.
+//   futures : un congé validé est engagé). Décompte (règle Louis 24/07) :
+//   lundi à jeudi = 1 jour, VENDREDI = 2 JOURS (il emporte le samedi,
+//   convention jours ouvrables : une semaine complète = 6 jours, et
+//   30 jours par an = 5 semaines), samedi et dimanche = 0, demi journée
+//   = moins 0,5. S y ajoute conseiller_contrats.conges_deja_pris : les
+//   jours posés AVANT la mise en place de Smart RH, saisis par la direction.
 // - Le solde peut être négatif (congés pris par anticipation) : affiché,
 //   pas bloquant, c est la direction qui tranche à la validation.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -34,7 +36,8 @@ export function moisComplets(debut, fin) {
   return Math.max(0, mois)
 }
 
-// Jours ouvrés (lundi à vendredi) entre deux dates INCLUSES
+// Jours décomptés entre deux dates INCLUSES : lundi à jeudi = 1 jour,
+// vendredi = 2 jours (il emporte le samedi), samedi et dimanche = 0.
 export function joursOuvres(debutStr, finStr) {
   const debut = dl(debutStr)
   const fin = dl(finStr || debutStr)
@@ -43,7 +46,8 @@ export function joursOuvres(debutStr, finStr) {
   const d = new Date(debut)
   while (d <= fin) {
     const j = d.getDay()
-    if (j !== 0 && j !== 6) n++
+    if (j >= 1 && j <= 4) n += 1
+    else if (j === 5) n += 2
     d.setDate(d.getDate() + 1)
   }
   return n

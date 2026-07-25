@@ -1015,7 +1015,7 @@ function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose,
                      value={form.conges_deja_pris ?? 0}
                      onChange={e => handleChange('conges_deja_pris', e.target.value)} />
               <div className="form-hint">
-                Jours ouvrés posés avant la mise en place de Smart RH : ils sont déduits du solde pour partir d un compteur juste.
+                Jours décomptés posés avant la mise en place de Smart RH (vendredi = 2 j) : ils sont déduits du solde pour partir d un compteur juste.
               </div>
             </div>
 
