@@ -169,7 +169,9 @@ export default function PilotageRH({ profile }) {
     const linkedIds = new Set(contrats.map(c => c.profile_id).filter(Boolean))
     const contratsLibres = contrats.filter(c => !c.profile_id)
     return profiles
-      .filter(p => p.is_active && !linkedIds.has(p.id))
+      // Les dirigeants (role manager) ne sont pas geres dans cet onglet :
+      // pas de contrat a leur creer, ils ne sont pas des profils orphelins.
+      .filter(p => p.is_active && p.role !== 'manager' && !linkedIds.has(p.id))
       .map(p => {
         const contratExistant = contratsLibres.find(c =>
           normNom(c.full_name) === normNom(p.full_name) ||
