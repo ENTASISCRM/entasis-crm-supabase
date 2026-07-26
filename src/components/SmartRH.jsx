@@ -138,8 +138,10 @@ function CalendrierAbsences({ conges }) {
   )
 }
 
-export default function SmartRH({ profile }) {
-  const isManager = profile?.role === 'manager'
+export default function SmartRH({ profile, rhDelegue = false }) {
+  // Le RH delegue (Claire) a la vue direction complete : validation,
+  // saisie d absence, soldes, feuille de temps. La RLS is_rh() suit.
+  const isManager = profile?.role === 'manager' || rhDelegue
   const [conges, setConges] = useState([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
@@ -180,6 +182,7 @@ export default function SmartRH({ profile }) {
     const vus = new Map()
     for (const k of contrats) {
       if (!k.actif || !k.profile_id) continue
+      if (k.profile?.role === 'manager') continue
       if (!['ALTERNANT', 'STAGIAIRE', 'CDI', 'CDD'].includes(k.type_contrat)) continue
       if (!vus.has(k.profile_id)) vus.set(k.profile_id, k)
     }
@@ -237,6 +240,7 @@ export default function SmartRH({ profile }) {
       const vus = new Map()
       for (const k of contrats) {
         if (!k.actif) continue
+        if (k.profile?.role === 'manager') continue
         if (!(k.type_contrat in ORDRE_PDF)) continue
         if (k.date_debut && k.date_debut > mFin) continue
         if (k.date_fin && k.date_fin < mDeb) continue
@@ -810,6 +814,7 @@ export default function SmartRH({ profile }) {
                 const vus = new Map()
                 for (const k of contrats) {
                   if (!k.actif) continue
+                  if (k.profile?.role === 'manager') continue
                   const cle = k.profile_id || (k.full_name || '').toLowerCase().trim()
                   if (!cle) continue
                   const dejaVu = vus.get(cle)

@@ -770,12 +770,17 @@ function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,mont
     {key:'multi-equipement', label:'Multi-équipement', Icon:Icon.Kanban},
     {key:'conformite', label:'Conformité', Icon:Icon.Dossiers},
     {key:'cockpit', label:'Cockpit', Icon:Icon.Forecast},
-    {key:'forecast',  label:isManager?'Management':'Prévisionnel', Icon:Icon.Forecast},
+    {key:'forecast',  label:(isManager||isRhDelegue)?'Management':'Prévisionnel', Icon:Icon.Forecast},
     {key:'agenda',    label:'Agenda',    Icon:Icon.Calendar},
     // Smart RH (congés) : tout le monde SAUF stagiaires et mandataires.
     ...(canSmartRh?[{key:'smart-rh', label:'Smart RH', Icon:Icon.Calendar}]:[]),
     {key:'market',    label:'Marchés',   Icon:Icon.Market},
     {key:'ucs-structures', label:'UCS Produits Structurés', Icon:Icon.Ucs, badgeGold:true},
+    ...((!isManager && isRhDelegue)?[
+      {key:'team', label:'Équipe', Icon:Icon.Team},
+      {key:'pilotage-rh', label:'Pilotage RH', Icon:Icon.Team},
+      {key:'recrutement', label:'Recrutement', Icon:Icon.Team},
+    ]:[]),
     ...(isManager?[
       {key:'structureurs', label:'Structureurs', Icon:Icon.Ucs, manager:true},
       {key:'team', label:'Équipe', Icon:Icon.Team},
@@ -969,6 +974,8 @@ async function genererFicheParrainage(profile){
 /* ─────────────────────────────────────────────────────────────────────────────
    TOP BAR
 ───────────────────────────────────────────────────────────────────────────── */
+// Profils avec acces RH delegue (voir public.is_rh() en base)
+const RH_DELEGUE_IDS = ['6864c9dc-be8d-4139-b6f3-1896be2b10c6']
 const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs',prospection:'Prospection LinkedIn','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️',editorial:'Agent éditorial ✍️',cockpit:'Cockpit ratios'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile}){
@@ -5404,7 +5411,12 @@ export default function App(){
 
   const isManager = effectiveProfile?.role === 'manager'
   // Smart RH pour tout le monde SAUF stagiaires et mandataires (règle Louis).
-  const canSmartRh = isManager || !['STAGIAIRE','MANDATAIRE'].includes(String(contractType||'').toUpperCase())
+  // Acces RH delegue : Claire Saisse gere la partie RH (decision Louis
+  // 26/07/2026). Onglets ouverts : Pilotage RH, Recrutement, Smart RH (vue
+  // direction), Management, Equipe. Le reste (Remuneration equipe via l API,
+  // Editorial, impersonation) reste direction. Miroir DB : public.is_rh().
+  const isRhDelegue = RH_DELEGUE_IDS.includes(profile?.id)
+  const canSmartRh = isManager || isRhDelegue || !['STAGIAIRE','MANDATAIRE'].includes(String(contractType||'').toUpperCase())
 
   return (
     <div className="app-shell">
@@ -5432,9 +5444,9 @@ export default function App(){
           {activeTab==='dashboard'&&isManager&&<EditorialPendingBanner count={editorialPending.count} nextDeadline={editorialPending.nextDeadline} onOpen={()=>setActiveTab('editorial')}/>}
           {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles} profile={profile}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile}/>)}
           {activeTab==='leads'&&<LeadRoomEmbed/>}
-          {activeTab==='smart-rh'&&canSmartRh&&<SmartRH profile={profile}/>}
-          {activeTab==='pilotage-rh'&&isManager&&<PilotageRH/>}
-          {activeTab==='recrutement'&&isManager&&<Recrutement/>}
+          {activeTab==='smart-rh'&&canSmartRh&&<SmartRH profile={profile} rhDelegue={isRhDelegue}/>}
+          {activeTab==='pilotage-rh'&&(isManager||isRhDelegue)&&<PilotageRH profile={profile}/>}
+          {activeTab==='recrutement'&&(isManager||isRhDelegue)&&<Recrutement/>}
           {activeTab==='pipeline'&&<PipelineBoard deals={deals} month={month} profile={profile} onEdit={startEdit} onQuickPatch={quickPatchDeal}/>}
           {activeTab==='dossiers'&&<DealsTable deals={deals} month={month} profile={profile} onEdit={startEdit} onDelete={deleteDeal} onRefresh={loadAll} onSelectClient={(clientId) => {
             setSelectedClientId(clientId)
@@ -5491,10 +5503,10 @@ export default function App(){
                   profile={profile}
                 />
           )}
-          {activeTab==='forecast'&&(isManager?<ManagementView deals={deals} objectifs={objectifs} month={month} profile={profile} teamProfiles={teamProfiles} canEditObjectifs={isManager} onSaveObjectif={saveObjectif}/>:<ForecastView deals={deals} objectifs={objectifs} month={month} profile={profile} teamProfiles={teamProfiles} canEditObjectifs={isManager} onSaveObjectif={saveObjectif}/>)}
+          {activeTab==='forecast'&&((isManager||isRhDelegue)?<ManagementView deals={deals} objectifs={objectifs} month={month} profile={profile} teamProfiles={teamProfiles} canEditObjectifs={isManager} onSaveObjectif={saveObjectif}/>:<ForecastView deals={deals} objectifs={objectifs} month={month} profile={profile} teamProfiles={teamProfiles} canEditObjectifs={isManager} onSaveObjectif={saveObjectif}/>)}
           {activeTab==='agenda'&&<AgendaView deals={deals} profile={profile}/>}
           {activeTab==='market'&&<MarketView/>}
-          {activeTab==='team'&&isManager&&<TeamView deals={deals} objectifs={objectifs} teamProfiles={teamProfiles} month={month} profile={profile}/>}
+          {activeTab==='team'&&(isManager||isRhDelegue)&&<TeamView deals={deals} objectifs={objectifs} teamProfiles={teamProfiles} month={month} profile={profile}/>}
           {activeTab==='weekly-review'&&isManager&&<WeeklyReview deals={deals} teamProfiles={teamProfiles} supabase={supabase}/>}
           {activeTab==='ucs-structures'&&<UcsStructures profile={profile} month={month}/>}
           {activeTab==='structureurs'&&<Structureurs profile={profile}/>}

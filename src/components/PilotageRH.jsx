@@ -94,7 +94,7 @@ const EMPTY_CONTRAT = {
   notes: '',
 }
 
-export default function PilotageRH() {
+export default function PilotageRH({ profile }) {
   const [contrats, setContrats] = useState([])
   const [profiles, setProfiles] = useState([])
   const [loading, setLoading] = useState(true)
@@ -134,7 +134,9 @@ export default function PilotageRH() {
         profilesService.listTeam().catch(() => []),
         congesService.listConges().catch(() => []),
       ])
-      setContrats(data)
+      // Les dirigeants (gerants et profils manager, Louis et Jean) ne sont
+      // pas geres dans cet onglet : hors liste, hors stats, hors projection.
+      setContrats(data.filter((c) => c.type_contrat !== 'GERANT' && c.profile?.role !== 'manager'))
       setProfiles(prof)
       setConges(cg)
       refreshDocs()
@@ -688,7 +690,7 @@ export default function PilotageRH() {
                   </td>
                   <td style={{ textAlign: 'right' }}>
                     <div className="table-actions" style={{ justifyContent: 'flex-end' }}>
-                      {c.profile_id && c.actif && c.type_contrat !== 'GERANT' && (
+                      {profile?.role === 'manager' && c.profile_id && c.actif && c.type_contrat !== 'GERANT' && (
                         <button
                           className="btn btn-ghost btn-sm"
                           onClick={() => handleImpersonate(c)}
