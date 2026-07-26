@@ -739,6 +739,9 @@ function AuthScreen() {
    SIDEBAR
 ───────────────────────────────────────────────────────────────────────────── */
 function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,month,prospectsNew,dossiersImmoCount,editorialCount,mobileOpen,onCloseMobile}){
+  // Acces RH delegue (Claire) : recalcule ici, la Sidebar est un composant
+  // separe du App qui definit le sien.
+  const isRhDelegue = RH_DELEGUE_IDS.includes(profile?.id)
   // Au clic d'une entrée nav en mobile, on ferme le drawer après navigation
   const handleNavClick = (key) => {
     setActiveTab(key)
