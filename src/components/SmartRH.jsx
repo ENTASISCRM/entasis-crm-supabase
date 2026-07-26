@@ -476,11 +476,15 @@ export default function SmartRH({ profile }) {
   }
   const aValider = useMemo(() => conges.filter((c) => c.statut === 'en_attente'), [conges])
   const enAttenteReponse = useMemo(() => conges.filter((c) => c.statut === 'contre_proposee'), [conges])
-  const planning = useMemo(
-    () => conges.filter((c) => c.statut === 'valide' && c.date_fin >= todayIso() && c.type !== TYPE_ECOLE)
-      .sort((a, b) => a.date_debut.localeCompare(b.date_debut)),
-    [conges],
-  )
+  // Absences validées du MOIS EN COURS (même déjà passées : cas d une
+  // saisie à la main par la direction, ex. arrêt maladie de la semaine
+  // dernière) et de tous les mois suivants.
+  const planning = useMemo(() => {
+    const debutMois = `${todayIso().slice(0, 7)}-01`
+    return conges
+      .filter((c) => c.statut === 'valide' && (c.date_fin || c.date_debut) >= debutMois && c.type !== TYPE_ECOLE)
+      .sort((a, b) => a.date_debut.localeCompare(b.date_debut))
+  }, [conges])
 
   async function envoyer() {
     if (!du || !au) { toast.error('Renseigne les dates de début et de fin'); return }
@@ -768,7 +772,7 @@ export default function SmartRH({ profile }) {
                 </>
               )}
 
-              <div className="ctit2">Absences à venir</div>
+              <div className="ctit2">Absences du mois et à venir</div>
               {planning.length === 0 && <div className="vide">Personne d absent pour l instant.</div>}
               {planning.map((c) => {
                 // Jours décomptés par cette absence + solde restant du salarié
