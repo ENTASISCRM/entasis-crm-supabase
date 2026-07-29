@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { listConges, createConge, createCongeDirection, decideConge, cancelConge, contreProposer, repondreContreProposition } from '../services/conges'
 import { getOwn as getOwnContrat, list as listContrats } from '../services/conseillerContrats'
+import { notifierRH } from '../lib/rh-notify-api'
 import { soldeConges, soldeAuRetour, joursDemande, joursDemandeSimples, joursOuvres, joursOuvresSimples, fmtJours, estFerie } from '../lib/conges-solde'
 
 const TYPES = ['Congé payé', 'RTT', 'Sans solde', 'Maladie', 'Autre']
@@ -208,6 +209,7 @@ export default function SmartRH({ profile, rhDelegue = false }) {
         decision_par: profile?.full_name || 'Direction',
       })
       toast.success('Absence enregistrée et validée')
+      notifierRH('absence_direction', { demandeur_id: abQui, type: abType, date_debut: abDu, date_fin: abDemi ? abDu : abAu, demi_journee: abDemi, motif: abMotif })
       setAbOpen(false); setAbQui(''); setAbType('Maladie'); setAbDu(''); setAbAu(''); setAbDemi(false); setAbMotif('')
       await reload()
     } catch (e) { toast.error(e.message || 'Échec de l enregistrement') } finally { setSaving(false) }
@@ -501,6 +503,8 @@ export default function SmartRH({ profile, rhDelegue = false }) {
         type, date_debut: du, date_fin: demi ? du : au, demi_journee: demi, motif,
       })
       toast.success('Demande envoyée, en attente de validation')
+      const congeMail = { type, date_debut: du, date_fin: demi ? du : au, demi_journee: demi, motif }
+      notifierRH('nouvelle_demande', { ...congeMail, jours: `${nbJoursAffiche(congeMail)} j` })
       setDu(''); setAu(''); setMotif(''); setDemi(false); setType('Congé payé')
       await reload()
     } catch (e) { toast.error(e.message || 'Échec de l envoi') } finally { setSaving(false) }
@@ -512,7 +516,7 @@ export default function SmartRH({ profile, rhDelegue = false }) {
       if (dmotif === null) return
     }
     setSaving(true)
-    try { await decideConge(c.id, statut, profile?.full_name || 'Direction', dmotif); toast.success(statut === 'valide' ? 'Congé validé' : 'Demande refusée'); await reload() }
+    try { await decideConge(c.id, statut, profile?.full_name || 'Direction', dmotif); toast.success(statut === 'valide' ? 'Congé validé' : 'Demande refusée'); notifierRH('decision', { ...c, statut, decision_motif: dmotif }); await reload() }
     catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
   }
   function ouvrirContre(c) {
@@ -526,6 +530,7 @@ export default function SmartRH({ profile, rhDelegue = false }) {
     try {
       await contreProposer(c.id, { date_debut: cpDu, date_fin: cpAu, demi_journee: cpDemi, message: cpMsg }, profile?.full_name || 'Direction')
       toast.success('Contre-proposition envoyée')
+      notifierRH('contre_proposition', { ...c, contre_date_debut: cpDu, contre_date_fin: cpDemi ? cpDu : cpAu, contre_demi_journee: cpDemi, contre_message: cpMsg })
       setCpPour(null)
       await reload()
     } catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
@@ -536,6 +541,7 @@ export default function SmartRH({ profile, rhDelegue = false }) {
     try {
       await repondreContreProposition(c.id, accepte)
       toast.success(accepte ? 'Nouvelles dates acceptées, congé validé' : 'Contre-proposition refusée')
+      notifierRH('reponse_contre', { ...c, accepte })
       await reload()
     } catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
   }
