@@ -145,6 +145,13 @@ export function alignedMonthForDeal(deal) {
     const aligned = monthFromDate(deal.date_signed);
     if (aligned) return aligned;
   }
+  // En cours / Prévu : le mois suit la date de signature PRÉVUE (sinon un
+  // dossier attendu en août restait dans le prévisionnel de juillet, 83
+  // dossiers réalignés en base le 27/07/2026).
+  if ((deal?.status === 'En cours' || deal?.status === 'Prévu') && deal?.date_expected) {
+    const aligned = monthFromDate(deal.date_expected);
+    if (aligned) return aligned;
+  }
   return deal?.month || null;
 }
 

@@ -4362,7 +4362,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                   className="form-input"
                   type="date"
                   value={deal.date_expected || ''}
-                  onChange={e => set('date_expected', e.target.value)}
+                  onChange={e => { set('date_expected', e.target.value); const m = monthFromDate(e.target.value); if (m && deal.status !== 'Signé') set('month', m) }}
                   style={(deal.status === 'En cours' || deal.status === 'Prévu') && !deal.date_expected
                     ? { background: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.30)' }
                     : undefined}
@@ -4379,7 +4379,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                   className="form-input"
                   type="date"
                   value={deal.date_signed || ''}
-                  onChange={e => set('date_signed', e.target.value)}
+                  onChange={e => { set('date_signed', e.target.value); const m = monthFromDate(e.target.value); if (m) set('month', m) }}
                   style={deal.status === 'Signé' && !deal.date_signed
                     ? { background: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.30)' }
                     : undefined}
