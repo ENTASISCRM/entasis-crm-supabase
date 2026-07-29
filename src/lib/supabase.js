@@ -14,3 +14,13 @@ export const supabase = createClient(supabaseUrl || 'https://placeholder.supabas
     storage:            typeof window !== 'undefined' ? window.localStorage : undefined,
   },
 })
+
+// Filet de sécurité session : un onglet qui dort (laptop fermé) peut rater le
+// rafraîchissement automatique du jeton et se réveiller en « JWT expired ».
+// Au retour sur l onglet, on force une vérification de session : si le jeton
+// est expiré mais renouvelable, il est rafraîchi immédiatement.
+if (typeof window !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') supabase.auth.getSession()
+  })
+}
