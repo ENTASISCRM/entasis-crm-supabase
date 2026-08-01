@@ -110,7 +110,7 @@ export function genererPdf({ lignes, futurs, arrivees, departs, arriveesFutures,
   doc.setTextColor(255, 255, 255); doc.setFontSize(15)
   doc.text(sa(`Feuille de temps equipe · ${MOIS_LONGS[moisNum - 1]} ${annee}`), 14, 17)
   doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(200, 205, 215)
-  doc.text(sa(`Document comptabilite · envoi automatique du 1er du mois`), 14, 22.5)
+  doc.text(sa(`Document comptabilite · genere le ${new Date().toLocaleDateString('fr-FR')}`), 14, 22.5)
   y = 34
 
   const cols = [
@@ -203,7 +203,7 @@ export function genererPdf({ lignes, futurs, arrivees, departs, arriveesFutures,
 }
 
 // ── Envoi Gmail (compte de service, delegation domaine) ────────────────────
-async function tokenGmail() {
+export async function tokenGmail() {
   let raw = (process.env.GOOGLE_SERVICE_ACCOUNT_KEY || '').replace(/^"|"$/g, '')
   const compte = JSON.parse(raw.includes('private_key') ? raw : Buffer.from(raw, 'base64').toString())
   const b64u = (o) => Buffer.from(JSON.stringify(o)).toString('base64url')
@@ -225,7 +225,7 @@ async function tokenGmail() {
   return j.access_token
 }
 
-async function envoyerGmail({ pdf, nomFichier, sujet, corps }) {
+export async function envoyerGmail({ pdf, nomFichier, sujet, corps }) {
   const token = await tokenGmail()
   const boundary = 'entasis' + Date.now()
   const mime = [
@@ -273,7 +273,7 @@ if (estMain) {
     pdf,
     nomFichier: `feuille-temps-entasis-${moisIso}.pdf`,
     sujet: `Feuille de temps Entasis · ${MOIS_LONGS[moisNum - 1]} ${annee}`,
-    corps: `Bonjour,\n\nVeuillez trouver ci-joint la feuille de temps de l equipe Entasis pour ${MOIS_LONGS[moisNum - 1]} ${annee} : jours travailles, absences detaillees, conges decomptes et soldes, plus les mouvements de contrats.\n\nCe mail est envoye automatiquement par le CRM le 1er de chaque mois.\n\nBien a vous,\nLouis Hatton\nEntasis Conseil`,
+    corps: `Bonjour,\n\nVeuillez trouver ci-joint la feuille de temps de l equipe Entasis pour ${MOIS_LONGS[moisNum - 1]} ${annee} : jours travailles, absences detaillees, conges decomptes et soldes, plus les mouvements de contrats.\n\nBien a vous,\nLouis Hatton\nEntasis Conseil`,
   })
   console.log(`[feuille-temps] envoye a ${DESTINATAIRE}`)
 }

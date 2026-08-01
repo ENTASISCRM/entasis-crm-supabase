@@ -12,6 +12,7 @@ import toast from 'react-hot-toast'
 import { listConges, createConge, createCongeDirection, decideConge, cancelConge, contreProposer, repondreContreProposition } from '../services/conges'
 import { getOwn as getOwnContrat, list as listContrats } from '../services/conseillerContrats'
 import { notifierRH } from '../lib/rh-notify-api'
+import { supabase } from '../lib/supabase'
 import { soldeConges, soldeAuRetour, joursDemande, joursDemandeSimples, joursOuvres, joursOuvresSimples, fmtJours, estFerie } from '../lib/conges-solde'
 
 const TYPES = ['Congé payé', 'RTT', 'Sans solde', 'Maladie', 'Autre']
@@ -218,6 +219,27 @@ export default function SmartRH({ profile, rhDelegue = false }) {
   // Feuille de temps PDF pour la comptable : mois choisi + generation en cours
   const [moisFeuille, setMoisFeuille] = useState(() => new Date().toISOString().slice(0, 7))
   const [pdfBusy, setPdfBusy] = useState(false)
+  const [envoiBusy, setEnvoiBusy] = useState(false)
+
+  // Envoi par mail a la comptable, DECLENCHE A LA MAIN (decision Louis) :
+  // le serveur genere le meme PDF et l envoie depuis la boite de Louis.
+  async function envoyerFeuille() {
+    setEnvoiBusy(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) throw new Error('Session expirée, recharge la page')
+      const r = await fetch('/api/feuille-temps-envoi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ mois: moisFeuille }),
+      })
+      const j = await r.json()
+      if (!r.ok) throw new Error(j.error || 'Envoi refusé')
+      toast.success(`Feuille de temps envoyée à ${j.destinataire}`)
+    } catch (e) {
+      toast.error('Envoi impossible : ' + (e.message || ''))
+    } finally { setEnvoiBusy(false) }
+  }
 
   // ── Feuille de temps mensuelle (PDF, direction) ──────────────────────────
   // Une ligne par salarié en poste sur le mois : jours ouvrés du contrat,
@@ -921,6 +943,9 @@ export default function SmartRH({ profile, rhDelegue = false }) {
                   />
                   <button className="pri" disabled={pdfBusy || !moisFeuille} onClick={genererFeuilleTemps}>
                     {pdfBusy ? 'Génération…' : '📄 Télécharger le PDF'}
+                  </button>
+                  <button className="pri" disabled={envoiBusy || !moisFeuille} onClick={envoyerFeuille} title="Génère le PDF côté serveur et l envoie par Gmail depuis la boîte de Louis">
+                    {envoiBusy ? 'Envoi…' : '📧 Envoyer à la comptable'}
                   </button>
                 </div>
               </div>

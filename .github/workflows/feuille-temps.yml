@@ -1,11 +1,9 @@
-name: Feuille de temps mensuelle
+name: Feuille de temps (secours manuel)
 
-# Envoi automatique de la feuille de temps du mois ecoule a la comptabilite,
-# le 1er de chaque mois a 08h00 Paris (06h00 UTC). Lancement manuel possible
-# pour tester (workflow_dispatch).
+# PAS de planification : l envoi se declenche depuis le CRM (carte
+# Comptabilite de Smart RH, decision Louis). Ce workflow reste comme
+# solution de secours, lancable a la main depuis GitHub uniquement.
 on:
-  schedule:
-    - cron: '0 6 1 * *'
   workflow_dispatch:
 
 jobs:
