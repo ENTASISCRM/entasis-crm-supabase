@@ -1,0 +1,26 @@
+name: Feuille de temps mensuelle
+
+# Envoi automatique de la feuille de temps du mois ecoule a la comptabilite,
+# le 1er de chaque mois a 08h00 Paris (06h00 UTC). Lancement manuel possible
+# pour tester (workflow_dispatch).
+on:
+  schedule:
+    - cron: '0 6 1 * *'
+  workflow_dispatch:
+
+jobs:
+  envoyer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --omit=dev --ignore-scripts
+      - name: Generer et envoyer la feuille de temps
+        run: node scripts/rh/feuille-temps-mensuelle.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+          COMPTABLE_EMAIL: ${{ vars.COMPTABLE_EMAIL }}
