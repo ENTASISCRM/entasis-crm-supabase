@@ -786,7 +786,7 @@ export default function PilotageRH({ profile }) {
 // Upload, ouverture via URL signée temporaire, suppression. Bucket privé
 // 'contrats-rh', accès manager uniquement via les policies storage.
 // ─────────────────────────────────────────────────────────────────────────
-function DocsContrat({ contratId, typeContrat, onChange }) {
+function DocsContrat({ contratId, typeContrat, nomSalarie, onChange }) {
   const [docs, setDocs] = useState(null)
   const [busy, setBusy] = useState(false)
   // Erreur de chargement VISIBLE : sans ça, un échec affichait des cases
@@ -842,6 +842,37 @@ function DocsContrat({ contratId, typeContrat, onChange }) {
       onChange && onChange()
     } catch (err) { toast.error('Suppression impossible : ' + (err.message || '')) }
     finally { setBusy(false) }
+  }
+
+  // Telecharge TOUS les documents de la fiche en un seul zip (un sous
+  // dossier par categorie) : pratique pour transmettre un dossier complet.
+  const toutTelecharger = async () => {
+    setBusy(true)
+    try {
+      const { default: JSZip } = await import('jszip')
+      const zip = new JSZip()
+      let n = 0
+      for (const cat of categories) {
+        for (const d of (docs?.[cat.key] || [])) {
+          const url = await contratDocs.urlPath(d.path)
+          const rep = await fetch(url)
+          if (!rep.ok) throw new Error(`téléchargement de ${contratDocs.nomAffiche(d.name)} refusé`)
+          zip.file(`${cat.label}/${contratDocs.nomAffiche(d.name)}`, await rep.blob())
+          n++
+        }
+      }
+      if (n === 0) { toast('Aucun document dans la fiche'); return }
+      const blob = await zip.generateAsync({ type: 'blob' })
+      const slug = String(nomSalarie || 'salarie').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '')
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = `documents-${slug}.zip`
+      a.click()
+      URL.revokeObjectURL(a.href)
+      toast.success(`${n} document${n > 1 ? 's' : ''} téléchargé${n > 1 ? 's' : ''} (zip)`)
+    } catch (e) {
+      toast.error('Téléchargement impossible : ' + (e.message || ''))
+    } finally { setBusy(false) }
   }
 
   const fmtTaille = (n) => {
@@ -940,8 +971,15 @@ function DocsContrat({ contratId, typeContrat, onChange }) {
             </div>
           )
         })}
-        <div className="form-hint" style={{ marginTop: 8 }}>
-          Stockage sécurisé, visible uniquement par la direction. 20 Mo max par fichier.
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, gap: 10 }}>
+          <div className="form-hint" style={{ margin: 0 }}>
+            Stockage sécurisé, visible uniquement par la direction. 20 Mo max par fichier.
+          </div>
+          {nbFournis > 0 && (
+            <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={toutTelecharger} style={{ flexShrink: 0 }}>
+              {busy ? '…' : '⬇ Tout télécharger'}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -1149,7 +1187,7 @@ function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose,
 
             {/* Contrat de travail : le document signé vit dans la fiche */}
             {form.id ? (
-              <DocsContrat contratId={form.id} typeContrat={form.type_contrat} onChange={onDocsChange} />
+              <DocsContrat contratId={form.id} typeContrat={form.type_contrat} nomSalarie={form.full_name} onChange={onDocsChange} />
             ) : (
               <div className="form-hint" style={{ marginBottom: 12 }}>
                 📎 Enregistre la fiche une première fois pour pouvoir joindre les documents (contrat, CERFA, identité, sécu).
