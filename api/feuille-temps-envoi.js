@@ -9,7 +9,8 @@
 // variable d environnement COMPTABLE_EMAIL (jamais fourni par le client).
 
 import { createClient } from '@supabase/supabase-js'
-import { calculerFeuille, genererPdf, envoyerGmail } from '../scripts/rh/feuille-temps-mensuelle.mjs'
+import { calculerFeuille, genererPdf } from '../scripts/rh/feuille-temps-mensuelle.mjs'
+import { envoyerMailGmail } from './_lib/gmail.js'
 
 const MOIS_LONGS = ['Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre']
 
@@ -47,9 +48,9 @@ export default async function handler(req, res) {
     const pdf = genererPdf({ ...feuille, annee, moisNum })
 
     const destinataire = process.env.COMPTABLE_EMAIL || 'louis.hatton@entasis-conseil.fr'
-    await envoyerGmail({
-      pdf,
-      nomFichier: `feuille-temps-entasis-${mois}.pdf`,
+    await envoyerMailGmail({
+      to: [destinataire],
+      pieces: [{ nom: `feuille-temps-entasis-${mois}.pdf`, contenu: pdf, mime: 'application/pdf' }],
       sujet: `Feuille de temps Entasis · ${MOIS_LONGS[moisNum - 1]} ${annee}`,
       corps: `Bonjour,\n\nVeuillez trouver ci-joint la feuille de temps de l equipe Entasis pour ${MOIS_LONGS[moisNum - 1]} ${annee} : jours travailles, absences detaillees, conges decomptes et soldes, plus les mouvements de contrats.\n\nBien a vous,\nLouis Hatton\nEntasis Conseil`,
     })

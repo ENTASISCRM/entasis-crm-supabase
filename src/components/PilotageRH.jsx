@@ -17,6 +17,7 @@ import * as service from '../services/conseillerContrats'
 import * as profilesService from '../services/profiles'
 import * as contratDocs from '../services/contratDocs'
 import * as congesService from '../services/conges'
+import MandatairesConformite from './MandatairesConformite'
 import { soldeConges, fmtJours } from '../lib/conges-solde'
 import { impersonate } from '../services/impersonation'
 import { TYPES_CONTRAT, LIBELLE_TYPE_CONTRAT } from '../lib/contrat-enums'
@@ -101,6 +102,8 @@ export default function PilotageRH({ profile }) {
   const [editing, setEditing] = useState(null)   // contrat en cours d'édition (modale)
   const [creating, setCreating] = useState(false)
   const [prefillProfile, setPrefillProfile] = useState(null)
+  // Sous onglets : equipe salariee / conformite des mandataires
+  const [vue, setVue] = useState('equipe')
   const [filterType, setFilterType] = useState('all')
   const [filterActif, setFilterActif] = useState('actifs')
   const [search, setSearch] = useState('')
@@ -282,6 +285,11 @@ export default function PilotageRH({ profile }) {
     return out
   }, [contrats])
 
+  const nbMandataires = useMemo(
+    () => contrats.filter((c) => c.type_contrat === 'MANDATAIRE' && c.actif).length,
+    [contrats],
+  )
+
   const handleSave = async (payload) => {
     try {
       if (payload.id) {
@@ -389,6 +397,32 @@ export default function PilotageRH({ profile }) {
         <button className="btn btn-primary" onClick={() => setCreating(true)}>+ Nouveau contrat</button>
       </div>
 
+      {/* Sous onglets : l equipe salariee d un cote, la conformite des
+          mandataires independants de l autre (obligations INPI, ORIAS,
+          declarations URSSAF trimestrielles). */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+        {[
+          { key: 'equipe', label: 'Équipe salariée' },
+          { key: 'mandataires', label: `Mandataires · conformité${nbMandataires ? ` (${nbMandataires})` : ''}` },
+        ].map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setVue(t.key)}
+            style={{
+              border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+              fontSize: 13, fontWeight: 650, padding: '8px 16px', borderRadius: 999,
+              background: vue === t.key ? 'var(--navy, #0A1628)' : 'rgba(0,0,0,0.05)',
+              color: vue === t.key ? '#fff' : 'var(--t2, #555)',
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {vue === 'mandataires' && <MandatairesConformite contrats={contrats} profile={profile} />}
+
+      {vue === 'equipe' && (<>
       {/* KPIs : tout est calculé sur les contrats en poste aujourd hui */}
       <div className="kpi-grid mb-24">
         <div className="kpi-card kpi-card-blue">
@@ -749,6 +783,8 @@ export default function PilotageRH({ profile }) {
           </tbody>
         </table>
       </div>
+
+      </>)}
 
       {/* Modale d'édition / création */}
       {(editing || creating) && (

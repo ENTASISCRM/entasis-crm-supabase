@@ -10,14 +10,13 @@
 //              COMPTABLE_EMAIL (destinataire), EXPEDITEUR_EMAIL (defaut louis).
 // ═══════════════════════════════════════════════════════════════════════════
 
-import crypto from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 import { jsPDF } from 'jspdf'
+import { envoyerMailGmail } from '../../api/_lib/gmail.js'
 import {
   soldeConges, joursOuvres, joursOuvresSimples, joursDemande,
 } from '../../src/lib/conges-solde.js'
 
-const EXPEDITEUR = process.env.EXPEDITEUR_EMAIL || 'louis.hatton@entasis-conseil.fr'
 const DESTINATAIRE = process.env.COMPTABLE_EMAIL || 'louis.hatton@entasis-conseil.fr'
 const TYPE_ECOLE = 'École / CFA'
 const ORDRE_PDF = { ALTERNANT: 0, STAGIAIRE: 1, CDI: 2, CDD: 3 }
@@ -202,60 +201,6 @@ export function genererPdf({ lignes, futurs, arrivees, departs, arriveesFutures,
   return Buffer.from(doc.output('arraybuffer'))
 }
 
-// ── Envoi Gmail (compte de service, delegation domaine) ────────────────────
-export async function tokenGmail() {
-  let raw = (process.env.GOOGLE_SERVICE_ACCOUNT_KEY || '').replace(/^"|"$/g, '')
-  const compte = JSON.parse(raw.includes('private_key') ? raw : Buffer.from(raw, 'base64').toString())
-  const b64u = (o) => Buffer.from(JSON.stringify(o)).toString('base64url')
-  const now = Math.floor(Date.now() / 1000)
-  const hdr = b64u({ alg: 'RS256', typ: 'JWT' })
-  const pld = b64u({ iss: compte.client_email, sub: EXPEDITEUR, scope: 'https://www.googleapis.com/auth/gmail.send', aud: 'https://oauth2.googleapis.com/token', iat: now, exp: now + 3600 })
-  const signer = crypto.createSign('RSA-SHA256'); signer.update(`${hdr}.${pld}`)
-  const sig = signer.sign(compte.private_key).toString('base64url')
-  const r = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `grant_type=${encodeURIComponent('urn:ietf:params:oauth:grant-type:jwt-bearer')}&assertion=${hdr}.${pld}.${sig}`,
-  })
-  const j = await r.json()
-  if (!j.access_token) {
-    throw new Error(`Delegation gmail.send refusee pour ${compte.client_email} : ${JSON.stringify(j)}. ` +
-      'Ajouter le scope https://www.googleapis.com/auth/gmail.send au client dans admin.google.com (delegation au niveau du domaine).')
-  }
-  return j.access_token
-}
-
-export async function envoyerGmail({ pdf, nomFichier, sujet, corps }) {
-  const token = await tokenGmail()
-  const boundary = 'entasis' + Date.now()
-  const mime = [
-    `From: ${EXPEDITEUR}`,
-    `To: ${DESTINATAIRE}`,
-    `Subject: =?UTF-8?B?${Buffer.from(sujet).toString('base64')}?=`,
-    'MIME-Version: 1.0',
-    `Content-Type: multipart/mixed; boundary="${boundary}"`,
-    '',
-    `--${boundary}`,
-    'Content-Type: text/plain; charset="UTF-8"',
-    '',
-    corps,
-    '',
-    `--${boundary}`,
-    `Content-Type: application/pdf; name="${nomFichier}"`,
-    'Content-Transfer-Encoding: base64',
-    `Content-Disposition: attachment; filename="${nomFichier}"`,
-    '',
-    pdf.toString('base64'),
-    `--${boundary}--`,
-  ].join('\r\n')
-  const r = await fetch(`https://gmail.googleapis.com/gmail/v1/users/${encodeURIComponent(EXPEDITEUR)}/messages/send`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ raw: Buffer.from(mime).toString('base64url') }),
-  })
-  if (!r.ok) throw new Error(`Gmail send ${r.status}: ${await r.text()}`)
-}
-
 // ── Main : feuille du mois ECOULE ──────────────────────────────────────────
 const estMain = process.argv[1] && process.argv[1].endsWith('feuille-temps-mensuelle.mjs')
 if (estMain) {
@@ -269,9 +214,9 @@ if (estMain) {
   console.log(`[feuille-temps] ${feuille.lignes.length} salaries`)
   const pdf = genererPdf({ ...feuille, annee, moisNum })
   const moisIso = `${annee}-${String(moisNum).padStart(2, '0')}`
-  await envoyerGmail({
-    pdf,
-    nomFichier: `feuille-temps-entasis-${moisIso}.pdf`,
+  await envoyerMailGmail({
+    to: [DESTINATAIRE],
+    pieces: [{ nom: `feuille-temps-entasis-${moisIso}.pdf`, contenu: pdf, mime: 'application/pdf' }],
     sujet: `Feuille de temps Entasis · ${MOIS_LONGS[moisNum - 1]} ${annee}`,
     corps: `Bonjour,\n\nVeuillez trouver ci-joint la feuille de temps de l equipe Entasis pour ${MOIS_LONGS[moisNum - 1]} ${annee} : jours travailles, absences detaillees, conges decomptes et soldes, plus les mouvements de contrats.\n\nBien a vous,\nLouis Hatton\nEntasis Conseil`,
   })

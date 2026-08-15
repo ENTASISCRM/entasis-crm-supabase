@@ -739,9 +739,9 @@ function AuthScreen() {
    SIDEBAR
 ───────────────────────────────────────────────────────────────────────────── */
 function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,month,prospectsNew,dossiersImmoCount,editorialCount,mobileOpen,onCloseMobile}){
-  // Acces RH delegue (Claire) : recalcule ici, la Sidebar est un composant
-  // separe du App qui definit le sien.
-  const isRhDelegue = RH_DELEGUE_IDS.includes(profile?.id)
+  // Acces RH delegue : drapeau profiles.rh_delegue (miroir de public.is_rh()
+  // en base). Recalcule ici, la Sidebar est un composant separe du App.
+  const isRhDelegue = profile?.rh_delegue === true
   // Au clic d'une entrée nav en mobile, on ferme le drawer après navigation
   const handleNavClick = (key) => {
     setActiveTab(key)
@@ -977,8 +977,6 @@ async function genererFicheParrainage(profile){
 /* ─────────────────────────────────────────────────────────────────────────────
    TOP BAR
 ───────────────────────────────────────────────────────────────────────────── */
-// Profils avec acces RH delegue (voir public.is_rh() en base)
-const RH_DELEGUE_IDS = ['6864c9dc-be8d-4139-b6f3-1896be2b10c6']
 const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs',prospection:'Prospection LinkedIn','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️',editorial:'Agent éditorial ✍️',cockpit:'Cockpit ratios'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile}){
@@ -5414,11 +5412,11 @@ export default function App(){
 
   const isManager = effectiveProfile?.role === 'manager'
   // Smart RH pour tout le monde SAUF stagiaires et mandataires (règle Louis).
-  // Acces RH delegue : Claire Saisse gere la partie RH (decision Louis
-  // 26/07/2026). Onglets ouverts : Pilotage RH, Recrutement, Smart RH (vue
-  // direction), Management, Equipe. Le reste (Remuneration equipe via l API,
-  // Editorial, impersonation) reste direction. Miroir DB : public.is_rh().
-  const isRhDelegue = RH_DELEGUE_IDS.includes(profile?.id)
+  // Acces RH delegue (drapeau profiles.rh_delegue, revocable) : ouvre
+  // Pilotage RH, Recrutement, Smart RH en vue direction, Management, Equipe.
+  // Le reste (Remuneration equipe, Editorial, impersonation) reste direction.
+  // Miroir DB : public.is_rh().
+  const isRhDelegue = profile?.rh_delegue === true
   const canSmartRh = isManager || isRhDelegue || !['STAGIAIRE','MANDATAIRE'].includes(String(contractType||'').toUpperCase())
 
   return (

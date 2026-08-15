@@ -15,9 +15,6 @@
 
 import { createClient } from '@supabase/supabase-js'
 
-// Miroir de public.is_rh() pour le calcul des destinataires direction
-const RH_DELEGUE_IDS = ['6864c9dc-be8d-4139-b6f3-1896be2b10c6']
-
 const fmtDate = (s) => {
   if (!s) return ''
   const d = new Date(`${String(s).slice(0, 10)}T00:00:00`)
