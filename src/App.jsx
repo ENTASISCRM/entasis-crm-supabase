@@ -17,11 +17,9 @@ import CommandPalette from './components/CommandPalette'
 // Onglets lourds charges a la demande (code-splitting via React.lazy) : sortis du
 // bundle principal pour alleger le JS au login. jspdf/html2canvas (OutilsCGP) et
 // chart.js (ManagementView) ne se telechargent que quand l onglet s ouvre.
-const VueImmobilier = lazy(() => import('./components/VueImmobilier'))
-const CatalogueProgrammes = lazy(() => import('./components/CatalogueProgrammes'))
-const MesDossiersImmo = lazy(() => import('./components/MesDossiersImmo'))
-const PipelineVEFA = lazy(() => import('./components/PipelineVEFA'))
 const OutilsCGP = lazy(() => import('./components/OutilsCGP'))
+// Conteneur immobilier : les 4 anciens onglets immo en sous-vues (fusion nav)
+const ImmobilierNeuf = lazy(() => import('./components/ImmobilierNeuf'))
 const LinkedInPro = lazy(() => import('./components/LinkedInPro'))
 const EditorialHub = lazy(() => import('./components/EditorialHub'))
 const PilotageRH = lazy(() => import('./components/PilotageRH'))
@@ -796,10 +794,7 @@ function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,mont
   ]
 
   const immoItems = [
-    {key:'immo-dashboard', label:'Vue Immo', Icon:Icon.Building},
-    {key:'immo-programmes', label:'Programmes', Icon:Icon.Catalogue},
-    {key:'immo-dossiers', label:'Mes Dossiers', Icon:Icon.ImmoFolder, badge:dossiersImmoCount||0},
-    {key:'immo-pipeline', label:'Pipeline VEFA', Icon:Icon.Kanban},
+    {key:'immobilier', label:'Immobilier Neuf', Icon:Icon.Building, badge:dossiersImmoCount||0},
   ]
 
   // Rémunération : ouvert à tous (manager + conseillers).
@@ -976,7 +971,7 @@ async function genererFicheParrainage(profile){
 /* ─────────────────────────────────────────────────────────────────────────────
    TOP BAR
 ───────────────────────────────────────────────────────────────────────────── */
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️',editorial:'Agent éditorial ✍️',cockpit:'Cockpit ratios'}
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs',immobilier:'Immobilier Neuf 🏠',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️',editorial:'Agent éditorial ✍️',cockpit:'Cockpit ratios'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile}){
   return (
@@ -5546,10 +5541,7 @@ export default function App(){
           {activeTab==='ucs-structures'&&<UcsStructures profile={profile} month={month}/>}
           {activeTab==='structureurs'&&<Structureurs profile={profile}/>}
           {activeTab==='prospection'&&<ProspectionView prospects={prospects} profile={profile} teamProfiles={teamProfiles} onRefresh={fetchProspects} onProspectsChange={setProspects}/>}
-          {activeTab==='immo-dashboard'&&<VueImmobilier profile={profile} setActiveTab={setActiveTab}/>}
-          {activeTab==='immo-programmes'&&<CatalogueProgrammes setActiveTab={setActiveTab}/>}
-          {activeTab==='immo-dossiers'&&<MesDossiersImmo profile={profile} teamProfiles={teamProfiles} setActiveTab={setActiveTab}/>}
-          {activeTab==='immo-pipeline'&&<PipelineVEFA profile={profile} teamProfiles={teamProfiles}/>}
+          {activeTab==='immobilier'&&<ImmobilierNeuf profile={profile} teamProfiles={teamProfiles}/>}
           {activeTab==='linkedin-pro'&&<LinkedInPro profile={profile}/>}
           {activeTab==='editorial'&&isManager&&<EditorialHub onPendingChange={(n)=>setEditorialPending(p=>({...p,count:n}))}/>}
           {activeTab==='remuneration'&&<Remuneration profile={profile} deals={deals} month={month}/>}
