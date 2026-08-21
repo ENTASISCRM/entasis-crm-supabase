@@ -63,12 +63,12 @@ const statutContrat = (c) => {
   return 'enposte'
 }
 
-// Coût réel mensuel d un contrat : le reste à charge quand il est saisi
-// (aides déduites), le brut sinon.
+// Coût réel mensuel d un contrat : le salaire brut PLUS le coût école
+// restant à charge (frais de formation d un alternant après prise en charge
+// OPCO, champ reste_a_charge_mensuel). Le champ s AJOUTE au salaire, il ne
+// le remplace pas : un alternant coûte son salaire ET la facture de l école.
 const coutMensuel = (c) =>
-  c.reste_a_charge_mensuel != null && c.reste_a_charge_mensuel !== ''
-    ? Number(c.reste_a_charge_mensuel)
-    : Number(c.salaire_brut_mensuel || 0)
+  Number(c.salaire_brut_mensuel || 0) + Number(c.reste_a_charge_mensuel || 0)
 
 const TYPE_COLORS = {
   GERANT:     { bg: 'var(--gold-soft, rgba(201,169,97,0.12))', fg: 'var(--gold-dk, #A6843F)' },
@@ -271,8 +271,9 @@ export default function PilotageRH({ profile }) {
       mandataires: enPoste.filter(c => c.type_contrat === 'MANDATAIRE').length,
       masseSalarialeMensuelle: enPoste.reduce((sum, c) => sum + Number(c.salaire_brut_mensuel || 0), 0),
       coutReelMensuel: enPoste.reduce((sum, c) => sum + coutMensuel(c), 0),
-      // Nombre de contrats en poste pour lesquels le reste à charge manque
-      sansResteACharge: enPoste.filter(c => (c.reste_a_charge_mensuel == null || c.reste_a_charge_mensuel === '') && Number(c.salaire_brut_mensuel || 0) > 0).length,
+      // Alternants en poste dont le coût école n a pas encore été saisi :
+      // leur coût réel est sous-estimé (salaire seul, sans la formation)
+      sansCoutEcole: enPoste.filter(c => (c.reste_a_charge_mensuel == null || c.reste_a_charge_mensuel === '') && c.type_contrat === 'ALTERNANT').length,
     }
   }, [contrats])
 
@@ -332,9 +333,9 @@ export default function PilotageRH({ profile }) {
     pousser('docs',
       actifs.filter((c) => !avecDocs.has(String(c.id))),
       (n) => `${n} dossier${n > 1 ? 's' : ''} sans document`)
-    pousser('rac',
-      actifs.filter((c) => (c.reste_a_charge_mensuel == null || c.reste_a_charge_mensuel === '') && Number(c.salaire_brut_mensuel || 0) > 0),
-      (n) => `${n} reste${n > 1 ? 's' : ''} à charge à saisir`)
+    pousser('ecole',
+      actifs.filter((c) => (c.reste_a_charge_mensuel == null || c.reste_a_charge_mensuel === '') && c.type_contrat === 'ALTERNANT'),
+      (n) => `${n} coût${n > 1 ? 's' : ''} école à saisir`)
     return out
   }, [contrats, avecDocs])
 
@@ -488,7 +489,7 @@ export default function PilotageRH({ profile }) {
           <div className="kpi-value">{fmtEur(stats.coutReelMensuel)}</div>
           <div className="kpi-hint">
             {fmtEur(stats.coutReelMensuel * 12)} / an · {fmtEur(stats.masseSalarialeMensuelle)} de brut
-            {stats.sansResteACharge > 0 ? ` · ${stats.sansResteACharge} au brut faute de saisie` : ''}
+            {stats.sansCoutEcole > 0 ? ` · ${stats.sansCoutEcole} coût${stats.sansCoutEcole > 1 ? 's' : ''} école à saisir` : ''}
           </div>
         </div>
         <div className="kpi-card kpi-card-gold">
@@ -793,21 +794,23 @@ export default function PilotageRH({ profile }) {
                       </div>
                     </td>
 
-                    {/* Remuneration : brut et cout reel ensemble */}
+                    {/* Remuneration : salaire brut, et pour les alternants le
+                        cout ecole (facture de formation apres OPCO) qui
+                        s ajoute au salaire dans les couts et projections */}
                     <td style={{ textAlign: 'right' }}>
                       <div className="cell-mono">{fmtEur(c.salaire_brut_mensuel)}</div>
                       <div className="cell-sub">
-                        {racAn != null ? `${fmtEur(racAn)} / an réel` : (
+                        {racAn != null ? `+ école ${fmtEur(racAn)} / an` : c.type_contrat === 'ALTERNANT' ? (
                           <button
                             onClick={() => setEditing(c)}
-                            title="Coût réel après aides, utilisé par les projections"
+                            title="Facture de l'école après prise en charge OPCO : elle s'ajoute au salaire dans les coûts et projections"
                             style={{
                               background: 'none', border: 'none', padding: 0, cursor: 'pointer',
                               color: 'var(--t3)', fontSize: 'inherit', fontFamily: 'inherit',
                               textDecoration: 'underline dotted', textUnderlineOffset: 3,
                             }}
-                          >reste à charge à saisir</button>
-                        )}
+                          >coût école à saisir</button>
+                        ) : null}
                       </div>
                     </td>
 
@@ -1257,19 +1260,21 @@ function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose,
               </div>
             </div>
 
-            {/* Saisie en ANNUEL (demande Louis : c est ce qui reste a payer pour
-                nous sur l annee, peu importe la prise en charge OPCO). Stocké en
-                mensuel en base pour que projections et KPIs restent en euros/mois. */}
+            {/* Cout ecole d un alternant : la facture de formation qui reste
+                a payer apres la prise en charge OPCO. Saisie en ANNUEL,
+                stockee en mensuel en base pour que projections et KPIs
+                restent en euros/mois. Ce montant s AJOUTE au salaire brut
+                dans les couts, il ne le remplace pas. */}
             <div className="form-group">
-              <label className="form-label">Reste à charge entreprise (€ / an)</label>
+              <label className="form-label">Coût école restant à charge (€ / an)</label>
               <input className="form-input" type="number" step="1" min="0"
-                     placeholder="ce qui nous reste à payer sur une année"
+                     placeholder="facture de l'école après prise en charge OPCO"
                      value={form.reste_a_charge_mensuel == null || String(form.reste_a_charge_mensuel).trim() === ''
                        ? ''
                        : Math.round(Number(form.reste_a_charge_mensuel) * 12)}
                      onChange={e => handleChange('reste_a_charge_mensuel', e.target.value === '' ? '' : String(Number(e.target.value) / 12))} />
               <div className="form-hint">
-                Aides et prises en charge déjà déduites : ce que l entreprise décaisse réellement sur l année. Vide = on retient le brut.
+                Frais de formation restant à payer par l entreprise sur l année (alternants). S ajoute au salaire brut dans les coûts et projections. Vide = 0.
               </div>
             </div>
 
@@ -1404,7 +1409,7 @@ function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose,
 
 // ─────────────────────────────────────────────────────────────────────────
 // Projection du coût réel entreprise sur 12 mois
-// Une barre par mois : reste à charge quand il est saisi, brut sinon.
+// Une barre par mois : salaire brut plus coût école restant à charge.
 // Les arrivées et fins de contrat entrent et sortent à leur date, c est
 // l outil de projection financière de la direction.
 // ─────────────────────────────────────────────────────────────────────────
@@ -1425,7 +1430,7 @@ function ProjectionCout({ projection }) {
             Coût réel entreprise sur 12 mois
           </div>
           <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>
-            Reste à charge quand il est saisi, brut sinon, au prorata des jours de présence. Effectif compté au dernier jour du mois.
+            Salaire brut plus coût école restant à charge, au prorata des jours de présence. Effectif compté au dernier jour du mois.
           </div>
         </div>
       </div>
