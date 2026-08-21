@@ -28,10 +28,8 @@ const SmartRH = lazy(() => import('./components/SmartRH'))
 const Remuneration = lazy(() => import('./components/Remuneration'))
 const ManagementView = lazy(() => import('./components/ManagementView'))
 const UcsStructures = lazy(() => import('./components/UcsStructures'))
-const Structureurs = lazy(() => import('./components/Structureurs'))
 const ClientsView = lazy(() => import('./components/clients/ClientsView'))
 const ClientView = lazy(() => import('./components/clients/ClientView'))
-const WeeklyReview = lazy(() => import('./components/WeeklyReview.jsx'))
 // Conformite embarque jspdf : lazy pour rester hors du bundle de login.
 const Conformite = lazy(() => import('./components/Conformite'))
 const MultiEquipement = lazy(() => import('./components/MultiEquipement'))
@@ -782,9 +780,7 @@ function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,mont
       {key:'recrutement', label:'Recrutement', Icon:Icon.Team},
     ]:[]),
     ...(isManager?[
-      {key:'structureurs', label:'Structureurs', Icon:Icon.Ucs, manager:true},
       {key:'team', label:'Équipe', Icon:Icon.Team},
-      {key:'weekly-review', label:'Revue hebdo', Icon:Icon.Forecast},
       {key:'pilotage-rh', label:'Pilotage RH', Icon:Icon.Team, manager:true},
       {key:'recrutement', label:'Recrutement', Icon:Icon.Team, manager:true},
       // Éditorial : manager uniquement (double barrière avec le RLS
@@ -971,7 +967,7 @@ async function genererFicheParrainage(profile){
 /* ─────────────────────────────────────────────────────────────────────────────
    TOP BAR
 ───────────────────────────────────────────────────────────────────────────── */
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs',immobilier:'Immobilier Neuf 🏠',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️',editorial:'Agent éditorial ✍️',cockpit:'Cockpit ratios'}
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',immobilier:'Immobilier Neuf 🏠',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️',editorial:'Agent éditorial ✍️',cockpit:'Cockpit ratios'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile}){
   return (
@@ -5537,9 +5533,7 @@ export default function App(){
           {activeTab==='agenda'&&<AgendaView deals={deals} profile={profile}/>}
           {activeTab==='market'&&<MarketView/>}
           {activeTab==='team'&&(isManager||isRhDelegue)&&<TeamView deals={deals} objectifs={objectifs} teamProfiles={teamProfiles} month={month} profile={profile}/>}
-          {activeTab==='weekly-review'&&isManager&&<WeeklyReview deals={deals} teamProfiles={teamProfiles} supabase={supabase}/>}
           {activeTab==='ucs-structures'&&<UcsStructures profile={profile} month={month}/>}
-          {activeTab==='structureurs'&&<Structureurs profile={profile}/>}
           {activeTab==='prospection'&&<ProspectionView prospects={prospects} profile={profile} teamProfiles={teamProfiles} onRefresh={fetchProspects} onProspectsChange={setProspects}/>}
           {activeTab==='immobilier'&&<ImmobilierNeuf profile={profile} teamProfiles={teamProfiles}/>}
           {activeTab==='linkedin-pro'&&<LinkedInPro profile={profile}/>}
