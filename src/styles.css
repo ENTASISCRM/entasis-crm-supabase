@@ -2115,3 +2115,26 @@ a { color: inherit; text-decoration: none; }
   0%, 100% { box-shadow: 0 0 0 4px rgba(201,169,97,0.15), 0 2px 6px rgba(201,169,97,0.35); }
   50%      { box-shadow: 0 0 0 8px rgba(201,169,97,0.08), 0 2px 8px rgba(201,169,97,0.50); }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * Sous-onglets de l'onglet Pilotage RH — mêmes tokens que le reste du CRM,
+ * au lieu de couleurs écrites en dur dans le JSX.
+ * ───────────────────────────────────────────────────────────────────────── */
+.rh-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.rh-tab {
+  border: 0.5px solid var(--bd);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  padding: 7px 16px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.03);
+  color: var(--t2);
+  transition: background var(--tr-fast), color var(--tr-fast);
+}
+.rh-tab:hover { background: rgba(0,0,0,0.07); }
+.rh-tab.is-active { background: var(--navy, #0A1628); border-color: transparent; color: #fff; }
+@media (prefers-reduced-motion: reduce) {
+  .rh-tab { transition: none; }
+}

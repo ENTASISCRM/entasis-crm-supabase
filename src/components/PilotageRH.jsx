@@ -107,8 +107,11 @@ export default function PilotageRH({ profile }) {
   // Une seule vue d ensemble a la fois (la frise ET la projection empilees
   // rendaient la page interminable)
   const [vueGraph, setVueGraph] = useState('frise')
-  // Menu d actions secondaires de la ligne survolee (garde une seule
-  // action visible par ligne : Editer)
+  // Menu d actions secondaires de la ligne (garde une seule action visible
+  // par ligne : Editer). La position ({ id, top, right }) est figee a
+  // l ouverture car le menu est rendu en position:fixed : le table-wrap a
+  // overflow:hidden, un menu en absolu dedans serait rogne sur les
+  // dernieres lignes du tableau.
   const [menuOuvert, setMenuOuvert] = useState(null)
   const [filterType, setFilterType] = useState('all')
   const [filterActif, setFilterActif] = useState('actifs')
@@ -158,12 +161,19 @@ export default function PilotageRH({ profile }) {
 
   useEffect(() => { reload() }, [])
 
-  // Un clic n importe ou referme le menu d actions ouvert
+  // Un clic n importe ou referme le menu d actions ouvert. Le scroll et le
+  // resize aussi : le menu est en position:fixed, il ne suivrait pas sa ligne.
   useEffect(() => {
     if (!menuOuvert) return undefined
     const fermer = () => setMenuOuvert(null)
     document.addEventListener('click', fermer)
-    return () => document.removeEventListener('click', fermer)
+    window.addEventListener('scroll', fermer, true)
+    window.addEventListener('resize', fermer)
+    return () => {
+      document.removeEventListener('click', fermer)
+      window.removeEventListener('scroll', fermer, true)
+      window.removeEventListener('resize', fermer)
+    }
   }, [menuOuvert])
 
   // Helper : normalisation de nom pour matching (insensible casse / accents /
@@ -443,7 +453,7 @@ export default function PilotageRH({ profile }) {
       {/* Sous onglets : l equipe salariee d un cote, la conformite des
           mandataires independants de l autre (obligations INPI, ORIAS,
           declarations URSSAF trimestrielles). */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+      <div className="rh-tabs">
         {[
           { key: 'equipe', label: 'Équipe salariée' },
           { key: 'mandataires', label: `Mandataires · conformité${nbMandataires ? ` (${nbMandataires})` : ''}` },
@@ -451,12 +461,7 @@ export default function PilotageRH({ profile }) {
           <button
             key={t.key}
             onClick={() => setVue(t.key)}
-            style={{
-              border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-              fontSize: 13, fontWeight: 650, padding: '8px 16px', borderRadius: 999,
-              background: vue === t.key ? 'var(--navy, #0A1628)' : 'rgba(0,0,0,0.05)',
-              color: vue === t.key ? '#fff' : 'var(--t2, #555)',
-            }}
+            className={`rh-tab${vue === t.key ? ' is-active' : ''}`}
           >
             {t.label}
           </button>
@@ -475,6 +480,7 @@ export default function PilotageRH({ profile }) {
           <div className="kpi-hint">
             {stats.cdi} CDI · {stats.cdd} CDD · {stats.alternants} alt. · {stats.stagiaires} stag. · {stats.mandataires} mand.
             {stats.aVenir > 0 ? ` · +${stats.aVenir} à venir` : ''}
+            {stats.termines > 0 ? ` · ${stats.termines} terminé${stats.termines > 1 ? 's' : ''} encore actif${stats.termines > 1 ? 's' : ''}` : ''}
           </div>
         </div>
         <div className="kpi-card kpi-card-green">
@@ -833,11 +839,15 @@ export default function PilotageRH({ profile }) {
                           <button
                             className="btn btn-ghost btn-sm"
                             title="Autres actions"
-                            onClick={() => setMenuOuvert(menuOuvert === c.id ? null : c.id)}
+                            onClick={(e) => {
+                              if (menuOuvert?.id === c.id) { setMenuOuvert(null); return }
+                              const r = e.currentTarget.getBoundingClientRect()
+                              setMenuOuvert({ id: c.id, top: r.bottom + 4, right: window.innerWidth - r.right })
+                            }}
                           >⋯</button>
-                          {menuOuvert === c.id && (
+                          {menuOuvert?.id === c.id && (
                             <div style={{
-                              position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 30,
+                              position: 'fixed', right: menuOuvert.right, top: menuOuvert.top, zIndex: 30,
                               background: '#fff', border: '0.5px solid var(--bd)', borderRadius: 10,
                               boxShadow: '0 8px 24px rgba(0,0,0,0.12)', padding: 4, minWidth: 200,
                               textAlign: 'left',
