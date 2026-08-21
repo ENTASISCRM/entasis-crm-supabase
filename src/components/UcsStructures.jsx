@@ -1,6 +1,24 @@
 // src/components/UcsStructures.jsx
 // Onglet "UCS Produits Structurés" : catalogue + simulateur de commission.
 //
+// ═══════════════════════════════════════════════════════════════════════════
+// INTÉGRATION (fusion navigation) — Structureurs devient la sous-vue
+// « Partenaires » de cet écran (pills Catalogue / Partenaires, state `vue`).
+// À faire dans App.jsx (chef de chantier) :
+//   • Retirer le lazy import (ligne ~33) :
+//       const Structureurs = lazy(() => import('./components/Structureurs'))
+//   • Retirer l'entrée sidebar manager (ligne ~788) :
+//       {key:'structureurs', label:'Structureurs', Icon:Icon.Ucs, manager:true},
+//   • Retirer le rendu conditionnel (ligne ~5533) :
+//       {activeTab==='structureurs'&&<Structureurs profile={profile}/>}
+//   • Retirer de PAGE_TITLES (ligne ~980) l'entrée : structureurs:'Structureurs'
+//   • CommandPalette : PAS besoin de retirer 'structureurs' du MANAGER_ONLY
+//     (l'id n'y sera juste plus jamais résolu).
+// L'écran Structureurs (src/components/Structureurs.jsx) reste INTACT et
+// accessible ici via le pill « Partenaires », affiché aux managers seulement
+// (le composant garde en plus son propre garde-fou manager interne).
+// ═══════════════════════════════════════════════════════════════════════════
+//
 // Layout 2 colonnes (60% / 40%) sur desktop, empilé sur mobile.
 // Charte Entasis : navy #0A1F44, or #C9A961, fond clair beige.
 //
@@ -13,6 +31,7 @@ import * as ucsService from '../services/ucsStructures'
 import * as clientsService from '../services/clients'
 import * as structureursService from '../services/structureurs'
 import { fetchRemuneration } from '../lib/remuneration-api'
+import Structureurs from './Structureurs'
 
 const ETATS = [
   { value: 'EN_COURS',   label: 'En cours',   color: '#15803d' },
@@ -93,6 +112,9 @@ export default function UcsStructures({ profile, month }) {
   const [selectedUcsId, setSelectedUcsId] = useState(null)
   const [filters, setFilters] = useState(loadFilters)
   const [adminMode, setAdminMode] = useState(false)
+  // Sous-vue : 'catalogue' (existant) ou 'partenaires' (écran Structureurs,
+  // manager only — même détection de rôle que le mode admin ci-dessus).
+  const [vue, setVue] = useState('catalogue')
   // Side panel structureur : visible uniquement pour les managers, ouvert au
   // clic sur un chip structureur dans une ligne du tableau.
   const [structureurPanelId, setStructureurPanelId] = useState(null)
@@ -216,6 +238,43 @@ export default function UcsStructures({ profile, month }) {
   // ───────────────────────────────── Render ─────────────────────────────────
   return (
     <div style={{ padding: '16px 24px 32px', maxWidth: 1600, margin: '0 auto' }}>
+      {/* Sous-vues Catalogue / Partenaires — visible managers seulement :
+          l'écran Structureurs est manager only (garde-fou interne en plus),
+          donc pas de barre du tout pour les conseillers (écran inchangé). */}
+      {isManager && (
+        <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+          {[
+            { v: 'catalogue', l: 'Catalogue' },
+            { v: 'partenaires', l: 'Partenaires' },
+          ].map(opt => {
+            const active = vue === opt.v
+            return (
+              <button
+                key={opt.v}
+                onClick={() => setVue(opt.v)}
+                style={{
+                  padding: '5px 14px',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  borderRadius: 14,
+                  border: `1px solid ${active ? 'var(--t1)' : 'var(--bd)'}`,
+                  background: active ? 'var(--t1)' : '#fff',
+                  color: active ? '#fff' : 'var(--t2)',
+                  cursor: 'pointer',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                }}
+              >{opt.l}</button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Sous-vue Partenaires : écran Structureurs rendu tel quel */}
+      {isManager && vue === 'partenaires' ? (
+        <Structureurs profile={profile} />
+      ) : (
+        <>
       <Header
         isManager={isManager}
         adminMode={adminMode}
@@ -275,6 +334,8 @@ export default function UcsStructures({ profile, month }) {
           structureurId={structureurPanelId}
           onClose={() => setStructureurPanelId(null)}
         />
+      )}
+        </>
       )}
     </div>
   )

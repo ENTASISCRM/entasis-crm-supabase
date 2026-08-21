@@ -9,6 +9,24 @@
 //
 // Phase 2 (à venir) : croiser avec Lead Room pour les RDV passés et
 // outcomes (no-shows, joints, à relancer).
+//
+// ═══════════════════════════════════════════════════════════════════════════
+// INTÉGRATION (fusion navigation) — WeeklyReview devient la vue « Semaine »
+// de cet écran (switch pills Mois / Semaine, state `periode`).
+// À faire dans App.jsx (chef de chantier) :
+//   • Retirer le lazy import (ligne ~36) :
+//       const WeeklyReview = lazy(() => import('./components/WeeklyReview.jsx'))
+//   • Retirer l'entrée sidebar manager (ligne ~790) :
+//       {key:'weekly-review', label:'Revue hebdo', Icon:Icon.Forecast},
+//   • Retirer le rendu conditionnel (ligne ~5531) :
+//       {activeTab==='weekly-review'&&isManager&&<WeeklyReview deals={deals} teamProfiles={teamProfiles} supabase={supabase}/>}
+//   • PAGE_TITLES (ligne ~980) : aucune entrée 'weekly-review' n'existe
+//     (vérifié) — rien à retirer. Optionnel : retirer 'weekly-review' du Set
+//     MONTH_TABS (ligne ~998), l'id n'étant plus jamais actif.
+//   • CommandPalette : PAS besoin de retirer 'weekly-review' du MANAGER_ONLY
+//     (l'id n'y sera juste plus jamais résolu).
+// L'écran WeeklyReview (src/components/WeeklyReview.jsx) reste INTACT et
+// accessible ici via le pill « Semaine ».
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { useEffect, useMemo, useState } from 'react'
@@ -25,6 +43,7 @@ import {
 import { supabase } from '../lib/supabase'
 import * as profilesService from '../services/profiles'
 import { fetchRemuneration } from '../lib/remuneration-api'
+import WeeklyReview from './WeeklyReview'
 
 const fmtEur = (v) => Number(v || 0).toLocaleString('fr-FR', {
   style: 'currency', currency: 'EUR', maximumFractionDigits: 0,
@@ -36,6 +55,9 @@ const LEADROOM_API = import.meta.env.VITE_LEADROOM_URL || 'https://entasis-leadr
 
 export default function ManagementView({ deals, objectifs, month, profile, teamProfiles, canEditObjectifs, onSaveObjectif }) {
   const isManager = profile?.role === 'manager'
+  // Période affichée : 'mois' (corps mensuel existant) ou 'semaine'
+  // (WeeklyReview rendu tel quel à la place du corps mensuel).
+  const [periode, setPeriode] = useState('mois')
   const [formObj, setFormObj] = useState({ pp_target: '', pu_target: '' })
   useEffect(() => {
     setFormObj({
@@ -278,20 +300,47 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
     <div>
       <div className="section-header">
         <div>
-          <div className="section-kicker">Pilotage équipe · {month}</div>
+          <div className="section-kicker">Pilotage équipe · {periode === 'semaine' ? 'semaine' : month}</div>
           <div className="section-title">Management</div>
           <div className="section-sub">
             Vue d'ensemble équipe : performances individuelles, top, retardataires.
           </div>
         </div>
-        <button
-          className="btn btn-ghost btn-sm"
-          onClick={copierSyntheseMois}
-          title="Copie un résumé texte du mois (PP/PU vs objectif, top, à booster) pour le mail direction">
-          📋 Copier la synthèse du mois
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          {/* Switch période Mois / Semaine (fusion WeeklyReview) */}
+          <div style={{ display: 'inline-flex', background: 'rgba(0,0,0,0.05)', borderRadius: 8, padding: 3 }}>
+            {[
+              { k: 'mois', l: 'Mois' },
+              { k: 'semaine', l: 'Semaine' },
+            ].map(opt => (
+              <button
+                key={opt.k}
+                onClick={() => setPeriode(opt.k)}
+                style={{
+                  padding: '5px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                  fontSize: 12, fontWeight: 600,
+                  background: periode === opt.k ? 'var(--gold)' : 'transparent',
+                  color: periode === opt.k ? '#fff' : 'var(--t2)',
+                }}
+              >{opt.l}</button>
+            ))}
+          </div>
+          {periode === 'mois' && (
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={copierSyntheseMois}
+              title="Copie un résumé texte du mois (PP/PU vs objectif, top, à booster) pour le mail direction">
+              📋 Copier la synthèse du mois
+            </button>
+          )}
+        </div>
       </div>
 
+      {/* ─── Vue Semaine : WeeklyReview rendu tel quel ─────────────── */}
+      {periode === 'semaine' ? (
+        <WeeklyReview deals={deals} teamProfiles={teamProfiles} supabase={supabase} />
+      ) : (
+        <>
       {/* ─── KPIs globaux cabinet ──────────────────────────────────── */}
       <div className="kpi-grid mb-24">
         <KpiCard
@@ -474,6 +523,8 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
             <button className="btn btn-primary btn-sm" type="submit">Enregistrer</button>
           </form>
         </div>
+      )}
+        </>
       )}
     </div>
   )
