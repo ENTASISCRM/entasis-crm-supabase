@@ -204,6 +204,11 @@ function PackageDetail({ pkg, onBack, onModerated }) {
         .edito-md th, .edito-md td { border: 1px solid rgba(60,60,67,0.16); padding: 6px 10px; text-align: left; }
         .edito-md a { color: var(--gold-dk); }
         .edito-md hr { border: none; border-top: 1px solid rgba(60,60,67,0.12); margin: 18px 0; }
+        .edito-fold > summary { list-style: none; cursor: pointer; }
+        .edito-fold > summary::-webkit-details-marker { display: none; }
+        .edito-fold > summary .chev { display: inline-block; font-size: 10px; color: var(--t3); transition: transform .15s ease; }
+        .edito-fold[open] > summary .chev { transform: rotate(90deg); }
+        .edito-fold[open] > summary { margin-bottom: 12px; }
       `}</style>
 
       <button className="btn btn-outline btn-sm" style={{ marginBottom: 16 }} onClick={onBack}>← Retour à la liste</button>
@@ -279,12 +284,17 @@ function PackageDetail({ pkg, onBack, onModerated }) {
         </pre>
       </div>
 
-      {/* Thread X */}
-      <div style={{ background: 'var(--card)', border: '1px solid var(--line, rgba(60,60,67,0.12))', borderRadius: 'var(--rad-lg)', padding: '20px 24px', marginBottom: 16 }}>
-        <div className="section-header" style={{ marginBottom: 10 }}>
-          <div className="section-title" style={{ fontSize: 15 }}>Thread X ({tweets.length} tweets)</div>
-          {tweets.length > 0 && <CopyBtn text={tweets.join('\n\n')} label="Copier tout le thread" toastLabel="Thread complet copié" />}
-        </div>
+      {/* Thread X — replié par défaut (le manager relit surtout l'article et le post LinkedIn) */}
+      <details className="edito-fold" style={{ background: 'var(--card)', border: '1px solid var(--line, rgba(60,60,67,0.12))', borderRadius: 'var(--rad-lg)', padding: '14px 24px', marginBottom: 16 }}>
+        <summary style={{ listStyle: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span className="chev">▶</span>
+          <div className="section-title" style={{ fontSize: 15, flex: 1 }}>Thread X ({tweets.length} tweets)</div>
+          {tweets.length > 0 && (
+            <span onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
+              <CopyBtn text={tweets.join('\n\n')} label="Copier tout le thread" toastLabel="Thread complet copié" />
+            </span>
+          )}
+        </summary>
         {tweets.map((t, i) => (
           <div key={i} style={{
             border: '1px solid rgba(60,60,67,0.12)', borderRadius: 10, padding: '10px 14px', marginBottom: 8,
@@ -299,14 +309,19 @@ function PackageDetail({ pkg, onBack, onModerated }) {
           </div>
         ))}
         {!tweets.length && <div style={{ fontSize: 13, color: 'var(--t3)' }}>(absent)</div>}
-      </div>
+      </details>
 
-      {/* Carrousel Instagram */}
-      <div style={{ background: 'var(--card)', border: '1px solid var(--line, rgba(60,60,67,0.12))', borderRadius: 'var(--rad-lg)', padding: '20px 24px', marginBottom: 16 }}>
-        <div className="section-header" style={{ marginBottom: 10 }}>
-          <div className="section-title" style={{ fontSize: 15 }}>Carrousel Instagram ({slides.length} slides)</div>
-          {slides.length > 0 && <CopyBtn text={slides.map((s, i) => `— Slide ${i + 1} —\n${slideText(s)}`).join('\n\n')} label="Copier tout le carrousel" toastLabel="Carrousel complet copié" />}
-        </div>
+      {/* Carrousel Instagram — replié par défaut */}
+      <details className="edito-fold" style={{ background: 'var(--card)', border: '1px solid var(--line, rgba(60,60,67,0.12))', borderRadius: 'var(--rad-lg)', padding: '14px 24px', marginBottom: 16 }}>
+        <summary style={{ listStyle: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span className="chev">▶</span>
+          <div className="section-title" style={{ fontSize: 15, flex: 1 }}>Carrousel Instagram ({slides.length} slides)</div>
+          {slides.length > 0 && (
+            <span onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
+              <CopyBtn text={slides.map((s, i) => `— Slide ${i + 1} —\n${slideText(s)}`).join('\n\n')} label="Copier tout le carrousel" toastLabel="Carrousel complet copié" />
+            </span>
+          )}
+        </summary>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
           {slides.map((s, i) => (
             <div key={i} style={{ border: '1px solid rgba(60,60,67,0.12)', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column' }}>
@@ -318,16 +333,21 @@ function PackageDetail({ pkg, onBack, onModerated }) {
           ))}
         </div>
         {!slides.length && <div style={{ fontSize: 13, color: 'var(--t3)' }}>(absent — package antérieur au format 360° ou carrousel invalide à la génération)</div>}
-      </div>
+      </details>
 
-      {/* Script vidéo */}
-      <div style={{ background: 'var(--card)', border: '1px solid var(--line, rgba(60,60,67,0.12))', borderRadius: 'var(--rad-lg)', padding: '20px 24px', marginBottom: 16 }}>
-        <div className="section-header" style={{ marginBottom: 10 }}>
-          <div className="section-title" style={{ fontSize: 15 }}>
+      {/* Script vidéo — replié par défaut */}
+      <details className="edito-fold" style={{ background: 'var(--card)', border: '1px solid var(--line, rgba(60,60,67,0.12))', borderRadius: 'var(--rad-lg)', padding: '14px 24px', marginBottom: 16 }}>
+        <summary style={{ listStyle: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span className="chev">▶</span>
+          <div className="section-title" style={{ fontSize: 15, flex: 1 }}>
             Script vidéo{hasVideo && video.duree_cible_sec ? ` (~${video.duree_cible_sec} s, vertical)` : ''}
           </div>
-          {hasVideo && <CopyBtn text={videoText} label="Copier le script" toastLabel="Script vidéo copié" />}
-        </div>
+          {hasVideo && (
+            <span onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
+              <CopyBtn text={videoText} label="Copier le script" toastLabel="Script vidéo copié" />
+            </span>
+          )}
+        </summary>
         {hasVideo ? (
           <>
             <div style={{ background: 'var(--gold-subtle)', border: '1px solid var(--gold-line)', borderRadius: 10, padding: '10px 14px', marginBottom: 12 }}>
@@ -365,11 +385,14 @@ function PackageDetail({ pkg, onBack, onModerated }) {
         ) : (
           <div style={{ fontSize: 13, color: 'var(--t3)' }}>(absent — package antérieur au format 360° ou script invalide à la génération)</div>
         )}
-      </div>
+      </details>
 
-      {/* Sources */}
-      <div style={{ background: 'var(--card)', border: '1px solid var(--line, rgba(60,60,67,0.12))', borderRadius: 'var(--rad-lg)', padding: '20px 24px', marginBottom: 24 }}>
-        <div className="section-title" style={{ fontSize: 15, marginBottom: 10 }}>Sources d'actualité</div>
+      {/* Sources — replié par défaut */}
+      <details className="edito-fold" style={{ background: 'var(--card)', border: '1px solid var(--line, rgba(60,60,67,0.12))', borderRadius: 'var(--rad-lg)', padding: '14px 24px', marginBottom: 24 }}>
+        <summary style={{ listStyle: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span className="chev">▶</span>
+          <div className="section-title" style={{ fontSize: 15, flex: 1 }}>Sources d'actualité</div>
+        </summary>
         {sources.map((s, i) => (
           <div key={i} style={{ fontSize: 13, margin: '6px 0' }}>
             <a href={s.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gold-dk)' }}>{s.titre || s.url}</a>
@@ -377,7 +400,7 @@ function PackageDetail({ pkg, onBack, onModerated }) {
           </div>
         ))}
         {!sources.length && <div style={{ fontSize: 13, color: 'var(--t3)' }}>(aucune)</div>}
-      </div>
+      </details>
 
       {rejectModal && (
         <ConfirmRejectModal

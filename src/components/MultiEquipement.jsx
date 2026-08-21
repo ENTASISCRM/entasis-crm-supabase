@@ -473,42 +473,55 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
           <CollabPanel items={collab} myCode={profile?.advisor_code} famMap={famMap}
             onRepondreRenfort={repondreRenfort} onDonnerAvis={donnerAvis} onProposer={proposerRenfort} />
 
-          {/* Hero : combien d euros restent sur la table, combien sont rentrés */}
-          <div className="hero">
-            <div className="hbox navy">
-              <div className="hv">~{fmtEur(totalActives)}</div>
-              <div className="hl">de collecte identifiée · {actives.length} mission{actives.length > 1 ? 's' : ''}</div>
-            </div>
-            <div className="hbox vert">
-              <div className="hv">+{fmtEur(gagneesMoisEur)}</div>
-              <div className="hl">signé ce mois en équipement complémentaire · {gagneesMois.length} gagnée{gagneesMois.length > 1 ? 's' : ''}</div>
-            </div>
-          </div>
+          {/* Hero € + bandeau campagne, repliés : le résumé tient sur une ligne,
+              le détail (2 blocs €, jauge, édition campagne) reste à un clic. */}
+          <details className="repli">
+            <summary>
+              <span className="chev">▶</span>
+              {campagne
+                ? <span>🎯 Campagne du mois : <b>{labelFam(camp)}</b></span>
+                : <span>Collecte du mois</span>}
+              <span className="enjeu">~{fmtEur(totalActives)} à aller chercher</span>
+              <span className="sgain">+{fmtEur(gagneesMoisEur)} signé ce mois</span>
+            </summary>
 
-          {/* Bandeau campagne du mois */}
-          {campagne && (
-            <div className="camp">
-              <span className="ic">🎯</span>
-              {!editCamp && (
-                <>
-                  <span>Campagne du mois : <b>{labelFam(camp)}</b></span>
-                  <span className="cjauge" title={`${campagne.traitees} clients traités sur ${campagne.objectif}`}>
-                    {campagne.traitees}/{campagne.objectif} clients
-                    <span className="bar"><i style={{ width: `${Math.min(100, (100 * campagne.traitees) / Math.max(1, campagne.objectif))}%` }} /></span>
-                  </span>
-                  <span className="enjeu">~{fmtK(campagne.enJeu)} en jeu</span>
-                  <button className={`lnk${campSeul ? ' on' : ''}`} onClick={() => setCampSeul((v) => !v)}>
-                    {campSeul ? 'toutes les missions' : 'voir la campagne'}
-                  </button>
-                  {isManager && <button className="lnk" onClick={() => setEditCamp(true)}>modifier</button>}
-                </>
-              )}
-              {editCamp && isManager && (
-                <FormCampagne matCols={matCols} camp={camp} objectif={settings.objectif_campagne}
-                  onCancel={() => setEditCamp(false)} onSave={sauverCampagne} />
-              )}
+            {/* Hero : combien d euros restent sur la table, combien sont rentrés */}
+            <div className="hero">
+              <div className="hbox navy">
+                <div className="hv">~{fmtEur(totalActives)}</div>
+                <div className="hl">de collecte identifiée · {actives.length} mission{actives.length > 1 ? 's' : ''}</div>
+              </div>
+              <div className="hbox vert">
+                <div className="hv">+{fmtEur(gagneesMoisEur)}</div>
+                <div className="hl">signé ce mois en équipement complémentaire · {gagneesMois.length} gagnée{gagneesMois.length > 1 ? 's' : ''}</div>
+              </div>
             </div>
-          )}
+
+            {/* Bandeau campagne du mois */}
+            {campagne && (
+              <div className="camp">
+                <span className="ic">🎯</span>
+                {!editCamp && (
+                  <>
+                    <span>Campagne du mois : <b>{labelFam(camp)}</b></span>
+                    <span className="cjauge" title={`${campagne.traitees} clients traités sur ${campagne.objectif}`}>
+                      {campagne.traitees}/{campagne.objectif} clients
+                      <span className="bar"><i style={{ width: `${Math.min(100, (100 * campagne.traitees) / Math.max(1, campagne.objectif))}%` }} /></span>
+                    </span>
+                    <span className="enjeu">~{fmtK(campagne.enJeu)} en jeu</span>
+                    <button className={`lnk${campSeul ? ' on' : ''}`} onClick={() => setCampSeul((v) => !v)}>
+                      {campSeul ? 'toutes les missions' : 'voir la campagne'}
+                    </button>
+                    {isManager && <button className="lnk" onClick={() => setEditCamp(true)}>modifier</button>}
+                  </>
+                )}
+                {editCamp && isManager && (
+                  <FormCampagne matCols={matCols} camp={camp} objectif={settings.objectif_campagne}
+                    onCancel={() => setEditCamp(false)} onSave={sauverCampagne} />
+                )}
+              </div>
+            )}
+          </details>
 
           {/* Chips d états */}
           <div className="chips">
@@ -527,16 +540,24 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
           </div>
 
           {/* Liste de missions : le coeur du module */}
-          {chip === 'journee' && liste.length > 0 && (
-            <div className="aide">
-              <b>Votre journée, déjà priorisée</b> : relances dues, campagne du mois et clients à fort potentiel, dans l ordre. Déroulez et proposez, pas besoin de choisir un filtre.
-            </div>
-          )}
-          {chip === 'a_attaquer' && liste.length > 0 && (
-            <div className="aide">
-              Chaque ligne = <b>un client</b> et le produit à lui proposer. Les <b>ronds</b> montrent son équipement (plein = détenu, ✕ = absence confirmée, rond doré = la famille à proposer).
-              « Proposer » rédige le mail ou ouvre le dossier ; un montant affiché <b>en fourchette</b> (« à préciser ») = complétez la fiche en un clic pour un chiffre net.
-            </div>
+          {(chip === 'journee' || chip === 'a_attaquer') && liste.length > 0 && (
+            <details className="repli replaide">
+              <summary>
+                <span className="chev">▶</span>
+                <span>Comment ça marche</span>
+              </summary>
+              {chip === 'journee' && (
+                <div className="aide">
+                  <b>Votre journée, déjà priorisée</b> : relances dues, campagne du mois et clients à fort potentiel, dans l ordre. Déroulez et proposez, pas besoin de choisir un filtre.
+                </div>
+              )}
+              {chip === 'a_attaquer' && (
+                <div className="aide">
+                  Chaque ligne = <b>un client</b> et le produit à lui proposer. Les <b>ronds</b> montrent son équipement (plein = détenu, ✕ = absence confirmée, rond doré = la famille à proposer).
+                  « Proposer » rédige le mail ou ouvre le dossier ; un montant affiché <b>en fourchette</b> (« à préciser ») = complétez la fiche en un clic pour un chiffre net.
+                </div>
+              )}
+            </details>
           )}
           {(chip === 'a_attaquer' || chip === 'journee') && listeGroupee.length > 1 && (
             <button className="revuebtn" onClick={() => setRevue(listeGroupee.map((g) => ({ client: g.client, famille: g.missions[0].famille })))}>▸ Revue par lot ({listeGroupee.length}) : enchaîner les propositions au clavier</button>
@@ -1812,6 +1833,22 @@ const styles = `
 .meq3 .vues button.on{ background:var(--navy); border-color:var(--navy); color:#fff }
 .meq3 .empty{ padding:22px; text-align:center; color:var(--silver) }
 .meq3 .errtxt{ color:#B4453B }
+
+/* Replis <details> : résumé sur une ligne, contenu intact à un clic */
+.meq3 .repli{ margin-bottom:10px }
+.meq3 .repli>summary{ list-style:none; cursor:pointer; display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:#fff; border:1px solid var(--line); border-radius:10px; padding:7px 12px; font-size:12.5px; font-weight:650; color:#5b6470 }
+.meq3 .repli>summary::-webkit-details-marker{ display:none }
+.meq3 .repli>summary b{ color:var(--gold-dk) }
+.meq3 .repli>summary .chev{ font-size:9px; color:var(--silver); transition:transform .15s ease }
+.meq3 .repli[open]>summary{ margin-bottom:8px }
+.meq3 .repli[open]>summary .chev{ transform:rotate(90deg) }
+.meq3 .repli>summary .sgain{ font-weight:800; color:var(--vert); font-variant-numeric:tabular-nums }
+.meq3 .repli.replaide{ margin-bottom:8px }
+.meq3 .repli.replaide>summary{ border-style:dashed; background:#F6F4EF; font-size:11.5px }
+.meq3 .repli .hero{ margin-bottom:0 }
+.meq3 .repli .hero+.camp{ margin-top:10px }
+.meq3 .repli .camp{ margin-bottom:0 }
+.meq3 .repli .aide{ margin-bottom:0 }
 
 .meq3 .hero{ display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap }
 .meq3 .hbox{ flex:1; min-width:230px; border-radius:14px; padding:16px 18px }
