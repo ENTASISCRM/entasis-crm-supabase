@@ -47,6 +47,23 @@ export async function listByAdvisorCodes(codes) {
 }
 
 /**
+ * Charge UN deal avec le même join clients que listAll. Utilisé par le
+ * handler Realtime INSERT : le payload WebSocket ne porte pas la jointure,
+ * on va la chercher pour ce seul deal au lieu de recharger la table.
+ * Retourne null si introuvable ou en cas d'erreur (l'appelant garde alors
+ * la ligne brute du payload).
+ */
+export async function getById(dealId) {
+  const { data, error } = await supabase
+    .from('deals')
+    .select(`*, clients(${CLIENT_JOIN_COLS})`)
+    .eq('id', dealId)
+    .maybeSingle()
+  if (error) return null
+  return data
+}
+
+/**
  * Met à jour un deal existant. Le caller passe l'objet complet.
  */
 // Champs UI transitoires portés par l'objet deal pour saisir/compléter la fiche

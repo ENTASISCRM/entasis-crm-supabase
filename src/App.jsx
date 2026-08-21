@@ -4933,7 +4933,13 @@ export default function App(){
     fetchLeads()
     const poll=setInterval(fetchLeads,60_000)
     const leadsChannel=supabase.channel('leads-room')
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'leads'},()=>{logger.debug('[Leads] INSERT Realtime');fetchLeads()})
+      // Le payload INSERT porte la ligne complete : on l applique localement au
+      // lieu de recharger toute la table (le pont Lead Room ecrit en rafale, un
+      // select('*') par lead chez chaque conseiller connecte ne tient pas).
+      // Le poll 60s reste le filet de securite si un event se perd.
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'leads'},payload=>{
+        setLeads(prev=>prev.some(l=>l.id===payload.new.id)?prev:[payload.new,...prev])
+      })
       .on('postgres_changes',{event:'UPDATE',schema:'public',table:'leads'},payload=>{
         setLeads(prev=>prev.map(l=>l.id===payload.new.id?payload.new:l))
       })
@@ -4948,6 +4954,13 @@ export default function App(){
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'deals'},payload=>{
         const fresh=payload.new
         setDeals(prev=>prev.some(d=>d.id===fresh.id)?prev:[...prev,fresh])
+        // Le payload Realtime ne porte pas la jointure clients(...) chargee
+        // partout ailleurs : fetch cible de ce seul deal pour completer la
+        // ligne, sinon la fiche reste sans donnees client jusqu au prochain
+        // rechargement complet.
+        dealsService.getById(fresh.id).then(full=>{
+          if(full)setDeals(prev=>prev.map(d=>d.id===full.id?full:d))
+        })
       })
       .on('postgres_changes',{event:'UPDATE',schema:'public',table:'deals'},payload=>{
         const fresh=payload.new
