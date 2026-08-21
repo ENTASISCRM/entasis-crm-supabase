@@ -768,7 +768,6 @@ function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,mont
     // l'iframe Lead Room. On retire le badge plutôt que d'afficher faux.
     {key:'leads',     label:'Leads Live',  Icon:Icon.Leads, badgeGold:true},
     {key:'pipeline',  label:'Pipeline',  Icon:Icon.Pipeline,  badge:isManager?pipelineCount:hotCount},
-    {key:'dossiers',  label:'Dossiers',  Icon:Icon.Dossiers},
     {key:'clients',   label:'Clients',   Icon:Icon.Team},
     {key:'multi-equipement', label:'Multi-équipement', Icon:Icon.Kanban},
     {key:'conformite', label:'Conformité', Icon:Icon.Dossiers},
@@ -977,7 +976,7 @@ async function genererFicheParrainage(profile){
 /* ─────────────────────────────────────────────────────────────────────────────
    TOP BAR
 ───────────────────────────────────────────────────────────────────────────── */
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',dossiers:'Dossiers clients',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️',editorial:'Agent éditorial ✍️',cockpit:'Cockpit ratios'}
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',structureurs:'Structureurs','immo-dashboard':'Immobilier Neuf','immo-programmes':'Catalogue Programmes','immo-dossiers':'Mes Dossiers Immobilier','immo-pipeline':'Pipeline VEFA',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️',editorial:'Agent éditorial ✍️',cockpit:'Cockpit ratios'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile}){
   return (
@@ -995,7 +994,7 @@ function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profi
           // Le selecteur de mois n apparait que sur les onglets qui filtrent
           // par mois — il trainait sur tous les ecrans (clients, conformite,
           // outils, immo...) ou il ne pilotait rien.
-          const MONTH_TABS = new Set(['dashboard','pipeline','dossiers','forecast','remuneration','team','management','weekly-review','cockpit'])
+          const MONTH_TABS = new Set(['dashboard','pipeline','clients','forecast','remuneration','team','cockpit'])
           if (!MONTH_TABS.has(activeTab)) return null
           return true
         })()&&(()=>{
@@ -4857,6 +4856,9 @@ export default function App(){
   const [error,setError]=useState('')
   const [activeTab,setActiveTab]=useState('dashboard')
   const [selectedClientId,setSelectedClientId]=useState(null)
+  // Sous-vue de l onglet Clients : annuaire (fiches) ou dossiers du mois
+  // (l ancien onglet Dossiers, absorbe ici — meme donnees, un chemin de moins).
+  const [clientsVue,setClientsVue]=useState('annuaire')
   const [prospects,setProspects]=useState([])
   const [prospectsNew,setProspectsNew]=useState(0)
   const [dossiersImmoCount,setDossiersImmoCount]=useState(0)
@@ -5361,7 +5363,8 @@ export default function App(){
     ].filter(Boolean).join('\n')
     setEditingDeal(deal)
     setModalOpen(true)
-    setActiveTab('dossiers')
+    setActiveTab('clients')
+    setClientsVue('dossiers')
   }
 
   function startCreate(){setEditingDeal(emptyDeal(profile?.advisor_code));setModalOpen(true)}
@@ -5469,11 +5472,22 @@ export default function App(){
           {activeTab==='pilotage-rh'&&(isManager||isRhDelegue)&&<PilotageRH profile={profile}/>}
           {activeTab==='recrutement'&&(isManager||isRhDelegue)&&<Recrutement/>}
           {activeTab==='pipeline'&&<PipelineBoard deals={deals} month={month} profile={profile} onEdit={startEdit} onQuickPatch={quickPatchDeal}/>}
-          {activeTab==='dossiers'&&<DealsTable deals={deals} month={month} profile={profile} onEdit={startEdit} onDelete={deleteDeal} onRefresh={loadAll} onSelectClient={(clientId) => {
+          {activeTab==='clients'&&!selectedClientId&&(
+            <div style={{display:'flex',gap:8,marginBottom:16}}>
+              {[['annuaire','Annuaire'],['dossiers','Dossiers du mois']].map(([k,label])=>(
+                <button key={k} onClick={()=>setClientsVue(k)}
+                  style={{border:'0.5px solid var(--bd)',cursor:'pointer',fontFamily:'inherit',fontSize:13,fontWeight:650,padding:'7px 16px',borderRadius:999,
+                    background:clientsVue===k?'var(--navy,#0A1628)':'rgba(0,0,0,0.03)',color:clientsVue===k?'#fff':'var(--t2)'}}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+          {activeTab==='clients'&&!selectedClientId&&clientsVue==='dossiers'&&<DealsTable deals={deals} month={month} profile={profile} onEdit={startEdit} onDelete={deleteDeal} onRefresh={loadAll} onSelectClient={(clientId) => {
             setSelectedClientId(clientId)
-            setActiveTab('clients')
+            setClientsVue('annuaire')
           }}/>}
-          {activeTab==='clients'&&(
+          {activeTab==='clients'&&(clientsVue==='annuaire'||selectedClientId)&&(
             selectedClientId
               ? <ClientView
                   clientId={selectedClientId}
