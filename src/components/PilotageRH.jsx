@@ -104,6 +104,12 @@ export default function PilotageRH({ profile }) {
   const [prefillProfile, setPrefillProfile] = useState(null)
   // Sous onglets : equipe salariee / conformite des mandataires
   const [vue, setVue] = useState('equipe')
+  // Une seule vue d ensemble a la fois (la frise ET la projection empilees
+  // rendaient la page interminable)
+  const [vueGraph, setVueGraph] = useState('frise')
+  // Menu d actions secondaires de la ligne survolee (garde une seule
+  // action visible par ligne : Editer)
+  const [menuOuvert, setMenuOuvert] = useState(null)
   const [filterType, setFilterType] = useState('all')
   const [filterActif, setFilterActif] = useState('actifs')
   const [search, setSearch] = useState('')
@@ -151,6 +157,14 @@ export default function PilotageRH({ profile }) {
   }
 
   useEffect(() => { reload() }, [])
+
+  // Un clic n importe ou referme le menu d actions ouvert
+  useEffect(() => {
+    if (!menuOuvert) return undefined
+    const fermer = () => setMenuOuvert(null)
+    document.addEventListener('click', fermer)
+    return () => document.removeEventListener('click', fermer)
+  }, [menuOuvert])
 
   // Helper : normalisation de nom pour matching (insensible casse / accents /
   // tirets / apostrophes). "Nans MARRO-DUZAT" === "Nans Marro Duzat" ===
@@ -284,6 +298,35 @@ export default function PilotageRH({ profile }) {
     }
     return out
   }, [contrats])
+
+  // Ce qui reclame une action, condense en pastilles : sans ca il fallait
+  // parcourir tout le tableau pour reperer les trous.
+  const aTraiter = useMemo(() => {
+    const actifs = contrats.filter((c) => c.actif && statutContrat(c) !== 'termine')
+    const out = []
+    const pousser = (cle, liste, texte, urgent) => {
+      if (liste.length === 0) return
+      out.push({
+        cle,
+        label: texte(liste.length),
+        detail: liste.map((c) => c.full_name).join(', '),
+        urgent: !!urgent,
+      })
+    }
+    pousser('fin',
+      actifs.filter((c) => TYPES_BORNES.includes(c.type_contrat) && !c.date_fin),
+      (n) => `${n} date${n > 1 ? 's' : ''} de fin manquante${n > 1 ? 's' : ''}`, true)
+    pousser('proche',
+      actifs.filter((c) => { const r = c.date_fin ? resteAvant(c.date_fin) : null; return r && !r.passe && r.alerte }),
+      (n) => `${n} fin${n > 1 ? 's' : ''} de contrat sous 3 mois`, true)
+    pousser('docs',
+      actifs.filter((c) => !avecDocs.has(String(c.id))),
+      (n) => `${n} dossier${n > 1 ? 's' : ''} sans document`)
+    pousser('rac',
+      actifs.filter((c) => (c.reste_a_charge_mensuel == null || c.reste_a_charge_mensuel === '') && Number(c.salaire_brut_mensuel || 0) > 0),
+      (n) => `${n} reste${n > 1 ? 's' : ''} à charge à saisir`)
+    return out
+  }, [contrats, avecDocs])
 
   const nbMandataires = useMemo(
     () => contrats.filter((c) => c.type_contrat === 'MANDATAIRE' && c.actif).length,
@@ -423,7 +466,8 @@ export default function PilotageRH({ profile }) {
       {vue === 'mandataires' && <MandatairesConformite contrats={contrats} profile={profile} />}
 
       {vue === 'equipe' && (<>
-      {/* KPIs : tout est calculé sur les contrats en poste aujourd hui */}
+      {/* Trois chiffres, pas plus : combien nous sommes, ce que ca coute,
+          ou on va. Le brut est devenu un detail du cout reel. */}
       <div className="kpi-grid mb-24">
         <div className="kpi-card kpi-card-blue">
           <div className="kpi-label">En poste aujourd'hui</div>
@@ -433,20 +477,15 @@ export default function PilotageRH({ profile }) {
             {stats.aVenir > 0 ? ` · +${stats.aVenir} à venir` : ''}
           </div>
         </div>
-        <div className="kpi-card kpi-card-gold">
-          <div className="kpi-label">Masse salariale brute / mois</div>
-          <div className="kpi-value">{fmtEur(stats.masseSalarialeMensuelle)}</div>
-          <div className="kpi-hint">Contrats en poste, hors charges patronales et variables</div>
-        </div>
         <div className="kpi-card kpi-card-green">
           <div className="kpi-label">Coût réel entreprise / mois</div>
           <div className="kpi-value">{fmtEur(stats.coutReelMensuel)}</div>
           <div className="kpi-hint">
-            {fmtEur(stats.coutReelMensuel * 12)} / an
-            {stats.sansResteACharge > 0 ? ` · ${stats.sansResteACharge} contrat(s) au brut faute de saisie` : ''}
+            {fmtEur(stats.coutReelMensuel * 12)} / an · {fmtEur(stats.masseSalarialeMensuelle)} de brut
+            {stats.sansResteACharge > 0 ? ` · ${stats.sansResteACharge} au brut faute de saisie` : ''}
           </div>
         </div>
-        <div className="kpi-card kpi-card-amber">
+        <div className="kpi-card kpi-card-gold">
           <div className="kpi-label">Coût réel dans 3 mois</div>
           <div className="kpi-value">{fmtEur(projection[3]?.cout || 0)}</div>
           <div className="kpi-hint">
@@ -458,6 +497,32 @@ export default function PilotageRH({ profile }) {
           </div>
         </div>
       </div>
+
+      {/* Ce qui reclame une action, en une ligne. Survole une pastille pour
+          voir qui est concerne. Rien ne s affiche si tout est en ordre. */}
+      {aTraiter.length > 0 && (
+        <div className="card mb-24" style={{
+          display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '12px 16px',
+        }}>
+          <span style={{
+            fontSize: 10.5, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase',
+            color: 'var(--t3)', flexShrink: 0,
+          }}>À traiter</span>
+          {aTraiter.map((a) => (
+            <span
+              key={a.cle}
+              title={a.detail}
+              style={{
+                fontSize: 12, fontWeight: 650, padding: '4px 11px', borderRadius: 999, cursor: 'default',
+                background: a.urgent ? 'rgba(255,59,48,0.09)' : 'rgba(255,149,0,0.10)',
+                color: a.urgent ? '#c0392b' : '#B26B00',
+              }}
+            >
+              {a.label}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Profils Supabase sans contrat (orphelins) */}
       {profilsOrphelins.length > 0 && (
@@ -572,11 +637,34 @@ export default function PilotageRH({ profile }) {
         </div>
       )}
 
-      {/* Frise chronologique — vue d'ensemble des échéances RH */}
-      <TimelineRH contrats={contrats} />
-
-      {/* Projection financière : coût réel entreprise sur 12 mois */}
-      <ProjectionCout projection={projection} />
+      {/* Vue d ensemble : une seule a la fois (les deux empilees rendaient la
+          page interminable avant d arriver au tableau). */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <span style={{
+          fontSize: 10.5, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase',
+          color: 'var(--t3)', marginRight: 2,
+        }}>Vue d'ensemble</span>
+        {[
+          { key: 'frise', label: 'Échéances' },
+          { key: 'couts', label: 'Coûts 12 mois' },
+        ].map((g) => (
+          <button
+            key={g.key}
+            onClick={() => setVueGraph(g.key)}
+            style={{
+              border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+              fontSize: 12, fontWeight: 650, padding: '5px 12px', borderRadius: 999,
+              background: vueGraph === g.key ? 'rgba(201,169,97,0.16)' : 'rgba(0,0,0,0.04)',
+              color: vueGraph === g.key ? 'var(--gold-dk, #A6843F)' : 'var(--t3)',
+            }}
+          >
+            {g.label}
+          </button>
+        ))}
+      </div>
+      {vueGraph === 'frise'
+        ? <TimelineRH contrats={contrats} />
+        : <ProjectionCout projection={projection} />}
 
       {/* Toolbar filtres */}
       <div className="table-toolbar mb-16" style={{ marginBottom: 16 }}>
@@ -593,168 +681,198 @@ export default function PilotageRH({ profile }) {
         </select>
       </div>
 
-      {/* Tableau */}
+      {/* Tableau : 6 colonnes au lieu de 10. Les donnees liees sont
+          regroupees dans une meme cellule (contrat = type + dates + echeance,
+          remuneration = brut + reste a charge), et une seule action reste
+          visible par ligne, le reste passe dans le menu. */}
       <div className="table-wrap">
         <table className="data-table">
           <thead>
             <tr>
               <th>Conseiller</th>
-              <th>Type</th>
-              <th style={{ textAlign: 'right' }}>Brut / mois</th>
-              <th style={{ textAlign: 'right' }}>Reste à charge / an</th>
-              <th style={{ textAlign: 'right' }}>Palier PP</th>
-              <th style={{ textAlign: 'right' }}>Palier PU</th>
-              <th>Début</th>
-              <th>Fin</th>
-              <th style={{ textAlign: 'right' }} title="Congés payés : 2,5 j acquis par mois complet depuis le début du contrat, moins les congés validés dans Smart RH et l historique saisi dans la fiche">Congés</th>
+              <th>Contrat</th>
+              <th style={{ textAlign: 'right' }}>Rémunération</th>
+              <th style={{ textAlign: 'right' }}>Paliers PP · PU</th>
+              <th style={{ textAlign: 'right' }}
+                  title="Congés payés : 2,5 j acquis par mois complet depuis le début du contrat, moins les congés validés dans Smart RH">
+                Congés
+              </th>
               <th style={{ textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={10} style={{ textAlign: 'center', padding: 40, color: 'var(--t3)' }}>Chargement…</td></tr>
+              <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40, color: 'var(--t3)' }}>Chargement…</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={10} className="table-empty-state">
+              <tr><td colSpan={6} className="table-empty-state">
                 <div className="empty-title">Aucun contrat trouvé</div>
                 <div className="empty-sub">Ajuste les filtres ou ajoute un nouveau contrat</div>
               </td></tr>
             ) : (() => {
-              // Regroupe par statut temporel : c est ce qui rend la page
-              // lisible (le mélange embauches futures / terminés faussait
-              // la lecture de l effectif).
-              // Un contrat désactivé est rangé avec les terminés même sans
-              // date de fin (départ non daté) : il ne doit jamais apparaître
-              // sous la pastille verte En poste.
               const parStatut = { enposte: [], avenir: [], termine: [] }
               for (const c of filtered) parStatut[c.actif ? statutContrat(c) : 'termine'].push(c)
               const groupes = [
                 { key: 'enposte', titre: 'En poste', dot: VERT, list: parStatut.enposte },
                 { key: 'avenir', titre: 'Arrivées à venir', dot: '#0071E3', list: parStatut.avenir },
                 { key: 'termine', titre: 'Terminés ou archivés', dot: 'var(--t3)', list: parStatut.termine },
-              ].filter(g => g.list.length > 0)
+              ].filter((g) => g.list.length > 0)
+
               const rowFor = (c) => {
-              const col = TYPE_COLORS[c.type_contrat] || TYPE_COLORS.CDI
-              return (
-                <tr key={c.id} style={{ opacity: c.actif ? 1 : 0.5 }}>
-                  <td>
-                    <div className="cell-primary">
-                      {c.full_name}
-                      {avecDocs.has(String(c.id)) && (
-                        <button
-                          onClick={() => setEditing(c)}
-                          title="Des documents sont archivés : clique pour les voir, en ajouter ou les remplacer"
-                          style={{ background: 'none', border: 'none', padding: 0, marginLeft: 6, fontSize: 12, cursor: 'pointer' }}
-                        >📎</button>
-                      )}
-                    </div>
-                    <div className="cell-sub">
-                      {c.matricule ? `Mat. ${c.matricule}` : 'Sans matricule'}
-                      {!avecDocs.has(String(c.id)) && c.actif && (
-                        <button
-                          onClick={() => setEditing(c)}
-                          title="Aucun contrat de travail archivé : clique pour joindre le document"
-                          style={{
-                            background: 'none', border: 'none', padding: 0, marginLeft: 8, cursor: 'pointer',
-                            color: 'var(--warning, #FF9500)', fontSize: 11, fontFamily: 'inherit',
-                            textDecoration: 'underline dotted', textUnderlineOffset: 3,
-                          }}
-                        >contrat à joindre</button>
-                      )}
-                    </div>
-                  </td>
-                  <td>
-                    <span style={{
-                      display: 'inline-flex', padding: '3px 10px', borderRadius: 999,
-                      fontSize: 11, fontWeight: 600, letterSpacing: '-0.005em',
-                      background: col.bg, color: col.fg,
-                    }}>
-                      {LIBELLE_TYPE_CONTRAT[c.type_contrat] || c.type_contrat}
-                    </span>
-                  </td>
-                  <td className="cell-mono" style={{ textAlign: 'right' }}>{fmtEur(c.salaire_brut_mensuel)}</td>
-                  <td className="cell-mono" style={{ textAlign: 'right' }}>
-                    {c.reste_a_charge_mensuel != null && c.reste_a_charge_mensuel !== ''
-                      ? fmtEur(Number(c.reste_a_charge_mensuel) * 12)
-                      : (
-                        <button
-                          onClick={() => setEditing(c)}
-                          title="Saisir le reste à charge (ouvre la fiche du contrat)"
-                          style={{
-                            background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-                            color: 'var(--t3)', fontSize: 'inherit', fontFamily: 'inherit',
-                            textDecoration: 'underline dotted', textUnderlineOffset: 3,
-                          }}
-                        >à saisir</button>
-                      )}
-                  </td>
-                  <td className="cell-mono" style={{ textAlign: 'right' }}>{c.palier_pp_mensuel > 0 ? fmtEur(c.palier_pp_mensuel) : '—'}</td>
-                  <td className="cell-mono" style={{ textAlign: 'right' }}>{c.palier_pu_mensuel > 0 ? fmtEur(c.palier_pu_mensuel) : '—'}</td>
-                  <td>{fmtDate(c.date_debut)}</td>
-                  <td>
-                    {c.date_fin ? (
-                      <>
-                        <div>{fmtDate(c.date_fin)}</div>
-                        {(() => {
-                          const r = c.actif ? resteAvant(c.date_fin) : null
-                          if (!r) return null
-                          return (
-                            <div className="cell-sub" style={{ color: r.alerte ? 'var(--danger, #c0392b)' : undefined }}>
-                              {r.texte}
-                            </div>
-                          )
-                        })()}
-                      </>
-                    ) : TYPES_BORNES.includes(c.type_contrat) && c.actif ? (
-                      <span style={{ color: 'var(--danger, #c0392b)', fontSize: 12 }}>à saisir</span>
-                    ) : '—'}
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    {(() => {
-                      const solde = c.profile_id
-                        ? soldeConges(c, congesParPersonne.get(c.profile_id) || [])
-                        : soldeConges(c, [])
-                      if (!solde) return <span style={{ color: 'var(--t3)' }}>—</span>
-                      return (
+                const col = TYPE_COLORS[c.type_contrat] || TYPE_COLORS.CDI
+                const reste = c.actif && c.date_fin ? resteAvant(c.date_fin) : null
+                const racAn = c.reste_a_charge_mensuel != null && c.reste_a_charge_mensuel !== ''
+                  ? Number(c.reste_a_charge_mensuel) * 12 : null
+                const solde = c.profile_id
+                  ? soldeConges(c, congesParPersonne.get(c.profile_id) || [])
+                  : soldeConges(c, [])
+                const aDoc = avecDocs.has(String(c.id))
+                const finManquante = TYPES_BORNES.includes(c.type_contrat) && !c.date_fin && c.actif
+                return (
+                  <tr key={c.id} style={{ opacity: c.actif ? 1 : 0.5 }}>
+                    {/* Qui */}
+                    <td>
+                      <div className="cell-primary">
+                        {c.full_name}
+                        {aDoc && (
+                          <button
+                            onClick={() => setEditing(c)}
+                            title="Documents archivés : cliquer pour les voir ou en ajouter"
+                            style={{ background: 'none', border: 'none', padding: 0, marginLeft: 6, fontSize: 12, cursor: 'pointer' }}
+                          >📎</button>
+                        )}
+                      </div>
+                      <div className="cell-sub">
+                        {c.matricule ? `Mat. ${c.matricule}` : 'Sans matricule'}
+                        {!aDoc && c.actif && (
+                          <button
+                            onClick={() => setEditing(c)}
+                            title="Aucun document archivé pour ce contrat"
+                            style={{
+                              background: 'none', border: 'none', padding: 0, marginLeft: 8, cursor: 'pointer',
+                              color: 'var(--warning, #B26B00)', fontSize: 11, fontFamily: 'inherit',
+                              textDecoration: 'underline dotted', textUnderlineOffset: 3,
+                            }}
+                          >documents à joindre</button>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Contrat : type, periode et echeance dans une seule cellule */}
+                    <td>
+                      <span style={{
+                        display: 'inline-flex', padding: '3px 10px', borderRadius: 999,
+                        fontSize: 11, fontWeight: 600, letterSpacing: '-0.005em',
+                        background: col.bg, color: col.fg,
+                      }}>
+                        {LIBELLE_TYPE_CONTRAT[c.type_contrat] || c.type_contrat}
+                      </span>
+                      <div className="cell-sub" style={{ marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
+                        {fmtDate(c.date_debut)}
+                        {c.date_fin ? ` → ${fmtDate(c.date_fin)}` : ''}
+                        {reste && (
+                          <span style={{ color: reste.alerte ? 'var(--danger, #c0392b)' : undefined, fontWeight: reste.alerte ? 700 : 400 }}>
+                            {` · ${reste.texte}`}
+                          </span>
+                        )}
+                        {finManquante && (
+                          <button
+                            onClick={() => setEditing(c)}
+                            style={{
+                              background: 'none', border: 'none', padding: 0, marginLeft: 6, cursor: 'pointer',
+                              color: 'var(--danger, #c0392b)', fontSize: 11, fontWeight: 700, fontFamily: 'inherit',
+                              textDecoration: 'underline dotted', textUnderlineOffset: 3,
+                            }}
+                          >fin à saisir</button>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Remuneration : brut et cout reel ensemble */}
+                    <td style={{ textAlign: 'right' }}>
+                      <div className="cell-mono">{fmtEur(c.salaire_brut_mensuel)}</div>
+                      <div className="cell-sub">
+                        {racAn != null ? `${fmtEur(racAn)} / an réel` : (
+                          <button
+                            onClick={() => setEditing(c)}
+                            title="Coût réel après aides, utilisé par les projections"
+                            style={{
+                              background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                              color: 'var(--t3)', fontSize: 'inherit', fontFamily: 'inherit',
+                              textDecoration: 'underline dotted', textUnderlineOffset: 3,
+                            }}
+                          >reste à charge à saisir</button>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Paliers */}
+                    <td style={{ textAlign: 'right' }}>
+                      <div className="cell-mono">{c.palier_pp_mensuel > 0 ? fmtEur(c.palier_pp_mensuel) : '—'}</div>
+                      <div className="cell-sub">
+                        {c.palier_pu_mensuel > 0 ? `PU ${fmtEur(c.palier_pu_mensuel)}` : 'PU —'}
+                      </div>
+                    </td>
+
+                    {/* Conges */}
+                    <td style={{ textAlign: 'right' }}>
+                      {solde ? (
                         <>
                           <div className="cell-mono" style={{ color: solde.restant < 0 ? 'var(--danger, #c0392b)' : undefined }}>
                             {fmtJours(solde.restant)}
                           </div>
                           <div className="cell-sub">{fmtJours(solde.acquis)} acquis · {fmtJours(solde.pris)} pris</div>
                         </>
-                      )
-                    })()}
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <div className="table-actions" style={{ justifyContent: 'flex-end' }}>
-                      {profile?.role === 'manager' && c.profile_id && c.actif && c.type_contrat !== 'GERANT' && (
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          onClick={() => handleImpersonate(c)}
-                          title="Se connecter en tant que ce conseiller (action auditée)"
-                        >👤 Voir en tant que</button>
-                      )}
-                      <button className="btn btn-ghost btn-sm" onClick={() => setEditing(c)}>Éditer</button>
-                      <button className="btn btn-danger btn-sm" onClick={() => handleToggleActif(c)}>
-                        {c.actif ? 'Désactiver' : 'Réactiver'}
-                      </button>
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        style={{ color: 'var(--danger, #c0392b)' }}
-                        title="Supprimer définitivement cette fiche (mauvaise saisie). Confirmation demandée."
-                        onClick={() => handleSupprimer(c)}
-                      >
-                        Supprimer
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              )
+                      ) : <span style={{ color: 'var(--t3)' }}>—</span>}
+                    </td>
+
+                    {/* Actions : une seule visible, le reste dans le menu */}
+                    <td style={{ textAlign: 'right' }}>
+                      <div className="table-actions" style={{ justifyContent: 'flex-end' }}>
+                        <button className="btn btn-ghost btn-sm" onClick={() => setEditing(c)}>Éditer</button>
+                        <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            title="Autres actions"
+                            onClick={() => setMenuOuvert(menuOuvert === c.id ? null : c.id)}
+                          >⋯</button>
+                          {menuOuvert === c.id && (
+                            <div style={{
+                              position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 30,
+                              background: '#fff', border: '0.5px solid var(--bd)', borderRadius: 10,
+                              boxShadow: '0 8px 24px rgba(0,0,0,0.12)', padding: 4, minWidth: 200,
+                              textAlign: 'left',
+                            }}>
+                              {profile?.role === 'manager' && c.profile_id && c.actif && c.type_contrat !== 'GERANT' && (
+                                <button
+                                  className="btn btn-ghost btn-sm"
+                                  style={{ width: '100%', justifyContent: 'flex-start' }}
+                                  onClick={() => { setMenuOuvert(null); handleImpersonate(c) }}
+                                >👤 Voir en tant que</button>
+                              )}
+                              <button
+                                className="btn btn-ghost btn-sm"
+                                style={{ width: '100%', justifyContent: 'flex-start' }}
+                                onClick={() => { setMenuOuvert(null); handleToggleActif(c) }}
+                              >{c.actif ? '⏸ Désactiver' : '▶ Réactiver'}</button>
+                              <button
+                                className="btn btn-ghost btn-sm"
+                                style={{ width: '100%', justifyContent: 'flex-start', color: 'var(--danger, #c0392b)' }}
+                                onClick={() => { setMenuOuvert(null); handleSupprimer(c) }}
+                              >Supprimer la fiche</button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )
               }
-              return groupes.flatMap(g => {
-                const terminesActifs = g.key === 'termine' ? g.list.filter(c => c.actif) : []
+
+              return groupes.flatMap((g) => {
+                const terminesActifs = g.key === 'termine' ? g.list.filter((c) => c.actif) : []
                 return [
                   <tr key={`head-${g.key}`}>
-                    <td colSpan={10} style={{ background: 'rgba(0,0,0,0.02)', padding: '7px 14px' }}>
+                    <td colSpan={6} style={{ background: 'rgba(0,0,0,0.02)', padding: '7px 14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <span style={{
                           display: 'inline-flex', alignItems: 'center', gap: 7,
