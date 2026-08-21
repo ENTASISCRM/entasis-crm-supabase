@@ -66,7 +66,7 @@ export default function VueImmobilier({ profile, setActiveTab }) {
   async function loadData() {
     setLoading(true)
     const [dosRes, progRes, promRes] = await Promise.all([
-      supabase.from('dossiers_immo').select('*').order('created_at', { ascending: false }),
+      supabase.from('dossiers_immo').select('*, programme:programmes(nom)').order('created_at', { ascending: false }),
       supabase.from('programmes').select('*').order('nom', { ascending: true }),
       supabase.from('promoteurs').select('*').order('nom', { ascending: true }),
     ])
@@ -236,7 +236,7 @@ export default function VueImmobilier({ profile, setActiveTab }) {
                     </div>
                     <div className="immo-pipeline-info">
                       <div className="immo-pipeline-name">{dossier.client_nom || 'Client'}</div>
-                      <div className="immo-pipeline-programme">{dossier.notes?.split('\n')[0] || 'Programme'}</div>
+                      <div className="immo-pipeline-programme">{dossier.programme?.nom || dossier.notes?.split('\n')[0] || 'Programme'}</div>
                     </div>
                     <span className="immo-pipeline-badge" style={{ background: `${color}22`, color, border: `1px solid ${color}44` }}>
                       {PIPELINE_LABELS[dossier.statut_pipeline] || dossier.statut_pipeline}

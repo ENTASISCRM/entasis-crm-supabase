@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { getClientName, statusLabel } from '../lib/ui-shared'
+import * as clientsService from '../services/clients'
 
 // Palette de commandes Ctrl/Cmd+K : un champ unique qui cherche dans les
 // clients et dossiers deja charges en memoire, et liste les onglets de
@@ -7,11 +8,17 @@ import { getClientName, statusLabel } from '../lib/ui-shared'
 // Aucune requete reseau : tout vient du state deals passe en prop.
 
 // Onglets reserves au role manager, masques de la palette pour un conseiller.
-const MANAGER_ONLY = new Set(['team', 'pilotage-rh', 'recrutement', 'editorial'])
+// Aligne sur la sidebar (App.jsx) : tout onglet reserve manager doit etre
+// liste ici, sinon il apparait dans la palette d un conseiller.
+const MANAGER_ONLY = new Set(['team', 'pilotage-rh', 'recrutement', 'editorial', 'structureurs', 'weekly-review', 'cockpit'])
 
 export default function CommandPalette({ open, onClose, deals, pages, isManager, onOpenDeal, onOpenClient, onGoTab }) {
   const [query, setQuery] = useState('')
   const [selIdx, setSelIdx] = useState(0)
+  // Resultats de la table clients (recherche reseau debouncee) : un client
+  // SANS dossier restait introuvable quand la palette ne cherchait que dans
+  // les deals en memoire.
+  const [clientRows, setClientRows] = useState([])
   const inputRef = useRef(null)
   const listRef = useRef(null)
 
@@ -20,10 +27,23 @@ export default function CommandPalette({ open, onClose, deals, pages, isManager,
     if (open) {
       setQuery('')
       setSelIdx(0)
+      setClientRows([])
       const t = setTimeout(() => inputRef.current?.focus(), 0)
       return () => clearTimeout(t)
     }
   }, [open])
+
+  useEffect(() => {
+    const q = query.trim()
+    if (!open || q.length < 2) { setClientRows([]); return }
+    let cancelled = false
+    const t = setTimeout(() => {
+      clientsService.searchByQuery(q)
+        .then(rows => { if (!cancelled) setClientRows(rows || []) })
+        .catch(() => {})
+    }, 150)
+    return () => { cancelled = true; clearTimeout(t) }
+  }, [open, query])
 
   const results = useMemo(() => {
     if (!open) return []
@@ -38,16 +58,24 @@ export default function CommandPalette({ open, onClose, deals, pages, isManager,
     // Sans requete saisie : la palette sert de menu de navigation rapide.
     if (!q) return tabs.slice(0, 9)
 
-    // Clients uniques rattaches aux dossiers charges (dedupe par client_id).
-    const clients = []
+    // Clients : d abord la table clients (un client SANS dossier reste
+    // trouvable), puis les clients derives des deals en complement.
+    const clientHits = []
     const seen = new Set()
+    for (const c of clientRows || []) {
+      const name = `${c.prenom || ''} ${c.nom || ''}`.trim()
+      if (!name || !name.toLowerCase().includes(q)) continue
+      seen.add(c.id)
+      clientHits.push({ type: 'client', key: `cli-${c.id}`, icon: '👤', label: name, sub: `Fiche client · ${c.advisor_code || ''}`, run: () => onOpenClient(c.id) })
+      if (clientHits.length >= 5) break
+    }
     for (const d of deals || []) {
+      if (clientHits.length >= 5) break
       if (!d.client_id || seen.has(d.client_id)) continue
       const name = getClientName(d)
       if (!name.toLowerCase().includes(q)) continue
       seen.add(d.client_id)
-      clients.push({ type: 'client', key: `cli-${d.client_id}`, icon: '👤', label: name, sub: `Fiche client · ${d.advisor_code || ''}`, run: () => onOpenClient(d.client_id) })
-      if (clients.length >= 5) break
+      clientHits.push({ type: 'client', key: `cli-${d.client_id}`, icon: '👤', label: name, sub: `Fiche client · ${d.advisor_code || ''}`, run: () => onOpenClient(d.client_id) })
     }
 
     // Dossiers (ouverture directe en modale d edition).
@@ -59,8 +87,8 @@ export default function CommandPalette({ open, onClose, deals, pages, isManager,
       if (found.length >= 7) break
     }
 
-    return [...clients, ...found, ...tabs.slice(0, 4)].slice(0, 12)
-  }, [open, query, deals, pages, isManager, onGoTab, onOpenClient, onOpenDeal])
+    return [...clientHits, ...found, ...tabs.slice(0, 4)].slice(0, 12)
+  }, [open, query, deals, clientRows, pages, isManager, onGoTab, onOpenClient, onOpenDeal])
 
   // Garde l index de selection dans les bornes quand la liste change.
   useEffect(() => { setSelIdx(0) }, [query])

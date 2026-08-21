@@ -33,7 +33,7 @@ function KanbanCard({ dossier, conseillerName }) {
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="immo-kanban-card">
       <div className="immo-kanban-card-name">{dossier.client_nom || 'Client'}</div>
-      <div className="immo-kanban-card-programme">{dossier.notes?.split('\n')[0]?.slice(0, 30) || '—'}</div>
+      <div className="immo-kanban-card-programme">{dossier.programme?.nom || dossier.notes?.split('\n')[0]?.slice(0, 30) || '—'}</div>
       {dossier.prix_lot && <div className="immo-kanban-card-prix">{euro(dossier.prix_lot)}</div>}
       <div className="immo-kanban-card-footer">
         <span>{conseillerName}</span>
@@ -58,7 +58,9 @@ export default function PipelineVEFA({ profile, teamProfiles }) {
 
   async function loadDossiers() {
     setLoading(true)
-    const { data } = await supabase.from('dossiers_immo').select('*').order('created_at', { ascending: false })
+    // Jointure programmes via la FK programme_id : le nom du programme vient
+    // de la table, plus du parse de la premiere ligne des notes.
+    const { data } = await supabase.from('dossiers_immo').select('*, programme:programmes(nom)').order('created_at', { ascending: false })
     setDossiers(data || [])
     setLoading(false)
   }

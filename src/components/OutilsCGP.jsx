@@ -121,7 +121,7 @@ const chartDefaults = {
 /* ─────────────────────────────────────────────────────────────────────────────
    AI HELPER
 ───────────────────────────────────────────────────────────────────────────── */
-async function callAI(system, userMsg) {
+async function callAI(context, userMsg) {
   // Récupérer le token de session
   const { data: { session } } = await supabase.auth.getSession()
   if (!session?.access_token) {
@@ -135,7 +135,7 @@ async function callAI(system, userMsg) {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${session.access_token}`
     },
-    body: JSON.stringify({ userMessage: userMsg }),
+    body: JSON.stringify({ userMessage: userMsg, context }),
   })
   const data = await res.json()
   if (data.error) throw new Error(data.error)
@@ -1579,7 +1579,7 @@ Resultats simulation sur ${duree} ans (hypothese rendement ${rendement}%) :
 - Capital a la sortie : ${euro(d.capitalSortie)}
 
 IMPORTANT : Mentionne clairement que le TD 2025 de 15,27% est exceptionnel et ne reflete pas la performance future. Le taux cible long terme est de 7%. Mentionne les risques (liquidite limitee, capital non garanti, marche immobilier europeen). Rappelle que les performances passees ne prejudgent pas des performances futures.`
-      const text = await callAI('Tu es un CGP senior chez Entasis Conseil. Redige des notes conformes AMF : pas de promesse de rendement garanti, mention systematique des risques, distinction claire entre performance passee et objectif futur.', prompt)
+      const text = await callAI('conformite_amf', prompt)
       setAiNote(text)
     } catch (e) { setAiNote('Erreur : ' + e.message) }
     setAiLoading(false)
@@ -1982,7 +1982,7 @@ function SimulateurImmoNeuf({ profile }) {
     setAiLoading(true)
     try {
       const prompt = `Redige un email professionnel pour un client interesse par un achat immobilier neuf en ${dispositif}. Bien: ${euro(prixBien)}, ${surface}m2, mensualite ${euro(result.mensualiteTotale)}, apport ${euro(apport)}, rendement brut ${pctFmt(result.rendBrut)}, cashflow mensuel ${euro(result.cashflowMensuel)}. L'email doit proposer un RDV pour approfondir le projet. Signe "L'equipe Entasis Conseil".`
-      const text = await callAI('Tu es CGP chez Entasis Conseil, specialise en immobilier neuf. Redige des emails professionnels, informatifs et engageants. Mentionne que les projections sont indicatives.', prompt)
+      const text = await callAI('immobilier', prompt)
       setAiEmail(text)
     } catch (e) { setAiEmail('Erreur : ' + e.message) }
     setAiLoading(false)
@@ -2277,14 +2277,9 @@ Ton souhaite : ${ton}
 
 La lettre doit etre professionnelle, datee du jour, avec en-tete Entasis Conseil et signature du conseiller. Format complet pret a envoyer.`
 
-      const system = `Tu es un assistant redactionnel pour Entasis Conseil, cabinet de gestion de patrimoine.
-Tu rediges des courriers et documents professionnels conformes aux standards du metier de CGP.
-Utilise un francais impeccable et adapte le registre au ton demande.
-En-tete : Entasis Conseil — Cabinet de Gestion de Patrimoine
-Mentions legales : CIF enregistre sous le n XXXXXX — ORIAS n XXXXXX
-Ne fais jamais de promesse de rendement garanti.`
-
-      const text = await callAI(system, prompt)
+      // Le prompt systeme (en-tete, regles redactionnelles) vit desormais
+      // cote serveur (api/generate-note.js, contexte 'courrier').
+      const text = await callAI('courrier', prompt)
       setGeneratedText(text)
     } catch (e) {
       setGeneratedText('Erreur : ' + e.message)

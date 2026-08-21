@@ -332,20 +332,25 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
         }}
       />
 
-      {/* ─── PRÉVISION DE PRODUCTION DU MOIS (direction) ─────────────── */}
-      <CaForecastSection />
-
-      {/* ─── FUNNEL PAR SOURCE + COÛT/SIGNATURE (direction) ──────────── */}
-      <FunnelBySourceSection deals={deals} />
-
-      {/* ─── HEATMAP CRÉNEAUX RDV ────────────────────────────────────── */}
-      <RdvHeatmapSection />
-
-      {/* ─── MODULE RECYCLAGE REFUSÉS ────────────────────────────────── */}
-      <RecyclageRefusesSection />
-
-      {/* ─── JOURNAL DE CONNEXIONS ───────────────────────────────────── */}
-      <LoginAuditSection />
+      {/* ─── Analyses direction, repliées par défaut ─────────────────────
+          Prévision, funnel par source, heatmap RDV, recyclage refusés et
+          journal de connexions occupaient 5 sections pleines AVANT le tableau
+          équipe — le contenu principal de l'écran. Repliées : tout reste là,
+          à un clic, et le tableau remonte au premier écran. ─────────────── */}
+      {[
+        { titre: 'Prévision de production du mois', contenu: <CaForecastSection /> },
+        { titre: 'Funnel par source & coût / signature', contenu: <FunnelBySourceSection deals={deals} /> },
+        { titre: 'Heatmap des créneaux RDV', contenu: <RdvHeatmapSection /> },
+        { titre: 'Recyclage des refusés', contenu: <RecyclageRefusesSection /> },
+        { titre: 'Journal de connexions', contenu: <LoginAuditSection /> },
+      ].map(sec => (
+        <details key={sec.titre} className="card" style={{ marginBottom: 16 }}>
+          <summary style={{ cursor: 'pointer', padding: '14px 20px', fontSize: 13, fontWeight: 650, color: 'var(--t2)', listStyle: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 10, color: 'var(--t3)' }}>▶</span> {sec.titre}
+          </summary>
+          <div style={{ padding: '0 4px 4px' }}>{sec.contenu}</div>
+        </details>
+      ))}
 
       {/* ─── Top performeurs + À booster ───────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 16, marginBottom: 24 }}>

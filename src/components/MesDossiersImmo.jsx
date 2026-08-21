@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
-import { PROMPT_IMMOBILIER } from '../config/promptImmo'
 
 const euro = (v) => Number(v||0).toLocaleString('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0})
 
@@ -131,7 +130,7 @@ export default function MesDossiersImmo({ profile, teamProfiles, setActiveTab })
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
-        body: JSON.stringify({ userMessage: message })
+        body: JSON.stringify({ userMessage: message, context: 'immobilier' })
       })
       const data = await response.json()
       if (data.error) throw new Error(data.error)

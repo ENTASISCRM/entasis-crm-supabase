@@ -15,7 +15,7 @@ export async function searchByQuery(query) {
   if (!query || query.length < 2) return []
   const { data, error } = await supabase
     .from('clients')
-    .select('id, nom, prenom, email, telephone, profession, statut_pro, revenus_annuels, patrimoine_estime')
+    .select('id, nom, prenom, email, telephone, profession, statut_pro, revenus_annuels, patrimoine_estime, advisor_code')
     .or(
       `nom.ilike.%${query}%,email.ilike.%${query}%,telephone.ilike.%${query}%`
     )
