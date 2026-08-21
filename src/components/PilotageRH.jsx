@@ -95,6 +95,65 @@ const EMPTY_CONTRAT = {
   notes: '',
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Bande de statistiques : les indicateurs de tête dans UN seul objet visuel.
+// Chaque item garde sa valeur, son détail et, si besoin, ses pastilles de
+// répartition — rien n est retiré, tout est simplement aligné sur le même
+// gabarit au lieu de quatre cartes flottantes de hauteurs différentes.
+// ─────────────────────────────────────────────────────────────────────────
+function StatBande({ items }) {
+  return (
+    <div className="card mb-24 stat-bande">
+      {items.map((it) => (
+        <div className="stat-item" key={it.label}>
+          <div className="stat-label">{it.label}</div>
+          <div className="stat-valeur" style={it.accent ? { color: it.accent } : undefined}>{it.valeur}</div>
+          {it.chips && it.chips.length > 0 && (
+            <div className="stat-chips">
+              {it.chips.map((c) => <span className="stat-chip" key={c}>{c}</span>)}
+            </div>
+          )}
+          {it.detail && <div className="stat-detail">{it.detail}</div>}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Bloc repliable : gabarit unique des sections secondaires (profils à relier,
+// frise chronologique, projection). Le chiffre-clé du bloc reste affiché même
+// replié, donc aucune information ne disparaît de l écran — elle passe juste
+// à un clic, et le tableau des contrats remonte à portée immédiate.
+// ─────────────────────────────────────────────────────────────────────────
+function BlocRepliable({ kicker, titre, sousTitre, resume, accent = 'var(--gold)', ouvert = false, action = null, children }) {
+  return (
+    <details className="card mb-24 bloc-repliable" open={ouvert}>
+      <summary className="panel-head">
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, minWidth: 0 }}>
+          <span className="bloc-chevron" aria-hidden="true">▶</span>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: accent }}>
+              {kicker}
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t1)', marginTop: 4 }}>{titre}</div>
+            {sousTitre && <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>{sousTitre}</div>}
+          </div>
+        </div>
+        <div className="bloc-resume">
+          {resume}
+          {/* Le bouton d action vit dans l en-tête mais ne doit pas replier le
+              bloc : on stoppe la propagation du clic vers le <summary>. */}
+          {action && (
+            <span onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>{action}</span>
+          )}
+        </div>
+      </summary>
+      {children}
+    </details>
+  )
+}
+
 export default function PilotageRH({ profile }) {
   const [contrats, setContrats] = useState([])
   const [profiles, setProfiles] = useState([])
@@ -400,7 +459,7 @@ export default function PilotageRH({ profile }) {
       {/* Sous onglets : l equipe salariee d un cote, la conformite des
           mandataires independants de l autre (obligations INPI, ORIAS,
           declarations URSSAF trimestrielles). */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+      <div className="rh-tabs">
         {[
           { key: 'equipe', label: 'Équipe salariée' },
           { key: 'mandataires', label: `Mandataires · conformité${nbMandataires ? ` (${nbMandataires})` : ''}` },
@@ -408,12 +467,7 @@ export default function PilotageRH({ profile }) {
           <button
             key={t.key}
             onClick={() => setVue(t.key)}
-            style={{
-              border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-              fontSize: 13, fontWeight: 650, padding: '8px 16px', borderRadius: 999,
-              background: vue === t.key ? 'var(--navy, #0A1628)' : 'rgba(0,0,0,0.05)',
-              color: vue === t.key ? '#fff' : 'var(--t2, #555)',
-            }}
+            className={`rh-tab${vue === t.key ? ' is-active' : ''}`}
           >
             {t.label}
           </button>
@@ -423,65 +477,65 @@ export default function PilotageRH({ profile }) {
       {vue === 'mandataires' && <MandatairesConformite contrats={contrats} profile={profile} />}
 
       {vue === 'equipe' && (<>
-      {/* KPIs : tout est calculé sur les contrats en poste aujourd hui */}
-      <div className="kpi-grid mb-24">
-        <div className="kpi-card kpi-card-blue">
-          <div className="kpi-label">En poste aujourd'hui</div>
-          <div className="kpi-value">{stats.total}</div>
-          <div className="kpi-hint">
-            {stats.cdi} CDI · {stats.cdd} CDD · {stats.alternants} alt. · {stats.stagiaires} stag. · {stats.mandataires} mand.
-            {stats.aVenir > 0 ? ` · +${stats.aVenir} à venir` : ''}
-          </div>
-        </div>
-        <div className="kpi-card kpi-card-gold">
-          <div className="kpi-label">Masse salariale brute / mois</div>
-          <div className="kpi-value">{fmtEur(stats.masseSalarialeMensuelle)}</div>
-          <div className="kpi-hint">Contrats en poste, hors charges patronales et variables</div>
-        </div>
-        <div className="kpi-card kpi-card-green">
-          <div className="kpi-label">Coût réel entreprise / mois</div>
-          <div className="kpi-value">{fmtEur(stats.coutReelMensuel)}</div>
-          <div className="kpi-hint">
-            {fmtEur(stats.coutReelMensuel * 12)} / an
-            {stats.sansResteACharge > 0 ? ` · ${stats.sansResteACharge} contrat(s) au brut faute de saisie` : ''}
-          </div>
-        </div>
-        <div className="kpi-card kpi-card-amber">
-          <div className="kpi-label">Coût réel dans 3 mois</div>
-          <div className="kpi-value">{fmtEur(projection[3]?.cout || 0)}</div>
-          <div className="kpi-hint">
-            {(() => {
-              const delta = (projection[3]?.cout || 0) - (projection[0]?.cout || 0)
-              const signe = delta > 0 ? '+' : delta < 0 ? '−' : ''
-              return `${signe}${fmtEur(Math.abs(delta))} vs ce mois · ${projection[3]?.nb || 0} en poste`
-            })()}
-          </div>
-        </div>
-      </div>
+      {/* Indicateurs de tête — tout est calculé sur les contrats EN POSTE
+          aujourd hui. Même contenu qu avant (effectif, répartition par type,
+          arrivées à venir, masse brute, coût réel, coût à 3 mois, contrats
+          sans reste à charge, contrats terminés encore actifs), regroupé en
+          une seule bande au lieu de quatre cartes de hauteurs inégales. */}
+      <StatBande items={[
+        {
+          label: "En poste aujourd'hui",
+          valeur: stats.total,
+          chips: [
+            `${stats.cdi} CDI`,
+            `${stats.cdd} CDD`,
+            `${stats.alternants} alt.`,
+            `${stats.stagiaires} stag.`,
+            `${stats.mandataires} mand.`,
+          ],
+          detail: [
+            stats.aVenir > 0 ? `+${stats.aVenir} arrivée${stats.aVenir > 1 ? 's' : ''} à venir` : null,
+            stats.termines > 0 ? `${stats.termines} terminé${stats.termines > 1 ? 's' : ''} encore actif${stats.termines > 1 ? 's' : ''}` : null,
+          ].filter(Boolean).join(' · ') || 'Aucune échéance immédiate',
+        },
+        {
+          label: 'Masse salariale brute / mois',
+          valeur: fmtEur(stats.masseSalarialeMensuelle),
+          detail: 'Contrats en poste, hors charges patronales et variables',
+        },
+        {
+          label: 'Coût réel entreprise / mois',
+          valeur: fmtEur(stats.coutReelMensuel),
+          detail: `${fmtEur(stats.coutReelMensuel * 12)} / an`
+            + (stats.sansResteACharge > 0 ? ` · ${stats.sansResteACharge} contrat(s) au brut faute de saisie` : ''),
+        },
+        {
+          label: 'Coût réel dans 3 mois',
+          valeur: fmtEur(projection[3]?.cout || 0),
+          detail: (() => {
+            const delta = (projection[3]?.cout || 0) - (projection[0]?.cout || 0)
+            const signe = delta > 0 ? '+' : delta < 0 ? '−' : ''
+            return `${signe}${fmtEur(Math.abs(delta))} vs ce mois · ${projection[3]?.nb || 0} en poste`
+          })(),
+        },
+      ]} />
 
       {/* Profils Supabase sans contrat (orphelins) */}
       {profilsOrphelins.length > 0 && (
-        <div className="card mb-24" style={{ borderTop: '2px solid var(--apple-orange, #FF9500)' }}>
-          <div className="panel-head" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#FF9500' }}>
-                À traiter · {profilsOrphelins.length} profil{profilsOrphelins.length !== 1 ? 's' : ''}
-              </div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t1)', marginTop: 4 }}>
-                Profils Supabase sans contrat
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>
-                {liaisonsPossibles.length > 0
-                  ? `${liaisonsPossibles.length} profil(s) matchent un contrat existant non lié — peut être rattaché en 1 clic.`
-                  : "Ces conseillers se sont inscrits via une invitation mais n'ont pas encore de contrat."}
-              </div>
-            </div>
-            {liaisonsPossibles.length > 0 && (
-              <button className="btn btn-primary btn-sm" onClick={handleLierTous}>
-                ↪ Lier auto les {liaisonsPossibles.length} match{liaisonsPossibles.length !== 1 ? 's' : ''}
-              </button>
-            )}
-          </div>
+        <BlocRepliable
+          ouvert
+          accent="var(--apple-orange, #FF9500)"
+          kicker={`À traiter · ${profilsOrphelins.length} profil${profilsOrphelins.length !== 1 ? 's' : ''}`}
+          titre="Profils Supabase sans contrat"
+          sousTitre={liaisonsPossibles.length > 0
+            ? `${liaisonsPossibles.length} profil(s) matchent un contrat existant non lié — peut être rattaché en 1 clic.`
+            : "Ces conseillers se sont inscrits via une invitation mais n'ont pas encore de contrat."}
+          action={liaisonsPossibles.length > 0 ? (
+            <button className="btn btn-primary btn-sm" onClick={handleLierTous}>
+              ↪ Lier auto les {liaisonsPossibles.length} match{liaisonsPossibles.length !== 1 ? 's' : ''}
+            </button>
+          ) : null}
+        >
           <div className="panel-body" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {profilsOrphelins.map(p => {
               const hasMatch = !!p.contratExistant
@@ -569,7 +623,7 @@ export default function PilotageRH({ profile }) {
               )
             })}
           </div>
-        </div>
+        </BlocRepliable>
       )}
 
       {/* Frise chronologique — vue d'ensemble des échéances RH */}
@@ -1287,20 +1341,19 @@ function ProjectionCout({ projection }) {
     ? `${(v / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} k€`
     : fmtEur(v)
   return (
-    <div className="card mb-24">
-      <div className="panel-head">
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--gold)' }}>
-            Projection financière
-          </div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t1)', marginTop: 4 }}>
-            Coût réel entreprise sur 12 mois
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>
-            Reste à charge quand il est saisi, brut sinon, au prorata des jours de présence. Effectif compté au dernier jour du mois.
-          </div>
-        </div>
-      </div>
+    <BlocRepliable
+      kicker="Projection financière"
+      titre="Coût réel entreprise sur 12 mois"
+      sousTitre="Reste à charge quand il est saisi, brut sinon, au prorata des jours de présence. Effectif compté au dernier jour du mois."
+      resume={
+        <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+          {fmtCompact(projection[0]?.cout || 0)}
+          <span style={{ color: 'var(--t3)', margin: '0 6px' }}>→</span>
+          {fmtCompact(projection[projection.length - 1]?.cout || 0)}
+          <span style={{ color: 'var(--t3)', fontWeight: 500 }}> à 12 mois</span>
+        </span>
+      }
+    >
       <div className="panel-body" style={{ overflowX: 'auto', padding: '18px 20px 14px' }}>
         <div style={{ display: 'flex', gap: 6, alignItems: 'stretch', minWidth: 12 * 74 }}>
           {projection.map((p, i) => {
@@ -1346,7 +1399,7 @@ function ProjectionCout({ projection }) {
           })}
         </div>
       </div>
-    </div>
+    </BlocRepliable>
   )
 }
 
@@ -1487,20 +1540,12 @@ function TimelineRH({ contrats }) {
   }
 
   return (
-    <div className="card mb-24 timeline-rh">
-      <div className="panel-head" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--gold)' }}>
-            Frise chronologique
-          </div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t1)', marginTop: 4 }}>
-            Échéances RH sur {mois.length} mois
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>
-            Arrivées en haut, fins de contrat en bas.
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 14, alignItems: 'center', fontSize: 12, fontWeight: 600, color: 'var(--t2)', paddingTop: 4, flexShrink: 0 }}>
+    <BlocRepliable
+      kicker="Frise chronologique"
+      titre={`Échéances RH sur ${mois.length} mois`}
+      sousTitre="Arrivées en haut, fins de contrat en bas."
+      resume={
+        <>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: VERT }} />
             {nbArrivees} arrivée{nbArrivees > 1 ? 's' : ''}
@@ -1509,9 +1554,10 @@ function TimelineRH({ contrats }) {
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: ROUGE }} />
             {nbFins} fin{nbFins > 1 ? 's' : ''}
           </span>
-        </div>
-      </div>
-      <div className="panel-body" style={{ padding: '18px 16px 14px', overflowX: 'auto' }}>
+        </>
+      }
+    >
+      <div className="panel-body timeline-rh" style={{ padding: '18px 16px 14px', overflowX: 'auto' }}>
         <div style={{
           display: 'grid',
           gridTemplateColumns: `repeat(${mois.length}, minmax(148px, 1fr))`,
@@ -1604,6 +1650,6 @@ function TimelineRH({ contrats }) {
           })}
         </div>
       </div>
-    </div>
+    </BlocRepliable>
   )
 }
