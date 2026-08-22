@@ -5057,6 +5057,15 @@ export default function App(){
     wroteHashOnce.current = true
   }, [session, profile, activeTab, clientsVue, selectedClientId])
 
+  // Si l'onglet actif devient inaccessible après coup — contractType arrive
+  // en async et peut retirer Smart RH d'un stagiaire, un rôle peut changer —
+  // retour à l'accueil plutôt qu'un écran vide. visibleTabsRef est rempli à
+  // chaque rendu depuis buildNavDomains.
+  useEffect(() => {
+    if (!session || !profile) return
+    if (!visibleTabsRef.current.has(activeTab)) setActiveTab('dashboard')
+  }, [session, profile, activeTab, contractType])
+
   const fetchProspects=()=>prospectsService.listAll().then(({ list, aContacter })=>{
     setProspects(list)
     setProspectsNew(aContacter)
