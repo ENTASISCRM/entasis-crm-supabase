@@ -70,3 +70,51 @@ Chaque phase est livrable indépendamment ; aucune ne casse la précédente.
 - Linear : skeletons/optimistic UI, tout-clavier, densité maîtrisée
 
 Document de présentation détaillé : artifact « Projet Clarté » (claude.ai).
+
+---
+
+# Séries C et D — livrées (août 2026)
+
+## Série C — harmonisation intérieure des écrans
+
+| # | Écran | Ce qui change |
+|---|---|---|
+| C1 | Marchés financiers | Grille maison → `data-table` charte, badges de performance sur tokens sémantiques, modales (ajout d'allocation, saisie des perfs) sur la structure standard |
+| C2 | UCS Structurés | Table catalogue sur `data-table`, états vide/erreur charte, fonds blancs codés en dur → tokens |
+| C3 | Agenda, Équipe | Carte de connexion Google sans emoji, table des invitations (classe `.table` inexistante → rendu brut) corrigée, dernières teintes du vieil or `#C09B5A` remplacées |
+
+## Série D — les 10 fonctions des grands CRM
+
+| # | Fonctionnalité | Référence |
+|---|---|---|
+| D1 | Filtres et tri mémorisés par conseiller (`usePersistedState`) | vues sauvegardées Attio/Zoho |
+| D2 | Édition inline du statut dans le tableau (`InlineSelect`) | grilles Zoho/Airtable |
+| D3 | Prochaine action datée + « Mes actions du jour » | Pipedrive, Close |
+| D4 | Timeline unifiée de la fiche client | « Interactions » Zoho |
+| D5 | Centre de notifications (cloche) | Attio, Monday |
+| D6 | Annuler après glisser-déposer | Monday, Gmail |
+| D7 | Export CSV (annuaire, dossiers), format Excel FR | tous |
+| D8 | Overlay « ? » des raccourcis | Attio, Linear |
+| D9 | Checklist d'accueil auto-cochée | HubSpot, Attio |
+| D10 | Journal d'échanges client (appels, mails, RDV) | Copper, Close |
+
+### Migrations appliquées en base
+- `20260822120000_prochaine_action.sql` — `deals.next_action` + `next_action_date` + index partiel
+- `20260822140000_client_interactions.sql` — table du journal d'échanges + RLS alignée sur la visibilité des fiches clients
+- `20260822160000_client_interactions_durcissement.sql` — client d'un échange figé, auteur dénormalisé (la RLS `profiles` masque les pairs)
+
+### Revues qualité
+Deux revues adversariales multi-agents (14 puis 16 agents, 4 dimensions :
+React/état, non-régression, sécurité RLS, cohérence métier) ont produit 65
+constats au total. Les défauts réels ont été corrigés dans la foulée —
+notamment les deep links morts au chargement à froid (série B), le repère de
+lecture des notifications qui sautait dans le futur, la suppression d'un
+échange refusée annoncée comme réussie, et le calcul de « aujourd'hui » en
+UTC au lieu de l'heure de Paris.
+
+### Reste ouvert (non fait, volontairement)
+- Mode sombre : les 78 tokens CSS le rendent mécanique, maquette déjà prête
+  dans `design-previews/proposal-4-obsidienne`.
+- Synchronisation de boîte mail (Gmail/Outlook) : le journal d'échanges est
+  saisi à la main, aucune lecture des mails des conseillers.
+- `LinkedIn Pro` et `Prospection` restent hors navigation (comme avant).
