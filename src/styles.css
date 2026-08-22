@@ -2393,3 +2393,33 @@ table,
   font-weight: 600;
   line-height: 1;
 }
+
+/* D2 — édition inline dans les tableaux : le select recouvre le badge,
+   invisible au repos, révélé au survol et au focus clavier. */
+.inline-select { position: relative; display: inline-flex; }
+.inline-select-face {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: box-shadow var(--tr-fast, 120ms ease);
+}
+.inline-select-chevron { opacity: 0; transition: opacity var(--tr-fast, 120ms ease); flex-shrink: 0; }
+.inline-select:hover .inline-select-chevron,
+.inline-select:focus-within .inline-select-chevron { opacity: 0.65; }
+.inline-select:hover .inline-select-face { box-shadow: 0 0 0 1px var(--bd-strong); }
+.inline-select:focus-within .inline-select-face { box-shadow: 0 0 0 2px var(--bd-focus); }
+.inline-select-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font: inherit;
+  border: none;
+  appearance: none;
+  background: transparent;
+}
+@media (prefers-reduced-motion: reduce) {
+  .inline-select-face, .inline-select-chevron { transition: none; }
+}

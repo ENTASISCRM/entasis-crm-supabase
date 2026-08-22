@@ -22,6 +22,7 @@ import { KanbanDnd, KanbanColumn, KanbanCard, targetColumnOf } from './component
 import FormSection from './components/ui/FormSection'
 import SortableTh from './components/ui/SortableTh'
 import ShortcutsHelp from './components/ui/ShortcutsHelp'
+import InlineSelect from './components/ui/InlineSelect'
 import { usePersistedState } from './hooks/usePersistedState'
 import { exporterCsv, suffixeDate, nombreFr } from './lib/export-csv'
 // Onglets lourds charges a la demande (code-splitting via React.lazy) : sortis du
@@ -2189,6 +2190,22 @@ const PIPELINE_COLS=[
   {id:'Annulé',   label:'Annulé',    cls:'col-cancelled'},
 ]
 
+// D2/D5 — règle unique de changement de statut, partagée par le kanban
+// (glisser-déposer) et les tableaux (édition inline). Renvoie true si le
+// changement a été appliqué, false s'il a été redirigé vers la modale ou
+// annulé — les garde-fous métier restent au même endroit pour les deux gestes.
+async function appliquerChangementStatut(deal,cible,{onEdit,onQuickPatch,undoable=false}={}){
+  if(!cible||cible===deal.status)return false
+  // Signature : compagnie, dates et data client sont obligatoires → la modale
+  // pré-basculée, jamais un dossier signé incomplet créé d'un seul geste.
+  if(cible==='Signé'){onEdit?.({...deal,status:'Signé'});return false}
+  // En cours / Prévu exigent une date de signature prévue.
+  if((cible==='En cours'||cible==='Prévu')&&!deal.date_expected){onEdit?.({...deal,status:cible});return false}
+  if(cible==='Annulé'&&!(await confirmDialog({title:`Abandonner le dossier de ${getClientName(deal)} ?`,message:'Il passera en Annulé.',confirmLabel:'Abandonner',danger:true})))return false
+  onQuickPatch?.(deal,{status:cible},`Dossier déplacé vers ${cible}`,{undoable})
+  return true
+}
+
 function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
   // D1 : les filtres sont mémorisés par conseiller (plus besoin de les
   // re-régler à chaque visite). La recherche reste volontairement volatile.
@@ -2246,17 +2263,7 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
   async function handleCardMove({itemData,overId,overData}){
     const deal=itemData?.deal
     if(!deal)return
-    const target=targetColumnOf({overId,overData})
-    if(!target||target===deal.status)return
-    if(target==='Signé'){onEdit({...deal,status:'Signé'});return}
-    // Même règle que la modale : En cours/Prévu exigent une date de signature
-    // prévue. Si elle manque, le drop ouvre la modale pré-basculée au lieu de
-    // créer silencieusement un dossier hors règle.
-    if((target==='En cours'||target==='Prévu')&&!deal.date_expected){onEdit({...deal,status:target});return}
-    // Même garde-fou que le bouton « Abandonner » : annuler par un simple
-    // geste demande confirmation.
-    if(target==='Annulé'&&!(await confirmDialog({title:`Abandonner le dossier de ${getClientName(deal)} ?`,message:'Il passera en Annulé.',confirmLabel:'Abandonner',danger:true})))return
-    if(onQuickPatch)onQuickPatch(deal,{status:target},`Dossier déplacé vers ${target}`,{undoable:true})
+    await appliquerChangementStatut(deal,targetColumnOf({overId,overData}),{onEdit,onQuickPatch,undoable:true})
   }
 
   return (
@@ -2451,7 +2458,7 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
 /* ─────────────────────────────────────────────────────────────────────────────
    DEALS TABLE
 ───────────────────────────────────────────────────────────────────────────── */
-function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClient}){
+function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClient,onQuickPatch}){
   // D1 : filtres mémorisés par conseiller d'une visite à l'autre.
   const prefScope=profile?.advisor_code||profile?.id||'anon'
   const [search,setSearch]=useState('')
@@ -2623,7 +2630,24 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
                         {group.co_advisor_code && <span className="cell-sub"> co: {group.co_advisor_code}</span>}
                       </td>
                       <td>{group.latestSignedDate ? <span style={{fontSize:14,fontWeight:600,color:'var(--t1)',fontVariantNumeric:'tabular-nums'}}>{new Date(group.latestSignedDate).toLocaleDateString('fr-FR')}</span> : <span style={{color:'var(--t3)'}}>—</span>}</td>
-                      <td><span className={STATUS_CLASS[group.globalStatus]||'badge'}>{statusLabel(group.globalStatus)}</span></td>
+                      <td onClick={e=>e.stopPropagation()}>
+                        {/* D2 : statut modifiable sans ouvrir la modale quand le
+                            client n'a qu'un dossier. Groupe multi-dossiers : le
+                            statut affiché est un calcul, on l'édite ligne à ligne
+                            dans le détail. */}
+                        {group.deals.length===1&&onQuickPatch?(
+                          <InlineSelect
+                            value={group.deals[0].status}
+                            options={STATUS_OPTIONS}
+                            renderLabel={statusLabel}
+                            badgeClass={STATUS_CLASS[group.deals[0].status]||'badge'}
+                            title="Changer le statut du dossier"
+                            onChange={next=>appliquerChangementStatut(group.deals[0],next,{onEdit,onQuickPatch,undoable:true})}
+                          />
+                        ):(
+                          <span className={STATUS_CLASS[group.globalStatus]||'badge'}>{statusLabel(group.globalStatus)}</span>
+                        )}
+                      </td>
                       <td>
                         <div className="table-actions">
                           {group.client_id && onSelectClient && (
@@ -2658,7 +2682,20 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
                         <td className="cell-mono">{deal.pu>0?euro(deal.pu):'—'}</td>
                         <td><span style={{fontSize:12,color:'var(--t3)'}}>{deal.company||'—'}</span></td>
                         <td>{deal.date_signed ? <span style={{fontSize:12,color:'var(--t2)',fontVariantNumeric:'tabular-nums'}}>{new Date(deal.date_signed).toLocaleDateString('fr-FR')}</span> : <span style={{color:'var(--t3)'}}>—</span>}</td>
-                        <td><span className={STATUS_CLASS[deal.status]||'badge'}>{statusLabel(deal.status)}</span></td>
+                        <td onClick={e=>e.stopPropagation()}>
+                          {onQuickPatch?(
+                            <InlineSelect
+                              value={deal.status}
+                              options={STATUS_OPTIONS}
+                              renderLabel={statusLabel}
+                              badgeClass={STATUS_CLASS[deal.status]||'badge'}
+                              title="Changer le statut du dossier"
+                              onChange={next=>appliquerChangementStatut(deal,next,{onEdit,onQuickPatch,undoable:true})}
+                            />
+                          ):(
+                            <span className={STATUS_CLASS[deal.status]||'badge'}>{statusLabel(deal.status)}</span>
+                          )}
+                        </td>
                         <td>
                           <div className="table-actions">
                             <button
@@ -5735,7 +5772,7 @@ export default function App(){
           {activeTab==='pilotage-rh'&&(isManager||isRhDelegue)&&<PilotageRH profile={profile}/>}
           {activeTab==='recrutement'&&(isManager||isRhDelegue)&&<Recrutement/>}
           {activeTab==='pipeline'&&<PipelineBoard deals={deals} month={month} profile={profile} onEdit={startEdit} onQuickPatch={quickPatchDeal}/>}
-          {activeTab==='clients'&&!selectedClientId&&clientsVue==='dossiers'&&<DealsTable deals={deals} month={month} profile={profile} onEdit={startEdit} onDelete={deleteDeal} onRefresh={loadAll} onSelectClient={(clientId) => {
+          {activeTab==='clients'&&!selectedClientId&&clientsVue==='dossiers'&&<DealsTable deals={deals} month={month} profile={profile} onEdit={startEdit} onDelete={deleteDeal} onRefresh={loadAll} onQuickPatch={quickPatchDeal} onSelectClient={(clientId) => {
             setSelectedClientId(clientId)
             setClientsVue('annuaire')
           }}/>}
