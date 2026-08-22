@@ -116,3 +116,16 @@ describe('export CSV', () => {
     expect(typeof exporterCsv).toBe('function');
   });
 });
+
+describe('normalizeDeal — prochaine action (D3)', () => {
+  it('convertit les valeurs vides en null pour la base', () => {
+    const d = normalizeDeal({ next_action: '   ', next_action_date: '' });
+    expect(d.next_action).toBeNull();
+    expect(d.next_action_date).toBeNull();
+  });
+  it('conserve une action renseignée', () => {
+    const d = normalizeDeal({ next_action: ' Relancer après relevé ', next_action_date: '2026-09-01' });
+    expect(d.next_action).toBe('Relancer après relevé');
+    expect(d.next_action_date).toBe('2026-09-01');
+  });
+});

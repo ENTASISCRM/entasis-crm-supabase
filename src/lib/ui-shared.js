@@ -97,6 +97,10 @@ export function normalizeDeal(d) {
       : (d.frais_entree_pct != null ? Number(d.frais_entree_pct) : 1.0),
     is_ordre_placement: !!d.is_ordre_placement,
     client_age: d.client_age === '' || d.client_age == null ? null : Number(d.client_age),
+    // D3 : colonnes `text` et `date` en base — une chaîne vide ferait
+    // échouer l'insert sur la colonne date, on renvoie null.
+    next_action: d.next_action ? String(d.next_action).trim() || null : null,
+    next_action_date: d.next_action_date || null,
   };
 }
 

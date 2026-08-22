@@ -1911,7 +1911,7 @@ function KpiCard({label,value,hint,accent,progressValue,delta}){
 /* ─────────────────────────────────────────────────────────────────────────────
    ADVISOR DASHBOARD
 ───────────────────────────────────────────────────────────────────────────── */
-function AdvisorDashboard({deals,objectifs,month,profile}){
+function AdvisorDashboard({deals,objectifs,month,profile,onEdit}){
   const code=profile?.advisor_code||''
   const m=advisorMetrics(deals,month,code)
 
@@ -2009,7 +2009,9 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
         <KpiCard label="Cabinet · PP signée" value={euro(cabinet.ppCab)} hint={`${cabinet.signedCount} dossier${cabinet.signedCount!==1?'s':''} signé${cabinet.signedCount!==1?'s':''} sur ${cabinet.totalCount}`} accent="gold"/>
         <KpiCard label="Cabinet · PU signée" value={euro(cabinet.puCab)} hint="Versements uniques équipe" accent="blue"/>
       </div>
-      <div>
+      {/* D3 : ce qui doit être fait aujourd'hui passe AVANT le reste. */}
+      <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit}/>
+      <div style={{marginTop:28}}>
         <div className="section-header"><div><div className="section-kicker">Actions immédiates</div><div className="section-title">Mes priorités</div></div></div>
         {priorities.length>0?(
           <div className="priorities-list">
@@ -2042,7 +2044,7 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
 /* ─────────────────────────────────────────────────────────────────────────────
    MANAGER DASHBOARD
 ───────────────────────────────────────────────────────────────────────────── */
-function ManagerDashboard({deals,objectifs,month,teamProfiles,profile}){
+function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit}){
   // Switch metric pour la vue annuelle, PP financiere par défaut, PU,
   // Mutuelle/Prevoyance et Total dispo via mini tabs (demande Louis
   // 2026-06-08, vue Direction).
@@ -2106,6 +2108,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile}){
         <KpiCard label="PP Mutuelle/Prévoyance" value={euro(ppMutS)} hint="Mutuelle Santé + Prévoyance TNS" accent="gold" delta={prevMonth?dPpMutS:null}/>
       </div>
       <div style={{marginBottom:24}}><Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded/></Suspense></div>
+      <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit}/>
       <div className="grid-2 gap-16 mb-24">
         <AreaChart title="PP cabinet annualisée" subtitle="Réalisé + pipeline → objectif" actual={ppS} projected={ppS+ppP} target={ppTarget}/>
         <AreaChart title="PU cabinet" subtitle="Versements uniques consolidés" actual={puS} projected={puS+puP} target={puTarget}/>
@@ -2189,6 +2192,78 @@ const PIPELINE_COLS=[
   {id:'Signé',    label:'Signé ✓',   cls:'col-signed'},
   {id:'Annulé',   label:'Annulé',    cls:'col-cancelled'},
 ]
+
+// D3 — « Mes actions du jour » : les prochaines actions échues ou à mener
+// aujourd'hui, sur les dossiers vivants du conseiller. Le réflexe Pipedrive :
+// on ouvre le CRM et on sait quoi faire, sans chercher.
+function ActionsDuJour({deals,profile,onEdit}){
+  const today=new Date().toISOString().slice(0,10)
+  const code=profile?.advisor_code
+  const items=useMemo(()=>{
+    return (deals||[])
+      .filter(d=>isPipeline(d.status))
+      .filter(d=>!code||dealMatchesAdvisor(d,code))
+      .filter(d=>d.next_action_date&&String(d.next_action_date).slice(0,10)<=today)
+      .sort((a,b)=>String(a.next_action_date).localeCompare(String(b.next_action_date)))
+  },[deals,code,today])
+
+  if(!items.length)return null
+  const enRetard=items.filter(d=>String(d.next_action_date).slice(0,10)<today).length
+
+  return (
+    <div style={{marginTop:28}}>
+      <div className="section-header">
+        <div>
+          <div className="section-kicker">À faire</div>
+          <div className="section-title">Mes actions du jour</div>
+          <div className="section-sub">
+            {items.length} action{items.length>1?'s':''} à mener
+            {enRetard>0?` · ${enRetard} en retard`:''}
+          </div>
+        </div>
+      </div>
+      <div className="priorities-list">
+        {items.map(d=>(
+          <div key={d.id} className="priority-item" style={{cursor:'pointer'}} onClick={()=>onEdit?.(d)} title="Ouvrir le dossier">
+            <div className={`priority-item-dot ${String(d.next_action_date).slice(0,10)<today?'urgent':'high'}`}/>
+            <div style={{flex:1,minWidth:0}}>
+              <div className="priority-item-client truncate">{getClientName(d)}</div>
+              <div className="priority-item-detail">{d.next_action||'Action à mener'} · {d.product}</div>
+            </div>
+            <NextActionChip deal={d}/>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// D3 — chip « prochaine action » : visible sur la carte kanban et dans la
+// liste d'accueil. Rouge si l'échéance est dépassée, or si c'est pour
+// aujourd'hui, neutre sinon — l'urgence se lit sans réfléchir.
+function NextActionChip({deal,compact}){
+  if(!deal?.next_action&&!deal?.next_action_date)return null
+  const iso=deal.next_action_date?String(deal.next_action_date).slice(0,10):null
+  const today=new Date().toISOString().slice(0,10)
+  const enRetard=iso&&iso<today
+  const aujourdhui=iso===today
+  const couleur=enRetard
+    ?{c:'var(--cancelled)',bg:'var(--cancelled-bg)',bd:'var(--cancelled-bd, rgba(255,59,48,0.20))'}
+    :aujourdhui
+      ?{c:'var(--gold-dk, #A6843F)',bg:'rgba(201,169,97,0.12)',bd:'var(--gold-line, rgba(201,169,97,0.30))'}
+      :{c:'var(--t2)',bg:'rgba(0,0,0,0.04)',bd:'var(--bd)'}
+  const dt=iso?new Date(iso+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}):null
+  return (
+    <div title={deal.next_action||'Prochaine action'} style={{display:'inline-flex',alignItems:'center',gap:5,maxWidth:'100%',
+      padding:'2px 8px',borderRadius:6,background:couleur.bg,border:`1px solid ${couleur.bd}`,
+      fontSize:compact?10:11.5,fontWeight:650,color:couleur.c,marginBottom:compact?6:0}}>
+      <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+        {deal.next_action||'Action à mener'}
+      </span>
+      {dt&&<span className="tnum" style={{opacity:.85,flexShrink:0}}>· {enRetard?'en retard '+dt:aujourdhui?"aujourd'hui":dt}</span>}
+    </div>
+  )
+}
 
 // D2/D5 — règle unique de changement de statut, partagée par le kanban
 // (glisser-déposer) et les tableaux (édition inline). Renvoie true si le
@@ -2347,6 +2422,7 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
                     {/* Brouillon créé depuis un RDV (produit Autre, 0 EUR) : déjà
                         compté dans Dossiers mais invisible ici, badge ambre pour
                         que le conseiller le qualifie au lieu de le laisser dormir. */}
+                    <NextActionChip deal={deal} compact/>
                     {isDealACompleter(deal)&&(
                       <div style={{display:'inline-flex',alignItems:'center',gap:4,marginTop:4,padding:'2px 8px',borderRadius:6,background:'rgba(180,83,9,0.10)',border:'1px solid rgba(180,83,9,0.28)',fontSize:10,fontWeight:700,color:'#B45309'}}>
                         ✏️ À compléter
@@ -4607,9 +4683,23 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
               <div className="form-group mt-16"><label className="form-label">Source</label><select className="form-select" value={deal.source||''} onChange={e=>set('source',e.target.value)}>{SOURCES.map(s=><option key={s}>{s}</option>)}</select></div>
             </FormSection>
             )}
-            {!expressMode && (
+            {/* D3 — prochaine action : la discipline des CRM de vente, aucun
+                dossier vivant sans étape suivante datée. Alimente la liste
+                « Mes actions du jour » de l'accueil. */}
+            {!expressMode && (<>
+              <div className="form-row form-row-2">
+                <div className="form-group">
+                  <label className="form-label">Prochaine action</label>
+                  <input className="form-input" value={deal.next_action||''} onChange={e=>set('next_action',e.target.value)} placeholder="Ex. Relancer après réception du relevé"/>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Pour le</label>
+                  <input className="form-input" type="date" value={deal.next_action_date||''} onChange={e=>set('next_action_date',e.target.value)}/>
+                  <div className="form-hint">Apparaît dans « Mes actions du jour » à cette date.</div>
+                </div>
+              </div>
               <div className="form-group"><label className="form-label">Notes</label><textarea className="form-textarea" rows={4} value={deal.notes||''} onChange={e=>set('notes',e.target.value)} placeholder="Contexte client, objections, prochaine étape, pièces manquantes…"/></div>
-            )}
+            </>)}
           </div>
           <div className="modal-foot" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
             {/* Gauche : Supprimer en édition, « Tout renseigner » en express
@@ -5766,7 +5856,7 @@ export default function App(){
 
           <Suspense fallback={<SkeletonPage/>}>
           {activeTab==='dashboard'&&isManager&&<EditorialPendingBanner count={editorialPending.count} nextDeadline={editorialPending.nextDeadline} onOpen={()=>setActiveTab('editorial')}/>}
-          {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles} profile={profile}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile}/>)}
+          {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles} profile={profile} onEdit={startEdit}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile} onEdit={startEdit}/>)}
           {activeTab==='leads'&&<LeadRoomEmbed/>}
           {activeTab==='smart-rh'&&canSmartRh&&<SmartRH profile={profile} rhDelegue={isRhDelegue}/>}
           {activeTab==='pilotage-rh'&&(isManager||isRhDelegue)&&<PilotageRH profile={profile}/>}
