@@ -16,6 +16,7 @@ import toast from 'react-hot-toast'
 import { logger } from '../lib/logger'
 import * as structureursService from '../services/structureurs'
 import { SkeletonCards } from './ui/Skeleton'
+import { messageErreur } from '../lib/ui-shared'
 
 const UPFRONT_TARGET = 3.0   // seuil de rentabilité cabinet (1,5% conseiller + 1,5% mini cabinet)
 
@@ -45,7 +46,7 @@ export default function Structureurs({ profile }) {
       })
       .catch(e => {
         logger.warn('[Structureurs] load failed', e)
-        setError(e.message || 'Erreur de chargement')
+        setError(messageErreur(e))
       })
       .finally(() => setLoading(false))
   }
@@ -67,7 +68,7 @@ export default function Structureurs({ profile }) {
       })
       .catch(e => {
         logger.warn('[Structureurs] load failed', e)
-        if (active) setError(e.message || 'Erreur de chargement')
+        if (active) setError(messageErreur(e))
       })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
@@ -445,7 +446,7 @@ function PartenaireRow({ s, onReload }) {
       await structureursService.update(s.id, { actif: !s.actif })
       await onReload?.()
     } catch (err) {
-      toast.error(`Erreur : ${err.message}`)
+      toast.error(`Erreur : ${messageErreur(err)}`)
     }
   }
 

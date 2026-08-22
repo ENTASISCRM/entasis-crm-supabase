@@ -13,6 +13,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import * as recrutementService from '../services/recrutement'
+import { messageErreur } from '../lib/ui-shared'
 
 const { STATUS_LABELS, PIPELINE_STATUSES, SOURCE_LABELS } = recrutementService
 
@@ -55,7 +56,7 @@ export default function Recrutement() {
       setCandidates(list)
       setStats(statsData)
     } catch (e) {
-      setError(e.message || 'Erreur de chargement (la table existe-t-elle ? colle la migration SQL dans Supabase SQL Editor)')
+      setError(messageErreur(e))
     } finally {
       setLoading(false)
     }
@@ -97,7 +98,7 @@ export default function Recrutement() {
       const statsData = await recrutementService.getStats()
       setStats(statsData)
     } catch (e) {
-      toast.error(`Impossible de changer le statut, ${e.message}`)
+      toast.error(`Impossible de changer le statut, ${messageErreur(e)}`)
       refresh()
     }
   }
@@ -383,7 +384,7 @@ function AddCandidateModal({ onClose, onCreated }) {
       await recrutementService.create(form)
       onCreated()
     } catch (e) {
-      toast.error(`Erreur, ${e.message}`)
+      toast.error(`Erreur, ${messageErreur(e)}`)
     } finally { setSaving(false) }
   }
 
@@ -502,7 +503,7 @@ function CandidateDetailModal({ candidate: initial, onClose, onUpdated, onDelete
       reload()
       onUpdated()
     } catch (e) {
-      toast.error(`Erreur, ${e.message}`)
+      toast.error(`Erreur, ${messageErreur(e)}`)
     } finally { setSaving(false) }
   }
 
@@ -515,7 +516,7 @@ function CandidateDetailModal({ candidate: initial, onClose, onUpdated, onDelete
       reload()
       onUpdated()
     } catch (e) {
-      toast.error(`Erreur, ${e.message}`)
+      toast.error(`Erreur, ${messageErreur(e)}`)
     } finally { setSaving(false) }
   }
 
@@ -526,7 +527,7 @@ function CandidateDetailModal({ candidate: initial, onClose, onUpdated, onDelete
       reload()
       onUpdated()
     } catch (e) {
-      toast.error(`Erreur, ${e.message}`)
+      toast.error(`Erreur, ${messageErreur(e)}`)
     }
   }
 
@@ -537,7 +538,7 @@ function CandidateDetailModal({ candidate: initial, onClose, onUpdated, onDelete
       setRejecting(false)
       onDeleted()
     } catch (e) {
-      toast.error(`Erreur, ${e.message}`)
+      toast.error(`Erreur, ${messageErreur(e)}`)
     }
   }
 

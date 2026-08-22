@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { logger } from '../lib/logger'
 import toast from 'react-hot-toast'
+import { messageErreur } from '../lib/ui-shared'
 
 const euro = (v) => Number(v||0).toLocaleString('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0})
 
@@ -59,14 +60,14 @@ export default function CatalogueProgrammes({ setActiveTab }) {
       logger.debug('[CatalogueProgrammes] Result:', { count: data?.length, error: error?.message || null })
       if (error) {
         console.error('[CatalogueProgrammes] Supabase error:', error.message, error.details, error.hint)
-        toast.error('Erreur chargement programmes : ' + error.message)
+        toast.error('Erreur chargement programmes : ' + messageErreur(error))
         setProgrammes([])
       } else {
         setProgrammes(data || [])
       }
     } catch (err) {
       console.error('[CatalogueProgrammes] Exception:', err)
-      toast.error('Erreur réseau : ' + err.message)
+      toast.error('Erreur réseau : ' + messageErreur(err))
       setProgrammes([])
     } finally {
       setLoading(false)
@@ -81,7 +82,7 @@ export default function CatalogueProgrammes({ setActiveTab }) {
       toast.success(`${data.synced} programmes GreenCity synchronisés`)
       await loadProgrammes()
     } catch (err) {
-      toast.error('Erreur de synchronisation : ' + err.message)
+      toast.error('Erreur de synchronisation : ' + messageErreur(err))
     }
     setSyncing(false)
   }
@@ -109,7 +110,7 @@ export default function CatalogueProgrammes({ setActiveTab }) {
       if (data.error) throw new Error(data.error)
       setAiResponse(data.content || 'Pas de réponse')
     } catch (err) {
-      setAiResponse('Erreur : ' + err.message)
+      setAiResponse('Erreur : ' + messageErreur(err))
     }
     setAiLoading(false)
   }

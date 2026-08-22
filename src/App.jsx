@@ -77,8 +77,7 @@ import {
   getClientName,
   emptyDeal,
   normalizeDeal,
-  STATUTS_PRO,
-} from './lib/ui-shared'
+  STATUTS_PRO, messageErreur } from './lib/ui-shared'
 
 const EMPTY_OBJECTIFS = MONTHS.reduce((a,m)=>{a[m]={pp_target:0,pu_target:0};return a},{})
 const LEAD_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
@@ -386,7 +385,7 @@ function AuthScreen() {
       },
     })
     if (error) {
-      setMsg('Erreur de connexion Google : ' + (error.message || 'inconnue'))
+      setMsg('Erreur de connexion Google : ' + (messageErreur(error)))
       setLoading(false)
     }
     // Pas de setLoading(false) en cas de succès : redirection vers Google.
@@ -410,7 +409,7 @@ function AuthScreen() {
       },
     })
     if (error) {
-      setMsg('Erreur : ' + (error.message || 'inconnue'))
+      setMsg('Erreur : ' + (messageErreur(error)))
     } else {
       setMsg('✓ Lien envoyé ! Vérifie ton email (et tes spams). Clique = connecté direct.')
     }
@@ -3198,7 +3197,7 @@ function AgendaView({deals,profile}){
         setLoading(false);return
       }
       setEvents(d.items||[])
-    }catch(e){setError('Erreur réseau : '+e.message)}
+    }catch(e){setError('Erreur réseau : '+ messageErreur(e))}
     setLoading(false)
   }
 
@@ -3547,7 +3546,7 @@ function TeamView({deals,objectifs,teamProfiles,month,profile}){
                                 ))
                                 toast.success('Type de contrat mis à jour')
                               } catch (err) {
-                                toast.error('Erreur : ' + (err.message || ''))
+                                toast.error('Erreur : ' + (messageErreur(err)))
                               }
                             }}
                             style={{
@@ -4795,7 +4794,7 @@ function ProspectionView({prospects,profile,teamProfiles,onRefresh,onProspectsCh
     try {
       await prospectsService.update(updatedProspect)
     } catch (e) {
-      toast.error(e.message)
+      toast.error(messageErreur(e))
       return
     }
     onProspectsChange(prev=>prev.map(p=>p.id===updatedProspect.id?updatedProspect:p))
@@ -5304,7 +5303,7 @@ export default function App(){
       setDossiersImmoCount(await dossiersImmoService.countSafe())
     } catch(e) {
       console.error('[App] loadAll error:', e)
-      setError(`Erreur chargement: ${e.message}`)
+      setError(`Erreur chargement: ${messageErreur(e)}`)
     } finally {
       loadAllInProgress.current = false  // toujours resetter (même si unmount)
       if (isMounted.current) setLoading(false)
@@ -5452,7 +5451,7 @@ export default function App(){
             await dealsService.create(deal)
           }
         } catch (e) {
-          toast.error(e.message)
+          toast.error(messageErreur(e))
           return
         }
       }
@@ -5495,7 +5494,7 @@ export default function App(){
     try {
       await dealsService.update(deal.id,patch)
     } catch (e) {
-      toast.error(e.message)
+      toast.error(messageErreur(e))
       return
     }
     setDeals(prev=>prev.map(d=>d.id===deal.id?{...d,...patch}:d))
@@ -5507,7 +5506,7 @@ export default function App(){
     try {
       await dealsService.remove(deal.id)
     } catch (e) {
-      toast.error(e.message)
+      toast.error(messageErreur(e))
       return
     }
     // Maj locale immediate (Realtime DELETE confirmera), au lieu de recharger tout.
@@ -5518,7 +5517,7 @@ export default function App(){
     try {
       await objectifsService.upsert(row)
     } catch (e) {
-      toast.error(e.message)
+      toast.error(messageErreur(e))
       return
     }
     // Maj locale ciblee (pas de Realtime sur objectifs), au lieu de recharger tout.

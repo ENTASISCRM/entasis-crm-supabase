@@ -16,6 +16,7 @@ import toast from 'react-hot-toast'
 import { SkeletonCards } from './ui/Skeleton'
 import { listTemoignages, addTemoignage } from '../services/temoignages'
 import { listFamilies } from '../services/equipment'
+import { messageErreur } from '../lib/ui-shared'
 
 // Prenom ou initiales : on n affiche jamais un nom complet.
 function afficheClient(nom) {
@@ -56,7 +57,7 @@ export default function Temoignages({ profile }) {
         setItems((tem || []).filter((t) => t.visible !== false))
         setFamilies(fam || [])
       } catch (e) {
-        if (vivant) setErr(e.message || 'Erreur de chargement')
+        if (vivant) setErr(messageErreur(e))
       } finally {
         if (vivant) setLoading(false)
       }

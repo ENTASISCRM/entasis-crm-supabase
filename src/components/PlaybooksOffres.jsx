@@ -23,6 +23,7 @@ import { SkeletonCards } from './ui/Skeleton'
 import { listFamilies } from '../services/equipment'
 import { chargerClientsEnrichis, ciblesDe, genererMissions } from '../services/offres'
 import { OFFRES } from '../config/offres'
+import { messageErreur } from '../lib/ui-shared'
 
 const fmtEur = (v) =>
   Number(v || 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
@@ -52,7 +53,7 @@ export default function PlaybooksOffres({ profile }) {
   useEffect(() => {
     let vivant = true
     ;(async () => {
-      try { await reload() } catch (e) { if (vivant) setErr(e.message || 'Erreur de chargement') }
+      try { await reload() } catch (e) { if (vivant) setErr(messageErreur(e)) }
       finally { if (vivant) setLoading(false) }
     })()
     return () => { vivant = false }
@@ -106,7 +107,7 @@ export default function PlaybooksOffres({ profile }) {
         toast('Aucune nouvelle mission : ces clients ont deja une mission sur cette famille')
       }
     } catch (e) {
-      toast.error(e.message || 'Echec du lancement de la campagne')
+      toast.error(messageErreur(e))
     } finally {
       setLancement(null)
     }

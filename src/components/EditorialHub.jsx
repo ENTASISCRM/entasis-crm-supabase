@@ -11,6 +11,7 @@ import { marked } from 'marked'
 import toast from 'react-hot-toast'
 import { SkeletonCards } from './ui/Skeleton'
 import { supabase } from '../lib/supabase'
+import { messageErreur } from '../lib/ui-shared'
 
 const SITE_JOURNAL = 'https://www.entasis-conseil.fr/journal'
 
@@ -187,7 +188,7 @@ function PackageDetail({ pkg, onBack, onModerated }) {
       setRejectModal(false)
       await onModerated()
     } catch (err) {
-      toast.error(`Échec : ${err.message}`)
+      toast.error(`Échec : ${messageErreur(err)}`)
     } finally {
       setBusy(false)
     }
@@ -461,7 +462,7 @@ function NewsletterConfig() {
       setCurrent(body.brevo_list_id)
       toast.success('Liste de la newsletter enregistrée')
     } catch (err) {
-      toast.error(`Échec : ${err.message}`)
+      toast.error(`Échec : ${messageErreur(err)}`)
     } finally {
       setSaving(false)
     }

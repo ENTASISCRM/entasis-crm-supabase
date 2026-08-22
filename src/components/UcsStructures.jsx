@@ -36,6 +36,7 @@ import * as clientsService from '../services/clients'
 import * as structureursService from '../services/structureurs'
 import { fetchRemuneration } from '../lib/remuneration-api'
 import Structureurs from './Structureurs'
+import { messageErreur } from '../lib/ui-shared'
 
 const ETATS = [
   { value: 'EN_COURS',   label: 'En cours',   color: '#15803d' },
@@ -159,7 +160,7 @@ export default function UcsStructures({ profile, month }) {
         // Valeur par défaut sûre (comme l ancien fallback local) et message
         // d erreur affiché à côté du taux.
         setTauxConseillerUcs(1.5)
-        setTauxError(e.message || 'Erreur de calcul du taux')
+        setTauxError(messageErreur(e))
       })
       .finally(() => { if (alive) setTauxLoading(false) })
     return () => { alive = false }
@@ -172,7 +173,7 @@ export default function UcsStructures({ profile, month }) {
       .then(data => { setUcs(data); setError('') })
       .catch(e => {
         logger.warn('[UCS] listAll failed', e)
-        setError(e.message || 'Erreur de chargement du catalogue')
+        setError(messageErreur(e))
       })
       .finally(() => setLoading(false))
   }
@@ -184,7 +185,7 @@ export default function UcsStructures({ profile, month }) {
       .then(data => { if (active) { setUcs(data); setError('') } })
       .catch(e => {
         logger.warn('[UCS] listAll failed', e)
-        if (active) setError(e.message || 'Erreur de chargement du catalogue')
+        if (active) setError(messageErreur(e))
       })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
@@ -912,7 +913,7 @@ function AdminRowActions({ u, onReload }) {
       await ucsService.markStatus(u.id, newEtat)
       await onReload?.()
     } catch (e) {
-      toast.error(`Erreur : ${e.message}`)
+      toast.error(`Erreur : ${messageErreur(e)}`)
     } finally {
       setBusy(false)
     }
@@ -935,7 +936,7 @@ function AdminRowActions({ u, onReload }) {
       await ucsService.update(u.id, { enveloppe_restante: val })
       await onReload?.()
     } catch (e) {
-      toast.error(`Erreur : ${e.message}`)
+      toast.error(`Erreur : ${messageErreur(e)}`)
     } finally {
       setBusy(false)
     }
@@ -1119,7 +1120,7 @@ function Simulator({ ucs, profile, isManager, tauxConseiller = 1.5 }) {
       setSavedFeedback('Simulation enregistrée ✓')
     } catch (e) {
       logger.warn('[UCS] saveSimulation failed', e)
-      setSavedFeedback(`Erreur : ${e.message}`)
+      setSavedFeedback(`Erreur : ${messageErreur(e)}`)
     } finally {
       setSaving(false)
     }
@@ -1571,7 +1572,7 @@ function AdminPanel({ onReload }) {
       await onReload?.()
     } catch (e) {
       logger.warn('[UCS] upsertMany failed', e)
-      setResult({ error: e.message })
+      setResult({ error: messageErreur(e) })
     } finally {
       setImporting(false)
     }
@@ -1797,7 +1798,7 @@ function parseUcsCsv(text) {
       }
       rows.push(row)
     } catch (e) {
-      errors.push(`Ligne ${i + 1} : ${e.message}`)
+      errors.push(`Ligne ${i + 1} : ${messageErreur(e)}`)
     }
   }
 
@@ -1864,7 +1865,7 @@ function StructureurSidePanel({ structureurId, onClose }) {
       const s = await structureursService.getById(structureurId)
       setStructureur(s)
     } catch (e) {
-      toast.error(`Erreur : ${e.message}`)
+      toast.error(`Erreur : ${messageErreur(e)}`)
     } finally {
       setSaving(false)
     }
@@ -2080,7 +2081,7 @@ function NotesEditor({ structureurId, initial, onSaved }) {
       setSavedAt(Date.now())
       await onSaved?.()
     } catch (e) {
-      toast.error(`Erreur : ${e.message}`)
+      toast.error(`Erreur : ${messageErreur(e)}`)
     } finally {
       setSaving(false)
     }

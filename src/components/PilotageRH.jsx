@@ -24,6 +24,7 @@ import MandatairesConformite from './MandatairesConformite'
 import { soldeConges, fmtJours } from '../lib/conges-solde'
 import { impersonate } from '../services/impersonation'
 import { TYPES_CONTRAT, LIBELLE_TYPE_CONTRAT } from '../lib/contrat-enums'
+import { messageErreur } from '../lib/ui-shared'
 
 const fmtEur = (v) => Number(v || 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '—')
@@ -156,7 +157,7 @@ export default function PilotageRH({ profile }) {
       setConges(cg)
       refreshDocs()
     } catch (e) {
-      toast.error('Erreur de chargement : ' + (e.message || ''))
+      toast.error('Erreur de chargement : ' + (messageErreur(e)))
     } finally {
       setLoading(false)
     }
@@ -221,7 +222,7 @@ export default function PilotageRH({ profile }) {
       toast.success('Contrat lié')
       reload()
     } catch (e) {
-      toast.error('Erreur : ' + (e.message || ''))
+      toast.error('Erreur : ' + (messageErreur(e)))
     }
   }
 
@@ -360,7 +361,7 @@ export default function PilotageRH({ profile }) {
       setCreating(false)
       reload()
     } catch (e) {
-      toast.error('Erreur : ' + (e.message || ''))
+      toast.error('Erreur : ' + (messageErreur(e)))
     }
   }
 
@@ -400,7 +401,7 @@ export default function PilotageRH({ profile }) {
       reload()
       return true
     } catch (e) {
-      toast.error('Erreur : ' + (e.message || ''))
+      toast.error('Erreur : ' + (messageErreur(e)))
     }
     return false
   }
@@ -412,7 +413,7 @@ export default function PilotageRH({ profile }) {
       toast.success(contrat.actif ? 'Contrat désactivé' : 'Contrat réactivé')
       reload()
     } catch (e) {
-      toast.error('Erreur : ' + (e.message || ''))
+      toast.error('Erreur : ' + (messageErreur(e)))
     }
   }
 
@@ -439,7 +440,7 @@ export default function PilotageRH({ profile }) {
       // et on prévient l'utilisateur.
       window.open(link, '_blank', 'noopener,noreferrer')
     } catch (e) {
-      toast.error('Erreur : ' + (e.message || ''), { id: toastId })
+      toast.error('Erreur : ' + (messageErreur(e)), { id: toastId })
     }
   }
 
@@ -964,7 +965,7 @@ function DocsContrat({ contratId, typeContrat, nomSalarie, onChange }) {
     try { setDocs(await contratDocs.listDocsParCategorie(contratId)) }
     catch (e) {
       console.error('[DocsContrat] chargement', e)
-      setErreur(e.message || 'Erreur de chargement des documents')
+      setErreur(messageErreur(e))
       setDocs(null)
     }
   }
@@ -987,7 +988,7 @@ function DocsContrat({ contratId, typeContrat, nomSalarie, onChange }) {
       await reloadDocs()
       onChange && onChange()
     } catch (err) {
-      toast.error('Envoi impossible : ' + (err.message || ''))
+      toast.error('Envoi impossible : ' + (messageErreur(err)))
     } finally { setBusy(false) }
   }
 
@@ -995,7 +996,7 @@ function DocsContrat({ contratId, typeContrat, nomSalarie, onChange }) {
     try {
       const url = await contratDocs.urlPath(path)
       window.open(url, '_blank', 'noopener')
-    } catch (err) { toast.error('Ouverture impossible : ' + (err.message || '')) }
+    } catch (err) { toast.error('Ouverture impossible : ' + (messageErreur(err))) }
   }
 
   const supprimer = async (d) => {
@@ -1006,7 +1007,7 @@ function DocsContrat({ contratId, typeContrat, nomSalarie, onChange }) {
       toast.success('Document supprimé')
       await reloadDocs()
       onChange && onChange()
-    } catch (err) { toast.error('Suppression impossible : ' + (err.message || '')) }
+    } catch (err) { toast.error('Suppression impossible : ' + (messageErreur(err))) }
     finally { setBusy(false) }
   }
 
@@ -1037,7 +1038,7 @@ function DocsContrat({ contratId, typeContrat, nomSalarie, onChange }) {
       URL.revokeObjectURL(a.href)
       toast.success(`${n} document${n > 1 ? 's' : ''} téléchargé${n > 1 ? 's' : ''} (zip)`)
     } catch (e) {
-      toast.error('Téléchargement impossible : ' + (e.message || ''))
+      toast.error('Téléchargement impossible : ' + (messageErreur(e)))
     } finally { setBusy(false) }
   }
 

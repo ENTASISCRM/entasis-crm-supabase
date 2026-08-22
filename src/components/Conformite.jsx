@@ -35,6 +35,7 @@ import {
   emptyReponses,
 } from '../lib/conformite-questionnaire'
 import { genRecueilPdf, genDevoirPdf } from '../lib/conformite-pdf'
+import { messageErreur } from '../lib/ui-shared'
 
 const PRODUIT_DEFAUT = 'Plan Epargne Retraite Individuel (PER IN)'
 const COMPAGNIE_DEFAUT = 'GENERALI'
@@ -259,7 +260,7 @@ export default function Conformite({ profile }) {
       const rows = await conformiteService.listAll()
       setDossiers(rows || [])
     } catch (e) {
-      toast.error('Erreur de chargement : ' + (e.message || ''))
+      toast.error('Erreur de chargement : ' + (messageErreur(e)))
     } finally {
       setLoading(false)
     }
@@ -298,7 +299,7 @@ export default function Conformite({ profile }) {
       setDossiers((prev) => prev.filter((d) => d.id !== row.id))
       toast.success('Dossier supprimé')
     } catch (e) {
-      toast.error('Erreur : ' + (e.message || ''))
+      toast.error('Erreur : ' + (messageErreur(e)))
     }
   }
 
@@ -587,7 +588,7 @@ function ModaleCreation({ profile, onClose, onCreated }) {
       toast.success('Dossier de conformité créé')
       onCreated(row)
     } catch (e) {
-      toast.error('Erreur : ' + (e.message || ''))
+      toast.error('Erreur : ' + (messageErreur(e)))
     } finally {
       setSaving(false)
     }
@@ -821,7 +822,7 @@ function EditeurDossier({ dossier, profile, onBack, onRowChange }) {
       await persist()
       toast.success('Dossier enregistré')
     } catch (e) {
-      toast.error('Erreur : ' + (e.message || ''))
+      toast.error('Erreur : ' + (messageErreur(e)))
     } finally {
       setBusy(false)
     }
@@ -847,7 +848,7 @@ function EditeurDossier({ dossier, profile, onBack, onRowChange }) {
       else await genDevoirPdf(args)
       toast.success(type === 'recueil' ? 'Recueil des exigences et besoins téléchargé' : 'Devoir de conseil téléchargé', { id: toastId })
     } catch (e) {
-      toast.error('Erreur : ' + (e.message || ''), { id: toastId })
+      toast.error('Erreur : ' + (messageErreur(e)), { id: toastId })
     } finally {
       setBusy(false)
     }
@@ -862,7 +863,7 @@ function EditeurDossier({ dossier, profile, onBack, onRowChange }) {
       await persist(patch)
       toast.success(statut === 'envoye' ? 'Dossier marqué envoyé' : 'Dossier marqué signé')
     } catch (e) {
-      toast.error('Erreur : ' + (e.message || ''))
+      toast.error('Erreur : ' + (messageErreur(e)))
     } finally {
       setBusy(false)
     }

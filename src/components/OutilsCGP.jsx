@@ -15,6 +15,7 @@ import {
   tri,
 } from '../lib/per-fiscal'
 import toast from 'react-hot-toast'
+import { messageErreur } from '../lib/ui-shared'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler)
 
@@ -1581,7 +1582,7 @@ Resultats simulation sur ${duree} ans (hypothese rendement ${rendement}%) :
 IMPORTANT : Mentionne clairement que le TD 2025 de 15,27% est exceptionnel et ne reflete pas la performance future. Le taux cible long terme est de 7%. Mentionne les risques (liquidite limitee, capital non garanti, marche immobilier europeen). Rappelle que les performances passees ne prejudgent pas des performances futures.`
       const text = await callAI('conformite_amf', prompt)
       setAiNote(text)
-    } catch (e) { setAiNote('Erreur : ' + e.message) }
+    } catch (e) { setAiNote('Erreur : ' + messageErreur(e)) }
     setAiLoading(false)
   }
 
@@ -1984,7 +1985,7 @@ function SimulateurImmoNeuf({ profile }) {
       const prompt = `Redige un email professionnel pour un client interesse par un achat immobilier neuf en ${dispositif}. Bien: ${euro(prixBien)}, ${surface}m2, mensualite ${euro(result.mensualiteTotale)}, apport ${euro(apport)}, rendement brut ${pctFmt(result.rendBrut)}, cashflow mensuel ${euro(result.cashflowMensuel)}. L'email doit proposer un RDV pour approfondir le projet. Signe "L'equipe Entasis Conseil".`
       const text = await callAI('immobilier', prompt)
       setAiEmail(text)
-    } catch (e) { setAiEmail('Erreur : ' + e.message) }
+    } catch (e) { setAiEmail('Erreur : ' + messageErreur(e)) }
     setAiLoading(false)
   }
 
@@ -2282,7 +2283,7 @@ La lettre doit etre professionnelle, datee du jour, avec en-tete Entasis Conseil
       const text = await callAI('courrier', prompt)
       setGeneratedText(text)
     } catch (e) {
-      setGeneratedText('Erreur : ' + e.message)
+      setGeneratedText('Erreur : ' + messageErreur(e))
     }
     setLoading(false)
   }

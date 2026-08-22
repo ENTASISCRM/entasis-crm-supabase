@@ -99,3 +99,15 @@ export function normalizeDeal(d) {
     client_age: d.client_age === '' || d.client_age == null ? null : Number(d.client_age),
   };
 }
+
+// Message d'erreur lisible pour l'UI (Série D / finition) : les erreurs
+// réseau brutes du navigateur («TypeError: Failed to fetch»,
+// «NetworkError…») deviennent une phrase française ; tout autre message
+// passe tel quel. Toujours passer par ici avant d'afficher un e.message.
+export function messageErreur(e) {
+  const brut = typeof e === 'string' ? e : (e?.message || '')
+  if (/failed to fetch|networkerror|load failed|fetch failed|network request failed|err_network|err_internet/i.test(brut)) {
+    return 'Connexion impossible — vérifiez votre réseau et réessayez.'
+  }
+  return brut || 'Une erreur est survenue.'
+}

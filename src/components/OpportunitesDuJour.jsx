@@ -26,6 +26,7 @@ import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { SkeletonCards } from './ui/Skeleton'
 import { chargerDonnees, construireSections } from '../services/opportunites'
+import { messageErreur } from '../lib/ui-shared'
 
 export default function OpportunitesDuJour({ profile, embedded }) {
   const isManager = profile?.role === 'manager'
@@ -41,7 +42,7 @@ export default function OpportunitesDuJour({ profile, embedded }) {
       try {
         const d = await chargerDonnees({ manager: isManager })
         if (vivant) setDonnees(d)
-      } catch (e) { if (vivant) setErr(e.message || 'Erreur de chargement') }
+      } catch (e) { if (vivant) setErr(messageErreur(e)) }
       finally { if (vivant) setLoading(false) }
     })()
     return () => { vivant = false }

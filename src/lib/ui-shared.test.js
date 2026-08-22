@@ -87,3 +87,19 @@ describe('normalizeDeal', () => {
     expect(normalizeDeal({ pp_m: 0, pu: 0, client_age: null }).client_age).toBeNull();
   });
 });
+
+import { messageErreur } from './ui-shared';
+
+describe('messageErreur', () => {
+  it('traduit les erreurs réseau brutes en français', () => {
+    expect(messageErreur(new TypeError('Failed to fetch'))).toMatch(/Connexion impossible/);
+    expect(messageErreur('NetworkError when attempting to fetch resource.')).toMatch(/Connexion impossible/);
+  });
+  it('laisse passer les messages métier tels quels', () => {
+    expect(messageErreur(new Error('Montant invalide'))).toBe('Montant invalide');
+  });
+  it('a un repli quand le message est vide', () => {
+    expect(messageErreur(null)).toBe('Une erreur est survenue.');
+    expect(messageErreur(new Error(''))).toBe('Une erreur est survenue.');
+  });
+});

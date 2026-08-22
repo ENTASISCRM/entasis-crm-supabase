@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'react-hot-toast'
 import { SkeletonText } from '../ui/Skeleton'
 import { confirmDialog } from '../ui/confirm'
+import { messageErreur } from '../../lib/ui-shared'
 
 const CATEGORIES = [
   { key: 'releve', label: 'Relevé' },
@@ -68,7 +69,7 @@ export default function ClientEspaceCard({ clientId, client, supabase, profile }
         : 'Accès ouvert (email non envoyé : prévenez le client)')
       recharger()
     } catch (e) {
-      toast.error(e.message || 'Invitation impossible')
+      toast.error(messageErreur(e))
     } finally {
       setInviting(false)
     }

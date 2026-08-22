@@ -25,6 +25,7 @@ import { confirmDialog } from './ui/confirm'
 import { SkeletonText } from './ui/Skeleton'
 import * as service from '../services/mandataires'
 import { echeanceUrssaf, trimestreExigible, ECHEANCES_URSSAF } from '../services/mandataires'
+import { messageErreur } from '../lib/ui-shared'
 
 const fmtEur = (v) => Number(v || 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '—')
@@ -84,7 +85,7 @@ export default function MandatairesConformite({ contrats = [], profile }) {
       }
       setChamps(next)
     } catch (e) {
-      if (seq === sequence.current) toast.error('Chargement impossible : ' + (e.message || ''))
+      if (seq === sequence.current) toast.error('Chargement impossible : ' + (messageErreur(e)))
     } finally {
       if (seq === sequence.current) setLoading(false)
     }
@@ -100,7 +101,7 @@ export default function MandatairesConformite({ contrats = [], profile }) {
       console.error('[mandataires] commissions', e)
       if (seq !== sequence.current) return
       setCommissions(null)
-      setCommErreur(e.message || 'calcul indisponible')
+      setCommErreur(messageErreur(e))
     }
   }
   useEffect(() => { reload() }, [annee])   // eslint-disable-line react-hooks/exhaustive-deps
@@ -128,7 +129,7 @@ export default function MandatairesConformite({ contrats = [], profile }) {
       setConformites((prev) => [...prev.filter((c) => c.contrat_id !== contratId), ligne])
       return ligne
     } catch (e) {
-      toast.error('Enregistrement impossible : ' + (e.message || ''))
+      toast.error('Enregistrement impossible : ' + (messageErreur(e)))
       return null
     }
   }
@@ -139,7 +140,7 @@ export default function MandatairesConformite({ contrats = [], profile }) {
       setUrssaf((prev) => [...prev.filter((u) => !(u.contrat_id === contratId && u.trimestre === trimestre)), ligne])
       return ligne
     } catch (e) {
-      toast.error('Enregistrement impossible : ' + (e.message || ''))
+      toast.error('Enregistrement impossible : ' + (messageErreur(e)))
       return null
     }
   }
@@ -166,7 +167,7 @@ export default function MandatairesConformite({ contrats = [], profile }) {
       else if (r.statut === 'cessee') toast.error('Entreprise cessée au registre !')
       else toast.error('SIREN introuvable au registre')
     } catch (e) {
-      toast.error('Vérification impossible : ' + (e.message || ''))
+      toast.error('Vérification impossible : ' + (messageErreur(e)))
     } finally { setBusy(null) }
   }
 
@@ -199,7 +200,7 @@ export default function MandatairesConformite({ contrats = [], profile }) {
       else toast.success(`Relance envoyée à ${email}`)
       await reload()
     } catch (e) {
-      toast.error('Envoi impossible : ' + (e.message || ''))
+      toast.error('Envoi impossible : ' + (messageErreur(e)))
     } finally { setBusy(null) }
   }
 
@@ -216,13 +217,13 @@ export default function MandatairesConformite({ contrats = [], profile }) {
       if (ok && ancien) { try { await service.supprimerJustificatif(ancien) } catch { /* best effort */ } }
       if (ok) toast.success('Justificatif archivé')
     } catch (err) {
-      toast.error('Envoi impossible : ' + (err.message || ''))
+      toast.error('Envoi impossible : ' + (messageErreur(err)))
     } finally { setBusy(null) }
   }
 
   const ouvrirDoc = async (path) => {
     try { window.open(await service.urlJustificatif(path), '_blank', 'noopener') }
-    catch (e) { toast.error('Ouverture impossible : ' + (e.message || '')) }
+    catch (e) { toast.error('Ouverture impossible : ' + (messageErreur(e))) }
   }
 
   const basculerValidation = async (m, t) => {

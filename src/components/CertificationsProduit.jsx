@@ -18,6 +18,7 @@ import { SkeletonCards } from './ui/Skeleton'
 import { listFamilies } from '../services/equipment'
 import { listTeam } from '../services/profiles'
 import { listCertifications, certifier, decertifier } from '../services/certifications'
+import { messageErreur } from '../lib/ui-shared'
 
 export default function CertificationsProduit({ profile }) {
   const isManager = profile?.role === 'manager'
@@ -47,7 +48,7 @@ export default function CertificationsProduit({ profile }) {
         )
         setCerts(new Set((cert || []).map((c) => `${c.advisor_code}|${c.famille}`)))
       } catch (e) {
-        if (vivant) setErr(e.message || 'Erreur de chargement')
+        if (vivant) setErr(messageErreur(e))
       } finally {
         if (vivant) setLoading(false)
       }
@@ -77,7 +78,7 @@ export default function CertificationsProduit({ profile }) {
       const revert = new Set(next)
       if (etait) revert.add(k); else revert.delete(k)
       setCerts(revert)
-      toast.error(e.message || 'Ecriture refusee (reserve aux managers)')
+      toast.error(messageErreur(e))
     } finally {
       setBusy(null)
     }

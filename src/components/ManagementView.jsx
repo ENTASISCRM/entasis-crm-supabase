@@ -48,6 +48,7 @@ import { supabase } from '../lib/supabase'
 import * as profilesService from '../services/profiles'
 import { fetchRemuneration } from '../lib/remuneration-api'
 import WeeklyReview from './WeeklyReview'
+import { messageErreur } from '../lib/ui-shared'
 
 const fmtEur = (v) => Number(v || 0).toLocaleString('fr-FR', {
   style: 'currency', currency: 'EUR', maximumFractionDigits: 0,
@@ -1504,7 +1505,7 @@ function CaForecastSection() {
         setS({ loading: false, data: j, error: null })
         setConvPct(typeof j.conversion_defaut_pct === 'number' ? j.conversion_defaut_pct : 25)
       })
-      .catch(e => { if (!cancelled) setS({ loading: false, data: null, error: e.message }) })
+      .catch(e => { if (!cancelled) setS({ loading: false, data: null, error: messageErreur(e) }) })
     return () => { cancelled = true }
   }, [])
 
@@ -1595,7 +1596,7 @@ function FunnelBySourceSection({ deals }) {
     leadroomAdmin(`funnel-by-source`)
       .then(r => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then(j => { if (!cancelled) setState({ loading: false, meta: j.campaigns_meta || {}, leads: j.leads || [], error: null }) })
-      .catch(e => { if (!cancelled) setState({ loading: false, meta: {}, leads: [], error: e.message }) })
+      .catch(e => { if (!cancelled) setState({ loading: false, meta: {}, leads: [], error: messageErreur(e) }) })
     return () => { cancelled = true }
   }, [])
 
@@ -1804,7 +1805,7 @@ function LoginAuditSection() {
       if (error) throw error
       setLogs(data || [])
     } catch (e) {
-      setError(e.message || 'Erreur de chargement')
+      setError(messageErreur(e))
     } finally {
       setLoading(false)
     }
@@ -1978,7 +1979,7 @@ function RecyclageRefusesSection() {
       toast.success(`${did} lead(s) ${action === 'recontact' ? 'remis dans le pool' : 'archivés'}.`)
       refresh()
     } catch (e) {
-      toast.error(`Erreur, ${e.message}`)
+      toast.error(`Erreur, ${messageErreur(e)}`)
     } finally {
       setWorking(false)
     }
@@ -2127,7 +2128,7 @@ function RdvBucketDrilldownModal({ bucket, onClose }) {
       if (r.ok) setLeads(json.leads || [])
       else setError(json.error || 'erreur')
     } catch (e) {
-      setError(e.message || 'réseau')
+      setError(messageErreur(e))
     } finally { setLoading(false) }
   }
   useEffect(() => { refresh() }, [bucket])
@@ -2187,7 +2188,7 @@ function RdvBucketDrilldownModal({ bucket, onClose }) {
         }
       }
     } catch (e) {
-      toast.error(`Action impossible, ${e.message}`)
+      toast.error(`Action impossible, ${messageErreur(e)}`)
     } finally {
       setBusy(b => { const { [leadId]: _, ...rest } = b; return rest })
     }
