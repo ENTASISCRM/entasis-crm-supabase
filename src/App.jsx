@@ -20,6 +20,7 @@ import SubTabs from './components/ui/SubTabs'
 import { buildNavDomains, viewId, domainOf, visibleTabs } from './lib/navigation'
 import { KanbanDnd, KanbanColumn, KanbanCard, targetColumnOf } from './components/ui/kanban'
 import FormSection from './components/ui/FormSection'
+import SortableTh from './components/ui/SortableTh'
 // Onglets lourds charges a la demande (code-splitting via React.lazy) : sortis du
 // bundle principal pour alleger le JS au login. jspdf/html2canvas (OutilsCGP) et
 // chart.js (ManagementView) ne se telechargent que quand l onglet s ouvre.
@@ -118,15 +119,8 @@ function isDealACompleter(d){
 }
 
 // En tête de colonne triable, même motif que SortableTh de ManagementView.
-function SortableTh({label,col,sortKey,sortDir,onSort,align}){
-  const active=sortKey===col
-  return (
-    <th onClick={()=>onSort(col)} style={{cursor:'pointer',userSelect:'none',textAlign:align||'left'}} title={`Trier par ${label}`}>
-      {label}
-      <span style={{marginLeft:4,color:active?'var(--gold)':'var(--t3)',fontSize:10}}>{active?(sortDir==='asc'?'↑':'↓'):'⇅'}</span>
-    </th>
-  )
-}
+// SortableTh : déplacé dans components/ui/SortableTh.jsx (B7, source unique
+// partagée avec ManagementView) — importé en tête de fichier.
 
 /* ─────────────────────────────────────────────────────────────────────────────
    ICONS (inline SVG)

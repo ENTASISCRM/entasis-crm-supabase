@@ -3,6 +3,7 @@ import { toast } from 'react-hot-toast'
 import { Skeleton, SkeletonCards, SkeletonTable } from '../ui/Skeleton'
 import SubTabs from '../ui/SubTabs'
 import { statusLabel } from '../../lib/ui-shared'
+import { euro, annualize } from '../../lib/format'
 import ClientModal from './ClientModal.jsx'
 import ClientEquipementCard from './ClientEquipementCard.jsx'
 import ClientContratsCard from './ClientContratsCard.jsx'
@@ -15,21 +16,7 @@ function copier(valeur, label) {
     .catch(() => toast.error('Copie impossible'))
 }
 
-// Helper pour formatage monétaire
-function euro(amount) {
-  if (amount === null || amount === undefined) return '—'
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(amount)
-}
-
-// Annualisation PP
-function annualize(pp) {
-  return (pp || 0) * 12
-}
+// euro/annualize : source unique lib/format.js (B7).
 
 // Statuts avec couleurs
 const STATUS_CLASS = {

@@ -3,8 +3,7 @@ import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 // B5 : primitives kanban partagées (mêmes gestes que le pipeline commercial).
 import { KanbanDnd, KanbanColumn, KanbanCard, targetColumnOf } from './ui/kanban'
-
-const euro = (v) => Number(v||0).toLocaleString('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0})
+import { euro } from '../lib/format'
 
 const COLUMNS = [
   { id: 'prospect', label: 'Prospect', color: '#6b7280' },

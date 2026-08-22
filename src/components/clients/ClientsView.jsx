@@ -4,22 +4,7 @@ import { statusLabel } from '../../lib/ui-shared'
 import ClientModal from './ClientModal.jsx'
 import ClientPeek from './ClientPeek.jsx'
 import { Skeleton, SkeletonTable } from '../ui/Skeleton'
-
-// Helper pour formatage monétaire
-function euro(amount) {
-  if (amount === null || amount === undefined) return '—'
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(amount)
-}
-
-// Annualisation PP
-function annualize(pp) {
-  return (pp || 0) * 12
-}
+import { euro, annualize } from '../../lib/format'
 
 export default function ClientsView({ supabase, onSelectClient, profile }) {
   const [clients, setClients] = useState([])
@@ -32,6 +17,21 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
   // B4 — aperçu latéral (pattern Attio) : un clic sur une ligne ouvre le
   // panneau par-dessus la liste ; « Voir » ouvre directement la fiche.
   const [peekClient, setPeekClient] = useState(null)
+  // B6 — rendu paginé : 50 lignes affichées, « Afficher plus » pour la
+  // suite. Le tri, la recherche et les filtres restent globaux (toute la
+  // base), seul le DOM est borné — l'écran reste instantané à 5 000 clients.
+  const PAGE_SIZE = 50
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  // B6 — recherche debouncée : le filtrage ne retravaille pas toute la
+  // liste à chaque frappe.
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 250)
+    return () => clearTimeout(t)
+  }, [search])
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE)
+  }, [debouncedSearch, filterType, statusFilter, sort])
 
   const isManager = profile?.role === 'manager'
 
@@ -48,8 +48,10 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
         // (Promise.all) au lieu d enchainer 3 allers-retours serie.
         // advisor_code + co_advisor_code necessaires pour le filtre "Mes clients"
         // (co-conseiller, cas Gianni Pichon co-conseiller de Clement).
+        // B6 — colonnes explicites au lieu de select('*') : l'annuaire ne
+        // transporte que ce qu'il affiche (payload réduit à volume égal).
         const [clientsRes, dealsRes, dossiersRes] = await Promise.all([
-          supabase.from('clients').select('*').order('created_at', { ascending: false }),
+          supabase.from('clients').select('id, nom, prenom, email, telephone, advisor_code, co_advisor_code, created_at').order('created_at', { ascending: false }),
           supabase.from('deals').select('id, client_id, product, status, pp_m, pu, advisor_code, co_advisor_code').not('client_id', 'is', null),
           supabase.from('dossiers_immo').select('id, client_id, statut_pipeline').not('client_id', 'is', null),
         ])
@@ -115,9 +117,9 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
       )
     }
 
-    // Recherche textuelle
-    if (search) {
-      const searchLower = search.toLowerCase()
+    // Recherche textuelle (valeur debouncée)
+    if (debouncedSearch) {
+      const searchLower = debouncedSearch.toLowerCase()
       filtered = filtered.filter(c =>
         (c.nom || '').toLowerCase().includes(searchLower) ||
         (c.prenom || '').toLowerCase().includes(searchLower) ||
@@ -128,7 +130,7 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
     }
 
     return filtered
-  }, [clients, search, filterType, isManager, profile])
+  }, [clients, debouncedSearch, filterType, isManager, profile])
 
   // Enrichir les clients avec métriques calculées, puis appliquer le filtre
   // sur le statut global (Sans deal correspond a la valeur Aucun deal)
@@ -302,7 +304,7 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
                 </tr>
               </thead>
               <tbody>
-                {sortedClients.map(client => (
+                {sortedClients.slice(0, visibleCount).map(client => (
                   <tr
                     key={client.id}
                     onClick={() => setPeekClient(client)}
@@ -373,6 +375,19 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
                 ))}
               </tbody>
             </table>
+            {sortedClients.length > visibleCount && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '14px 16px', borderTop: '0.5px solid var(--bd)' }}>
+                <span style={{ fontSize: 12.5, color: 'var(--t3)', fontVariantNumeric: 'tabular-nums' }}>
+                  {visibleCount} affichés sur {sortedClients.length}
+                </span>
+                <button className="btn btn-outline btn-sm" onClick={() => setVisibleCount(c => c + PAGE_SIZE)}>
+                  Afficher {Math.min(PAGE_SIZE, sortedClients.length - visibleCount)} de plus
+                </button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setVisibleCount(sortedClients.length)}>
+                  Tout afficher
+                </button>
+              </div>
+            )}
         </div>
       )}
 

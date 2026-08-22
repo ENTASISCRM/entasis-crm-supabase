@@ -34,6 +34,7 @@ import { toast } from 'react-hot-toast'
 import { confirmDialog } from './ui/confirm'
 import SubTabs from './ui/SubTabs'
 import { Skeleton, SkeletonText } from './ui/Skeleton'
+import SortableTh from './ui/SortableTh'
 import { leadroomAdmin } from '../lib/leadroom-api'
 import {
   advisorMetrics,
@@ -600,19 +601,8 @@ function PodiumCard({ titre, subtitle, rows, color, emoji }) {
   )
 }
 
-function SortableTh({ label, col, sortKey, sortDir, onSort, align }) {
-  const active = sortKey === col
-  return (
-    <th onClick={() => onSort(col)}
-      style={{ cursor: 'pointer', userSelect: 'none', textAlign: align || 'left' }}
-      title={`Trier par ${label}`}>
-      {label}
-      <span style={{ marginLeft: 4, color: active ? 'var(--gold)' : 'var(--t3)', fontSize: 10 }}>
-        {active ? (sortDir === 'asc' ? '↑' : '↓') : '⇅'}
-      </span>
-    </th>
-  )
-}
+// SortableTh : déplacé dans ui/SortableTh.jsx (B7, source unique partagée
+// avec App.jsx) — importé en tête de fichier.
 
 // ─────────────────────────────────────────────────────────────────────────
 // Modal drill-down : détail complet d'un conseiller
