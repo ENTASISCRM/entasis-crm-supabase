@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { toast } from 'react-hot-toast'
 import { statusLabel } from '../../lib/ui-shared'
 import ClientModal from './ClientModal.jsx'
+import ClientPeek from './ClientPeek.jsx'
 import { Skeleton, SkeletonTable } from '../ui/Skeleton'
 
 // Helper pour formatage monétaire
@@ -28,6 +29,9 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
   const [statusFilter, setStatusFilter] = useState('Tous') // filtre sur le statut global calcule
   const [sort, setSort] = useState({ col: null, dir: 'desc' }) // tri colonnes, null = ordre de creation
   const [newClientModalOpen, setNewClientModalOpen] = useState(false)
+  // B4 — aperçu latéral (pattern Attio) : un clic sur une ligne ouvre le
+  // panneau par-dessus la liste ; « Voir » ouvre directement la fiche.
+  const [peekClient, setPeekClient] = useState(null)
 
   const isManager = profile?.role === 'manager'
 
@@ -301,8 +305,9 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
                 {sortedClients.map(client => (
                   <tr
                     key={client.id}
-                    onClick={() => onSelectClient(client.id)}
+                    onClick={() => setPeekClient(client)}
                     style={{ cursor: 'pointer' }}
+                    title="Aperçu rapide — « Voir » ouvre la fiche complète"
                   >
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -370,6 +375,13 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
             </table>
         </div>
       )}
+
+      {/* Aperçu latéral (B4) */}
+      <ClientPeek
+        client={peekClient}
+        onClose={() => setPeekClient(null)}
+        onOpenFull={(id) => { setPeekClient(null); onSelectClient(id) }}
+      />
 
       {/* Modal nouveau client */}
       <ClientModal

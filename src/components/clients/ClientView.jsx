@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
 import { Skeleton, SkeletonCards, SkeletonTable } from '../ui/Skeleton'
+import SubTabs from '../ui/SubTabs'
 import { statusLabel } from '../../lib/ui-shared'
 import ClientModal from './ClientModal.jsx'
 import ClientEquipementCard from './ClientEquipementCard.jsx'
@@ -92,6 +93,9 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
   const [loading, setLoading] = useState(true)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [expandedDeal, setExpandedDeal] = useState(null)
+  // B4 — la fiche en onglets : Synthèse / Patrimoine & contrats /
+  // Documents & espace client / Immobilier / Historique.
+  const [tab, setTab] = useState('synthese')
 
   const isManager = profile?.role === 'manager'
 
@@ -345,6 +349,23 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
         </button>
       </div>
 
+      {/* B4 — sections en onglets : consultation ciblée au lieu d'un long
+          défilement ; les cartes Contrats/Espace/Équipement chargent leurs
+          données à leur montage, donc chaque onglet charge à la demande. */}
+      <SubTabs
+        ariaLabel="Sections de la fiche client"
+        tabs={[
+          { key: 'synthese', label: 'Synthèse' },
+          { key: 'patrimoine', label: 'Patrimoine & contrats', badge: clientDeals.length },
+          { key: 'documents', label: 'Documents & espace client' },
+          { key: 'immobilier', label: 'Immobilier', badge: clientDossiers.length },
+          { key: 'historique', label: 'Historique' },
+        ]}
+        active={tab}
+        onChange={setTab}
+      />
+
+      {tab === 'synthese' && (<>
       {/* Cards résumé */}
       <div className="grid grid-4" style={{ marginBottom: '32px' }}>
         <div className="card">
@@ -528,7 +549,9 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
           </div>
         </div>
       </div>
+      </>)}
 
+      {tab === 'patrimoine' && (<>
       {/* Section Produits financiers */}
       <div className="card" style={{ marginBottom: '32px' }}>
         <div className="card-header" style={{ padding: '24px 28px 16px 28px' }}>
@@ -692,14 +715,17 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
           valorisations), alimente automatiquement par les deals signes */}
       <ClientContratsCard clientId={client.id} client={client} profile={profile} />
 
-      {/* Section Espace client : acces portail + documents partages */}
-      <ClientEspaceCard clientId={client.id} client={client} supabase={supabase} profile={profile} />
-
       {/* Section Equipement : familles detenues, absences et suggestion */}
       <ClientEquipementCard clientId={client.id} client={client} supabase={supabase} />
+      </>)}
+
+      {/* Section Espace client : acces portail + documents partages */}
+      {tab === 'documents' && (
+        <ClientEspaceCard clientId={client.id} client={client} supabase={supabase} profile={profile} />
+      )}
 
       {/* Section Dossiers immobilier */}
-      {clientDossiers.length > 0 && (
+      {tab === 'immobilier' && (clientDossiers.length > 0 ? (
         <div className="card" style={{ marginBottom: '32px' }}>
           <div className="card-header">
             <h3>Dossiers immobilier ({clientDossiers.length})</h3>
@@ -738,10 +764,15 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
             </div>
           </div>
         </div>
-      )}
+      ) : (
+        <div className="table-empty-state">
+          <div className="empty-title">Aucun dossier immobilier</div>
+          <div className="empty-sub">Les dossiers créés dans le module Immobilier Neuf pour ce client apparaîtront ici.</div>
+        </div>
+      ))}
 
       {/* Section Historique */}
-      {history.length > 0 && (
+      {tab === 'historique' && (history.length > 0 ? (
         <div className="card">
           <div className="card-header">
             <h3>Historique des actions</h3>
@@ -768,7 +799,12 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
             </div>
           </div>
         </div>
-      )}
+      ) : (
+        <div className="table-empty-state">
+          <div className="empty-title">Aucune action enregistrée</div>
+          <div className="empty-sub">Les créations et modifications de dossiers de ce client s'afficheront ici.</div>
+        </div>
+      ))}
 
       {/* Modal d'édition */}
       <ClientModal

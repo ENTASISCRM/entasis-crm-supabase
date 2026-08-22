@@ -2310,3 +2310,63 @@ table,
 @media (prefers-reduced-motion: reduce) {
   .form-section-chevron { transition: none; }
 }
+
+/* B4 — aperçu client en panneau latéral (pattern Attio). */
+.peek-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(0,0,0,0.25);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+.peek-panel {
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: min(440px, 100%);
+  background: var(--card);
+  border-left: 0.5px solid var(--bd);
+  box-shadow: -24px 0 60px rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  animation: peek-in 200ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+@keyframes peek-in {
+  from { transform: translateX(48px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+.peek-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 20px 22px 14px;
+  border-bottom: 0.5px solid var(--bd);
+}
+.peek-name { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; color: var(--t1); }
+.peek-sub { font-size: 12.5px; color: var(--t3); margin-top: 4px; display: flex; align-items: center; flex-wrap: wrap; }
+.peek-body { flex: 1; overflow-y: auto; padding: 16px 22px; }
+.peek-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 22px;
+  border-top: 0.5px solid var(--bd);
+}
+.peek-contact { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
+.peek-contact a { font-size: 13px; color: var(--gold-dk, #A6843F); text-decoration: none; }
+.peek-contact a:hover { text-decoration: underline; }
+.peek-stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0 18px; }
+.peek-stat { border: 0.5px solid var(--bd); border-radius: 10px; padding: 10px 12px; background: var(--paper-grad, var(--card)); }
+.peek-stat .v { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--t1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.peek-stat .l { font-size: 10.5px; font-weight: 600; color: var(--t3); margin-top: 2px; }
+.peek-section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--t3); margin: 6px 0 4px; }
+.peek-deal { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 0.5px solid var(--bd-soft); }
+.peek-deal:last-of-type { border-bottom: none; }
+.peek-deal-name { font-size: 13px; font-weight: 600; color: var(--t1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.peek-deal-amounts { font-size: 11.5px; color: var(--t3); font-variant-numeric: tabular-nums; }
+.peek-more { font-size: 12px; color: var(--t3); padding-top: 8px; }
+.peek-empty { font-size: 13px; color: var(--t3); padding: 12px 0; }
+@media (prefers-reduced-motion: reduce) {
+  .peek-panel { animation: none; }
+}
