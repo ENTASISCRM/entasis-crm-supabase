@@ -23,6 +23,9 @@ import FormSection from './components/ui/FormSection'
 import SortableTh from './components/ui/SortableTh'
 import ShortcutsHelp from './components/ui/ShortcutsHelp'
 import InlineSelect from './components/ui/InlineSelect'
+import NotificationsBell from './components/ui/NotificationsBell'
+import ChecklistAccueil from './components/ui/ChecklistAccueil'
+import * as congesService from './services/conges'
 import { usePersistedState } from './hooks/usePersistedState'
 import { exporterCsv, suffixeDate, nombreFr } from './lib/export-csv'
 // Onglets lourds charges a la demande (code-splitting via React.lazy) : sortis du
@@ -947,7 +950,7 @@ async function genererFicheParrainage(profile){
 // portent déjà l'identité visuelle de chaque écran.
 const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers',team:'Équipe',leads:'Leads Live','ucs-structures':'UCS Produits Structurés',immobilier:'Immobilier Neuf',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH','recrutement':'Recrutement',conformite:'Conformité',editorial:'Agent éditorial',cockpit:'Cockpit ratios'}
 
-function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile,onHelp}){
+function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile,onHelp,notifications,notifScope}){
   return (
     <div className="topbar">
       {onMobileMenu && (
@@ -981,6 +984,8 @@ function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profi
           )
         })()}
         <button className="btn btn-ghost btn-sm" onClick={onRefresh} title="Rafraîchir les données" aria-label="Rafraîchir"><Icon.Refresh/></button>
+        {/* D5 : signaux dérivés des données déjà chargées (aucun polling). */}
+        <NotificationsBell items={notifications||[]} scope={notifScope}/>
         {/* D8 : aide des raccourcis, aussi accessible par la touche « ? ». */}
         <button className="btn btn-ghost btn-sm btn-icon" onClick={onHelp} title="Raccourcis clavier (?)" aria-label="Raccourcis clavier">?</button>
         {/* Fiche de recommandation (idee 3) : outil papier remis en fin de RDV,
@@ -1911,7 +1916,7 @@ function KpiCard({label,value,hint,accent,progressValue,delta}){
 /* ─────────────────────────────────────────────────────────────────────────────
    ADVISOR DASHBOARD
 ───────────────────────────────────────────────────────────────────────────── */
-function AdvisorDashboard({deals,objectifs,month,profile,onEdit}){
+function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab}){
   const code=profile?.advisor_code||''
   const m=advisorMetrics(deals,month,code)
 
@@ -1964,8 +1969,51 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit}){
     return () => { alive = false }
   }, [month])
 
+  // D9 — parcours d'accueil : les étapes se cochent d'elles-mêmes à partir
+  // de ce que le conseiller a déjà fait. Aucun état à maintenir en base.
+  const mesDeals = profile?.advisor_code ? deals.filter(d => dealMatchesAdvisor(d, profile.advisor_code)) : []
+  const etapesAccueil = [
+    {
+      cle: 'profil',
+      libelle: 'Compléter mon profil (nom et code conseiller)',
+      fait: !!(profile?.full_name && profile?.advisor_code),
+      aide: 'Demande à la direction si ton code est manquant.',
+    },
+    {
+      cle: 'dossier',
+      libelle: 'Créer mon premier dossier',
+      fait: mesDeals.length > 0,
+      aide: 'Bouton « Nouveau dossier » en haut à droite — 15 secondes en mode express.',
+      onAller: () => onEdit?.(emptyDeal(profile?.advisor_code)),
+      libelleAction: 'Créer',
+    },
+    {
+      cle: 'client',
+      libelle: 'Rattacher un client à un dossier',
+      fait: mesDeals.some(d => d.client_id),
+      aide: 'Un dossier rattaché alimente la fiche client et les opportunités.',
+      onAller: () => onGoTab?.('clients'),
+      libelleAction: 'Voir les clients',
+    },
+    {
+      cle: 'action',
+      libelle: 'Poser une prochaine action sur un dossier',
+      fait: mesDeals.some(d => d.next_action_date),
+      aide: 'Elle apparaîtra dans « Mes actions du jour » à la date choisie.',
+      onAller: () => onGoTab?.('pipeline'),
+      libelleAction: 'Ouvrir le pipeline',
+    },
+    {
+      cle: 'signature',
+      libelle: 'Signer un premier dossier',
+      fait: mesDeals.some(d => d.status === 'Signé'),
+      aide: 'La fiche client doit être complète pour pouvoir signer.',
+    },
+  ]
+
   return (
     <div>
+      <ChecklistAccueil etapes={etapesAccueil} scope={profile?.advisor_code || profile?.id || 'anon'}/>
       {/* Bloc Mission du mois (top of dashboard) — engagement émotionnel
           + leads chauds Lead Room. Affichage conditionnel : si pas
           d'objectif et pas de leads chauds, ne s'affiche pas. */}
@@ -5117,6 +5165,7 @@ export default function App(){
   const [reloadCallback,setReloadCallback]=useState(null) // Callback après sauvegarde deal
   const [paletteOpen,setPaletteOpen]=useState(false) // Palette de commandes Ctrl+K
   const [helpOpen,setHelpOpen]=useState(false) // D8 : overlay des raccourcis (touche ?)
+  const [congesEnAttente,setCongesEnAttente]=useState([]) // D5 : congés à valider (direction/RH)
 
   // Anti race condition : empêche les appels parallèles à loadAll() depuis
   // getSession() et onAuthStateChange au mount.
@@ -5147,6 +5196,19 @@ export default function App(){
           setEditorialPending({ count: count || 0, nextDeadline: data?.[0]?.veto_deadline || null })
         }
       })
+  }, [profile, activeTab])
+
+  // D5 — congés en attente de validation : signal de la cloche pour la
+  // direction et le RH délégué. Rafraîchi au changement d'onglet, comme le
+  // compteur éditorial : pas de polling supplémentaire.
+  useEffect(() => {
+    const peutValider = profile?.role === 'manager' || profile?.rh_delegue === true
+    if (!peutValider) { setCongesEnAttente([]); return }
+    congesService.listConges()
+      .then(list => {
+        if (isMounted.current) setCongesEnAttente((list || []).filter(c => c.statut === 'en_attente'))
+      })
+      .catch(() => { /* signal secondaire : un échec ne doit rien casser */ })
   }, [profile, activeTab])
 
   // Raccourcis clavier globaux : Ctrl/Cmd+K ouvre la palette, « / » focus la
@@ -5805,6 +5867,51 @@ export default function App(){
   for (const d of navDomains) for (const v of d.views) if (!palettePages[v.tab]) palettePages[v.tab] = PAGE_TITLES[v.tab] || v.label
   const activeDomain = domainOf(navDomains, activeTab)
   // Badges de la barre de sous-onglets (mêmes règles que la sidebar).
+  // ── D5 : signaux de la cloche, dérivés des données déjà en mémoire ──────
+  // Trois sources utiles au quotidien : les signatures récentes de l'équipe
+  // (motivation + vigilance doublons), les congés à valider, les packages
+  // éditoriaux en attente de veto. Chacun ouvre l'écran concerné.
+  const notifications = (() => {
+    const out = []
+    const ilYa7j = Date.now() - 7 * 24 * 60 * 60 * 1000
+    for (const d of deals) {
+      if (d.status !== 'Signé') continue
+      const quand = d.updated_at || d.created_at
+      if (!quand || new Date(quand).getTime() < ilYa7j) continue
+      // Ses propres signatures ne sont pas une notification : on les connaît.
+      if (profile?.advisor_code && d.advisor_code === profile.advisor_code) continue
+      out.push({
+        id: `signe-${d.id}`,
+        date: quand,
+        couleur: 'var(--signed, #34C759)',
+        titre: `${getClientName(d)} — dossier signé`,
+        detail: `${d.product} · ${d.advisor_code} · ${euro(annualize(d.pp_m) + (d.pu || 0))}`,
+        onOpen: () => { setActiveTab('clients'); setClientsVue('dossiers') },
+      })
+    }
+    for (const c of congesEnAttente) {
+      out.push({
+        id: `conge-${c.id}`,
+        date: c.created_at || c.date_debut,
+        couleur: 'var(--progress, #FF9500)',
+        titre: `Congé à valider — ${c.demandeur_nom || c.advisor_code || 'demande'}`,
+        detail: `${c.type || 'Congé'} du ${c.date_debut} au ${c.date_fin}`,
+        onOpen: () => setActiveTab('smart-rh'),
+      })
+    }
+    if (isManager && editorialPending.count > 0) {
+      out.push({
+        id: 'editorial',
+        date: editorialPending.nextDeadline || new Date().toISOString(),
+        couleur: 'var(--gold)',
+        titre: `${editorialPending.count} package éditorial en attente de veto`,
+        detail: editorialPending.nextDeadline ? `Échéance ${new Date(editorialPending.nextDeadline).toLocaleDateString('fr-FR')}` : null,
+        onOpen: () => setActiveTab('editorial'),
+      })
+    }
+    return out.sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 20)
+  })()
+
   const subBadges = {
     pipeline: isManager
       ? deals.filter(d => dealDuMois(d, month) && isPipeline(d.status)).length
@@ -5832,7 +5939,7 @@ export default function App(){
         onCloseMobile={()=>setMobileMenuOpen(false)}
       />
       <div className="app-main">
-        <TopBar activeTab={activeTab} month={month} setMonth={setMonth} onNewDeal={startCreate} onRefresh={loadAll} onMobileMenu={()=>setMobileMenuOpen(true)} profile={effectiveProfile} onHelp={()=>setHelpOpen(true)}/>
+        <TopBar activeTab={activeTab} month={month} setMonth={setMonth} onNewDeal={startCreate} onRefresh={loadAll} onMobileMenu={()=>setMobileMenuOpen(true)} profile={effectiveProfile} onHelp={()=>setHelpOpen(true)} notifications={notifications} notifScope={profile?.advisor_code||profile?.id||'anon'}/>
         <div className="app-content">
           {error&&<div className="notice notice-error">{error}</div>}
           {!profile&&error&&<div className="notice notice-warn">Profil introuvable dans <span className="code">public.profiles</span>. Vérifie la table et les policies.</div>}
@@ -5856,7 +5963,7 @@ export default function App(){
 
           <Suspense fallback={<SkeletonPage/>}>
           {activeTab==='dashboard'&&isManager&&<EditorialPendingBanner count={editorialPending.count} nextDeadline={editorialPending.nextDeadline} onOpen={()=>setActiveTab('editorial')}/>}
-          {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles} profile={profile} onEdit={startEdit}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile} onEdit={startEdit}/>)}
+          {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles} profile={profile} onEdit={startEdit}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile} onEdit={startEdit} onGoTab={setActiveTab}/>)}
           {activeTab==='leads'&&<LeadRoomEmbed/>}
           {activeTab==='smart-rh'&&canSmartRh&&<SmartRH profile={profile} rhDelegue={isRhDelegue}/>}
           {activeTab==='pilotage-rh'&&(isManager||isRhDelegue)&&<PilotageRH profile={profile}/>}
