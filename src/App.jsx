@@ -142,7 +142,9 @@ const Icon = {
   Close:     ()=><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>,
   Edit:      ()=><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M9 1.5l2.5 2.5-7 7L2 12l.5-2.5 7-7z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/></svg>,
   Trash:     ()=><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 3.5h10M5 3.5V2h3v1.5M3 3.5l.8 7.5h5.4l.8-7.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-  Refresh:   ()=><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M11 6.5A4.5 4.5 0 012 6.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/><path d="M11 3.5v3h-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  // Flèche circulaire complète : le demi-arc précédent se lisait comme un
+  // glyphe orphelin dans la barre du haut, présente sur tous les écrans.
+  Refresh:   ()=><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M11.1 8.13a4.88 4.88 0 1 1-1.15-5.07L12.46 5.42" stroke="currentColor" strokeWidth="1.35" fill="none" strokeLinecap="round" strokeLinejoin="round"/><polyline points="12.46,2.17 12.46,5.42 9.21,5.42" stroke="currentColor" strokeWidth="1.35" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>,
   Clock:     ()=><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" strokeWidth="1.2"/><path d="M5.5 3v2.5l1.5 1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>,
   Market:    ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><rect x="3" y="10" width="2" height="6" rx=".5" fill="currentColor" opacity=".9"/><line x1="4" y1="7" x2="4" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".7"/><line x1="4" y1="16" x2="4" y2="18" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".7"/><rect x="9" y="5" width="2" height="8" rx=".5" fill="currentColor" opacity=".7"/><line x1="10" y1="2" x2="10" y2="5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".5"/><line x1="10" y1="13" x2="10" y2="16" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".5"/><rect x="15" y="7" width="2" height="7" rx=".5" fill="currentColor" opacity=".5"/><line x1="16" y1="4" x2="16" y2="7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".4"/><line x1="16" y1="14" x2="16" y2="17" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".4"/></svg>,
   Calendar:  ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" strokeWidth="1.4" fill="none" opacity=".8"/><path d="M3 8h14" stroke="currentColor" strokeWidth="1.2" opacity=".5"/><path d="M7 2v3M13 2v3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".7"/><circle cx="7" cy="12" r="1" fill="currentColor" opacity=".6"/><circle cx="10" cy="12" r="1" fill="currentColor" opacity=".4"/><circle cx="13" cy="12" r="1" fill="currentColor" opacity=".4"/></svg>,
@@ -159,6 +161,16 @@ const Icon = {
   Editorial: ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><path d="M4.5 15.5l1-3.5 8-8a1.77 1.77 0 012.5 2.5l-8 8-3.5 1z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill="none" opacity=".85"/><path d="M11.5 6l2.5 2.5" stroke="currentColor" strokeWidth="1.2" opacity=".5"/><path d="M3.5 18.5h13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".4"/></svg>,
   Outils:    ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.4" fill="none" opacity=".8"/><path d="M10 2v3M10 15v3M2 10h3M15 10h3M4.2 4.2l2.1 2.1M13.7 13.7l2.1 2.1M4.2 15.8l2.1-2.1M13.7 6.3l2.1-2.1" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" opacity=".6"/></svg>,
   LinkedIn:  ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".8"/><path d="M7 9v4M7 7v.01" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" opacity=".7"/><path d="M10 13v-2.5c0-1 .5-1.5 1.5-1.5s1.5.5 1.5 1.5V13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity=".7"/></svg>,
+  Search:    ({size=13})=><svg width={size} height={size} viewBox="0 0 13 13" fill="none" aria-hidden="true"><circle cx="5.6" cy="5.6" r="4" stroke="currentColor" strokeWidth="1.4" fill="none"/><path d="M8.6 8.6L11.5 11.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
+  // Glyphes des états vides : 28 px, au trait, teintés par `.empty-icon`
+  // (les emoji juraient avec le reste de la charte).
+  EmptySearch: ()=><svg className="empty-glyph" viewBox="0 0 28 28" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="7.5" stroke="currentColor" strokeWidth="1.6"/><path d="M17.5 17.5L24 24" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>,
+  EmptySpark:  ()=><svg className="empty-glyph" viewBox="0 0 28 28" fill="none" aria-hidden="true"><path d="M15.5 3L6 16h6l-1.5 9L20 12h-6l1.5-9z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/></svg>,
+  EmptyCheck:  ()=><svg className="empty-glyph" viewBox="0 0 28 28" fill="none" aria-hidden="true"><circle cx="14" cy="14" r="10.5" stroke="currentColor" strokeWidth="1.6"/><path d="M9 14.3l3.4 3.4L19.2 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  EmptyPeople: ()=><svg className="empty-glyph" viewBox="0 0 28 28" fill="none" aria-hidden="true"><circle cx="10.5" cy="9.5" r="4" stroke="currentColor" strokeWidth="1.6"/><circle cx="19.5" cy="10.5" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M3.5 22c0-3.9 3.1-7 7-7s7 3.1 7 7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/><path d="M19.5 15.5c2.8 0 5 2.2 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
+  EmptyFolder: ()=><svg className="empty-glyph" viewBox="0 0 28 28" fill="none" aria-hidden="true"><path d="M3.5 8.5a2 2 0 012-2h5l2.5 3h9a2 2 0 012 2v9a2 2 0 01-2 2h-16.5a2 2 0 01-2-2v-12z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/></svg>,
+  EmptyChart:  ()=><svg className="empty-glyph" viewBox="0 0 28 28" fill="none" aria-hidden="true"><path d="M4 23h20" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/><rect x="6.5" y="13" width="4" height="7" rx="1" stroke="currentColor" strokeWidth="1.6"/><rect x="13" y="8" width="4" height="12" rx="1" stroke="currentColor" strokeWidth="1.6"/><rect x="19.5" y="16" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.6"/></svg>,
+  EmptyMail:   ()=><svg className="empty-glyph" viewBox="0 0 28 28" fill="none" aria-hidden="true"><rect x="3.5" y="7" width="21" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.6"/><path d="M4.5 9l9.5 6.5L23.5 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>,
   // Briefcase style pour l'onglet UCS Produits Structurés
   Ucs:       ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><rect x="2.5" y="6" width="15" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.4" fill="none" opacity=".85"/><path d="M7 6V4.5a1 1 0 011-1h4a1 1 0 011 1V6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".7"/><path d="M2.5 10h15" stroke="currentColor" strokeWidth="1.2" opacity=".5"/><rect x="8.5" y="10" width="3" height="2" rx=".4" fill="currentColor" opacity=".6"/></svg>,
 }
@@ -1585,7 +1597,7 @@ function LeadRoom({leads,profile,onLeadsChange,onConvertDeal,onRefresh}){
             placeholder="Nom, téléphone, email…"
             style={{width:'100%',paddingLeft:32,height:34,fontSize:12}}
           />
-          <span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',fontSize:13,color:'var(--t3)',pointerEvents:'none'}}>🔍</span>
+          <span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',display:'flex',color:'var(--t3)',pointerEvents:'none'}}><Icon.Search/></span>
           {search&&<button onClick={()=>setSearch('')} style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'var(--t3)',fontSize:13,padding:0,lineHeight:1}}>×</button>}
         </div>
 
@@ -1686,7 +1698,7 @@ function LeadRoom({leads,profile,onLeadsChange,onConvertDeal,onRefresh}){
         </>
       ):(
         <div className="table-empty-state">
-          <div className="empty-icon">{search?'🔍':'⚡'}</div>
+          <div className="empty-icon">{search?<Icon.EmptySearch/>:<Icon.EmptySpark/>}</div>
           <div className="empty-title">
             {search?`Aucun résultat pour "${search}"`:filter==='mine'?'Aucun lead en cours':filter==='available'?'Aucun lead disponible':'Aucun lead reçu'}
           </div>
@@ -2075,7 +2087,7 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab}){
             ))}
           </div>
         ):(
-          <div className="table-empty-state"><div className="empty-icon">✓</div><div className="empty-title">Aucune priorité urgente</div><div className="empty-sub">Tous tes dossiers chauds sont traités.</div></div>
+          <div className="table-empty-state"><div className="empty-icon"><Icon.EmptyCheck/></div><div className="empty-title">Aucune priorité urgente</div><div className="empty-sub">Tous tes dossiers chauds sont traités.</div></div>
         )}
       </div>
       <div style={{marginTop:28}}>
@@ -2203,7 +2215,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit}){
               <div><span className={`badge ${row.signRate>=60?'badge-signed':row.signRate>=30?'badge-progress':'badge-cancelled'}`}>{row.signRate}%</span></div>
             </div>
           ))}
-          {!advisorRows.length&&<div className="table-empty-state"><div className="empty-icon">👥</div><div className="empty-title">Aucun conseiller configuré</div><div className="empty-sub">Renseigne les profils dans <span className="code">public.profiles</span></div></div>}
+          {!advisorRows.length&&<div className="table-empty-state"><div className="empty-icon"><Icon.EmptyPeople/></div><div className="empty-title">Aucun conseiller configuré</div><div className="empty-sub">Renseigne les profils dans <span className="code">public.profiles</span></div></div>}
         </div>
       </div>
       {hotDeals.length>0&&<div>
@@ -2855,7 +2867,7 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
             </tbody>
           </table>
         ):(
-          <div className="table-empty-state"><div className="empty-icon">📂</div><div className="empty-title">Aucun dossier trouvé</div><div className="empty-sub">Modifie les filtres ou crée un nouveau dossier.</div></div>
+          <div className="table-empty-state"><div className="empty-icon"><Icon.EmptyFolder/></div><div className="empty-title">Aucun dossier trouvé</div><div className="empty-sub">Modifie les filtres ou crée un nouveau dossier.</div></div>
         )}
       </div>
     </div>
@@ -2924,7 +2936,7 @@ function ForecastView({deals,objectifs,month,profile,teamProfiles,canEditObjecti
           </div>
         )
       })}
-      {!visibleProfiles.length&&<div className="card"><div className="table-empty-state"><div className="empty-icon">📊</div><div className="empty-title">Aucun conseiller actif</div><div className="empty-sub">Renseigne les profils avec <span className="code">advisor_code</span> dans <span className="code">public.profiles</span></div></div></div>}
+      {!visibleProfiles.length&&<div className="card"><div className="table-empty-state"><div className="empty-icon"><Icon.EmptyChart/></div><div className="empty-title">Aucun conseiller actif</div><div className="empty-sub">Renseigne les profils avec <span className="code">advisor_code</span> dans <span className="code">public.profiles</span></div></div></div>}
     </div>
   )
 }
@@ -3856,7 +3868,7 @@ function TeamView({deals,objectifs,teamProfiles,month,profile}){
           </div>
         )
       })}
-      {!rows.length&&<div className="card"><div className="table-empty-state"><div className="empty-icon">👥</div><div className="empty-title">Aucun conseiller actif</div><div className="empty-sub">Configure les profils dans <span className="code">public.profiles</span></div></div></div>}
+      {!rows.length&&<div className="card"><div className="table-empty-state"><div className="empty-icon"><Icon.EmptyPeople/></div><div className="empty-title">Aucun conseiller actif</div><div className="empty-sub">Configure les profils dans <span className="code">public.profiles</span></div></div></div>}
     </div>
   )
 }
@@ -4334,7 +4346,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                       className="btn btn-secondary"
                       style={{ width: '100%', marginBottom: '8px' }}
                     >
-                      🔍 Rechercher un client existant
+                      <Icon.Search size={14}/> Rechercher un client existant
                     </button>
                     <div style={{ fontSize: '12px', color: 'var(--t2)', textAlign: 'center' }}>
                       ou remplir les informations ci-dessous pour un nouveau client
@@ -5058,7 +5070,7 @@ function ProspectionView({prospects,profile,teamProfiles,onRefresh,onProspectsCh
           <input className="search-input" value={search} onChange={e=>setSearch(e.target.value)}
             placeholder="Nom, entreprise, poste…"
             style={{width:'100%',paddingLeft:32,height:34,fontSize:12}}/>
-          <span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',fontSize:13,color:'var(--t3)',pointerEvents:'none'}}>🔍</span>
+          <span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',display:'flex',color:'var(--t3)',pointerEvents:'none'}}><Icon.Search/></span>
           {search&&<button onClick={()=>setSearch('')} style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'var(--t3)',fontSize:13,padding:0}}>×</button>}
         </div>
         {niches.length>1&&(
@@ -5125,7 +5137,7 @@ function ProspectionView({prospects,profile,teamProfiles,onRefresh,onProspectsCh
         </div>
       {filtered.length===0&&(
         <div className="table-empty-state" style={{marginTop:20}}>
-          <div className="empty-icon">📧</div>
+          <div className="empty-icon"><Icon.EmptyMail/></div>
           <div className="empty-title">Aucun prospect</div>
           <div className="empty-sub">Les prospects Clay arriveront ici via Zapier.</div>
         </div>

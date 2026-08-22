@@ -143,7 +143,9 @@ export default function CatalogueProgrammes({ setActiveTab }) {
       {/* Search bar */}
       <div className="immo-catalogue-toolbar">
         <div className="immo-search-wrap">
-          <span className="immo-search-icon">🔍</span>
+          <span className="immo-search-icon" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="5.6" cy="5.6" r="4" stroke="currentColor" strokeWidth="1.4"/><path d="M8.6 8.6L11.5 11.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+          </span>
           <input
             className="immo-search"
             placeholder="Rechercher un programme..."

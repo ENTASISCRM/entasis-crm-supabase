@@ -736,7 +736,11 @@ a { color: inherit; text-decoration: none; }
   font-size: 28px;
   margin-bottom: 12px;
   opacity: 0.4;
+  display: flex;
+  justify-content: center;
+  color: var(--t2);
 }
+.empty-glyph { width: 30px; height: 30px; }
 .empty-title { font-size: 15px; font-weight: 600; color: var(--t2); margin-bottom: 6px; }
 .empty-sub { font-size: 13px; color: var(--t3); }
 
@@ -1620,7 +1624,9 @@ a { color: inherit; text-decoration: none; }
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 14px;
+  display: flex;
+  color: var(--t3);
+  pointer-events: none;
 }
 .immo-search {
   width: 100%;
@@ -2164,7 +2170,15 @@ a { color: inherit; text-decoration: none; }
 
 /* A1 — Confirm dialog (remplace window.confirm). L'overlay réutilise
    .modal-overlay ; la boîte est volontairement compacte. */
-.confirm-overlay { z-index: 1200; }
+.confirm-overlay {
+  z-index: 1200;
+  /* La confirmation se superpose souvent à une modale déjà floutée : un
+     voile léger suffit, sinon les deux flous s'additionnent et l'écran
+     derrière devient illisible (on perd le contexte de ce qu'on confirme). */
+  background: rgba(0,0,0,0.18);
+  backdrop-filter: blur(3px) saturate(115%);
+  -webkit-backdrop-filter: blur(3px) saturate(115%);
+}
 .confirm-box {
   background: var(--card);
   border: 0.5px solid var(--bd);

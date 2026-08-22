@@ -375,7 +375,7 @@ function pdfCoverPage(doc, simType, clientName, conseiller, conseillerEmail, dat
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(14)
   sc(doc, metaGrey)
-  doc.text('Etude realisee pour', P.m + 10, 145)
+  doc.text('Étude réalisée pour', P.m + 10, 145)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(18)
   sc(doc, dark)
@@ -410,7 +410,7 @@ function pdfCoverPage(doc, simType, clientName, conseiller, conseillerEmail, dat
   doc.text('ENTASIS CONSEIL', P.pw / 2, 282, { align: 'center' })
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(8)
-  doc.text('Cabinet en Gestion de Patrimoine Independant — ORIAS 23003153', P.pw / 2, 290, { align: 'center' })
+  doc.text('Cabinet en Gestion de Patrimoine Indépendant — ORIAS 23003153', P.pw / 2, 290, { align: 'center' })
 }
 
 /* ── PDF Header (pages 2+) ──────────────────────────────────────────────── */
@@ -678,7 +678,7 @@ function SimulateurPER({ profile }) {
   const [tauxDynamique, setTauxDynamique] = useState(7)
   const profilRendements = useMemo(() => [
     { value: 'prudent', label: `Prudent ${tauxPrudent}%`, taux: (Number(tauxPrudent) || 0) / 100 },
-    { value: 'equilibre', label: `Equilibre ${tauxEquilibre}%`, taux: (Number(tauxEquilibre) || 0) / 100 },
+    { value: 'equilibre', label: `Équilibre ${tauxEquilibre}%`, taux: (Number(tauxEquilibre) || 0) / 100 },
     { value: 'dynamique', label: `Dynamique ${tauxDynamique}%`, taux: (Number(tauxDynamique) || 0) / 100 },
   ], [tauxPrudent, tauxEquilibre, tauxDynamique])
 
@@ -838,7 +838,7 @@ function SimulateurPER({ profile }) {
         borderColor: C.info, backgroundColor: 'transparent', fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2.5,
       },
       {
-        label: `Equilibre (${tauxEquilibre}%)`,
+        label: `Équilibre (${tauxEquilibre}%)`,
         data: result.scenarios[1].yearly.map(y => y.capital),
         borderColor: C.gold, backgroundColor: 'transparent', fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2.5,
       },
@@ -910,17 +910,17 @@ function SimulateurPER({ profile }) {
               <div style={{ fontSize: 11, fontWeight: 600, color: C.ivoryMuted, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8, fontFamily: FONT_SANS }}>Nombre de parts fiscales</div>
               <PillSelect options={PARTS_OPTIONS} value={nbParts} onChange={v => setNbParts(Number(v))} />
             </div>
-            <Field label="Plafond PER reportable non utilise (3 annees precedentes)" value={plafondReportable} onChange={setPlafondReportable} suffix="EUR" />
+            <Field label="Plafond PER reportable non utilisé (3 années précédentes)" value={plafondReportable} onChange={setPlafondReportable} suffix="EUR" />
             <div style={{ height: 14 }} />
-            <Slider label="Versements PER envisages en 2026" value={versement2025} onChange={setVersement2025} min={0} max={Math.max(1, plafondTotal)} step={100} suffix="EUR" formatValue={v => euro(v)} />
+            <Slider label="Versements PER envisagés en 2026" value={versement2025} onChange={setVersement2025} min={0} max={Math.max(1, plafondTotal)} step={100} suffix="EUR" formatValue={v => euro(v)} />
           </div>
           <div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <ResultCard label="Impots sans PER" value={euro(result.impotSans)} accent={C.danger} />
-              <ResultCard label="Impots avec PER" value={euro(result.impotAvec)} accent={C.info} />
-              <ResultCard label="Economie d'impots" value={euro(result.economieFiscale)} accent={C.success} />
-              <ResultCard label="Effort reel d'epargne" value={euro(result.effortReel)} accent={C.ivoryMuted} />
-              <ResultCard label="TMI detectee" value={`${Math.round(result.tmi * 100)}%`} accent={C.gold} />
+              <ResultCard label="Impôts sans PER" value={euro(result.impotSans)} accent={C.danger} />
+              <ResultCard label="Impôts avec PER" value={euro(result.impotAvec)} accent={C.info} />
+              <ResultCard label="Économie d'impôts" value={euro(result.economieFiscale)} accent={C.success} />
+              <ResultCard label="Effort réel d'épargne" value={euro(result.effortReel)} accent={C.ivoryMuted} />
+              <ResultCard label="TMI détectée" value={`${Math.round(result.tmi * 100)}%`} accent={C.gold} />
               <ResultCard label="Plafond disponible 2026" value={euro(result.plafondTotal)} accent={C.gold} />
             </div>
           </div>
@@ -932,14 +932,14 @@ function SimulateurPER({ profile }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         <div>
-          <Slider label="Age actuel" value={age} onChange={v => { setAge(v); if (ageRetraite <= v) setAgeRetraite(v + 1) }} min={18} max={75} suffix="ans" />
-          <Slider label="Age de depart a la retraite" value={ageRetraite} onChange={setAgeRetraite} min={age + 1} max={75} suffix="ans" />
+          <Slider label="Âge actuel" value={age} onChange={v => { setAge(v); if (ageRetraite <= v) setAgeRetraite(v + 1) }} min={18} max={75} suffix="ans" />
+          <Slider label="Âge de départ à la retraite" value={ageRetraite} onChange={setAgeRetraite} min={age + 1} max={75} suffix="ans" />
           <Slider label="Versement mensuel" value={versementMensuel} onChange={setVersementMensuel} min={100} max={5000} step={50} suffix="EUR" formatValue={v => euro(v)} />
           <Field label="Versement initial" value={versementInitial} onChange={setVersementInitial} suffix="EUR" />
           <div style={{ height: 14 }} />
 
           <div style={{ marginBottom: 18 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: C.ivoryMuted, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8, fontFamily: FONT_SANS }}>Hypothese de rendement</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.ivoryMuted, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8, fontFamily: FONT_SANS }}>Hypothèse de rendement</div>
             <PillSelect options={profilRendements} value={profil} onChange={setProfil} />
           </div>
 
@@ -947,7 +947,7 @@ function SimulateurPER({ profile }) {
             <div style={{ fontSize: 11, fontWeight: 600, color: C.ivoryMuted, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8, fontFamily: FONT_SANS }}>Taux de rendement par profil (modifiables)</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
               <Field label="Prudent" value={tauxPrudent} onChange={setTauxPrudent} suffix="%" step="0.5" />
-              <Field label="Equilibre" value={tauxEquilibre} onChange={setTauxEquilibre} suffix="%" step="0.5" />
+              <Field label="Équilibre" value={tauxEquilibre} onChange={setTauxEquilibre} suffix="%" step="0.5" />
               <Field label="Dynamique" value={tauxDynamique} onChange={setTauxDynamique} suffix="%" step="0.5" />
             </div>
           </div>
@@ -965,13 +965,13 @@ function SimulateurPER({ profile }) {
             {result.scenarios.map((s, i) => (
               <ResultCard key={s.value} label={`Capital ${s.label}`} value={euro(s.capital)} accent={[C.info, C.gold, C.success][i]} sub={`Rente : ${euro(s.renteMensuelle)}/mois`} />
             ))}
-            <ResultCard label="Total verse brut" value={euro(selectedScenario.totalVerse)} accent={C.ivoryDim} />
+            <ResultCard label="Total versé brut" value={euro(selectedScenario.totalVerse)} accent={C.ivoryDim} />
             <ResultCard label="Plus-value nette" value={euro(selectedScenario.plusValue)} accent={C.success} />
-            <ResultCard label="Economie fiscale cumulee" value={euro(selectedScenario.econFiscaleCumulee)} accent={C.gold} />
-            <ResultCard label="Effort reel net total" value={euro(selectedScenario.effortReelTotal)} accent={C.warn} />
+            <ResultCard label="Économie fiscale cumulée" value={euro(selectedScenario.econFiscaleCumulee)} accent={C.gold} />
+            <ResultCard label="Effort réel net total" value={euro(selectedScenario.effortReelTotal)} accent={C.warn} />
             <ResultCard label="TRI net" value={pctFmt(selectedScenario.tri)} accent={C.info} />
             {modeSortie === 'rente' && (
-              <ResultCard label="Rente mensuelle estimee" value={euro(selectedScenario.sortieData.renteBrute)} accent={C.gold} sub={`Après abattement 10% : ${euro(selectedScenario.sortieData.renteImposable)}/mois imposable`} />
+              <ResultCard label="Rente mensuelle estimée" value={euro(selectedScenario.sortieData.renteBrute)} accent={C.gold} sub={`Après abattement 10% : ${euro(selectedScenario.sortieData.renteImposable)}/mois imposable`} />
             )}
             {modeSortie === 'capital' && (
               <>
@@ -1001,8 +1001,8 @@ function SimulateurPER({ profile }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr>
-                {['Annee', 'Versements', 'Produits', 'Capital fin annee', 'Economie fiscale'].map(h => (
-                  <th key={h} style={{ textAlign: h === 'Annee' ? 'left' : 'right', padding: '8px 12px', color: C.ivoryDim, fontSize: 10, textTransform: 'uppercase', fontWeight: 700, borderBottom: `1px solid ${C.bd}`, position: 'sticky', top: 0, background: C.card }}>{h}</th>
+                {['Année', 'Versements', 'Produits', "Capital fin d'année", 'Économie fiscale'].map(h => (
+                  <th key={h} style={{ textAlign: h === 'Année' ? 'left' : 'right', padding: '8px 12px', color: C.ivoryDim, fontSize: 10, textTransform: 'uppercase', fontWeight: 700, borderBottom: `1px solid ${C.bd}`, position: 'sticky', top: 0, background: C.card }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -1041,31 +1041,31 @@ function SimulateurPER({ profile }) {
           doc.addPage()
           pdfHeader(doc, dt)
           let y = 35
-          y = pdfSec(doc, y, 'Synthese fiscale', dt)
+          y = pdfSec(doc, y, 'Synthèse fiscale', dt)
           y = pdfKPIBlocks(doc, y, [
-            { label: 'Impots sans PER', value: fmt(result.impotSans), accent: red },
-            { label: 'Impots avec PER', value: fmt(result.impotAvec), accent: navy },
-            { label: 'Economie d\'impots', value: fmt(result.economieFiscale), accent: green },
-            { label: 'TMI detectee', value: Math.round(result.tmi * 100) + ' %', accent: navy },
+            { label: 'Impôts sans PER', value: fmt(result.impotSans), accent: red },
+            { label: 'Impôts avec PER', value: fmt(result.impotAvec), accent: navy },
+            { label: 'Économie d\'impôts', value: fmt(result.economieFiscale), accent: green },
+            { label: 'TMI détectée', value: Math.round(result.tmi * 100) + ' %', accent: navy },
             { label: 'Plafond PER 2026', value: fmt(result.plafondTotal), accent: navy },
-            { label: 'Effort reel', value: fmt(result.effortReel), accent: dark },
+            { label: 'Effort réel', value: fmt(result.effortReel), accent: dark },
           ], dt)
           y += 5
           y = pdfSec(doc, y, 'Projection du capital a la retraite', dt)
           y = pdfKPIBlocks(doc, y, [
             { label: `Capital Prudent (${tauxPrudent}%)`, value: fmt(result.scenarios[0].capital), accent: [96, 165, 250] },
-            { label: `Capital Equilibre (${tauxEquilibre}%)`, value: fmt(result.scenarios[1].capital), accent: navy },
+            { label: `Capital Équilibre (${tauxEquilibre}%)`, value: fmt(result.scenarios[1].capital), accent: navy },
             { label: `Capital Dynamique (${tauxDynamique}%)`, value: fmt(result.scenarios[2].capital), accent: green },
-            { label: 'Total verse brut', value: fmt(selectedScenario.totalVerse), accent: dark },
-            { label: 'Eco. fiscale cumulee', value: fmt(selectedScenario.econFiscaleCumulee), accent: green },
+            { label: 'Total versé brut', value: fmt(selectedScenario.totalVerse), accent: dark },
+            { label: 'Éco. fiscale cumulée', value: fmt(selectedScenario.econFiscaleCumulee), accent: green },
             { label: 'Rente mensuelle (eq.)', value: fmt(result.scenarios[1].renteMensuelle), accent: navy },
           ], dt)
           y += 5
           y = pdfSec(doc, y, 'Parametres de simulation', dt)
           y = pdfRows(doc, y, [
-            ['Age actuel', age + ' ans'],
+            ['Âge actuel', age + ' ans'],
             ['Age de retraite', ageRetraite + ' ans'],
-            ['Duree de capitalisation', duree + ' ans'],
+            ['Durée de capitalisation', duree + ' ans'],
             ['Versement mensuel', fmt(versementMensuel)],
             ['Versement initial', fmt(versementInitial)],
             ['Revenu fiscal', fmt(revenu)],
@@ -1078,7 +1078,7 @@ function SimulateurPER({ profile }) {
           pdfHeader(doc, dt)
           y = 35
           y = pdfSec(doc, y, 'Tableau annuel detaille — ' + selectedScenario.label, dt)
-          y = pdfCompTable(doc, y, ['Annee', 'Versements', 'Produits', 'Capital', 'Eco. fiscale'], selectedScenario.yearly.map((r, i) => ({
+          y = pdfCompTable(doc, y, ['Année', 'Versements', 'Produits', 'Capital', 'Eco. fiscale'], selectedScenario.yearly.map((r, i) => ({
             cells: [r.annee, fmt(r.versements), fmt(r.produits), fmt(r.capital), fmt(r.econFiscale)],
             _bold: i === selectedScenario.yearly.length - 1,
           })), dt)
@@ -1257,7 +1257,7 @@ function SimulateurAssuranceVie({ profile }) {
         tension: 0.3, pointRadius: 0, borderWidth: 2.5,
       },
       {
-        label: 'Capital net apres fiscalite',
+        label: 'Capital net après fiscalité',
         data: result.yearlyNet,
         borderColor: C.success, backgroundColor: 'transparent', fill: false,
         tension: 0.3, pointRadius: 0, borderWidth: 2.5,
@@ -1270,15 +1270,15 @@ function SimulateurAssuranceVie({ profile }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         <div>
           <Slider label="Capital initial" value={capitalInitial} onChange={setCapitalInitial} min={0} max={500000} step={1000} suffix="EUR" formatValue={v => euro(v)} />
-          <Slider label="Versements mensuels programmes" value={versementMensuel} onChange={setVersementMensuel} min={0} max={5000} step={50} suffix="EUR" formatValue={v => euro(v)} />
-          <Slider label="Duree" value={duree} onChange={setDuree} min={1} max={30} suffix="ans" />
+          <Slider label="Versements mensuels programmés" value={versementMensuel} onChange={setVersementMensuel} min={0} max={5000} step={50} suffix="EUR" formatValue={v => euro(v)} />
+          <Slider label="Durée" value={duree} onChange={setDuree} min={1} max={30} suffix="ans" />
 
-          <SectionDivider label="Repartition et rendement" />
+          <SectionDivider label="Répartition et rendement" />
           <Slider label={`Fonds Euro ${pctEuro}% / UC ${pctUC}%`} value={pctEuro} onChange={setPctEuro} min={0} max={100} step={5} suffix="%" />
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
             <Field label="Taux fonds euro" value={tauxEuro} onChange={setTauxEuro} suffix="%" step="0.1" />
-            <Field label="Taux UC hypothese" value={tauxUC} onChange={setTauxUC} suffix="%" step="0.1" />
+            <Field label="Taux UC hypothèse" value={tauxUC} onChange={setTauxUC} suffix="%" step="0.1" />
           </div>
 
           <Field label="Frais de gestion annuels" value={fraisGestion} onChange={setFraisGestion} suffix="%" step="0.05" />
@@ -1315,25 +1315,25 @@ function SimulateurAssuranceVie({ profile }) {
         <div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
             <ResultCard label="Capital brut final" value={euro(result.capitalBrut)} accent={C.gold} />
-            <ResultCard label="Total verse" value={euro(result.totalVerse)} accent={C.ivoryDim} />
-            <ResultCard label="Interets generes" value={euro(result.interets)} accent={C.success} />
-            <ResultCard label="Rendement net annualise" value={pctFmt(result.rendNetAnnualise)} accent={C.info} sub={`Euro ${pctEuro}% / UC ${pctUC}%`} />
+            <ResultCard label="Total versé" value={euro(result.totalVerse)} accent={C.ivoryDim} />
+            <ResultCard label="Intérêts générés" value={euro(result.interets)} accent={C.success} />
+            <ResultCard label="Rendement net annualisé" value={pctFmt(result.rendNetAnnualise)} accent={C.info} sub={`Euro ${pctEuro}% / UC ${pctUC}%`} />
             {typeRachat !== 'aucun' && (
               <>
                 <ResultCard label="Total des rachats" value={euro(result.totalRachats)} accent={C.info} />
-                <ResultCard label="Impot paye sur rachats" value={euro(result.impotRachatsTotal)} accent={C.danger} />
+                <ResultCard label="Impôt payé sur rachats" value={euro(result.impotRachatsTotal)} accent={C.danger} />
                 <ResultCard label="Capital disponible total" value={euro(result.capitalDisponible)} accent={C.success} sub="Capital final + rachats effectués" />
               </>
             )}
           </div>
 
           <div style={{ background: C.card, borderRadius: 10, padding: '14px 16px', marginBottom: 10 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: C.ivoryDim, textTransform: 'uppercase', marginBottom: 8, fontFamily: FONT_SANS }}>Fiscalite rachat apres 8 ans</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.ivoryDim, textTransform: 'uppercase', marginBottom: 8, fontFamily: FONT_SANS }}>Fiscalité rachat après 8 ans</div>
             {[
-              ['Interets generes', euro(result.interets), C.ivory],
+              ['Intérêts générés', euro(result.interets), C.ivory],
               [`Abattement (${situationFiscale === 'couple' ? 'couple' : 'celibataire'})`, `- ${euro(result.abattement)}`, C.success],
               ['PS (17,2%)', `- ${euro(result.ps)}`, C.danger],
-              ['IR apres abattement', `- ${euro(result.irApresAbat)}`, C.danger],
+              ['IR après abattement', `- ${euro(result.irApresAbat)}`, C.danger],
             ].map(([label, val, color], i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '4px 0', borderBottom: `1px solid ${C.bd}` }}>
                 <span style={{ color: C.ivoryDim }}>{label}</span>
@@ -1341,7 +1341,7 @@ function SimulateurAssuranceVie({ profile }) {
               </div>
             ))}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, padding: '8px 0', fontWeight: 700 }}>
-              <span style={{ color: C.ivory }}>Capital net apres fiscalite</span>
+              <span style={{ color: C.ivory }}>Capital net après fiscalité</span>
               <span style={{ color: C.success }}>{euro(result.netFiscal)}</span>
             </div>
           </div>
@@ -1381,19 +1381,19 @@ function SimulateurAssuranceVie({ profile }) {
           doc.addPage()
           pdfHeader(doc, dt)
           let y = 35
-          y = pdfSec(doc, y, 'Synthese', dt)
+          y = pdfSec(doc, y, 'Synthèse', dt)
           y = pdfKPIBlocks(doc, y, [
             { label: 'Capital brut final', value: fmt(result.capitalBrut), accent: navy },
-            { label: 'Total verse', value: fmt(result.totalVerse), accent: dark },
-            { label: 'Interets generes', value: fmt(result.interets), accent: green },
+            { label: 'Total versé', value: fmt(result.totalVerse), accent: dark },
+            { label: 'Intérêts générés', value: fmt(result.interets), accent: green },
             { label: 'PS (17,2%)', value: '- ' + fmt(result.ps), accent: red },
-            { label: 'IR apres abattement', value: '- ' + fmt(result.irApresAbat), accent: red },
-            { label: 'Capital net apres fiscalite', value: fmt(result.netFiscal), accent: green },
+            { label: 'IR après abattement', value: '- ' + fmt(result.irApresAbat), accent: red },
+            { label: 'Capital net après fiscalité', value: fmt(result.netFiscal), accent: green },
           ], dt)
           y += 5
           y = pdfSec(doc, y, 'Rendement', dt)
           y = pdfKPIBlocks(doc, y, [
-            { label: 'Rendement net annualise', value: pPct(result.rendNetAnnualise), accent: navy },
+            { label: 'Rendement net annualisé', value: pPct(result.rendNetAnnualise), accent: navy },
             { label: 'Taux composite brut', value: pPct(result.tauxComposite), accent: dark },
           ], dt)
           y += 5
@@ -1401,10 +1401,10 @@ function SimulateurAssuranceVie({ profile }) {
           y = pdfRows(doc, y, [
             ['Capital initial', fmt(capitalInitial)],
             ['Versements mensuels', fmt(versementMensuel)],
-            ['Duree', duree + ' ans'],
-            ['Repartition', 'Fonds Euro ' + pctEuro + '% / UC ' + pctUC + '%'],
+            ['Durée', duree + ' ans'],
+            ['Répartition', 'Fonds Euro ' + pctEuro + '% / UC ' + pctUC + '%'],
             ['Taux fonds euro', tauxEuro + ' %'],
-            ['Taux UC hypothese', tauxUC + ' %'],
+            ['Taux UC hypothèse', tauxUC + ' %'],
             ['Frais de gestion', fraisGestion + ' %'],
             ['Objectif', AV_OBJECTIFS.find(o => o.value === objectif)?.label || ''],
             ['Situation fiscale', situationFiscale === 'couple' ? 'Couple' : 'Celibataire'],
@@ -1425,7 +1425,7 @@ function SimulateurAssuranceVie({ profile }) {
             ],
             _bold: i === result.yearlyBrut.length - 1,
           }))
-          y = pdfCompTable(doc, y, ['Annee', 'Verse cumule', 'Capital brut', 'Interets', 'Capital net'], tableRows, dt)
+          y = pdfCompTable(doc, y, ['Année', 'Versé cumulé', 'Capital brut', 'Intérêts', 'Capital net'], tableRows, dt)
 
           // Page 4: Chart
           const img = await captureChartImage(chartRef)
@@ -1655,7 +1655,7 @@ Simulation indicative — Entasis Conseil`
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: C.ivoryDim, textTransform: 'uppercase', marginBottom: 8, letterSpacing: '.06em' }}>Repartition geographique</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: C.ivoryDim, textTransform: 'uppercase', marginBottom: 8, letterSpacing: '.06em' }}>Répartition géographique</div>
             {[
               { label: 'Italie', pct: WEMO.geoItalie, color: '#4ade80' },
               { label: 'Espagne', pct: WEMO.geoEspagne, color: '#fb923c' },
@@ -1698,7 +1698,7 @@ Simulation indicative — Entasis Conseil`
 
       {/* ── DISCLAIMER ────────────────────────────────────────────── */}
       <div style={{ background: 'rgba(201,168,76,0.06)', border: `1px solid ${C.goldLine}`, borderRadius: 10, padding: '12px 16px', marginBottom: 20, fontSize: 11.5, lineHeight: 1.7, color: C.ivoryMuted }}>
-        <strong style={{ color: C.gold }}>Avertissement</strong> — Le taux de distribution 2025 de 15,27% ne reflete pas la performance future. Ce taux exceptionnel s'explique par la phase de lancement de la SCPI et des conditions d'acquisition particulierement favorables. Le taux cible long terme est de <strong style={{ color: C.ivory }}>7% net de frais de gestion, brut de fiscalite</strong> (non garanti). Les performances passees ne prejudgent pas des performances futures. L'investissement en SCPI comporte un risque de perte en capital. Frais de souscription : 10% HT. Commission de gestion : 11% HT (deja deduite du taux de distribution). Pas de commission de sortie (SCPI a capital variable).
+        <strong style={{ color: C.gold }}>Avertissement</strong> — Le taux de distribution 2025 de 15,27% ne reflete pas la performance future. Ce taux exceptionnel s'explique par la phase de lancement de la SCPI et des conditions d'acquisition particulierement favorables. Le taux cible long terme est de <strong style={{ color: C.ivory }}>7 % net de frais de gestion, brut de fiscalité</strong> (non garanti). Les performances passees ne prejudgent pas des performances futures. L'investissement en SCPI comporte un risque de perte en capital. Frais de souscription : 10% HT. Commission de gestion : 11% HT (deja deduite du taux de distribution). Pas de commission de sortie (SCPI a capital variable).
       </div>
 
       {/* ── SIMULATION INPUTS + RESULTS ───────────────────────────── */}
@@ -1712,20 +1712,20 @@ Simulation indicative — Entasis Conseil`
             </div>
           )}
 
-          <Slider label="Hypothese de rendement long terme" value={rendement} onChange={setRendement} min={4} max={12} step={0.25} suffix="%" />
+          <Slider label="Hypothèse de rendement long terme" value={rendement} onChange={setRendement} min={4} max={12} step={0.25} suffix="%" />
           <div style={{ fontSize: 10.5, color: C.ivoryDim, marginTop: -12, marginBottom: 16, lineHeight: 1.5 }}>
-            Cible officielle Wemo One : <strong style={{ color: C.gold }}>7% net de frais, brut de fiscalite</strong>
+            Cible officielle Wemo One : <strong style={{ color: C.gold }}>7 % net de frais, brut de fiscalité</strong>
           </div>
 
           <div style={{ marginBottom: 18 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: C.ivoryMuted, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8, fontFamily: FONT_SANS }}>Structure de detention</div>
-            <PillSelect options={[{ value: 'IR', label: 'IR (personne physique)' }, { value: 'IS', label: 'IS (societe)' }, { value: 'AV', label: 'Assurance Vie' }, { value: 'SCI_IS', label: 'SCI a l\'IS' }]} value={structure} onChange={setStructure} />
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.ivoryMuted, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8, fontFamily: FONT_SANS }}>Structure de détention</div>
+            <PillSelect options={[{ value: 'IR', label: 'IR (personne physique)' }, { value: 'IS', label: 'IS (société)' }, { value: 'AV', label: 'Assurance Vie' }, { value: 'SCI_IS', label: 'SCI a l\'IS' }]} value={structure} onChange={setStructure} />
           </div>
 
           {(structure === 'IR' || structure === 'AV') && <Slider label="Votre TMI" value={tmiRate} onChange={setTmiRate} min={0} max={45} step={1} suffix="%" />}
           {(structure === 'IS' || structure === 'SCI_IS') && <Slider label="Taux IS applicable" value={isRate} onChange={setIsRate} min={15} max={33} step={1} suffix="%" />}
-          <Slider label="Duree de detention" value={duree} onChange={setDuree} min={3} max={20} suffix="ans" />
-          <Slider label="Hypothese revalorisation annuelle" value={revalo} onChange={setRevalo} min={0} max={5} step={0.5} suffix="%" />
+          <Slider label="Durée de détention" value={duree} onChange={setDuree} min={3} max={20} suffix="ans" />
+          <Slider label="Hypothèse de revalorisation annuelle" value={revalo} onChange={setRevalo} min={0} max={5} step={0.5} suffix="%" />
 
           {duree < 8 && (
             <div style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: C.warn, marginTop: 8 }}>
@@ -1734,7 +1734,7 @@ Simulation indicative — Entasis Conseil`
           )}
 
           <div style={{ background: C.card, borderRadius: 8, padding: '12px 14px', marginTop: 16, fontSize: 11.5, lineHeight: 1.6, color: C.ivoryDim }}>
-            <strong style={{ color: C.ivory }}>Frais & Fiscalite</strong><br />
+            <strong style={{ color: C.ivory }}>Frais & Fiscalité</strong><br />
             - Frais de souscription : <strong style={{ color: C.ivory }}>10% HT en sus</strong> du capital investi ({euro(result.ir.capitalEnParts)} + {euro(result.ir.fraisEntree)} = {euro(result.ir.decaissementTotal)})<br />
             - Commission de gestion : <strong style={{ color: C.ivory }}>11% HT</strong> — deja incluse dans le taux de distribution (net de frais)<br />
             - <strong style={{ color: C.success }}>Pas de commission de sortie</strong> — SCPI a capital variable, retrait par confrontation au marche<br />
@@ -1756,7 +1756,7 @@ Simulation indicative — Entasis Conseil`
               </thead>
               <tbody>
                 {[
-                  ['Capital generateur de revenus', euro(result.ir.capitalEnParts), euro(result.is.capitalEnParts)],
+                  ['Capital générateur de revenus', euro(result.ir.capitalEnParts), euro(result.is.capitalEnParts)],
                   ['Frais souscription (10% HT, en sus)', euro(result.ir.fraisEntree), euro(result.is.fraisEntree)],
                   ['Decaissement total', euro(result.ir.decaissementTotal), euro(result.is.decaissementTotal)],
                   [`Revenus bruts / an (${rendement}%)`, euro(result.ir.revenusBrutsAn), euro(result.is.revenusBrutsAn)],
@@ -1813,18 +1813,18 @@ Simulation indicative — Entasis Conseil`
             ['Capital en parts', fmt(montantEffectif)], ['Nombre de parts', pNum(nbParts)],
             ['Frais souscription (10% HT, en sus)', fmt(result.ir.fraisEntree)],
             ['Decaissement total', fmt(result.ir.decaissementTotal)],
-            ['Structure de detention', structure], ['Hypothese rendement', rendement + ' %'],
-            ['Duree de detention', duree + ' ans'], ['Revalorisation annuelle', revalo + ' %/an'],
+            ['Structure de détention', structure], ['Hypothèse de rendement', rendement + ' %'],
+            ['Durée de détention', duree + ' ans'], ['Revalorisation annuelle', revalo + ' %/an'],
           ], dt)
           y += 10
           y = pdfSec(doc, y, 'Comparaison IR vs IS', dt)
           y = pdfCompTable(doc, y, ['', 'IR', 'IS'], [
-            { cells: ['Capital generateur de revenus', fmt(result.ir.capitalEnParts), fmt(result.is.capitalEnParts)] },
+            { cells: ['Capital générateur de revenus', fmt(result.ir.capitalEnParts), fmt(result.is.capitalEnParts)] },
             { cells: ['Frais souscription (en sus)', fmt(result.ir.fraisEntree), fmt(result.is.fraisEntree)] },
             { cells: ['Decaissement total', fmt(result.ir.decaissementTotal), fmt(result.is.decaissementTotal)] },
             { cells: ['Revenus bruts / an (' + rendement + '%)', fmt(result.ir.revenusBrutsAn), fmt(result.is.revenusBrutsAn)] },
             { cells: ['PS 17,2% (part FR 14,5%)', fmt(result.ir.psAn) + '/an', '-'] },
-            { cells: ['Impot / an', fmt(result.ir.impotAn) + '/an', fmt(result.is.impotAn) + '/an'] },
+            { cells: ['Impôt / an', fmt(result.ir.impotAn) + '/an', fmt(result.is.impotAn) + '/an'] },
             { cells: ['Revenus nets / an', fmt(result.ir.revenusNetsAn), fmt(result.is.revenusNetsAn)] },
             { cells: ['Revenus cumules (' + duree + ' ans)', fmt(result.ir.totalNet), fmt(result.is.totalNet)] },
             { cells: ['Capital a la sortie', fmt(result.ir.capitalSortie), fmt(result.is.capitalSortie)] },
@@ -1975,7 +1975,7 @@ function SimulateurImmoNeuf({ profile }) {
     labels: Array.from({ length: dureeEmprunt }, (_, i) => `An ${i + 1}`),
     datasets: [
       { label: 'Capital restant du', data: result.yearlyRestant, borderColor: C.danger, backgroundColor: `${C.danger}15`, fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 },
-      { label: 'Valeur estimee du bien', data: result.yearlyValeur, borderColor: C.success, fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2 },
+      { label: 'Valeur estimée du bien', data: result.yearlyValeur, borderColor: C.success, fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2 },
     ],
   }
 
@@ -1999,7 +1999,7 @@ function SimulateurImmoNeuf({ profile }) {
           <Slider label="Apport personnel" value={apport} onChange={setApport} min={0} max={Math.min(prixBien, 300000)} step={5000} suffix="EUR" formatValue={v => euro(v)} />
 
           <div style={{ marginBottom: 18 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: C.ivoryMuted, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8, fontFamily: FONT_SANS }}>Duree d'emprunt</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.ivoryMuted, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8, fontFamily: FONT_SANS }}>Durée d'emprunt</div>
             <PillSelect options={[{ value: 15, label: '15 ans' }, { value: 20, label: '20 ans' }, { value: 25, label: '25 ans' }]} value={dureeEmprunt} onChange={v => setDureeEmprunt(Number(v))} />
           </div>
 
@@ -2045,7 +2045,7 @@ function SimulateurImmoNeuf({ profile }) {
               ['Prix du bien', euro(prixBien)],
               ['Frais de notaire (2,5%)', euro(result.fraisNotaire)],
               ['Frais de garantie (1%)', euro(result.fraisGarantie)],
-              ['Cout total acquisition', euro(result.coutTotal)],
+              ['Coût total acquisition', euro(result.coutTotal)],
               ['Apport', euro(apport)],
               ['Montant emprunte', euro(result.emprunt)],
             ].map(([label, val], i) => (
@@ -2057,15 +2057,15 @@ function SimulateurImmoNeuf({ profile }) {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-            <ResultCard label="Mensualite totale" value={euro(result.mensualiteTotale)} accent={C.gold} sub={`Credit ${euro(result.mensualiteCredit)} + Ass. ${euro(result.assuranceMensuelle)}`} />
-            <ResultCard label="Cout du credit" value={euro(result.coutCredit)} accent={C.warn} />
+            <ResultCard label="Mensualité totale" value={euro(result.mensualiteTotale)} accent={C.gold} sub={`Credit ${euro(result.mensualiteCredit)} + Ass. ${euro(result.assuranceMensuelle)}`} />
+            <ResultCard label="Coût du crédit" value={euro(result.coutCredit)} accent={C.warn} />
             {(dispositif === 'LLI' || dispositif === 'LMNP') && (
               <>
                 <ResultCard label="Rendement brut" value={pctFmt(result.rendBrut)} accent={C.success} sub={`Loyer : ${euro(result.loyerMensuel)}/mois`} />
                 <ResultCard label="Cashflow mensuel" value={euro(result.cashflowMensuel)} accent={result.cashflowMensuel >= 0 ? C.success : C.danger} />
               </>
             )}
-            {dispositif === 'LLI' && <ResultCard label="Economie TVA (10% vs 20%)" value={euro(result.economieTVA)} accent={C.success} />}
+            {dispositif === 'LLI' && <ResultCard label="Économie TVA (10 % vs 20 %)" value={euro(result.economieTVA)} accent={C.success} />}
           </div>
         </div>
       </div>
@@ -2117,8 +2117,8 @@ function SimulateurImmoNeuf({ profile }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr>
-                {['Annee', 'Interets', 'Capital rembourse', 'Capital restant du'].map(h => (
-                  <th key={h} style={{ textAlign: h === 'Annee' ? 'left' : 'right', padding: '8px 12px', color: C.ivoryDim, fontSize: 10, textTransform: 'uppercase', fontWeight: 700, borderBottom: `1px solid ${C.bd}`, position: 'sticky', top: 0, background: C.card }}>{h}</th>
+                {['Année', 'Intérêts', 'Capital rembourse', 'Capital restant du'].map(h => (
+                  <th key={h} style={{ textAlign: h === 'Année' ? 'left' : 'right', padding: '8px 12px', color: C.ivoryDim, fontSize: 10, textTransform: 'uppercase', fontWeight: 700, borderBottom: `1px solid ${C.bd}`, position: 'sticky', top: 0, background: C.card }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -2166,7 +2166,7 @@ function SimulateurImmoNeuf({ profile }) {
           y = pdfRows(doc, y, [
             ['Prix du bien FAI', fmt(prixBien)],
             ['Frais de notaire 2,5% (taux reduit neuf)', fmt(result.fraisNotaire)],
-            ['Cout total acquisition', fmt(result.coutTotal)],
+            ['Coût total acquisition', fmt(result.coutTotal)],
             ['Apport personnel', fmt(apport)],
             ['Taux d\'apport', tauxApport + ' %'],
             ['Montant emprunte', fmt(result.emprunt)],
@@ -2175,14 +2175,14 @@ function SimulateurImmoNeuf({ profile }) {
           y = pdfSec(doc, y, 'Financement', dt)
           const coutInterets = Math.round(result.mensualiteCredit * dureeEmprunt * 12 - result.emprunt)
           y = pdfRows(doc, y, [
-            ['Duree d\'emprunt', dureeEmprunt + ' ans'],
+            ['Durée d\'emprunt', dureeEmprunt + ' ans'],
             ['Taux d\'interet', tauxInteret + ' %'],
             ['Taux assurance emprunteur', tauxAssurance + ' %'],
-            ['Mensualite hors assurance', fmt(result.mensualiteCredit)],
+            ['Mensualité hors assurance', fmt(result.mensualiteCredit)],
             ['Assurance mensuelle', fmt(result.assuranceMensuelle)],
-            ['Mensualite totale', fmt(result.mensualiteTotale)],
-            ['Cout total des interets', fmt(coutInterets)],
-            ['Cout total du credit (interets + assurance)', fmt(result.coutCredit)],
+            ['Mensualité totale', fmt(result.mensualiteTotale)],
+            ['Coût total des intérêts', fmt(coutInterets)],
+            ['Coût total du crédit (intérêts + assurance)', fmt(result.coutCredit)],
           ], dt)
           y += 10
           if (dispositif === 'LLI' || dispositif === 'LMNP') {
@@ -2192,7 +2192,7 @@ function SimulateurImmoNeuf({ profile }) {
               ['Cashflow mensuel brut', fmt(result.cashflowMensuel), result.cashflowMensuel >= 0 ? 'green' : 'red'],
               ['Rendement brut', pPct(result.rendBrut)],
             ]
-            if (dispositif === 'LLI') rendRows.push(['Economie TVA (10% vs 20%)', fmt(result.economieTVA), 'green'])
+            if (dispositif === 'LLI') rendRows.push(['Économie TVA (10 % vs 20 %)', fmt(result.economieTVA), 'green'])
             y = pdfRows(doc, y, rendRows, dt)
             y += 10
           }
@@ -2200,17 +2200,17 @@ function SimulateurImmoNeuf({ profile }) {
           const capitalRembourse = result.emprunt
           const pvLatente = valeurFuture - prixBien
           const effortMensuel = result.mensualiteTotale - (result.loyerMensuel || 0)
-          y = pdfSec(doc, y, 'Synthese patrimoniale', dt)
+          y = pdfSec(doc, y, 'Synthèse patrimoniale', dt)
           y = pdfRows(doc, y, [
             ['Valeur estimee dans ' + dureeEmprunt + ' ans (+1%/an)', fmt(valeurFuture)],
             ['Capital rembourse', fmt(capitalRembourse)],
-            ['Plus-value latente estimee', fmt(pvLatente), 'green'],
-            ['Effort d\'epargne mensuel net', fmt(effortMensuel), effortMensuel > 0 ? 'red' : 'green'],
+            ['Plus-value latente estimée', fmt(pvLatente), 'green'],
+            ['Effort d\'épargne mensuel net', fmt(effortMensuel), effortMensuel > 0 ? 'red' : 'green'],
           ], dt)
           y += 10
           const keyKpis = [
-            { label: 'Mensualite totale', value: fmt(result.mensualiteTotale), accent: navy },
-            { label: 'Cout du credit', value: fmt(result.coutCredit), accent: red },
+            { label: 'Mensualité totale', value: fmt(result.mensualiteTotale), accent: navy },
+            { label: 'Coût du crédit', value: fmt(result.coutCredit), accent: red },
           ]
           if (dispositif === 'LLI' || dispositif === 'LMNP') {
             keyKpis.push({ label: 'Rendement brut', value: pPct(result.rendBrut), accent: green })
@@ -2317,7 +2317,7 @@ La lettre doit etre professionnelle, datee du jour, avec en-tete Entasis Conseil
         <div style={{ height: 14 }} />
         <Field label="Objet" value={objet} onChange={setObjet} type="text" placeholder="Objet du courrier..." />
         <div style={{ height: 14 }} />
-        <Field label="Points cles a aborder" value={pointsCles} onChange={setPointsCles} type="textarea" placeholder="- Point 1&#10;- Point 2&#10;- Point 3" />
+        <Field label="Points clés à aborder" value={pointsCles} onChange={setPointsCles} type="textarea" placeholder="- Point 1&#10;- Point 2&#10;- Point 3" />
         <div style={{ height: 14 }} />
 
         <div style={{ marginBottom: 18 }}>
@@ -2573,7 +2573,7 @@ const TABS = [
   { id: 'scpi', label: 'SCPI Wemo One' },
   { id: 'immo', label: 'Achat Immo Neuf' },
   { id: 'compound', label: 'Intérêts composés' },
-  { id: 'lettre', label: 'Generateur Lettre' },
+  { id: 'lettre', label: 'Générateur de lettre' },
 ]
 
 const TAB_COMPONENTS = {
