@@ -5,14 +5,18 @@ import ClientModal from './ClientModal.jsx'
 import ClientPeek from './ClientPeek.jsx'
 import { Skeleton, SkeletonTable } from '../ui/Skeleton'
 import { euro, annualize } from '../../lib/format'
+import { usePersistedState } from '../../hooks/usePersistedState'
+import { exporterCsv, suffixeDate, nombreFr } from '../../lib/export-csv'
 
 export default function ClientsView({ supabase, onSelectClient, profile }) {
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [filterType, setFilterType] = useState('Tous') // Tous | Mes clients | Par statut
-  const [statusFilter, setStatusFilter] = useState('Tous') // filtre sur le statut global calcule
-  const [sort, setSort] = useState({ col: null, dir: 'desc' }) // tri colonnes, null = ordre de creation
+  // D1 : filtres et tri mémorisés par conseiller entre deux visites.
+  const prefScope = profile?.advisor_code || profile?.id || 'anon'
+  const [filterType, setFilterType] = usePersistedState('clients.ownership', 'Tous', prefScope) // Tous | Mes clients
+  const [statusFilter, setStatusFilter] = usePersistedState('clients.status', 'Tous', prefScope) // statut global calculé
+  const [sort, setSort] = usePersistedState('clients.sort', { col: null, dir: 'desc' }, prefScope) // null = ordre de création
   const [newClientModalOpen, setNewClientModalOpen] = useState(false)
   // B4 — aperçu latéral (pattern Attio) : un clic sur une ligne ouvre le
   // panneau par-dessus la liste ; « Voir » ouvre directement la fiche.
@@ -173,6 +177,20 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
 
   const sortArrow = (col) => sort.col === col ? (sort.dir === 'asc' ? ' ▲' : ' ▼') : ''
 
+  // D7 — export CSV de l'annuaire tel qu'affiché (mêmes filtres, même tri).
+  function exporterClients() {
+    if (!sortedClients.length) { toast('Aucun client à exporter'); return }
+    const colonnes = ['Nom', 'Prénom', 'Email', 'Téléphone', 'Conseiller', 'Co-conseiller', 'Produits', 'Dossiers immobilier', 'Statut global', 'CA total']
+    const lignes = sortedClients.map(c => [
+      c.nom || '', c.prenom || '', c.email || '', c.telephone || '',
+      c.advisor_code || '', c.co_advisor_code || '',
+      (c.deals || []).length, (c.dossiers_immo || []).length,
+      statusLabel(c.globalStatus) || c.globalStatus || '', nombreFr(c.caTotal),
+    ])
+    exporterCsv(`clients-${suffixeDate()}`, colonnes, lignes)
+    toast.success(`${sortedClients.length} client${sortedClients.length > 1 ? 's' : ''} exporté${sortedClients.length > 1 ? 's' : ''}`)
+  }
+
   const handleClientCreated = (newClient) => {
     setClients(prev => [newClient, ...prev])
     setNewClientModalOpen(false)
@@ -201,12 +219,23 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
             Clients ({enrichedClients.length})
           </h1>
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={() => setNewClientModalOpen(true)}
-        >
-          + Nouveau client
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {/* D7 : exporte la sélection affichée (filtres + tri), pas toute la base. */}
+          <button
+            className="btn btn-outline"
+            onClick={exporterClients}
+            disabled={!sortedClients.length}
+            title="Exporter les clients affichés en CSV (Excel)"
+          >
+            Exporter ({sortedClients.length})
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => setNewClientModalOpen(true)}
+          >
+            + Nouveau client
+          </button>
+        </div>
       </div>
 
       {/* Filtres et recherche */}

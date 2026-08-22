@@ -21,6 +21,9 @@ import { buildNavDomains, viewId, domainOf, visibleTabs } from './lib/navigation
 import { KanbanDnd, KanbanColumn, KanbanCard, targetColumnOf } from './components/ui/kanban'
 import FormSection from './components/ui/FormSection'
 import SortableTh from './components/ui/SortableTh'
+import ShortcutsHelp from './components/ui/ShortcutsHelp'
+import { usePersistedState } from './hooks/usePersistedState'
+import { exporterCsv, suffixeDate, nombreFr } from './lib/export-csv'
 // Onglets lourds charges a la demande (code-splitting via React.lazy) : sortis du
 // bundle principal pour alleger le JS au login. jspdf/html2canvas (OutilsCGP) et
 // chart.js (ManagementView) ne se telechargent que quand l onglet s ouvre.
@@ -943,7 +946,7 @@ async function genererFicheParrainage(profile){
 // portent déjà l'identité visuelle de chaque écran.
 const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers',team:'Équipe',leads:'Leads Live','ucs-structures':'UCS Produits Structurés',immobilier:'Immobilier Neuf',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH','recrutement':'Recrutement',conformite:'Conformité',editorial:'Agent éditorial',cockpit:'Cockpit ratios'}
 
-function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile}){
+function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile,onHelp}){
   return (
     <div className="topbar">
       {onMobileMenu && (
@@ -976,7 +979,9 @@ function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profi
             </div>
           )
         })()}
-        <button className="btn btn-ghost btn-sm" onClick={onRefresh}><Icon.Refresh/></button>
+        <button className="btn btn-ghost btn-sm" onClick={onRefresh} title="Rafraîchir les données" aria-label="Rafraîchir"><Icon.Refresh/></button>
+        {/* D8 : aide des raccourcis, aussi accessible par la touche « ? ». */}
+        <button className="btn btn-ghost btn-sm btn-icon" onClick={onHelp} title="Raccourcis clavier (?)" aria-label="Raccourcis clavier">?</button>
         {/* Fiche de recommandation (idee 3) : outil papier remis en fin de RDV,
             genere un PDF pre rempli au nom du conseiller. Toujours accessible. */}
         <button className="btn btn-ghost btn-sm" title="Fiche de recommandation a remettre au client" onClick={async()=>{
@@ -2185,8 +2190,11 @@ const PIPELINE_COLS=[
 ]
 
 function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
+  // D1 : les filtres sont mémorisés par conseiller (plus besoin de les
+  // re-régler à chaque visite). La recherche reste volontairement volatile.
+  const prefScope=profile?.advisor_code||profile?.id||'anon'
   const [search,setSearch]=useState('')
-  const [advisorF,setAdvisorF]=useState('Tous')
+  const [advisorF,setAdvisorF]=usePersistedState('pipeline.advisor','Tous',prefScope)
   // Filtre spécial « brouillons périmés » (idée 38) : n'affiche que les
   // dossiers Prévu ou En cours dont l'échéance est dépassée de plus de 14
   // jours, tous mois confondus, pour purger le stock en quelques clics.
@@ -2248,7 +2256,7 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
     // Même garde-fou que le bouton « Abandonner » : annuler par un simple
     // geste demande confirmation.
     if(target==='Annulé'&&!(await confirmDialog({title:`Abandonner le dossier de ${getClientName(deal)} ?`,message:'Il passera en Annulé.',confirmLabel:'Abandonner',danger:true})))return
-    if(onQuickPatch)onQuickPatch(deal,{status:target},`Dossier déplacé vers ${target}`)
+    if(onQuickPatch)onQuickPatch(deal,{status:target},`Dossier déplacé vers ${target}`,{undoable:true})
   }
 
   return (
@@ -2444,11 +2452,13 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
    DEALS TABLE
 ───────────────────────────────────────────────────────────────────────────── */
 function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClient}){
+  // D1 : filtres mémorisés par conseiller d'une visite à l'autre.
+  const prefScope=profile?.advisor_code||profile?.id||'anon'
   const [search,setSearch]=useState('')
-  const [statusF,setStatusF]=useState('Tous')
-  const [productF,setProductF]=useState('Tous')
-  const [priorityF,setPriorityF]=useState('Tous')
-  const [allMonths,setAllMonths]=useState(false)
+  const [statusF,setStatusF]=usePersistedState('dossiers.status','Tous',prefScope)
+  const [productF,setProductF]=usePersistedState('dossiers.product','Tous',prefScope)
+  const [priorityF,setPriorityF]=usePersistedState('dossiers.priority','Tous',prefScope)
+  const [allMonths,setAllMonths]=usePersistedState('dossiers.allMonths',false,prefScope)
   const [expandedGroups,setExpandedGroups]=useState(new Set())
   // La recherche couvre aussi téléphone et email : retrouver un dossier en
   // tapant les derniers chiffres du numéro qui appelle.
@@ -2535,6 +2545,22 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
     })
   },[groupedDeals,sort])
 
+  // D7 — export CSV des dossiers filtrés : une ligne par dossier, colonnes
+  // dans l'ordre de lecture métier. Montants en nombres (pas de symbole €)
+  // pour rester calculables dans Excel.
+  function exporterDossiers(){
+    if(!filtered.length){toast('Aucun dossier à exporter');return}
+    const colonnes=['Client','Produit','Compagnie','Statut','Priorité','PP mensuelle','PP annualisée','PU','Conseiller','Co-conseiller','Mois','Date prévue','Date signature','Source','Email','Téléphone']
+    const lignes=filtered.map(d=>[
+      getClientName(d), d.product||'', d.company||'', statusLabel(d.status)||d.status||'', d.priority||'',
+      nombreFr(d.pp_m), nombreFr(annualize(d.pp_m)), nombreFr(d.pu),
+      d.advisor_code||'', d.co_advisor_code||'', d.month||'',
+      d.date_expected||'', d.date_signed||'', d.source||'', d.client_email||'', d.client_phone||'',
+    ])
+    exporterCsv(`dossiers-${suffixeDate()}`,colonnes,lignes)
+    toast.success(`${filtered.length} dossier${filtered.length>1?'s':''} exporté${filtered.length>1?'s':''}`)
+  }
+
   return (
     <div>
       <div className="section-header"><div><div className="section-kicker">Référentiel</div><div className="section-title">Dossiers clients</div><div className="section-sub">{groupedDeals.length} client{groupedDeals.length!==1?'s':''} · {travailles} dossier{travailles!==1?'s':''} travaillé{travailles!==1?'s':''}{aCompleter>0?` · ${aCompleter} RDV calé${aCompleter!==1?'s':''} à compléter`:''} · PP signée {euro(ppTotal)} · PU signée {euro(puTotal)}</div></div></div>
@@ -2549,6 +2575,10 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
             Tous les mois
           </label>
           <button className="btn btn-ghost btn-sm" onClick={onRefresh}><Icon.Refresh/> Rafraîchir</button>
+          {/* D7 : exporte exactement la sélection affichée (filtres + tri). */}
+          <button className="btn btn-outline btn-sm" onClick={exporterDossiers} disabled={!filtered.length} title="Exporter les dossiers affichés en CSV (Excel)">
+            Exporter ({filtered.length})
+          </button>
         </div>
       </div>
       <div className="table-wrap">
@@ -4959,6 +4989,7 @@ export default function App(){
   const [editorialPending,setEditorialPending]=useState({count:0,nextDeadline:null})
   const [reloadCallback,setReloadCallback]=useState(null) // Callback après sauvegarde deal
   const [paletteOpen,setPaletteOpen]=useState(false) // Palette de commandes Ctrl+K
+  const [helpOpen,setHelpOpen]=useState(false) // D8 : overlay des raccourcis (touche ?)
 
   // Anti race condition : empêche les appels parallèles à loadAll() depuis
   // getSession() et onAuthStateChange au mount.
@@ -5006,10 +5037,16 @@ export default function App(){
       }
       // .confirm-overlay : dialogue de confirmation imperatif (ui/confirm.jsx),
       // hors state React d'App — on le detecte via le DOM.
-      if(typing||e.ctrlKey||e.metaKey||e.altKey||modalOpen||paletteOpen||document.querySelector('.confirm-overlay'))return
+      if(typing||e.ctrlKey||e.metaKey||e.altKey||modalOpen||paletteOpen||helpOpen||document.querySelector('.confirm-overlay'))return
       if(e.key==='/'){
         const el=document.querySelector('[data-global-search]')
         if(el){e.preventDefault();el.focus()}
+        return
+      }
+      // D8 : « ? » ouvre l'aide des raccourcis (pattern Attio/Linear/Gmail).
+      if(e.key==='?'){
+        e.preventDefault()
+        setHelpOpen(o=>!o)
         return
       }
       if(e.key==='n'&&activeTab!=='leads'&&activeTab!=='prospection'){
@@ -5020,7 +5057,7 @@ export default function App(){
     }
     window.addEventListener('keydown',onKey)
     return()=>window.removeEventListener('keydown',onKey)
-  },[session,modalOpen,paletteOpen,activeTab,profile])
+  },[session,modalOpen,paletteOpen,helpOpen,activeTab,profile])
 
   // ── B2 : deep links — synchronisation hash ⇄ navigation ────────────────
   // Formats : #/pipeline · #/clients · #/clients/dossiers · #/clients/c/<id>
@@ -5490,7 +5527,10 @@ export default function App(){
   // périmés : reprogrammation ou abandon) sans ouvrir la modale. Update
   // partiel via dealsService + maj locale immédiate, le canal Realtime
   // confirmera, même motif que deleteDeal.
-  async function quickPatchDeal(deal,patch,message){
+  // D6 : `undoable` ajoute un bouton « Annuler » au toast — le geste
+  // glisser-déposer devient réversible (filet de sécurité type Gmail).
+  // L'annulation restaure les valeurs d'AVANT le patch, champ par champ.
+  async function quickPatchDeal(deal,patch,message,{undoable=false}={}){
     try {
       await dealsService.update(deal.id,patch)
     } catch (e) {
@@ -5498,7 +5538,18 @@ export default function App(){
       return
     }
     setDeals(prev=>prev.map(d=>d.id===deal.id?{...d,...patch}:d))
-    if(message)toast.success(message)
+    if(!message)return
+    if(!undoable){toast.success(message);return}
+    const avant=Object.fromEntries(Object.keys(patch).map(k=>[k,deal[k]??null]))
+    toast.success(t=>(
+      <span style={{display:'inline-flex',alignItems:'center',gap:12}}>
+        {message}
+        <button className="btn btn-outline btn-sm" onClick={()=>{
+          toast.dismiss(t.id)
+          quickPatchDeal({...deal,...patch},avant,'Déplacement annulé')
+        }}>Annuler</button>
+      </span>
+    ),{duration:7000})
   }
 
   async function deleteDeal(deal){
@@ -5654,7 +5705,7 @@ export default function App(){
         onCloseMobile={()=>setMobileMenuOpen(false)}
       />
       <div className="app-main">
-        <TopBar activeTab={activeTab} month={month} setMonth={setMonth} onNewDeal={startCreate} onRefresh={loadAll} onMobileMenu={()=>setMobileMenuOpen(true)} profile={effectiveProfile}/>
+        <TopBar activeTab={activeTab} month={month} setMonth={setMonth} onNewDeal={startCreate} onRefresh={loadAll} onMobileMenu={()=>setMobileMenuOpen(true)} profile={effectiveProfile} onHelp={()=>setHelpOpen(true)}/>
         <div className="app-content">
           {error&&<div className="notice notice-error">{error}</div>}
           {!profile&&error&&<div className="notice notice-warn">Profil introuvable dans <span className="code">public.profiles</span>. Vérifie la table et les policies.</div>}
@@ -5757,6 +5808,7 @@ export default function App(){
         </div>
       </div>
 
+      <ShortcutsHelp open={helpOpen} onClose={()=>setHelpOpen(false)}/>
       <CommandPalette
         open={paletteOpen}
         onClose={()=>setPaletteOpen(false)}

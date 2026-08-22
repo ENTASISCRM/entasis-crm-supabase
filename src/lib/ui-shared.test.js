@@ -103,3 +103,16 @@ describe('messageErreur', () => {
     expect(messageErreur(new Error(''))).toBe('Une erreur est survenue.');
   });
 });
+
+import { exporterCsv, nombreFr } from './export-csv';
+
+describe('export CSV', () => {
+  it('formate les nombres à la française', () => {
+    expect(nombreFr(1234.5)).toBe('1234,5');
+    expect(nombreFr(null)).toBe('');
+    expect(nombreFr(0)).toBe('0');
+  });
+  it('expose une fonction d export', () => {
+    expect(typeof exporterCsv).toBe('function');
+  });
+});
