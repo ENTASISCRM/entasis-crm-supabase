@@ -17,6 +17,7 @@ import CommandPalette from './components/CommandPalette'
 import { confirmDialog } from './components/ui/confirm'
 import { SkeletonPage } from './components/ui/Skeleton'
 import SubTabs from './components/ui/SubTabs'
+import { buildNavDomains, viewId, domainOf, visibleTabs } from './lib/navigation'
 // Onglets lourds charges a la demande (code-splitting via React.lazy) : sortis du
 // bundle principal pour alleger le JS au login. jspdf/html2canvas (OutilsCGP) et
 // chart.js (ManagementView) ne se telechargent que quand l onglet s ouvre.
@@ -756,53 +757,38 @@ function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,mont
 
   const pipelineCount=useMemo(()=>deals.filter(d=>dealDuMois(d,month)&&isPipeline(d.status)).length,[deals,month])
 
-  const navItems = [
-    {key:'dashboard', label: isManager?'Vue cabinet':'Mon mois', Icon:Icon.Dashboard},
-    // Badge volontairement absent : la Lead Room est un projet Supabase
-    // séparé (mtqowhjshvgkpkhnpilb) avec sa propre table `leads` et ses
-    // propres statuts ('pending'/'taken'/...). La table `leads` du CRM
-    // ici (statuts 'available'/'released'/...) est un vestige legacy non
-    // synchronisé → le compteur 'leadsAvailable' donnait un chiffre faux
-    // qui ne correspondait pas à ce que les conseillers voient dans
-    // l'iframe Lead Room. On retire le badge plutôt que d'afficher faux.
-    {key:'leads',     label:'Leads Live',  Icon:Icon.Leads, badgeGold:true},
-    {key:'pipeline',  label:'Pipeline',  Icon:Icon.Pipeline,  badge:isManager?pipelineCount:hotCount},
-    {key:'clients',   label:'Clients',   Icon:Icon.Team},
-    {key:'multi-equipement', label:'Multi-équipement', Icon:Icon.Kanban},
-    {key:'conformite', label:'Conformité', Icon:Icon.Dossiers},
-    {key:'cockpit', label:'Cockpit', Icon:Icon.Forecast},
-    {key:'forecast',  label:(isManager||isRhDelegue)?'Management':'Prévisionnel', Icon:Icon.Forecast},
-    {key:'agenda',    label:'Agenda',    Icon:Icon.Calendar},
-    // Smart RH (congés) : tout le monde SAUF stagiaires et mandataires.
-    ...(canSmartRh?[{key:'smart-rh', label:'Smart RH', Icon:Icon.Calendar}]:[]),
-    {key:'market',    label:'Marchés',   Icon:Icon.Market},
-    {key:'ucs-structures', label:'UCS Produits Structurés', Icon:Icon.Ucs, badgeGold:true},
-    ...((!isManager && isRhDelegue)?[
-      {key:'team', label:'Équipe', Icon:Icon.Team},
-      {key:'pilotage-rh', label:'Pilotage RH', Icon:Icon.Team},
-      {key:'recrutement', label:'Recrutement', Icon:Icon.Team},
-    ]:[]),
-    ...(isManager?[
-      {key:'team', label:'Équipe', Icon:Icon.Team},
-      {key:'pilotage-rh', label:'Pilotage RH', Icon:Icon.Team, manager:true},
-      {key:'recrutement', label:'Recrutement', Icon:Icon.Team, manager:true},
-      // Éditorial : manager uniquement (double barrière avec le RLS
-      // manager-only de editorial_packages). Badge = packages en attente de veto.
-      {key:'editorial', label:'Éditorial', Icon:Icon.Editorial, manager:true, badge:editorialCount}
-    ]:[]),
-  ]
+  // B1 — la sidebar liste des DOMAINES (source unique lib/navigation.js,
+  // partagée avec la barre de sous-onglets, la palette ⌘K et le routing).
+  // Notes reprises de l'ancienne liste à plat :
+  // - Leads Live sans badge : la Lead Room est un projet Supabase séparé,
+  //   le compteur local donnait un chiffre faux.
+  // - Éditorial manager uniquement (double barrière avec le RLS
+  //   manager-only de editorial_packages). Badge = packages en attente.
+  // - Rémunération ouverte à tous : le composant sépare vue équipe /
+  //   vue personnelle via RLS conseiller_contrats.
+  const domains = buildNavDomains({ isManager, isRhDelegue, canSmartRh })
 
-  const immoItems = [
-    {key:'immobilier', label:'Immobilier Neuf', Icon:Icon.Building, badge:dossiersImmoCount||0},
-  ]
+  // Compteurs affichés en badge, agrégés au niveau du domaine.
+  const badgeValues = {
+    pipeline: isManager ? pipelineCount : hotCount,
+    immobilier: dossiersImmoCount || 0,
+    editorial: editorialCount || 0,
+  }
+  const domainBadge = (d) => d.views.reduce((s, v) => s + (badgeValues[v.badgeKey] || 0), 0)
 
-  // Rémunération : ouvert à tous (manager + conseillers).
-  // Le composant Remuneration gère la séparation : manager = vue équipe,
-  // conseiller = sa propre situation uniquement (via RLS conseiller_contrats).
-  const outilsItems = [
-    {key:'remuneration', label:'Rémunération', Icon:Icon.Outils},
-    {key:'outils', label:'Outils CGP', Icon:Icon.Outils},
-  ]
+  // Mémoire du dernier onglet visité par domaine : re-cliquer « Activité »
+  // ramène là où on était (Agenda, Cockpit…), pas systématiquement au 1er.
+  const lastTabRef = useRef({})
+  useEffect(() => {
+    const d = domainOf(domains, activeTab)
+    if (d) lastTabRef.current[d.key] = activeTab
+  })
+  const openDomain = (d) => {
+    const remembered = lastTabRef.current[d.key]
+    const target = d.views.some((v) => v.tab === remembered) ? remembered : d.views[0].tab
+    handleNavClick(target)
+  }
+  const activeDomain = domainOf(domains, activeTab)
 
   return (
     <>
@@ -820,38 +806,26 @@ function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,mont
         </div>
         <div className="sidebar-nav">
           <div className="nav-section-label">Navigation</div>
-          {navItems.map(({key,label,Icon:NavIcon,badge,badgeGold})=>(
-            <button key={key} className={`nav-item${activeTab===key?' active':''}`} onClick={()=>handleNavClick(key)}>
-              <NavIcon/>
-              {label}
-              {badge>0&&(
-                <span className={`nav-item-badge${badgeGold?' nav-item-badge--gold':''}`}>
-                  {badge}
-                </span>
-              )}
-            </button>
-          ))}
-          <div className="nav-divider"/>
-          <div className="nav-section-label">Immobilier Neuf</div>
-          {immoItems.map(({key,label,Icon:NavIcon,badge})=>(
-            <button key={key} className={`nav-item${activeTab===key?' active':''}`} onClick={()=>handleNavClick(key)}>
-              <NavIcon/>
-              {label}
-              {badge>0&&(
-                <span className="nav-item-badge">
-                  {badge}
-                </span>
-              )}
-            </button>
-          ))}
-          <div className="nav-divider"/>
-          <div className="nav-section-label">Outils</div>
-          {outilsItems.map(({key,label,Icon:NavIcon})=>(
-            <button key={key} className={`nav-item${activeTab===key?' active':''}`} onClick={()=>handleNavClick(key)}>
-              <NavIcon/>
-              {label}
-            </button>
-          ))}
+          {domains.map((d) => {
+            const NavIcon = Icon[d.icon] || Icon.Dashboard
+            const badge = domainBadge(d)
+            return (
+              <button
+                key={d.key}
+                className={`nav-item${activeDomain?.key === d.key ? ' active' : ''}`}
+                onClick={() => openDomain(d)}
+                aria-current={activeDomain?.key === d.key ? 'page' : undefined}
+              >
+                <NavIcon/>
+                {d.label}
+                {badge > 0 && (
+                  <span className={`nav-item-badge${d.key === 'editorial' ? ' nav-item-badge--gold' : ''}`}>
+                    {badge}
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </div>
         <div className="sidebar-footer">
           <div className="user-info">
@@ -4924,6 +4898,62 @@ export default function App(){
     return()=>window.removeEventListener('keydown',onKey)
   },[session,modalOpen,paletteOpen,activeTab,profile])
 
+  // ── B2 : deep links — synchronisation hash ⇄ navigation ────────────────
+  // Formats : #/pipeline · #/clients · #/clients/dossiers · #/clients/c/<id>
+  // Le hash Supabase auth (#access_token=…) ne commence jamais par « #/ » :
+  // il est ignoré ici (et consommé par supabase-js avant que session existe).
+  const applyingHash = useRef(false)
+  const hashReady = useRef(false)
+  const wroteHashOnce = useRef(false)
+  // Tabs accessibles au rôle courant — rempli à chaque rendu (voir plus bas),
+  // consulté par le listener hashchange sans re-abonnement.
+  const visibleTabsRef = useRef(new Set(['dashboard']))
+
+  useEffect(() => {
+    if (!session || !profile) return
+    const apply = () => {
+      const h = window.location.hash
+      if (!h.startsWith('#/')) return
+      const parts = h.slice(2).split('/').filter(Boolean).map(decodeURIComponent)
+      const tab = parts[0] || 'dashboard'
+      applyingHash.current = true
+      if (!visibleTabsRef.current.has(tab)) {
+        setActiveTab('dashboard')
+      } else {
+        setActiveTab(tab)
+        if (tab === 'clients') {
+          if (parts[1] === 'c' && parts[2]) { setSelectedClientId(parts[2]); setClientsVue('annuaire') }
+          else { setSelectedClientId(null); setClientsVue(parts[1] === 'dossiers' ? 'dossiers' : 'annuaire') }
+        }
+      }
+      // Libéré après le commit du batch : l'effet écrivain (ci-dessous) voit
+      // encore le drapeau levé et ne réécrit pas le hash qu'on vient de lire.
+      setTimeout(() => { applyingHash.current = false }, 0)
+    }
+    apply() // état initial : F5 ou lien partagé
+    hashReady.current = true
+    window.addEventListener('hashchange', apply)
+    return () => window.removeEventListener('hashchange', apply)
+  }, [session, profile])
+
+  useEffect(() => {
+    if (!session || !profile || !hashReady.current || applyingHash.current) return
+    let next = '#/' + activeTab
+    if (activeTab === 'clients') {
+      if (selectedClientId) next = '#/clients/c/' + encodeURIComponent(selectedClientId)
+      else if (clientsVue === 'dossiers') next = '#/clients/dossiers'
+      else next = '#/clients'
+    }
+    if (window.location.hash !== next) {
+      // Première écriture en replaceState (pas d'entrée d'historique parasite
+      // au chargement) ; ensuite chaque navigation pousse une entrée → le
+      // bouton retour du navigateur fonctionne.
+      if (wroteHashOnce.current) window.location.hash = next
+      else window.history.replaceState(null, '', next)
+    }
+    wroteHashOnce.current = true
+  }, [session, profile, activeTab, clientsVue, selectedClientId])
+
   const fetchProspects=()=>prospectsService.listAll().then(({ list, aContacter })=>{
     setProspects(list)
     setProspectsNew(aContacter)
@@ -5438,6 +5468,25 @@ export default function App(){
   const isRhDelegue = profile?.rh_delegue === true
   const canSmartRh = isManager || isRhDelegue || !['STAGIAIRE','MANDATAIRE'].includes(String(contractType||'').toUpperCase())
 
+  // ── B1 : navigation en domaines (source unique lib/navigation.js) ──────
+  const navDomains = buildNavDomains({ isManager, isRhDelegue, canSmartRh })
+  visibleTabsRef.current = visibleTabs(navDomains) // consommé par le routing hash
+  // Vues accessibles → palette ⌘K : même source que la sidebar, fin de la
+  // liste MANAGER_ONLY maintenue à la main dans CommandPalette.
+  const palettePages = {}
+  for (const d of navDomains) for (const v of d.views) if (!palettePages[v.tab]) palettePages[v.tab] = PAGE_TITLES[v.tab] || v.label
+  const activeDomain = domainOf(navDomains, activeTab)
+  // Badges de la barre de sous-onglets (mêmes règles que la sidebar).
+  const subBadges = {
+    pipeline: isManager
+      ? deals.filter(d => dealDuMois(d, month) && isPipeline(d.status)).length
+      : (profile?.advisor_code
+        ? deals.filter(d => dealDuMois(d, month) && dealMatchesAdvisor(d, profile.advisor_code) && (d.priority === 'Urgente' || d.priority === 'Haute') && isPipeline(d.status)).length
+        : 0),
+    immobilier: dossiersImmoCount || 0,
+    editorial: editorialPending.count || 0,
+  }
+
   return (
     <div className="app-shell">
       <Sidebar
@@ -5460,6 +5509,23 @@ export default function App(){
           {error&&<div className="notice notice-error">{error}</div>}
           {!profile&&error&&<div className="notice notice-warn">Profil introuvable dans <span className="code">public.profiles</span>. Vérifie la table et les policies.</div>}
 
+          {/* B1 : sous-onglets du domaine actif (Activité, Clients, RH…). */}
+          {activeDomain && activeDomain.views.length > 1 && (
+            <SubTabs
+              ariaLabel={`Vues ${activeDomain.label}`}
+              tabs={activeDomain.views.map(v => ({ key: viewId(v), label: v.label, badge: subBadges[v.badgeKey] || 0 }))}
+              active={activeTab === 'clients' ? `clients:${selectedClientId ? 'annuaire' : clientsVue}` : activeTab}
+              onChange={(id) => {
+                if (id.startsWith('clients:')) {
+                  setActiveTab('clients'); setSelectedClientId(null); setClientsVue(id.split(':')[1])
+                } else {
+                  setActiveTab(id)
+                }
+              }}
+              style={{ marginBottom: 16 }}
+            />
+          )}
+
           <Suspense fallback={<SkeletonPage/>}>
           {activeTab==='dashboard'&&isManager&&<EditorialPendingBanner count={editorialPending.count} nextDeadline={editorialPending.nextDeadline} onOpen={()=>setActiveTab('editorial')}/>}
           {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles} profile={profile}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile}/>)}
@@ -5468,15 +5534,6 @@ export default function App(){
           {activeTab==='pilotage-rh'&&(isManager||isRhDelegue)&&<PilotageRH profile={profile}/>}
           {activeTab==='recrutement'&&(isManager||isRhDelegue)&&<Recrutement/>}
           {activeTab==='pipeline'&&<PipelineBoard deals={deals} month={month} profile={profile} onEdit={startEdit} onQuickPatch={quickPatchDeal}/>}
-          {activeTab==='clients'&&!selectedClientId&&(
-            <SubTabs
-              ariaLabel="Sous-onglets Clients"
-              tabs={[{key:'annuaire',label:'Annuaire'},{key:'dossiers',label:'Dossiers du mois'}]}
-              active={clientsVue}
-              onChange={setClientsVue}
-              style={{marginBottom:16}}
-            />
-          )}
           {activeTab==='clients'&&!selectedClientId&&clientsVue==='dossiers'&&<DealsTable deals={deals} month={month} profile={profile} onEdit={startEdit} onDelete={deleteDeal} onRefresh={loadAll} onSelectClient={(clientId) => {
             setSelectedClientId(clientId)
             setClientsVue('annuaire')
@@ -5554,8 +5611,7 @@ export default function App(){
         open={paletteOpen}
         onClose={()=>setPaletteOpen(false)}
         deals={deals}
-        pages={PAGE_TITLES}
-        isManager={isManager}
+        pages={palettePages}
         onOpenDeal={(d)=>{setPaletteOpen(false);startEdit(d)}}
         onOpenClient={(id)=>{setPaletteOpen(false);setSelectedClientId(id);setActiveTab('clients')}}
         onGoTab={(t)=>{setPaletteOpen(false);setActiveTab(t)}}
