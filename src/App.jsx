@@ -19,6 +19,7 @@ import { SkeletonPage } from './components/ui/Skeleton'
 import SubTabs from './components/ui/SubTabs'
 import { buildNavDomains, viewId, domainOf, visibleTabs } from './lib/navigation'
 import { KanbanDnd, KanbanColumn, KanbanCard, targetColumnOf } from './components/ui/kanban'
+import FormSection from './components/ui/FormSection'
 // Onglets lourds charges a la demande (code-splitting via React.lazy) : sortis du
 // bundle principal pour alleger le JS au login. jspdf/html2canvas (OutilsCGP) et
 // chart.js (ManagementView) ne se telechargent que quand l onglet s ouvre.
@@ -3678,6 +3679,14 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
   // Bug Jean 01/06/2026, doublon Celine Merle créé par double-clic rapide.
   const [isSaving,setIsSaving]=useState(false)
 
+  // B3 — création en 2 temps : à la création, mode « express » (client,
+  // produits, montants, dates — l'essentiel en ~15 s) ; « Tout renseigner »
+  // ou le passage d'un produit en Signé ouvre le formulaire complet.
+  // En édition, formulaire complet d'office (sections repliables).
+  const [fullForm,setFullForm]=useState(!!initialDeal?.created_at)
+  // B3 — garde anti-perte : fermer demande confirmation si un champ a bougé.
+  const dirtyRef=useRef(false)
+
   // Multi-produits pour création de nouveaux deals
   const isNew=!initialDeal?.created_at
   const showMultiProducts = isNew
@@ -3731,17 +3740,20 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
   })
 
   function setProductField(index, field, value) {
+    dirtyRef.current = true
     setProducts(prev => prev.map((p, i) =>
       i === index ? { ...p, [field]: value } : p
     ))
   }
 
   function addProduct() {
+    dirtyRef.current = true
     setProducts(prev => [...prev, { ...emptyProduct(), _localId: uid() }])
   }
 
   function removeProduct(index) {
     if (products.length === 1) return
+    dirtyRef.current = true
     setProducts(prev => prev.filter((_, i) => i !== index))
   }
 
@@ -3756,6 +3768,28 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
       enriched.advisor_code = profile.advisor_code
     }
     setDeal(enriched)
+    // B3 — réouverture : repartir propre. Saisie non modifiée, mode express
+    // pour une création / complet en édition, et produits réinitialisés
+    // depuis le deal ouvert (avant ce reset, les produits d'une création
+    // précédente restaient pré-remplis à la suivante — modale jamais
+    // démontée par App).
+    dirtyRef.current = false
+    setFullForm(!!initialDeal.created_at)
+    const locked = !initialDeal.created_at && !!initialDeal.client_id && !!initialDeal.client
+    setProducts([locked
+      ? { ...emptyProduct(), _localId: uid(), priority: initialDeal.priority || 'Normale' }
+      : {
+        _localId: uid(),
+        product: initialDeal.product || '',
+        company: initialDeal.company || '',
+        pp_m: initialDeal.pp_m || 0,
+        pu: initialDeal.pu || 0,
+        status: initialDeal.status || 'En cours',
+        priority: initialDeal.priority || 'Normale',
+        date_expected: initialDeal.date_expected || '',
+        date_signed: initialDeal.date_signed || '',
+        notes: initialDeal.notes || '',
+      }])
   }, [initialDeal, profile?.advisor_code])
 
   // Recherche clients au fur et à mesure de la frappe
@@ -3784,6 +3818,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
   }, [deal?.client_data])
 
   const selectClient = (client) => {
+    dirtyRef.current = true
     setSelectedClient(client)
     setShowClientSearch(false)
     setClientSearch('')
@@ -3805,6 +3840,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
   }
 
   const clearSelectedClient = () => {
+    dirtyRef.current = true
     setSelectedClient(null)
     setDeal(prev => ({
       ...prev,
@@ -3813,8 +3849,24 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
     }))
   }
   if(!open||!deal)return null
-  const set=(k,v)=>setDeal(p=>({...p,[k]:v}))
+  const set=(k,v)=>{dirtyRef.current=true;setDeal(p=>({...p,[k]:v}))}
   const isManager=profile?.role==='manager'
+  // B3 — mode express : uniquement à la création, tant que rien ne passe en
+  // Signé (les données client de signature deviennent alors requises).
+  const anySigned = showMultiProducts ? products.some(p=>p.status==='Signé') : deal.status==='Signé'
+  const expressMode = isNew && !fullForm && !anySigned
+
+  // B3 — fermeture protégée : confirmation si la saisie a été modifiée.
+  async function requestClose(){
+    if(dirtyRef.current&&!(await confirmDialog({
+      title:'Abandonner les modifications ?',
+      message:'Les champs saisis dans ce dossier seront perdus.',
+      confirmLabel:'Abandonner',
+      cancelLabel:'Continuer la saisie',
+      danger:true,
+    })))return
+    onClose()
+  }
   // Validation des dates (Louis 27/05) : un deal signé DOIT avoir une date
   // de signature (sinon le mois n'est pas aligné, la valeur cabinet n'est
   // pas comptée correctement, etc.). Un deal en cours/prévu doit avoir une
@@ -3843,6 +3895,13 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
   }
 
   async function submitInner(e) {
+    // Conseiller principal obligatoire (NOT NULL en base). Pré-rempli pour un
+    // conseiller ; un manager sans code passe par la section Équipe & suivi.
+    if (!deal.advisor_code) {
+      toast.error('Choisis le conseiller principal (section Équipe & suivi).')
+      setFullForm(true)
+      return
+    }
     // Contact obligatoire a la creation d un NOUVEAU client : sans email ni
     // telephone, impossible de rattacher plus tard la signature au lead de la
     // Lead Room (trou d attribution). Si un client existant est selectionne,
@@ -3931,11 +3990,19 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-box" onClick={e=>e.stopPropagation()}>
+    <div className="modal-overlay" onClick={requestClose}>
+      {/* key : remonte les sections repliables (FormSection) quand on passe
+          d'un dossier à un autre — leurs états ouverts/repliés repartent des
+          bons défauts (la modale elle-même n'est jamais démontée par App). */}
+      <div className="modal-box" key={deal.id || '__new__'} onClick={e=>e.stopPropagation()}>
         <div className="modal-head">
-          <div><div className="modal-title">{isNew?'Nouveau dossier':'Éditer le dossier'}</div>{getClientName(deal) !== 'Client' && <div className="modal-subtitle">{getClientName(deal)}</div>}</div>
-          <button className="btn btn-ghost btn-icon" onClick={onClose}><Icon.Close/></button>
+          <div>
+            <div className="modal-title">{isNew?(expressMode?'Nouveau dossier — express':'Nouveau dossier'):'Éditer le dossier'}</div>
+            {getClientName(deal) !== 'Client'
+              ? <div className="modal-subtitle">{getClientName(deal)}</div>
+              : (expressMode ? <div className="modal-subtitle">L'essentiel en 15 secondes — le reste peut attendre.</div> : null)}
+          </div>
+          <button className="btn btn-ghost btn-icon" onClick={requestClose} aria-label="Fermer"><Icon.Close/></button>
         </div>
         <form onSubmit={submit}>
           <div className="modal-body">
@@ -4110,31 +4177,44 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
               {/* Data client structurée (Louis 13/07) : obligatoire au passage
                   en « Signé ». Éditable même pour un client existant, pour
                   compléter sa fiche avant la signature. Alimente le module
-                  Multi-équipement (statut = clé des règles de cross-sell). */}
-              <div className="form-row form-row-2 mt-16">
-                <div className="form-group">
-                  <label className="form-label">Statut {deal.status==='Signé' ? '*' : ''}</label>
-                  <select className="form-select" value={deal.client_statut_pro||''} onChange={e=>set('client_statut_pro',e.target.value)}>
-                    <option value="">— à préciser —</option>
-                    {STATUTS_PRO.map(s=><option key={s} value={s}>{s}</option>)}
-                  </select>
+                  Multi-équipement (statut = clé des règles de cross-sell).
+                  B3 : masquée en mode express, section repliable sinon —
+                  forcée ouverte dès qu'un produit passe en Signé. */}
+              {!expressMode && (
+                <div className="mt-16">
+                <FormSection
+                  title="Données client pour la signature"
+                  hint="statut, profession, revenus, patrimoine"
+                  defaultOpen={anySigned}
+                  forceOpen={anySigned}
+                >
+                  <div className="form-row form-row-2">
+                    <div className="form-group">
+                      <label className="form-label">Statut {deal.status==='Signé' ? '*' : ''}</label>
+                      <select className="form-select" value={deal.client_statut_pro||''} onChange={e=>set('client_statut_pro',e.target.value)}>
+                        <option value="">— à préciser —</option>
+                        {STATUTS_PRO.map(s=><option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Profession {deal.status==='Signé' ? '*' : ''}</label>
+                      <input className="form-input" value={deal.client_profession||''} onChange={e=>set('client_profession',e.target.value)} placeholder="Ex. avocat, mandataire immobilier…" />
+                    </div>
+                  </div>
+                  <div className="form-row form-row-2 mt-16">
+                    <div className="form-group">
+                      <label className="form-label">Revenus annuels (€) {deal.status==='Signé' ? '*' : ''}</label>
+                      <input className="form-input" type="number" min="0" value={deal.client_revenus??''} onChange={e=>set('client_revenus',e.target.value)} placeholder="Ex. 80000" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Patrimoine estimé (€) {deal.status==='Signé' ? '*' : ''}</label>
+                      <input className="form-input" type="number" min="0" value={deal.client_patrimoine??''} onChange={e=>set('client_patrimoine',e.target.value)} placeholder="Ex. 300000" />
+                    </div>
+                  </div>
+                  <div className="form-hint" style={{marginTop:8}}>Ces informations deviennent obligatoires au passage en « Signé » (data patrimoniale et cross-sell).</div>
+                </FormSection>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Profession {deal.status==='Signé' ? '*' : ''}</label>
-                  <input className="form-input" value={deal.client_profession||''} onChange={e=>set('client_profession',e.target.value)} placeholder="Ex. avocat, mandataire immobilier…" />
-                </div>
-              </div>
-              <div className="form-row form-row-2 mt-16">
-                <div className="form-group">
-                  <label className="form-label">Revenus annuels (€) {deal.status==='Signé' ? '*' : ''}</label>
-                  <input className="form-input" type="number" min="0" value={deal.client_revenus??''} onChange={e=>set('client_revenus',e.target.value)} placeholder="Ex. 80000" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Patrimoine estimé (€) {deal.status==='Signé' ? '*' : ''}</label>
-                  <input className="form-input" type="number" min="0" value={deal.client_patrimoine??''} onChange={e=>set('client_patrimoine',e.target.value)} placeholder="Ex. 300000" />
-                </div>
-              </div>
-              <div className="form-hint" style={{marginTop:8}}>Ces informations client deviennent obligatoires au passage en « Signé » (data patrimoniale et cross-sell).</div>
+              )}
             </div>
 {showMultiProducts ? (
               <div>
@@ -4377,8 +4457,12 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                 />
               </div>
             </div>
-            <div>
-              <div className="form-section-title mb-16">Équipe & suivi</div>
+            {!expressMode && (
+            <FormSection
+              title="Équipe & suivi"
+              hint={[deal.advisor_code, deal.co_advisor_code && `co ${deal.co_advisor_code}`, deal.source].filter(Boolean).join(' · ') || 'conseiller, co-conseiller, priorité, source'}
+              defaultOpen={isNew}
+            >
               <div className="form-row form-row-3">
                 <div className="form-group">
                   <label className="form-label">Conseiller principal *</label>
@@ -4439,13 +4523,21 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                 </div>
               </div>
               <div className="form-group mt-16"><label className="form-label">Source</label><select className="form-select" value={deal.source||''} onChange={e=>set('source',e.target.value)}>{SOURCES.map(s=><option key={s}>{s}</option>)}</select></div>
-            </div>
-            <div className="form-group"><label className="form-label">Notes</label><textarea className="form-textarea" rows={4} value={deal.notes||''} onChange={e=>set('notes',e.target.value)} placeholder="Contexte client, objections, prochaine étape, pièces manquantes…"/></div>
+            </FormSection>
+            )}
+            {!expressMode && (
+              <div className="form-group"><label className="form-label">Notes</label><textarea className="form-textarea" rows={4} value={deal.notes||''} onChange={e=>set('notes',e.target.value)} placeholder="Contexte client, objections, prochaine étape, pièces manquantes…"/></div>
+            )}
           </div>
           <div className="modal-foot" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-            {/* Bouton Supprimer à gauche, visible uniquement en édition
-                (pas pour les nouveaux dossiers, rien à supprimer). */}
+            {/* Gauche : Supprimer en édition, « Tout renseigner » en express
+                (bascule vers le formulaire complet — équipe, source, notes). */}
             <div>
+              {expressMode && (
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => setFullForm(true)}>
+                  Tout renseigner (équipe, source, notes…)
+                </button>
+              )}
               {!isNew && onDelete && (
                 <button
                   type="button"
@@ -4464,9 +4556,9 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
               )}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" className="btn btn-outline" onClick={onClose} disabled={isSaving}>Annuler</button>
+              <button type="button" className="btn btn-outline" onClick={requestClose} disabled={isSaving}>Annuler</button>
               <button type="submit" className="btn btn-gold" disabled={isSaving}>
-                {isSaving ? 'Enregistrement…' : 'Enregistrer'}
+                {isSaving ? 'Enregistrement…' : isNew ? 'Créer le dossier' : 'Enregistrer'}
               </button>
             </div>
           </div>
