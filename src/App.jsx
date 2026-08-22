@@ -2909,15 +2909,16 @@ function MarketView(){
     el.appendChild(s)
   },[])
 
+  // Badge de performance sur les tokens sémantiques de la charte (C1).
   function PerfBadge({val}){
     if(val==null||val===0)return <span style={{color:'var(--t3)',fontSize:11}}>—</span>
-    const up=val>0,down=val<0
+    const up=val>0
     return(
-      <span style={{
-        fontSize:11.5,fontWeight:700,
-        color:up?'#10B981':down?'#EF4444':'var(--t2)',
-        background:up?'rgba(16,185,129,0.1)':down?'rgba(239,68,68,0.1)':'var(--bg)',
-        padding:'2px 7px',borderRadius:4,whiteSpace:'nowrap'
+      <span className="badge tnum" style={{
+        color:up?'var(--signed)':'var(--cancelled)',
+        background:up?'var(--signed-bg)':'var(--cancelled-bg)',
+        borderColor:'transparent',
+        whiteSpace:'nowrap',
       }}>
         {up?'+':''}{val.toFixed(2)}%
       </span>
@@ -2937,13 +2938,11 @@ function MarketView(){
           </div>
         </div>
         <div style={{display:'flex',gap:8}}>
-          <button onClick={()=>{setNewFund({name:'',isin:'',cat:'',refLabel:'',refSymbol:''});setAddError('');setAddModal(true)}}
-            style={{padding:'7px 14px',background:'var(--gold)',color:'white',border:'none',borderRadius:'var(--rad)',fontSize:12,fontWeight:600,cursor:'pointer'}}>
-            + Ajouter
+          <button className="btn btn-gold btn-sm" onClick={()=>{setNewFund({name:'',isin:'',cat:'',refLabel:'',refSymbol:''});setAddError('');setAddModal(true)}}>
+            <Icon.Plus/> Ajouter
           </button>
-          <button onClick={loadAllNAV} disabled={loading}
-            style={{padding:'7px 14px',background:loading?'var(--bd)':'var(--bg)',color:'var(--t1)',border:'1px solid var(--bd)',borderRadius:'var(--rad)',fontSize:12,fontWeight:600,cursor:loading?'not-allowed':'pointer'}}>
-            {loading?'Chargement…':'↻ Actualiser'}
+          <button className="btn btn-outline btn-sm" onClick={loadAllNAV} disabled={loading}>
+            {loading?'Chargement…':'Actualiser'}
           </button>
         </div>
       </div>
@@ -2955,108 +2954,100 @@ function MarketView(){
         </div>
       </div>
 
-      {/* Table */}
-      <div style={{border:'1px solid var(--bd)',borderRadius:'var(--rad-lg)',overflow:'hidden',marginBottom:selectedFund?20:0,background:'white'}}>
-        {/* Header */}
-        <div style={{display:'grid',gridTemplateColumns:'28px 1fr 100px 75px 80px 80px 80px 80px 130px 36px',background:'var(--bg)',borderBottom:'2px solid var(--bd)'}}>
-          {['#','Fonds','ISIN','VL','1 sem','1 mois','3 mois','1 an','Indice réf.',''].map(h=>(
-            <div key={h} style={{padding:'8px 10px',fontSize:10,fontWeight:700,color:'var(--t3)',textTransform:'uppercase',letterSpacing:'0.04em',borderRight:'1px solid var(--bd)'}}>{h}</div>
-          ))}
-        </div>
-
-        {funds.map((f,i)=>{
-          const d=navData[f.isin]
-          const isSelected=selectedFund?.isin===f.isin
-          return(
-            <div key={f.isin}
-              onClick={()=>setSelectedFund(isSelected?null:f)}
-              style={{
-                display:'grid',gridTemplateColumns:'28px 1fr 100px 75px 80px 80px 80px 80px 130px 36px',
-                borderBottom:'1px solid var(--bd)',
-                background:isSelected?'rgba(192,155,90,0.06)':i%2===0?'white':'rgba(248,246,242,0.4)',
-                cursor:'pointer',transition:'background .15s',
-                borderLeft:isSelected?'3px solid var(--gold)':'3px solid transparent',
-              }}
-              onMouseEnter={e=>!isSelected&&(e.currentTarget.style.background='rgba(192,155,90,0.04)')}
-              onMouseLeave={e=>!isSelected&&(e.currentTarget.style.background=i%2===0?'white':'rgba(248,246,242,0.4)')}
-            >
-              {/* # */}
-              <div style={{padding:'10px 8px',display:'flex',alignItems:'center',borderRight:'1px solid var(--bd)'}}>
-                <span style={{fontSize:11,fontWeight:700,color:'var(--t3)'}}>{i+1}</span>
-              </div>
-              {/* Nom */}
-              <div style={{padding:'10px',borderRight:'1px solid var(--bd)',minWidth:0,display:'flex',flexDirection:'column',justifyContent:'center'}}>
-                <div style={{fontSize:12.5,fontWeight:600,color:'var(--t1)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.name}</div>
-                <div style={{fontSize:10,color:'var(--t3)',marginTop:1}}>{f.cat}{d?.date?` · VL au ${d.date}`:''}</div>
-              </div>
-              {/* ISIN */}
-              <div style={{padding:'10px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center'}}>
-                <span style={{fontSize:10,color:'var(--t3)',fontFamily:'monospace'}}>{f.isin}</span>
-              </div>
-              {/* VL */}
-              <div style={{padding:'10px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center',justifyContent:'flex-end'}}>
-                {loading&&!d
-                  ?<div style={{width:42,height:14,background:'var(--bd)',borderRadius:3}}/>
-                  :d?.vl
-                    ?<div style={{textAlign:'right'}}>
-                      <div style={{fontSize:12.5,fontWeight:700,color:'var(--t1)'}}>{d.vl.toFixed(2)}</div>
-                      <div style={{fontSize:9.5,color:'var(--t3)'}}>{d.currency||'EUR'}</div>
+      {/* Table des fonds — data-table charte (C1), mêmes colonnes et actions */}
+      <div className="table-wrap" style={{marginBottom:selectedFund?20:0}}>
+        <table className="data-table" style={{width:'100%'}}>
+          <thead>
+            <tr>
+              <th style={{width:34}}>#</th>
+              <th>Fonds</th>
+              <th style={{width:110}}>ISIN</th>
+              <th style={{width:80,textAlign:'right'}}>VL</th>
+              <th style={{width:80,textAlign:'center'}}>1 sem</th>
+              <th style={{width:80,textAlign:'center'}}>1 mois</th>
+              <th style={{width:80,textAlign:'center'}}>3 mois</th>
+              <th style={{width:80,textAlign:'center'}}>1 an</th>
+              <th style={{width:140}}>Indice réf.</th>
+              <th style={{width:44}} aria-label="Actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {funds.map((f,i)=>{
+              const d=navData[f.isin]
+              const isSelected=selectedFund?.isin===f.isin
+              return(
+                <tr key={f.isin}
+                  onClick={()=>setSelectedFund(isSelected?null:f)}
+                  title={isSelected?'Masquer le graphique':'Afficher le graphique de l\'indice de référence'}
+                  style={{
+                    cursor:'pointer',
+                    background:isSelected?'rgba(201,169,97,0.07)':undefined,
+                    boxShadow:isSelected?'inset 3px 0 0 var(--gold)':undefined,
+                  }}
+                >
+                  <td className="tnum" style={{color:'var(--t3)',fontWeight:600}}>{i+1}</td>
+                  <td>
+                    <div className="cell-primary" style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:340}}>{f.name}</div>
+                    <div className="cell-sub">{f.cat}{d?.date?` · VL au ${d.date}`:''}</div>
+                  </td>
+                  <td><span className="cell-mono" style={{fontSize:11,color:'var(--t3)'}}>{f.isin}</span></td>
+                  <td style={{textAlign:'right'}}>
+                    {loading&&!d
+                      ?<Skeleton h={13} w={44} style={{marginLeft:'auto'}}/>
+                      :d?.vl
+                        ?<>
+                          <div className="cell-primary tnum">{d.vl.toFixed(2)}</div>
+                          <div className="cell-sub">{d.currency||'EUR'}</div>
+                        </>
+                        :<span style={{color:'var(--t3)'}}>—</span>
+                    }
+                  </td>
+                  <td style={{textAlign:'center'}}><PerfBadge val={d?.perf1W}/></td>
+                  <td style={{textAlign:'center'}}><PerfBadge val={d?.perf1M}/></td>
+                  <td style={{textAlign:'center'}}><PerfBadge val={d?.perf3M}/></td>
+                  <td style={{textAlign:'center'}}><PerfBadge val={d?.perf1Y}/></td>
+                  <td>
+                    <div style={{display:'flex',alignItems:'center',gap:6}}>
+                      <span style={{width:7,height:7,borderRadius:'50%',background:f.color,flexShrink:0}}/>
+                      <span style={{fontSize:11.5,color:'var(--t2)',fontWeight:500}}>{f.refLabel}</span>
                     </div>
-                    :<span style={{fontSize:11,color:'var(--t3)'}}>—</span>
-                }
-              </div>
-              {/* 1S */}
-              <div style={{padding:'10px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <PerfBadge val={d?.perf1W}/>
-              </div>
-              {/* 1M */}
-              <div style={{padding:'10px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <PerfBadge val={d?.perf1M}/>
-              </div>
-              {/* 3M */}
-              <div style={{padding:'10px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <PerfBadge val={d?.perf3M}/>
-              </div>
-              {/* 1Y */}
-              <div style={{padding:'10px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <PerfBadge val={d?.perf1Y}/>
-              </div>
-              {/* Indice réf */}
-              <div style={{padding:'10px',display:'flex',alignItems:'center',gap:6}}>
-                <div style={{width:7,height:7,borderRadius:'50%',background:f.color,flexShrink:0}}/>
-                <span style={{fontSize:11,color:'var(--t2)',fontWeight:500}}>{f.refLabel}</span>
-              </div>
-              {/* Supprimer */}
-              <div style={{display:'flex',alignItems:'center',justifyContent:'center'}}
-                onClick={e=>{e.stopPropagation();if(funds.length>1){setFunds(prev=>prev.filter((_,j)=>j!==i));if(selectedFund?.isin===f.isin)setSelectedFund(null)}}}>
-                <span style={{fontSize:13,color:'var(--t3)',cursor:funds.length>1?'pointer':'not-allowed',opacity:funds.length>1?1:0.3}}
-                  title="Supprimer ce fonds">✕</span>
-              </div>
-            </div>
-          )
-        })}
+                  </td>
+                  <td onClick={e=>e.stopPropagation()}>
+                    <button
+                      className="btn btn-ghost btn-icon btn-sm"
+                      disabled={funds.length<=1}
+                      title="Retirer ce fonds de la liste"
+                      aria-label={`Retirer ${f.name}`}
+                      onClick={()=>{if(funds.length>1){setFunds(prev=>prev.filter((_,j)=>j!==i));if(selectedFund?.isin===f.isin)setSelectedFund(null)}}}
+                    >✕</button>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
       </div>
 
-      {/* Chart détail */}
+      {/* Chart détail — carte charte (C1) */}
       {selectedFund&&(
-        <div style={{border:'1px solid var(--gold-line)',borderRadius:'var(--rad-lg)',overflow:'hidden',background:'white',marginBottom:20}}>
-          <div style={{padding:'10px 16px',borderBottom:'1px solid var(--bd)',display:'flex',alignItems:'center',gap:10,background:'rgba(192,155,90,0.04)'}}>
-            <div style={{width:8,height:8,borderRadius:'50%',background:selectedFund.color}}/>
+        <div className="card" style={{overflow:'hidden',marginBottom:20,borderTop:'2px solid var(--gold)'}}>
+          <div style={{padding:'10px 16px',borderBottom:'0.5px solid var(--bd)',display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+            <span style={{width:8,height:8,borderRadius:'50%',background:selectedFund.color,flexShrink:0}}/>
             <span style={{fontWeight:600,fontSize:13,color:'var(--t1)'}}>{selectedFund.name}</span>
             <span style={{fontSize:11,color:'var(--t3)'}}>· Indice de réf. : {selectedFund.refLabel}</span>
             {navData[selectedFund.isin]&&(
-              <div style={{marginLeft:8,display:'flex',gap:10,alignItems:'center'}}>
+              <div style={{marginLeft:8,display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
                 {[['1S','perf1W'],['1M','perf1M'],['3M','perf3M'],['1Y','perf1Y']].map(([lbl,key])=>{
                   const v=navData[selectedFund.isin][key]
                   return v!=null?(
-                    <span key={key} style={{fontSize:11,fontWeight:700,color:v>0?'#10B981':v<0?'#EF4444':'var(--t2)'}}>
+                    <span key={key} className="tnum" style={{fontSize:11,fontWeight:700,color:v>0?'var(--signed)':v<0?'var(--cancelled)':'var(--t2)'}}>
                       {lbl} : {v>0?'+':''}{v.toFixed(2)}%
                     </span>
                   ):null
                 })}
               </div>
             )}
-            <button onClick={()=>{
+            <button className="btn btn-ghost btn-sm" style={{marginLeft:8}} onClick={()=>{
               const d=navData[selectedFund.isin]
               setEditPerfVals({
                 perf1W: d?.perf1W!=null?String(d.perf1W):'',
@@ -3065,10 +3056,10 @@ function MarketView(){
                 perf1Y: d?.perf1Y!=null?String(d.perf1Y):'',
               })
               setEditPerfIsin(selectedFund.isin)
-            }} style={{marginLeft:8,padding:'3px 10px',fontSize:11,background:'var(--bg)',border:'1px solid var(--bd)',borderRadius:'var(--rad)',color:'var(--t2)',cursor:'pointer',fontWeight:500}}>
-              ✎ Saisir perfs
+            }}>
+              Saisir perfs
             </button>
-            <button onClick={()=>setSelectedFund(null)} style={{marginLeft:'auto',background:'transparent',border:'none',color:'var(--t3)',cursor:'pointer',fontSize:18,lineHeight:1}}>✕</button>
+            <button className="btn btn-ghost btn-icon btn-sm" style={{marginLeft:'auto'}} onClick={()=>setSelectedFund(null)} aria-label="Fermer le graphique">✕</button>
           </div>
           <div className="tradingview-widget-container" id="tv-detail-chart" style={{height:380}}>
             <div className="tradingview-widget-container__widget" style={{height:'100%'}}></div>
@@ -3076,32 +3067,37 @@ function MarketView(){
         </div>
       )}
 
-      <div style={{padding:'10px 14px',background:'rgba(192,155,90,0.04)',border:'1px solid var(--gold-line)',borderRadius:'var(--rad)',fontSize:11,color:'var(--t3)',lineHeight:1.6}}>
-        ℹ️ <strong style={{color:'var(--t2)'}}>VL quotidienne J+1</strong> — Performances calculées sur les VL historiques. Cliquez sur un fonds pour afficher le graphique de son indice de référence.
+      <div style={{padding:'10px 14px',background:'var(--gold-subtle, rgba(201,169,97,0.06))',border:'1px solid var(--gold-line, rgba(201,169,97,0.30))',borderRadius:'var(--rad)',fontSize:11.5,color:'var(--t3)',lineHeight:1.6,marginTop:selectedFund?0:16}}>
+        <strong style={{color:'var(--t2)'}}>VL quotidienne J+1</strong> — Performances calculées sur les VL historiques. Cliquez sur un fonds pour afficher le graphique de son indice de référence.
       </div>
 
-      {/* Modal saisie manuelle perfs */}
+      {/* Modal saisie manuelle perfs — structure modale charte (C1) */}
       {editPerfIsin&&(
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:1001,display:'flex',alignItems:'center',justifyContent:'center'}}
-          onClick={()=>setEditPerfIsin(null)}>
-          <div style={{background:'var(--surface)',borderRadius:'var(--rad-lg)',padding:28,width:360,boxShadow:'0 20px 60px rgba(0,0,0,0.3)'}}
-            onClick={e=>e.stopPropagation()}>
-            <div style={{fontWeight:700,fontSize:15,color:'var(--t1)',marginBottom:4}}>Saisie manuelle des performances</div>
-            <div style={{fontSize:11,color:'var(--t3)',marginBottom:18}}>{funds.find(f=>f.isin===editPerfIsin)?.name} · {editPerfIsin}</div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:18}}>
-              {[['1 semaine','perf1W'],['1 mois','perf1M'],['3 mois','perf3M'],['1 an','perf1Y']].map(([lbl,key])=>(
-                <div key={key}>
-                  <div style={{fontSize:11,fontWeight:600,color:'var(--t2)',marginBottom:4,textTransform:'uppercase',letterSpacing:'0.04em'}}>{lbl} (%)</div>
-                  <input type="number" step="0.01" value={editPerfVals[key]}
-                    onChange={e=>setEditPerfVals(p=>({...p,[key]:e.target.value}))}
-                    placeholder="ex: -3.12"
-                    style={{width:'100%',padding:'7px 10px',border:'1px solid var(--bd)',borderRadius:'var(--rad)',fontSize:13,background:'var(--bg)',color:'var(--t1)',boxSizing:'border-box'}}/>
-                </div>
-              ))}
+        <div className="modal-overlay" onClick={()=>setEditPerfIsin(null)}>
+          <div className="modal-box" style={{width:'min(100%, 420px)'}} onClick={e=>e.stopPropagation()}>
+            <div className="modal-head">
+              <div>
+                <div className="modal-title">Saisie manuelle des performances</div>
+                <div className="modal-subtitle">{funds.find(f=>f.isin===editPerfIsin)?.name} · {editPerfIsin}</div>
+              </div>
+              <button className="btn btn-ghost btn-icon" onClick={()=>setEditPerfIsin(null)} aria-label="Fermer"><Icon.Close/></button>
             </div>
-            <div style={{fontSize:10,color:'var(--t3)',marginBottom:14,fontStyle:'italic'}}>Source : fiches Morningstar. Valeurs en %, ex: -3.12 pour -3,12%</div>
-            <div style={{display:'flex',gap:8}}>
-              <button onClick={()=>{
+            <div className="modal-body">
+              <div className="form-row form-row-2">
+                {[['1 semaine','perf1W'],['1 mois','perf1M'],['3 mois','perf3M'],['1 an','perf1Y']].map(([lbl,key])=>(
+                  <div key={key} className="form-group">
+                    <label className="form-label">{lbl} (%)</label>
+                    <input className="form-input" type="number" step="0.01" value={editPerfVals[key]}
+                      onChange={e=>setEditPerfVals(p=>({...p,[key]:e.target.value}))}
+                      placeholder="ex: -3.12"/>
+                  </div>
+                ))}
+              </div>
+              <div className="form-hint">Source : fiches Morningstar. Valeurs en %, ex : -3.12 pour −3,12 %.</div>
+            </div>
+            <div className="modal-foot">
+              <button className="btn btn-outline" onClick={()=>setEditPerfIsin(null)}>Annuler</button>
+              <button className="btn btn-gold" onClick={()=>{
                 const patch={}
                 const keys=['perf1W','perf1M','perf3M','perf1Y']
                 keys.forEach(k=>{
@@ -3110,42 +3106,41 @@ function MarketView(){
                 })
                 setNavData(prev=>({...prev,[editPerfIsin]:{...(prev[editPerfIsin]||{}), ...patch}}))
                 setEditPerfIsin(null)
-              }} style={{flex:1,padding:'9px 0',background:'var(--gold)',color:'white',border:'none',borderRadius:'var(--rad)',fontWeight:600,fontSize:13,cursor:'pointer'}}>
+              }}>
                 Enregistrer
-              </button>
-              <button onClick={()=>setEditPerfIsin(null)}
-                style={{padding:'9px 18px',background:'var(--bg)',color:'var(--t2)',border:'1px solid var(--bd)',borderRadius:'var(--rad)',fontWeight:600,fontSize:13,cursor:'pointer'}}>
-                Annuler
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal ajout allocation */}
+      {/* Modal ajout allocation — structure modale charte (C1) */}
       {addModal&&(
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}
-          onClick={()=>setAddModal(false)}>
-          <div style={{background:'var(--surface)',borderRadius:'var(--rad-lg)',padding:28,width:420,boxShadow:'0 20px 60px rgba(0,0,0,0.3)'}}
-            onClick={e=>e.stopPropagation()}>
-            <div style={{fontWeight:700,fontSize:16,color:'var(--t1)',marginBottom:18}}>Ajouter une allocation</div>
-            {[
-              {label:'Nom du fonds *',key:'name',placeholder:'ex: Lazard Japon AC H EUR'},
-              {label:'ISIN *',key:'isin',placeholder:'ex: FR0014008M81'},
-              {label:'Catégorie',key:'cat',placeholder:'ex: Actions Japon'},
-              {label:'Indice de référence',key:'refLabel',placeholder:'ex: Nikkei 225'},
-              {label:'Symbole TradingView',key:'refSymbol',placeholder:'ex: INDEX:NKY'},
-            ].map(({label,key,placeholder})=>(
-              <div key={key} style={{marginBottom:12}}>
-                <div style={{fontSize:11,fontWeight:600,color:'var(--t2)',marginBottom:4,textTransform:'uppercase',letterSpacing:'0.04em'}}>{label}</div>
-                <input value={newFund[key]} onChange={e=>setNewFund(p=>({...p,[key]:e.target.value}))}
-                  placeholder={placeholder}
-                  style={{width:'100%',padding:'8px 10px',border:'1px solid var(--bd)',borderRadius:'var(--rad)',fontSize:12,background:'var(--bg)',color:'var(--t1)',boxSizing:'border-box'}}/>
-              </div>
-            ))}
-            {addError&&<div style={{color:'#EF4444',fontSize:12,marginBottom:10}}>{addError}</div>}
-            <div style={{display:'flex',gap:8,marginTop:4}}>
-              <button onClick={async()=>{
+        <div className="modal-overlay" onClick={()=>setAddModal(false)}>
+          <div className="modal-box" style={{width:'min(100%, 460px)'}} onClick={e=>e.stopPropagation()}>
+            <div className="modal-head">
+              <div><div className="modal-title">Ajouter une allocation</div></div>
+              <button className="btn btn-ghost btn-icon" onClick={()=>setAddModal(false)} aria-label="Fermer"><Icon.Close/></button>
+            </div>
+            <div className="modal-body">
+              {[
+                {label:'Nom du fonds *',key:'name',placeholder:'ex: Lazard Japon AC H EUR'},
+                {label:'ISIN *',key:'isin',placeholder:'ex: FR0014008M81'},
+                {label:'Catégorie',key:'cat',placeholder:'ex: Actions Japon'},
+                {label:'Indice de référence',key:'refLabel',placeholder:'ex: Nikkei 225'},
+                {label:'Symbole TradingView',key:'refSymbol',placeholder:'ex: INDEX:NKY'},
+              ].map(({label,key,placeholder})=>(
+                <div key={key} className="form-group">
+                  <label className="form-label">{label}</label>
+                  <input className="form-input" value={newFund[key]} onChange={e=>setNewFund(p=>({...p,[key]:e.target.value}))}
+                    placeholder={placeholder}/>
+                </div>
+              ))}
+              {addError&&<div className="notice notice-error" style={{margin:0}}>{addError}</div>}
+            </div>
+            <div className="modal-foot">
+              <button className="btn btn-outline" onClick={()=>setAddModal(false)}>Annuler</button>
+              <button className="btn btn-gold" disabled={addLoading} onClick={async()=>{
                 if(!newFund.name.trim()||!newFund.isin.trim()){setAddError('Nom et ISIN obligatoires');return}
                 const isin=newFund.isin.trim().toUpperCase()
                 if(funds.find(f=>f.isin===isin)){setAddError('Cet ISIN est déjà dans la liste');return}
@@ -3156,13 +3151,8 @@ function MarketView(){
                 setFunds(prev=>[...prev,fund])
                 if(d&&d.vl)setNavData(prev=>({...prev,[isin]:d}))
                 setAddLoading(false);setAddModal(false)
-              }} disabled={addLoading}
-                style={{flex:1,padding:'9px 0',background:'var(--gold)',color:'white',border:'none',borderRadius:'var(--rad)',fontWeight:600,fontSize:13,cursor:addLoading?'not-allowed':'pointer'}}>
+              }}>
                 {addLoading?'Vérification…':'Ajouter'}
-              </button>
-              <button onClick={()=>setAddModal(false)}
-                style={{padding:'9px 18px',background:'var(--bg)',color:'var(--t2)',border:'1px solid var(--bd)',borderRadius:'var(--rad)',fontWeight:600,fontSize:13,cursor:'pointer'}}>
-                Annuler
               </button>
             </div>
           </div>
