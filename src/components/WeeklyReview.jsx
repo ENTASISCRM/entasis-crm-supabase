@@ -205,7 +205,7 @@ function ObjectiveModal({show, objective, onSave, onClose, weekNumber, year, sug
                   style={{
                     border: 'none',
                     background: 'none',
-                    color: '#C09B5A',
+                    color: 'var(--gold)',
                     fontWeight: 600,
                     fontSize: '12px',
                     cursor: 'pointer',
@@ -542,8 +542,8 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
     datasets: [{
       label: 'Signatures',
       data: weeklyHistory.map(w => w.signatures),
-      borderColor: '#C09B5A',
-      backgroundColor: 'rgba(192, 155, 90, 0.1)',
+      borderColor: 'var(--gold)',
+      backgroundColor: 'rgba(201, 169, 97, 0.1)',
       tension: 0.3,
       fill: true
     }]
@@ -556,7 +556,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
       label: 'Nombre de deals',
       data: productStats.map(([, stats]) => stats.count),
       backgroundColor: [
-        'rgba(192, 155, 90, 0.8)',
+        'rgba(201, 169, 97, 0.8)',
         'rgba(27, 107, 70, 0.8)',
         'rgba(42, 82, 133, 0.8)',
         'rgba(122, 85, 32, 0.8)',
@@ -572,12 +572,12 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
       {
         label: 'Signatures semaine',
         data: advisorRows.map(r => r.currentSigs),
-        backgroundColor: 'rgba(192, 155, 90, 0.8)',
+        backgroundColor: 'rgba(201, 169, 97, 0.8)',
       },
       {
         label: 'S-1',
         data: advisorRows.map(r => r.previousSigs),
-        backgroundColor: 'rgba(192, 155, 90, 0.2)',
+        backgroundColor: 'rgba(201, 169, 97, 0.2)',
       }
     ]
   }), [advisorRows])
@@ -809,7 +809,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
             onChange={e => setSelectedWeekKey(e.target.value)}
             style={{
               padding: '6px 12px',
-              border: '1px solid #C09B5A',
+              border: '1px solid var(--gold)',
               borderRadius: 6,
               background: 'white',
               cursor: 'pointer',
@@ -987,12 +987,12 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
                 </td>
               </tr>
             ))}
-            <tr style={{borderTop: '2px solid #C09B5A', fontWeight: '700', background: 'rgba(192, 155, 90, 0.05)'}}>
+            <tr style={{borderTop: '2px solid var(--gold)', fontWeight: '700', background: 'rgba(201, 169, 97, 0.05)'}}>
               <td style={{padding: '16px 20px'}}>TOTAL CABINET</td>
-              <td style={{textAlign: 'center', color: '#C09B5A', padding: '16px 20px'}}>{totalCurrentSigs}</td>
-              <td style={{textAlign: 'right', color: '#C09B5A', padding: '16px 20px'}}>{euro(totalCurrentPp)}</td>
-              <td style={{textAlign: 'right', color: '#C09B5A', padding: '16px 20px'}}>{euro(totalCurrentPu)}</td>
-              <td style={{textAlign: 'right', color: '#C09B5A', padding: '16px 20px'}}>
+              <td style={{textAlign: 'center', color: 'var(--gold)', padding: '16px 20px'}}>{totalCurrentSigs}</td>
+              <td style={{textAlign: 'right', color: 'var(--gold)', padding: '16px 20px'}}>{euro(totalCurrentPp)}</td>
+              <td style={{textAlign: 'right', color: 'var(--gold)', padding: '16px 20px'}}>{euro(totalCurrentPu)}</td>
+              <td style={{textAlign: 'right', color: 'var(--gold)', padding: '16px 20px'}}>
                 {calendarData.length > 0 ? (() => {
                   const totalRdv = calendarData.reduce((sum, c) => sum + c.total, 0)
                   const now = new Date()
@@ -1002,7 +1002,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
                   return (
                     <div>
                       <span>{totalRdv} RDV</span>
-                      <div style={{ fontSize: 11, color: '#C09B5A', marginTop: 2 }}>
+                      <div style={{ fontSize: 11, color: 'var(--gold)', marginTop: 2 }}>
                         {totalUpcoming} à venir
                       </div>
                     </div>
@@ -1088,10 +1088,10 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
                       onClick={() => setSelectedDay(selectedDay === day ? null : day)}
                       style={{
                         background: selectedDay === day
-                          ? 'rgba(192, 155, 90, 0.15)'
+                          ? 'rgba(201, 169, 97, 0.15)'
                           : '#FAFAF8',
                         border: selectedDay === day
-                          ? '2px solid #C09B5A'
+                          ? '2px solid var(--gold)'
                           : '1px solid var(--bd)',
                         borderRadius: 8,
                         padding: '16px 12px',
@@ -1106,7 +1106,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
                       <div style={{
                         fontSize: 24,
                         fontWeight: 700,
-                        color: '#C09B5A',
+                        color: 'var(--gold)',
                         marginBottom: '8px'
                       }}>
                         {rdvByDay[day]}
@@ -1124,7 +1124,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
                       marginBottom: '16px',
                       fontSize: '16px',
                       fontWeight: 600,
-                      color: '#C09B5A'
+                      color: 'var(--gold)'
                     }}>
                       {selectedDay} — Détail des RDV
                     </h4>
@@ -1220,7 +1220,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
                       const isCurrentWeek = week.weekKey === currentWeekKey
                       const isEven = index % 2 === 0
                       const baseColor = isEven ? 'rgba(0, 0, 0, 0.02)' : 'transparent'
-                      const currentWeekColor = 'rgba(192, 155, 90, 0.1)'
+                      const currentWeekColor = 'rgba(201, 169, 97, 0.1)'
                       return (
                         <tr
                           key={week.weekKey}
@@ -1377,7 +1377,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
                   style={{
                     width: '100%',
                     padding: '8px 12px',
-                    border: '1px solid #C09B5A',
+                    border: '1px solid var(--gold)',
                     borderRadius: 6,
                     background: 'white'
                   }}
@@ -1388,7 +1388,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
                   ))}
                 </select>
               </div>
-              <div style={{padding: '20px 0', fontSize: '18px', fontWeight: 600, color: '#C09B5A'}}>VS</div>
+              <div style={{padding: '20px 0', fontSize: '18px', fontWeight: 600, color: 'var(--gold)'}}>VS</div>
               <div style={{flex: 1}}>
                 <label style={{display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 500}}>Semaine B</label>
                 <select
@@ -1397,7 +1397,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
                   style={{
                     width: '100%',
                     padding: '8px 12px',
-                    border: '1px solid #C09B5A',
+                    border: '1px solid var(--gold)',
                     borderRadius: 6,
                     background: 'white'
                   }}

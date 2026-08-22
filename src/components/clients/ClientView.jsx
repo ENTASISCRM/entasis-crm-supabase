@@ -572,9 +572,9 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         padding: '16px',
-                        backgroundColor: isExpanded ? 'rgba(192, 155, 90, 0.05)' : 'var(--bg)',
+                        backgroundColor: isExpanded ? 'rgba(201, 169, 97, 0.05)' : 'var(--bg)',
                         borderRadius: 'var(--rad)',
-                        border: isExpanded ? '2px solid #C09B5A' : '1px solid var(--bd)',
+                        border: isExpanded ? '2px solid var(--gold)' : '1px solid var(--bd)',
                         cursor: 'pointer'
                       }}
                       onClick={() => setExpandedDeal(isExpanded ? null : deal.id)}
@@ -618,7 +618,7 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
                       <div style={{
                         marginTop: '8px',
                         padding: '16px',
-                        backgroundColor: '#F9F8F6',
+                        backgroundColor: 'var(--bg)',
                         borderRadius: 'var(--rad)',
                         border: '1px solid var(--bd)',
                         marginLeft: '20px'

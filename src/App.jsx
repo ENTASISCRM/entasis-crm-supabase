@@ -1043,7 +1043,7 @@ function LeadCard({lead,profile,onTake,onRelease,onCreateRDV,onConvertDeal}){
 
   return (
     <div style={{
-      background:isMyLead?'rgba(192,155,90,0.04)':isBooked?'rgba(16,185,129,0.04)':'white',
+      background:isMyLead?'rgba(201,169,97,0.04)':isBooked?'rgba(16,185,129,0.04)':'white',
       border:`1.5px solid ${isMyLead?'var(--gold-line)':isBooked?'rgba(16,185,129,0.3)':'var(--bd)'}`,
       borderRadius:'var(--rad-lg)',padding:'11px 13px',
       opacity:isTaken&&!isMyLead?0.5:1,transition:'all .2s',
@@ -1241,11 +1241,11 @@ function LeadRow({lead,profile,onTake,onRelease,onCreateRDV,onConvertDeal,onRese
       alignItems:'center',
       minHeight:36,
       borderBottom:'1px solid var(--bd)',
-      background:isMyLead?'rgba(192,155,90,0.05)':isBooked?'rgba(16,185,129,0.04)':'transparent',
+      background:isMyLead?'rgba(201,169,97,0.05)':isBooked?'rgba(16,185,129,0.04)':'transparent',
       opacity:isDead?0.35:isTaken&&!isMyLead?0.45:1,textDecoration:isDead?'line-through':'none',
     }}
-    onMouseEnter={e=>e.currentTarget.style.background='rgba(192,155,90,0.07)'}
-    onMouseLeave={e=>e.currentTarget.style.background=isMyLead?'rgba(192,155,90,0.05)':isBooked?'rgba(16,185,129,0.04)':'transparent'}
+    onMouseEnter={e=>e.currentTarget.style.background='rgba(201,169,97,0.07)'}
+    onMouseLeave={e=>e.currentTarget.style.background=isMyLead?'rgba(201,169,97,0.05)':isBooked?'rgba(16,185,129,0.04)':'transparent'}
     >
       <div style={{padding:'0 8px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center',height:'100%'}}>
         <span style={{fontSize:9,fontWeight:700,padding:'1px 5px',borderRadius:2,background:cc+'15',color:cc,border:`1px solid ${cc}25`,whiteSpace:'nowrap'}}>{lead.campagne}</span>
@@ -1530,7 +1530,7 @@ function LeadRoom({leads,profile,onLeadsChange,onConvertDeal,onRefresh}){
       {/* Stats */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12,marginBottom:20}}>
         {[
-          {label:'Disponibles',value:available.length,color:'var(--gold)',bg:'rgba(192,155,90,0.06)',bd:'var(--gold-line)'},
+          {label:'Disponibles',value:available.length,color:'var(--gold)',bg:'rgba(201,169,97,0.06)',bd:'var(--gold-line)'},
           {label:'En appel',value:leads.filter(l=>l.status==='contacted').length,color:'var(--progress)',bg:'var(--progress-bg)',bd:'var(--progress-bd)'},
           {label:'RDV planifiés',value:booked.length,color:'#10B981',bg:'rgba(16,185,129,0.06)',bd:'rgba(16,185,129,0.2)'},
           {label:'Total leads',value:leads.length,color:'var(--t2)',bg:'var(--bg)',bd:'var(--bd)'},
@@ -1615,7 +1615,7 @@ function LeadRoom({leads,profile,onLeadsChange,onConvertDeal,onRefresh}){
 
       {/* Alerte leads dispo */}
       {available.length>0&&filter!=='available'&&!search&&(
-        <div style={{background:'rgba(192,155,90,0.08)',border:'1.5px solid var(--gold-line)',borderRadius:'var(--rad-lg)',padding:'12px 16px',marginBottom:14,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div style={{background:'rgba(201,169,97,0.08)',border:'1.5px solid var(--gold-line)',borderRadius:'var(--rad-lg)',padding:'12px 16px',marginBottom:14,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
             <span style={{fontSize:20}}>⚡</span>
             <div>
@@ -1748,12 +1748,12 @@ function AreaChart({actual,projected,target,title,subtitle}){
         <svg viewBox={`0 0 ${W} ${H}`} className="chart-svg" style={{height:H}}>
           <defs>
             <linearGradient id={`fill-${title}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="rgba(192,155,90,0.22)"/>
-              <stop offset="100%" stopColor="rgba(192,155,90,0.02)"/>
+              <stop offset="0%" stopColor="rgba(201,169,97,0.22)"/>
+              <stop offset="100%" stopColor="rgba(201,169,97,0.02)"/>
             </linearGradient>
             <linearGradient id={`stroke-${title}`} x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="rgba(192,155,90,0.6)"/>
-              <stop offset="100%" stopColor="#C09B5A"/>
+              <stop offset="0%" stopColor="rgba(201,169,97,0.6)"/>
+              <stop offset="100%" stopColor="var(--gold)"/>
             </linearGradient>
           </defs>
           {[0.25,0.5,0.75,1].map(t=>{
@@ -1763,11 +1763,11 @@ function AreaChart({actual,projected,target,title,subtitle}){
           {target>0&&<line x1={PL} y1={targetY} x2={W-PR} y2={targetY} className="chart-target-line"/>}
           <path d={area} fill={`url(#fill-${title})`}/>
           <path d={path} fill="none" stroke={`url(#stroke-${title})`} strokeWidth="2.2" strokeLinecap="round"/>
-          <line x1={actualX} y1={PT} x2={actualX} y2={H-PT} stroke="rgba(192,155,90,0.2)" strokeWidth="1" strokeDasharray="3 3"/>
+          <line x1={actualX} y1={PT} x2={actualX} y2={H-PT} stroke="rgba(201,169,97,0.2)" strokeWidth="1" strokeDasharray="3 3"/>
           {pts.slice(1,3).map((pt,i)=>(
             <g key={i}>
-              <circle cx={pt.x} cy={pt.y} r="5" fill="white" stroke="#C09B5A" strokeWidth="2"/>
-              <circle cx={pt.x} cy={pt.y} r="2" fill="#C09B5A"/>
+              <circle cx={pt.x} cy={pt.y} r="5" fill="white" stroke="var(--gold)" strokeWidth="2"/>
+              <circle cx={pt.x} cy={pt.y} r="2" fill="var(--gold)"/>
             </g>
           ))}
           <text x={actualX-3} y={H-8} className="chart-label" textAnchor="end">Réalisé</text>
@@ -1847,8 +1847,8 @@ function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle,me
       <div className="chart-body">
         <svg viewBox={`0 0 ${W} ${H}`} className="chart-svg" style={{height:H}}>
           <defs>
-            <linearGradient id="bar-signed" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#C09B5A"/><stop offset="100%" stopColor="#9A7B3A"/></linearGradient>
-            <linearGradient id="bar-pipeline" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="rgba(192,155,90,0.35)"/><stop offset="100%" stopColor="rgba(192,155,90,0.15)"/></linearGradient>
+            <linearGradient id="bar-signed" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--gold)"/><stop offset="100%" stopColor="#9A7B3A"/></linearGradient>
+            <linearGradient id="bar-pipeline" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="rgba(201,169,97,0.35)"/><stop offset="100%" stopColor="rgba(201,169,97,0.15)"/></linearGradient>
           </defs>
           {gridVals.map((g,i)=><line key={i} x1={PL} y1={g.y} x2={W-PR} y2={g.y} stroke="var(--bd)" strokeWidth="0.5"/>)}
           <line x1={PL} y1={H-PB} x2={W-PR} y2={H-PB} stroke="var(--bd)" strokeWidth="1"/>
@@ -1861,7 +1861,7 @@ function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle,me
             return (
               <g key={d.month}>
                 {ph>0.5&&<rect x={bx} y={py} width={barW} height={ph} fill="url(#bar-pipeline)" rx="2" ry="2"/>}
-                {sh>0.5&&<rect x={bx} y={sy} width={barW} height={sh} fill={isCurrent?"url(#bar-signed)":"rgba(192,155,90,0.75)"} rx="2" ry="2"/>}
+                {sh>0.5&&<rect x={bx} y={sy} width={barW} height={sh} fill={isCurrent?"url(#bar-signed)":"rgba(201,169,97,0.75)"} rx="2" ry="2"/>}
                 {isCurrent&&hh>0.5&&<rect x={bx-1} y={Math.min(py,sy)-1} width={barW+2} height={hh+2} fill="none" stroke="var(--gold)" strokeWidth="1.5" rx="3" opacity="0.5"/>}
                 <text x={cx} y={H-8} textAnchor="middle" fontSize="9.5" fill={isCurrent?'var(--gold)':'var(--t3)'} fontWeight={isCurrent?'600':'400'} fontFamily="var(--font-sans)">{d.month.slice(0,3)}</text>
               </g>
@@ -1870,7 +1870,7 @@ function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle,me
         </svg>
         <div className="chart-legend">
           <div className="chart-legend-item"><div className="legend-dot" style={{background:'var(--gold)'}}/>{metricLabel} signée : {euro(data.reduce((s,d)=>s+d.ppSigned,0))}</div>
-          <div className="chart-legend-item"><div className="legend-dot" style={{background:'rgba(192,155,90,0.35)',border:'1px solid var(--gold)'}}/>{metricLabel} pipeline : {euro(data.reduce((s,d)=>s+d.ppPipeline,0))}</div>
+          <div className="chart-legend-item"><div className="legend-dot" style={{background:'rgba(201,169,97,0.35)',border:'1px solid var(--gold)'}}/>{metricLabel} pipeline : {euro(data.reduce((s,d)=>s+d.ppPipeline,0))}</div>
           <div className="chart-legend-item"><div className="legend-dot" style={{background:'var(--gold)',opacity:0.4}}/>Ligne objectif cabinet</div>
           <div className="chart-legend-item" style={{marginLeft:'auto'}}><div className="legend-dot" style={{background:'var(--gold)',outline:'1.5px solid var(--gold)',outlineOffset:1}}/>Mois en cours : <strong style={{color:'var(--t1)'}}>{currentMonth}</strong></div>
         </div>
@@ -2566,7 +2566,7 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
                       onClick={() => group.client_id && onSelectClient && onSelectClient(group.client_id)}
                       style={{
                         cursor: group.client_id && onSelectClient ? 'pointer' : 'default',
-                        backgroundColor: isExpanded ? 'rgba(192, 155, 90, 0.05)' : 'transparent'
+                        backgroundColor: isExpanded ? 'rgba(201, 169, 97, 0.05)' : 'transparent'
                       }}
                     >
                       <td>
@@ -2617,7 +2617,7 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
                       </td>
                     </tr>
                     {isExpanded && group.deals.map(deal => (
-                      <tr key={`${currentGroupKey}-${deal.id}`} style={{ backgroundColor: '#F9F8F6' }}>
+                      <tr key={`${currentGroupKey}-${deal.id}`} style={{ backgroundColor: 'var(--bg)' }}>
                         <td style={{ paddingLeft: '40px' }}>
                           <div className="cell-sub">└─ {deal.product}</div>
                         </td>
@@ -3242,7 +3242,9 @@ function AgendaView({deals,profile}){
     <div>
       <div className="section-header"><div><div className="section-kicker">Google Agenda</div><div className="section-title">Agenda & Relances</div></div></div>
       <div className="card" style={{maxWidth:460,margin:'48px auto',textAlign:'center',padding:'40px 32px'}}>
-        <div style={{fontSize:42,marginBottom:16}}>📅</div>
+        <div style={{width:56,height:56,borderRadius:'50%',background:'var(--gold-subtle, rgba(201,169,97,0.12))',color:'var(--gold-dk, #A6843F)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px'}}>
+          <Icon.Calendar/>
+        </div>
         <div style={{fontFamily:'var(--font-sans)',fontSize:22,fontWeight:700,letterSpacing:'-0.015em',color:'var(--t1)',marginBottom:10}}>Google Agenda non connecté</div>
         <div style={{fontSize:13.5,color:'var(--t2)',lineHeight:1.7,marginBottom:24}}>Connectez votre compte Google pour accéder à votre agenda depuis le CRM.</div>
         <button className="btn btn-gold" style={{margin:'0 auto 20px',padding:'12px 24px',fontSize:14}} onClick={reconnectGoogle}>Connecter Google Agenda</button>
@@ -3270,8 +3272,8 @@ function AgendaView({deals,profile}){
         {days.map(({date,events:dayEvts})=>{
           const isT=isToday(date)
           return (
-            <div key={date.toISOString()} style={{border:`1px solid ${isT?'var(--gold-line)':'var(--bd)'}`,borderRadius:'var(--rad-lg)',background:isT?'rgba(192,155,90,0.04)':'var(--card)',overflow:'hidden'}}>
-              <div style={{padding:'10px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:dayEvts.length>0?`1px solid ${isT?'var(--gold-line)':'var(--bd)'}`:'none',background:isT?'rgba(192,155,90,0.06)':'transparent'}}>
+            <div key={date.toISOString()} style={{border:`1px solid ${isT?'var(--gold-line)':'var(--bd)'}`,borderRadius:'var(--rad-lg)',background:isT?'rgba(201,169,97,0.04)':'var(--card)',overflow:'hidden'}}>
+              <div style={{padding:'10px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:dayEvts.length>0?`1px solid ${isT?'var(--gold-line)':'var(--bd)'}`:'none',background:isT?'rgba(201,169,97,0.06)':'transparent'}}>
                 <div style={{display:'flex',alignItems:'center',gap:10}}>
                   {isT&&<span style={{background:'var(--gold)',color:'white',fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:4,letterSpacing:'0.04em'}}>AUJOURD'HUI</span>}
                   <span style={{fontSize:13,fontWeight:isT?700:500,color:isT?'var(--t1)':'var(--t2)',textTransform:'capitalize'}}>{fmtDay(date)}</span>
@@ -3287,7 +3289,7 @@ function AgendaView({deals,profile}){
                     const linked=evt.extendedProperties?.private?.entasisDealId?deals.find(d=>d.id===evt.extendedProperties.private.entasisDealId):null
                     const allDay=!!evt.start?.date&&!evt.start?.dateTime
                     return (
-                      <div key={evt.id} style={{display:'flex',alignItems:'flex-start',gap:12,padding:'10px 12px',borderRadius:'var(--rad)',background:isCrm?'rgba(192,155,90,0.06)':'white',border:`1px solid ${isCrm?'var(--gold-line)':'var(--bd)'}`}}>
+                      <div key={evt.id} style={{display:'flex',alignItems:'flex-start',gap:12,padding:'10px 12px',borderRadius:'var(--rad)',background:isCrm?'rgba(201,169,97,0.06)':'var(--card)',border:`1px solid ${isCrm?'var(--gold-line)':'var(--bd)'}`}}>
                         <div style={{minWidth:48,textAlign:'right',flexShrink:0,paddingTop:1}}>
                           {allDay?<span style={{fontSize:10,fontWeight:600,color:'var(--t3)',textTransform:'uppercase'}}>Journée</span>
                             :<><div style={{fontSize:12,fontWeight:700,color:isCrm?'var(--gold)':'var(--t2)'}}>{fmtTime(start)}</div>{end&&<div style={{fontSize:10,color:'var(--t3)'}}>{fmtTime(end)}</div>}</>}
@@ -3296,12 +3298,12 @@ function AgendaView({deals,profile}){
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{fontWeight:600,fontSize:13,color:'var(--t1)',display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
                             {evt.summary||'(sans titre)'}
-                            {isCrm&&<span style={{fontSize:10,fontWeight:700,color:'var(--gold)',background:'rgba(192,155,90,0.12)',border:'1px solid var(--gold-line)',borderRadius:3,padding:'1px 5px',letterSpacing:'0.04em'}}>CRM</span>}
+                            {isCrm&&<span style={{fontSize:10,fontWeight:700,color:'var(--gold)',background:'rgba(201,169,97,0.12)',border:'1px solid var(--gold-line)',borderRadius:3,padding:'1px 5px',letterSpacing:'0.04em'}}>CRM</span>}
                           </div>
                           {linked&&<div style={{marginTop:4,display:'flex',gap:6,alignItems:'center',fontSize:12,color:'var(--t2)',flexWrap:'wrap'}}><Icon.Link/><span>{linked.client} · {linked.product}</span><span className={STATUS_CLASS[linked.status]||'badge'}>{linked.status}</span><strong>{euro(annualize(linked.pp_m))}</strong></div>}
-                          {evt.location&&<div style={{fontSize:11,color:'var(--t3)',marginTop:2}}>📍 {evt.location}</div>}
+                          {evt.location&&<div style={{fontSize:11,color:'var(--t3)',marginTop:2}}>{evt.location}</div>}
                         </div>
-                        {isCrm&&<button onClick={()=>deleteEvent(evt.id)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--t3)',padding:4,flexShrink:0,opacity:.7}} title="Supprimer"><Icon.Trash/></button>}
+                        {isCrm&&<button className="btn btn-ghost btn-icon btn-sm" onClick={()=>deleteEvent(evt.id)} style={{flexShrink:0}} title="Supprimer cette relance" aria-label="Supprimer cette relance"><Icon.Trash/></button>}
                       </div>
                     )
                   })}
@@ -3500,13 +3502,14 @@ function TeamView({deals,objectifs,teamProfiles,month,profile}){
         <div className="panel-body">
           {invitations.length === 0 ? (
             <div className="table-empty-state">
-              <div className="empty-icon">✉️</div>
               <div className="empty-title">Aucune invitation</div>
               <div className="empty-sub">Générez votre première invitation d'équipe</div>
             </div>
           ) : (
-            <div className="table-responsive">
-              <table className="table">
+            <div className="table-responsive" style={{overflowX:'auto'}}>
+              {/* C3 : data-table charte — la classe .table n'existait pas,
+                  cette table s'affichait avec le style brut du navigateur. */}
+              <table className="data-table" style={{width:'100%'}}>
                 <thead>
                   <tr>
                     <th>Email</th>
@@ -4603,7 +4606,7 @@ const PROSPECT_STATUS_COLOR = {
   a_contacter:    {bg:'var(--bg)',bd:'var(--bd)',color:'var(--t3)'},
   invite:         {bg:'rgba(14,165,233,0.07)',bd:'rgba(14,165,233,0.2)',color:'#0EA5E9'},
   connecte:       {bg:'rgba(124,58,237,0.07)',bd:'rgba(124,58,237,0.2)',color:'#7C3AED'},
-  message_envoye: {bg:'rgba(192,155,90,0.08)',bd:'var(--gold-line)',color:'var(--gold)'},
+  message_envoye: {bg:'rgba(201,169,97,0.08)',bd:'var(--gold-line)',color:'var(--gold)'},
   en_discussion:  {bg:'var(--progress-bg)',bd:'var(--progress-bd)',color:'var(--progress)'},
   rdv_propose:    {bg:'rgba(249,115,22,0.07)',bd:'rgba(249,115,22,0.2)',color:'#F97316'},
   rdv_pris:       {bg:'rgba(16,185,129,0.07)',bd:'rgba(16,185,129,0.2)',color:'#10B981'},
@@ -4662,7 +4665,7 @@ function ProspectModal({open,prospect,profile,teamProfiles,onClose,onSave}){
             <div className="form-group">
               <label className="form-label">Message LinkedIn généré par IA</label>
               <div style={{
-                background:'rgba(192,155,90,0.05)',border:'1px solid var(--gold-line)',
+                background:'rgba(201,169,97,0.05)',border:'1px solid var(--gold-line)',
                 borderRadius:'var(--rad)',padding:'12px 14px',fontSize:13,
                 color:'var(--t2)',lineHeight:1.6,whiteSpace:'pre-wrap',
               }}>
@@ -4822,7 +4825,7 @@ function ProspectionView({prospects,profile,teamProfiles,onRefresh,onProspectsCh
       <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12,marginBottom:20}}>
         {[
           {label:'Total prospects',value:kpis.total,color:'var(--t1)',bg:'var(--bg)',bd:'var(--bd)'},
-          {label:'Messages envoyés',value:kpis.messagesSent,color:'var(--gold)',bg:'rgba(192,155,90,0.06)',bd:'var(--gold-line)'},
+          {label:'Messages envoyés',value:kpis.messagesSent,color:'var(--gold)',bg:'rgba(201,169,97,0.06)',bd:'var(--gold-line)'},
           {label:'Taux réponse',value:`${tauxReponse}%`,color:'var(--progress)',bg:'var(--progress-bg)',bd:'var(--progress-bd)'},
           {label:'RDV pris',value:kpis.rdvPris,color:'#10B981',bg:'rgba(16,185,129,0.07)',bd:'rgba(16,185,129,0.2)'},
           {label:'Convertis',value:kpis.convertis,color:'var(--signed)',bg:'var(--signed-bg)',bd:'var(--signed-bd)'},
@@ -4890,7 +4893,7 @@ function ProspectionView({prospects,profile,teamProfiles,onRefresh,onProspectsCh
                     >
                       <div style={{fontWeight:600,fontSize:12.5,color:'var(--t1)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:3}}>{p.nom}</div>
                       <div style={{fontSize:11,color:'var(--t3)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.poste||p.entreprise||'—'}</div>
-                      {p.niche&&<div style={{marginTop:5,display:'inline-block',fontSize:9.5,fontWeight:600,padding:'1px 5px',borderRadius:3,background:'rgba(192,155,90,0.1)',color:'var(--gold)',border:'1px solid var(--gold-line)'}}>{p.niche}</div>}
+                      {p.niche&&<div style={{marginTop:5,display:'inline-block',fontSize:9.5,fontWeight:600,padding:'1px 5px',borderRadius:3,background:'rgba(201,169,97,0.1)',color:'var(--gold)',border:'1px solid var(--gold-line)'}}>{p.niche}</div>}
                       {p.advisor_code&&isManager&&<div style={{marginTop:3,fontSize:10,color:'var(--t3)'}}>{p.advisor_code}</div>}
                       {p.message_linkedin&&col.id==='a_contacter'&&(
                         <div style={{marginTop:5,fontSize:10,color:'var(--gold)',display:'flex',alignItems:'center',gap:3}}>
