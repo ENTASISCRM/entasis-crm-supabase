@@ -12,8 +12,10 @@
 // suffit largement pour l'usage Louis).
 
 import { useEffect, useMemo, useState } from 'react'
+import toast from 'react-hot-toast'
 import { logger } from '../lib/logger'
 import * as structureursService from '../services/structureurs'
+import { SkeletonCards } from './ui/Skeleton'
 
 const UPFRONT_TARGET = 3.0   // seuil de rentabilité cabinet (1,5% conseiller + 1,5% mini cabinet)
 
@@ -107,7 +109,7 @@ export default function Structureurs({ profile }) {
       <Header />
 
       {loading && (
-        <div style={{ padding: 32, textAlign: 'center', color: 'var(--t3)' }}>Chargement…</div>
+        <div style={{ padding: '8px 0' }}><SkeletonCards n={4} height={100} /></div>
       )}
 
       {error && !loading && (
@@ -443,7 +445,7 @@ function PartenaireRow({ s, onReload }) {
       await structureursService.update(s.id, { actif: !s.actif })
       await onReload?.()
     } catch (err) {
-      alert(`Erreur : ${err.message}`)
+      toast.error(`Erreur : ${err.message}`)
     }
   }
 

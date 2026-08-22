@@ -18,6 +18,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
+import { confirmDialog } from './ui/confirm'
+import { SkeletonCards } from './ui/Skeleton'
 import { listFamilies } from '../services/equipment'
 import { chargerClientsEnrichis, ciblesDe, genererMissions } from '../services/offres'
 import { OFFRES } from '../config/offres'
@@ -89,11 +91,11 @@ export default function PlaybooksOffres({ profile }) {
   async function lancer(carte) {
     const { offre, cibles, n, potentiel } = carte
     if (n === 0) { toast('Aucun client cible pour cette offre sur ce portefeuille'); return }
-    const ok = window.confirm(
-      `Lancer la campagne « ${offre.titre} » ?\n\n`
-      + `${n} client${n > 1 ? 's' : ''} cible${n > 1 ? 's' : ''} · ~${fmtEur(potentiel)} de potentiel.\n`
-      + `Une mission ${labelFam(offre.famille_cible)} sera creee pour chaque client sans mission existante sur cette famille.`,
-    )
+    const ok = await confirmDialog({
+      title: `Lancer la campagne « ${offre.titre} » ?`,
+      message: `${n} client${n > 1 ? 's' : ''} cible${n > 1 ? 's' : ''} · ~${fmtEur(potentiel)} de potentiel. Une mission ${labelFam(offre.famille_cible)} sera créée pour chaque client sans mission existante sur cette famille.`,
+      confirmLabel: 'Lancer la campagne',
+    })
     if (!ok) return
     setLancement(offre.id)
     try {
@@ -135,7 +137,7 @@ export default function PlaybooksOffres({ profile }) {
         </div>
       )}
 
-      {loading && <div className="empty">Chargement…</div>}
+      {loading && <SkeletonCards n={3} height={96} />}
       {err && <div className="empty errtxt">Erreur : {err}</div>}
 
       {!loading && !err && (

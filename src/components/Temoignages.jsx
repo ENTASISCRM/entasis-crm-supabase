@@ -13,6 +13,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
+import { SkeletonCards } from './ui/Skeleton'
 import { listTemoignages, addTemoignage } from '../services/temoignages'
 import { listFamilies } from '../services/equipment'
 
@@ -184,7 +185,7 @@ export default function Temoignages({ profile }) {
         )}
       </div>
 
-      {loading && <div className="tm-empty">Chargement…</div>}
+      {loading && <SkeletonCards n={3} height={110} />}
       {err && <div className="tm-empty err">Erreur : {err}</div>}
       {!loading && !err && liste.length === 0 && (
         <div className="tm-empty">

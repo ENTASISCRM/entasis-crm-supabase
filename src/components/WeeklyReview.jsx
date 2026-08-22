@@ -140,7 +140,7 @@ function KpiCard({label, value, hint, accent, progressValue, delta}) {
 
   return (
     <div className={`kpi-card ${accentClass}`} style={{padding: '20px 24px'}}>
-      <div className="kpi-label" style={{fontSize: '12px', color: '#999', marginBottom: '8px'}}>{label}</div>
+      <div className="kpi-label" style={{fontSize: '12px', color: 'var(--t3)', marginBottom: '8px'}}>{label}</div>
       <div className="kpi-value" style={{fontSize: '24px', fontWeight: '700', marginBottom: '8px'}}>{value}</div>
       {hasDelta && (
         <div style={{display:'inline-flex',alignItems:'center',gap:3,fontSize:11.5,fontWeight:500,color:deltaUp?'var(--signed)':'var(--cancelled)'}}>
@@ -148,13 +148,13 @@ function KpiCard({label, value, hint, accent, progressValue, delta}) {
           {deltaUp?'+':''}{delta.label} vs S-1
         </div>
       )}
-      {!hasDelta && hint && <div className="kpi-hint" style={{fontSize: '11px', color: '#999'}}>{hint}</div>}
+      {!hasDelta && hint && <div className="kpi-hint" style={{fontSize: '11px', color: 'var(--t3)'}}>{hint}</div>}
       {fill != null && (
         <>
           <div className="kpi-progress-bar" style={{marginTop: '8px'}}>
             <div className={`kpi-progress-fill${fill>=100?' over':''}`} style={{width:`${Math.min(100,fill)}%`}}/>
           </div>
-          <div className="kpi-hint" style={{marginTop:4, fontSize: '11px', color: '#999'}}>{fill}% de l'objectif</div>
+          <div className="kpi-hint" style={{marginTop:4, fontSize: '11px', color: 'var(--t3)'}}>{fill}% de l'objectif</div>
         </>
       )}
     </div>
@@ -193,7 +193,7 @@ function ObjectiveModal({show, objective, onSave, onClose, weekNumber, year, sug
             {/* Suggestion basée sur la moyenne des dernières semaines,
                 un clic préremplit le champ, le manager reste décideur */}
             {suggestion && (
-              <div style={{marginTop: '8px', fontSize: '12px', color: '#999'}}>
+              <div style={{marginTop: '8px', fontSize: '12px', color: 'var(--t3)'}}>
                 Moyenne {suggestion.semaines} dernière{suggestion.semaines > 1 ? 's' : ''} semaine{suggestion.semaines > 1 ? 's' : ''} : {suggestion.moyenne} signature{suggestion.moyenne > 1 ? 's' : ''}
                 {' '}
                 <button
@@ -911,26 +911,26 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
       <div className="card" style={{padding: '0'}}>
         <table className="table" style={{width: '100%', margin: '0'}}>
           <thead>
-            <tr style={{background: '#F5F2EC'}}>
-              <th style={{padding: '12px 20px', borderBottom: '1px solid #E8E4DC'}}>Conseiller</th>
-              <th style={{textAlign: 'center', padding: '12px 20px', borderBottom: '1px solid #E8E4DC'}}>Signatures</th>
-              <th style={{textAlign: 'right', padding: '12px 20px', borderBottom: '1px solid #E8E4DC'}}>CA PP</th>
-              <th style={{textAlign: 'right', padding: '12px 20px', borderBottom: '1px solid #E8E4DC'}}>CA PU</th>
-              <th style={{textAlign: 'right', padding: '12px 20px', borderBottom: '1px solid #E8E4DC'}}>RDV</th>
-              <th style={{textAlign: 'center', padding: '12px 20px', borderBottom: '1px solid #E8E4DC'}}>Tendance</th>
+            <tr style={{background: 'rgba(0,0,0,0.03)'}}>
+              <th style={{padding: '12px 20px', borderBottom: '1px solid var(--bd)'}}>Conseiller</th>
+              <th style={{textAlign: 'center', padding: '12px 20px', borderBottom: '1px solid var(--bd)'}}>Signatures</th>
+              <th style={{textAlign: 'right', padding: '12px 20px', borderBottom: '1px solid var(--bd)'}}>CA PP</th>
+              <th style={{textAlign: 'right', padding: '12px 20px', borderBottom: '1px solid var(--bd)'}}>CA PU</th>
+              <th style={{textAlign: 'right', padding: '12px 20px', borderBottom: '1px solid var(--bd)'}}>RDV</th>
+              <th style={{textAlign: 'center', padding: '12px 20px', borderBottom: '1px solid var(--bd)'}}>Tendance</th>
             </tr>
           </thead>
           <tbody>
             {advisorRows.map((row, i) => (
               <tr key={row.advisor.advisor_code} style={{
                 backgroundColor: row.currentSigs === 0 && today > 1 ? 'rgba(250, 165, 165, 0.1)' : 'transparent',
-                borderBottom: '1px solid #E8E4DC'
+                borderBottom: '1px solid var(--bd)'
               }}>
                 <td style={{padding: '16px 20px'}}>
                   <div style={{ fontWeight: 600 }}>{row.advisor.full_name || row.advisor.advisor_code}</div>
                   <div style={{
                     fontSize: 11,
-                    color: '#999',
+                    color: 'var(--t3)',
                     marginTop: 4
                   }}>
                     {row.advisor.advisor_code}
@@ -956,7 +956,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
                         <span style={{ fontWeight: 600 }}>
                           {row.calendar.total} RDV
                         </span>
-                        <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
+                        <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 2 }}>
                           {past} passés · {upcoming} à venir
                         </div>
                         {upcoming === 0 && (
@@ -972,7 +972,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
                       </div>
                     )
                   })() : calendarLoading ? (
-                    <span style={{ color: '#999', fontSize: 12 }}>...</span>
+                    <span style={{ color: 'var(--t3)', fontSize: 12 }}>...</span>
                   ) : (
                     <span style={{ color: '#ccc', fontSize: 12 }}>—</span>
                   )}
@@ -1024,7 +1024,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
 
       {/* AGENDA ÉQUIPE - MINI CALENDRIER 5 JOURS */}
       <div className="card mt-24">
-        <div style={{padding: '20px 24px', borderBottom: '1px solid #E8E4DC'}}>
+        <div style={{padding: '20px 24px', borderBottom: '1px solid var(--bd)'}}>
           <h3 style={{margin: '0', fontSize: '18px', fontWeight: '600'}}>📅 Agenda équipe — semaine</h3>
           {calendarError && (
             <span style={{ color: '#E74C3C', fontSize: '12px', marginTop: '8px', display: 'block' }}>
@@ -1092,7 +1092,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
                           : '#FAFAF8',
                         border: selectedDay === day
                           ? '2px solid #C09B5A'
-                          : '1px solid #E8E4DC',
+                          : '1px solid var(--bd)',
                         borderRadius: 8,
                         padding: '16px 12px',
                         textAlign: 'center',
@@ -1111,7 +1111,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
                       }}>
                         {rdvByDay[day]}
                       </div>
-                      <div style={{ fontSize: 11, color: '#999' }}>RDV</div>
+                      <div style={{ fontSize: 11, color: 'var(--t3)' }}>RDV</div>
                     </div>
                   ))}
                 </div>
@@ -1166,7 +1166,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
                                   {event.title}
                                 </span>
                                 {event.location && (
-                                  <span style={{ color: '#999', fontSize: 11 }}>
+                                  <span style={{ color: 'var(--t3)', fontSize: 11 }}>
                                     {' 📍 '}{event.location}
                                   </span>
                                 )}
@@ -1180,7 +1180,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
                       !advisor.byDay?.[selectedDay] ||
                       advisor.byDay[selectedDay].length === 0
                     ) && (
-                      <p style={{ color: '#999', fontSize: '14px', fontStyle: 'italic', margin: '0' }}>
+                      <p style={{ color: 'var(--t3)', fontSize: '14px', fontStyle: 'italic', margin: '0' }}>
                         Aucun RDV prévu ce {selectedDay}.
                       </p>
                     )}
@@ -1262,7 +1262,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
       <div className="mt-24">
         {/* GRAPHIQUE 1 - Evolution signatures (pleine largeur) */}
         <div className="card">
-          <div style={{padding: '20px 24px', borderBottom: '1px solid #E8E4DC'}}>
+          <div style={{padding: '20px 24px', borderBottom: '1px solid var(--bd)'}}>
             <h3 style={{margin: '0', fontSize: '18px', fontWeight: '600'}}>Évolution des signatures</h3>
           </div>
           <div style={{padding: '20px 24px'}}>
@@ -1293,7 +1293,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
         <div style={{display: 'flex', gap: '24px', marginTop: '24px'}}>
           {/* GRAPHIQUE 2 - Répartition produit */}
           <div className="card" style={{flex: 1}}>
-            <div style={{padding: '20px 24px', borderBottom: '1px solid #E8E4DC'}}>
+            <div style={{padding: '20px 24px', borderBottom: '1px solid var(--bd)'}}>
               <h3 style={{margin: '0', fontSize: '18px', fontWeight: '600'}}>Répartition par produit (tous deals signés)</h3>
             </div>
             <div style={{padding: '20px 24px'}}>
@@ -1323,7 +1323,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
 
           {/* GRAPHIQUE 3 - Performance conseillers */}
           <div className="card" style={{flex: 1}}>
-            <div style={{padding: '20px 24px', borderBottom: '1px solid #E8E4DC'}}>
+            <div style={{padding: '20px 24px', borderBottom: '1px solid var(--bd)'}}>
               <h3 style={{margin: '0', fontSize: '18px', fontWeight: '600'}}>Performance conseillers — semaine vs S-1</h3>
             </div>
             <div style={{padding: '20px 24px'}}>
@@ -1357,7 +1357,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
 
       {/* COMPARAISON SEMAINES */}
       <div className="card mt-24">
-        <div style={{padding: '20px 24px', borderBottom: '1px solid #E8E4DC', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+        <div style={{padding: '20px 24px', borderBottom: '1px solid var(--bd)', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
           <h3 style={{margin: '0', fontSize: '18px', fontWeight: '600'}}>⚖️ Comparaison de semaines</h3>
           <button
             className="btn btn-ghost btn-sm"
@@ -1423,7 +1423,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
               const puA = dealsA.reduce((s, d) => s + (d.pu || 0), 0)
               const puB = dealsB.reduce((s, d) => s + (d.pu || 0), 0)
 
-              const deltaColor = (val) => val > 0 ? '#1B6B46' : val < 0 ? '#C0392B' : '#999'
+              const deltaColor = (val) => val > 0 ? '#1B6B46' : val < 0 ? '#C0392B' : 'var(--t3)'
               const deltaIcon = (val) => val > 0 ? '↑' : val < 0 ? '↓' : '='
               const deltaPct = (a, b) => b === 0 ? (a > 0 ? 100 : 0) : Math.round(((a - b) / b) * 100)
 
@@ -1431,7 +1431,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
                 <>
                   <table className="table" style={{width: '100%', marginBottom: '24px', margin: '0'}}>
                     <thead>
-                      <tr style={{background: '#F5F2EC'}}>
+                      <tr style={{background: 'rgba(0,0,0,0.03)'}}>
                         <th style={{padding: '12px 16px'}}>Métrique</th>
                         <th style={{textAlign: 'center', padding: '12px 16px'}}>Semaine A ({weekA})</th>
                         <th style={{textAlign: 'center', padding: '12px 16px'}}>Semaine B ({weekB})</th>
@@ -1439,7 +1439,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
                       </tr>
                     </thead>
                     <tbody>
-                      <tr style={{borderBottom: '1px solid #E8E4DC'}}>
+                      <tr style={{borderBottom: '1px solid var(--bd)'}}>
                         <td style={{padding: '12px 16px'}}>Signatures total</td>
                         <td style={{textAlign: 'center', fontWeight: 600, padding: '12px 16px'}}>{sigsA}</td>
                         <td style={{textAlign: 'center', fontWeight: 600, padding: '12px 16px'}}>{sigsB}</td>
@@ -1447,7 +1447,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
                           {deltaIcon(sigsA - sigsB)} {Math.abs(sigsA - sigsB)}
                         </td>
                       </tr>
-                      <tr style={{borderBottom: '1px solid #E8E4DC'}}>
+                      <tr style={{borderBottom: '1px solid var(--bd)'}}>
                         <td style={{padding: '12px 16px'}}>PP Annualisée</td>
                         <td style={{textAlign: 'center', fontWeight: 600, padding: '12px 16px'}}>{euro(ppA)}</td>
                         <td style={{textAlign: 'center', fontWeight: 600, padding: '12px 16px'}}>{euro(ppB)}</td>
@@ -1455,7 +1455,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
                           {deltaIcon(ppA - ppB)} {deltaPct(ppA, ppB)}%
                         </td>
                       </tr>
-                      <tr style={{borderBottom: '1px solid #E8E4DC'}}>
+                      <tr style={{borderBottom: '1px solid var(--bd)'}}>
                         <td style={{padding: '12px 16px'}}>PU total</td>
                         <td style={{textAlign: 'center', fontWeight: 600, padding: '12px 16px'}}>{euro(puA)}</td>
                         <td style={{textAlign: 'center', fontWeight: 600, padding: '12px 16px'}}>{euro(puB)}</td>
@@ -1469,7 +1469,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
                   <h4 style={{marginBottom: '16px', fontSize: '16px', fontWeight: 600}}>Performance par conseiller</h4>
                   <table className="table" style={{width: '100%', margin: '0'}}>
                     <thead>
-                      <tr style={{background: '#F5F2EC'}}>
+                      <tr style={{background: 'rgba(0,0,0,0.03)'}}>
                         <th style={{padding: '12px 16px'}}>Conseiller</th>
                         <th style={{textAlign: 'center', padding: '12px 16px'}}>Sig. A</th>
                         <th style={{textAlign: 'center', padding: '12px 16px'}}>Sig. B</th>
@@ -1485,7 +1485,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
                         const delta = mySigsA - mySigsB
 
                         return (
-                          <tr key={advisor.advisor_code} style={{borderBottom: '1px solid #E8E4DC'}}>
+                          <tr key={advisor.advisor_code} style={{borderBottom: '1px solid var(--bd)'}}>
                             <td style={{padding: '12px 16px'}}>{advisor.full_name || advisor.advisor_code}</td>
                             <td style={{textAlign: 'center', fontWeight: 600, padding: '12px 16px'}}>{mySigsA}</td>
                             <td style={{textAlign: 'center', fontWeight: 600, padding: '12px 16px'}}>{mySigsB}</td>

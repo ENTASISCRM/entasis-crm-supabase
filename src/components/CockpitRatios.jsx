@@ -17,6 +17,7 @@
 // les noms. Charte navy et or.
 
 import { useEffect, useMemo, useState } from 'react'
+import { SkeletonCards } from './ui/Skeleton'
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip,
 } from 'chart.js'
@@ -266,7 +267,7 @@ function SectionCompletude({ isManager }) {
         <div className="cmpl-why">Une fiche complète = un dossier signable et des opportunités de vente chiffrées.</div>
       </div>
 
-      {st.loading && <div className="ck-empty">Chargement…</div>}
+      {st.loading && <SkeletonCards n={3} height={96} />}
       {st.err && <div className="ck-empty err">Erreur : {st.err}</div>}
 
       {!st.loading && !st.err && (
@@ -340,7 +341,7 @@ export default function CockpitRatios({ profile }) {
         La collecte additionne les versements uniques et les versements programmes annualises des dossiers signes.
       </div>
 
-      {state.loading && <div className="ck-empty">Chargement…</div>}
+      {state.loading && <SkeletonCards n={3} height={96} />}
       {state.err && <div className="ck-empty err">Erreur : {state.err}</div>}
       {!state.loading && !state.err && state.lignes.length === 0 && (
         <div className="ck-empty">Aucune donnee sur la periode.</div>

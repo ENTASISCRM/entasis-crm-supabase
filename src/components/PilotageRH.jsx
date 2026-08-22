@@ -13,6 +13,9 @@
 
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
+import { confirmDialog } from './ui/confirm'
+import SubTabs from './ui/SubTabs'
+import { SkeletonRows, SkeletonText } from './ui/Skeleton'
 import * as service from '../services/conseillerContrats'
 import * as profilesService from '../services/profiles'
 import * as contratDocs from '../services/contratDocs'
@@ -224,7 +227,7 @@ export default function PilotageRH({ profile }) {
 
   const handleLierTous = async () => {
     if (liaisonsPossibles.length === 0) return
-    if (!confirm(`Lier automatiquement ${liaisonsPossibles.length} contrat(s) existant(s) à leur profil ? Les contrats sont matchés par nom ou code.`)) return
+    if (!(await confirmDialog({title:`Lier ${liaisonsPossibles.length} contrat(s) à leur profil ?`,message:'Les contrats sont matchés automatiquement par nom ou code.',confirmLabel:'Lier automatiquement'}))) return
     let ok = 0
     for (const p of liaisonsPossibles) {
       try {
@@ -365,7 +368,7 @@ export default function PilotageRH({ profile }) {
   // stage ou de CDD passée) : ils sortent des listes mais restent
   // consultables via le filtre Inactifs.
   const handleDesactiverTermines = async (list) => {
-    if (!confirm(`Désactiver ${list.length} contrat(s) terminé(s) ? Ils restent consultables via le filtre Inactifs.`)) return
+    if (!(await confirmDialog({title:`Désactiver ${list.length} contrat(s) terminé(s) ?`,message:'Ils restent consultables via le filtre Inactifs.',confirmLabel:'Désactiver'}))) return
     let ok = 0
     for (const c of list) {
       try { await service.setActif(c.id, false); ok++ } catch (e) { console.error('[PilotageRH] désactiver terminés', e) }
@@ -378,11 +381,12 @@ export default function PilotageRH({ profile }) {
   // les documents archives du bucket sont effaces avec la fiche pour ne
   // pas laisser d orphelins. Pour un depart, le bon geste reste Desactiver.
   const handleSupprimer = async (contrat) => {
-    const ok = confirm(
-      `Supprimer définitivement la fiche de ${contrat.full_name} ?\n\n` +
-      `Cette action est irréversible : le contrat, son historique et ses documents archivés seront effacés.\n` +
-      `Pour un départ ou une fin de contrat, utilise plutôt Désactiver.`
-    )
+    const ok = await confirmDialog({
+      title: `Supprimer la fiche de ${contrat.full_name} ?`,
+      message: 'Cette action est irréversible : le contrat, son historique et ses documents archivés seront effacés. Pour un départ ou une fin de contrat, utilise plutôt Désactiver.',
+      confirmLabel: 'Supprimer définitivement',
+      danger: true,
+    })
     if (!ok) return
     try {
       try {
@@ -402,7 +406,7 @@ export default function PilotageRH({ profile }) {
   }
 
   const handleToggleActif = async (contrat) => {
-    if (!confirm(`${contrat.actif ? 'Désactiver' : 'Réactiver'} le contrat de ${contrat.full_name} ?`)) return
+    if (!(await confirmDialog({title:`${contrat.actif ? 'Désactiver' : 'Réactiver'} le contrat de ${contrat.full_name} ?`,confirmLabel:contrat.actif ? 'Désactiver' : 'Réactiver',danger:contrat.actif}))) return
     try {
       await service.setActif(contrat.id, !contrat.actif)
       toast.success(contrat.actif ? 'Contrat désactivé' : 'Contrat réactivé')
@@ -454,20 +458,15 @@ export default function PilotageRH({ profile }) {
       {/* Sous onglets : l equipe salariee d un cote, la conformite des
           mandataires independants de l autre (obligations INPI, ORIAS,
           declarations URSSAF trimestrielles). */}
-      <div className="rh-tabs">
-        {[
+      <SubTabs
+        ariaLabel="Sous-onglets Pilotage RH"
+        tabs={[
           { key: 'equipe', label: 'Équipe salariée' },
-          { key: 'mandataires', label: `Mandataires · conformité${nbMandataires ? ` (${nbMandataires})` : ''}` },
-        ].map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setVue(t.key)}
-            className={`rh-tab${vue === t.key ? ' is-active' : ''}`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+          { key: 'mandataires', label: 'Mandataires · conformité', badge: nbMandataires },
+        ]}
+        active={vue}
+        onChange={setVue}
+      />
 
       {vue === 'mandataires' && <MandatairesConformite contrats={contrats} profile={profile} />}
 
@@ -709,7 +708,7 @@ export default function PilotageRH({ profile }) {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40, color: 'var(--t3)' }}>Chargement…</td></tr>
+              <SkeletonRows rows={5} cols={6} />
             ) : filtered.length === 0 ? (
               <tr><td colSpan={6} className="table-empty-state">
                 <div className="empty-title">Aucun contrat trouvé</div>
@@ -1000,7 +999,7 @@ function DocsContrat({ contratId, typeContrat, nomSalarie, onChange }) {
   }
 
   const supprimer = async (d) => {
-    if (!confirm(`Supprimer « ${contratDocs.nomAffiche(d.name)} » ? Le fichier sera définitivement effacé.`)) return
+    if (!(await confirmDialog({title:`Supprimer « ${contratDocs.nomAffiche(d.name)} » ?`,message:'Le fichier sera définitivement effacé.',confirmLabel:'Supprimer',danger:true}))) return
     setBusy(true)
     try {
       await contratDocs.deletePath(d.path)
@@ -1077,7 +1076,7 @@ function DocsContrat({ contratId, typeContrat, nomSalarie, onChange }) {
             >Réessayer</button>
           </div>
         ) : docs === null ? (
-          <div style={{ fontSize: 12, color: 'var(--t3)', padding: '8px 0' }}>Chargement…</div>
+          <div style={{ padding: '8px 0' }}><SkeletonText lines={3} gap={8} /></div>
         ) : categories.map((cat) => {
           const fichiers = docs[cat.key] || []
           const fourni = fichiers.length > 0

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
+import { Skeleton, SkeletonCards, SkeletonTable } from '../ui/Skeleton'
 import { statusLabel } from '../../lib/ui-shared'
 import ClientModal from './ClientModal.jsx'
 import ClientEquipementCard from './ClientEquipementCard.jsx'
@@ -189,8 +190,11 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
-        <div>Chargement...</div>
+      <div style={{ padding: 24 }}>
+        <Skeleton h={22} w={260} style={{ marginBottom: 18 }} />
+        <SkeletonCards n={5} />
+        <div style={{ height: 22 }} />
+        <SkeletonTable rows={4} cols={4} />
       </div>
     )
   }
@@ -606,7 +610,7 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
                         padding: '16px',
                         backgroundColor: '#F9F8F6',
                         borderRadius: 'var(--rad)',
-                        border: '1px solid #E8E4DC',
+                        border: '1px solid var(--bd)',
                         marginLeft: '20px'
                       }}>
                         <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600' }}>

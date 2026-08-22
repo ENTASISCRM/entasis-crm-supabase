@@ -11,6 +11,7 @@
 //   • Modale détail avec timeline d'actions
 
 import { useEffect, useMemo, useState } from 'react'
+import toast from 'react-hot-toast'
 import * as recrutementService from '../services/recrutement'
 
 const { STATUS_LABELS, PIPELINE_STATUSES, SOURCE_LABELS } = recrutementService
@@ -96,7 +97,7 @@ export default function Recrutement() {
       const statsData = await recrutementService.getStats()
       setStats(statsData)
     } catch (e) {
-      alert(`Impossible de changer le statut, ${e.message}`)
+      toast.error(`Impossible de changer le statut, ${e.message}`)
       refresh()
     }
   }
@@ -106,7 +107,7 @@ export default function Recrutement() {
       <div className="section-header mb-24">
         <div>
           <div className="section-kicker">Acquisition talents · pilotage</div>
-          <div className="section-title">Recrutement 🎯</div>
+          <div className="section-title">Recrutement</div>
           <div className="section-sub">
             {stats ? `${stats.total} candidat${stats.total > 1 ? 's' : ''} total · ${stats.last30days} sur 30j` : 'Chargement…'}
           </div>
@@ -376,13 +377,13 @@ function AddCandidateModal({ onClose, onCreated }) {
 
   async function submit(e) {
     e.preventDefault()
-    if (!form.full_name.trim()) { alert('Nom requis'); return }
+    if (!form.full_name.trim()) { toast.error('Nom requis'); return }
     setSaving(true)
     try {
       await recrutementService.create(form)
       onCreated()
     } catch (e) {
-      alert(`Erreur, ${e.message}`)
+      toast.error(`Erreur, ${e.message}`)
     } finally { setSaving(false) }
   }
 
@@ -501,7 +502,7 @@ function CandidateDetailModal({ candidate: initial, onClose, onUpdated, onDelete
       reload()
       onUpdated()
     } catch (e) {
-      alert(`Erreur, ${e.message}`)
+      toast.error(`Erreur, ${e.message}`)
     } finally { setSaving(false) }
   }
 
@@ -514,7 +515,7 @@ function CandidateDetailModal({ candidate: initial, onClose, onUpdated, onDelete
       reload()
       onUpdated()
     } catch (e) {
-      alert(`Erreur, ${e.message}`)
+      toast.error(`Erreur, ${e.message}`)
     } finally { setSaving(false) }
   }
 
@@ -525,18 +526,18 @@ function CandidateDetailModal({ candidate: initial, onClose, onUpdated, onDelete
       reload()
       onUpdated()
     } catch (e) {
-      alert(`Erreur, ${e.message}`)
+      toast.error(`Erreur, ${e.message}`)
     }
   }
 
   async function doReject() {
-    if (!rejectReason.trim()) { alert('Indique une raison'); return }
+    if (!rejectReason.trim()) { toast.error('Indique une raison'); return }
     try {
       await recrutementService.reject(candidate.id, rejectReason.trim())
       setRejecting(false)
       onDeleted()
     } catch (e) {
-      alert(`Erreur, ${e.message}`)
+      toast.error(`Erreur, ${e.message}`)
     }
   }
 

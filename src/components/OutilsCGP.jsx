@@ -829,7 +829,7 @@ function SimulateurPER({ profile }) {
       {
         label: 'Versements cumules',
         data: result.scenarios[1].yearly.map(y => y.annee * versementMensuel * 12 + versementInitial),
-        borderColor: '#999', borderDash: [5, 3], backgroundColor: 'transparent', fill: false, tension: 0.3, pointRadius: 0, borderWidth: 1.5,
+        borderColor: '#8A95A8', borderDash: [5, 3], backgroundColor: 'transparent', fill: false, tension: 0.3, pointRadius: 0, borderWidth: 1.5,
       },
       {
         label: `Prudent (${tauxPrudent}%)`,

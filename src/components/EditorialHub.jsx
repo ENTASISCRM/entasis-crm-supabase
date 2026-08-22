@@ -9,6 +9,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { marked } from 'marked'
 import toast from 'react-hot-toast'
+import { SkeletonCards } from './ui/Skeleton'
 import { supabase } from '../lib/supabase'
 
 const SITE_JOURNAL = 'https://www.entasis-conseil.fr/journal'
@@ -571,7 +572,7 @@ export default function EditorialHub({ onPendingChange }) {
       </div>
 
       {error && <div className="notice notice-error">{error}</div>}
-      {loading && <div style={{ padding: 24, color: 'var(--t3)', fontSize: 13 }}>Chargement…</div>}
+      {loading && <SkeletonCards n={2} height={120} />}
       {!loading && !visible.length && (
         <div style={{ padding: 32, textAlign: 'center', color: 'var(--t3)', fontSize: 13 }}>
           Aucun package {statutFilter !== 'tous' || themeFilter !== 'tous' ? 'pour ces filtres' : 'généré pour le moment'}.

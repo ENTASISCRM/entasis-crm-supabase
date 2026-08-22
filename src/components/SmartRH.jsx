@@ -9,6 +9,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
+import { confirmDialog } from './ui/confirm'
+import { SkeletonCards } from './ui/Skeleton'
 import { listConges, createConge, createCongeDirection, decideConge, cancelConge, contreProposer, repondreContreProposition } from '../services/conges'
 import { getOwn as getOwnContrat, list as listContrats } from '../services/conseillerContrats'
 import { notifierRH } from '../lib/rh-notify-api'
@@ -558,7 +560,7 @@ export default function SmartRH({ profile, rhDelegue = false }) {
     } catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
   }
   async function repondreContre(c, accepte) {
-    if (!accepte && !window.confirm('Refuser ces nouvelles dates ? La demande sera annulée.')) return
+    if (!accepte && !(await confirmDialog({title:'Refuser ces nouvelles dates ?',message:'La demande sera annulée.',confirmLabel:'Refuser',danger:true}))) return
     setSaving(true)
     try {
       await repondreContreProposition(c.id, accepte)
@@ -568,7 +570,7 @@ export default function SmartRH({ profile, rhDelegue = false }) {
     } catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
   }
   async function annuler(c) {
-    if (!window.confirm('Annuler cette demande ?')) return
+    if (!(await confirmDialog({title:'Annuler cette demande de congé ?',confirmLabel:'Annuler la demande',cancelLabel:'Retour',danger:true}))) return
     setSaving(true)
     try { await cancelConge(c.id); toast.success('Demande annulée'); await reload() }
     catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
@@ -588,7 +590,7 @@ export default function SmartRH({ profile, rhDelegue = false }) {
         {aValider.length > 0 && isManager && <span className="kpi">{aValider.length} à valider</span>}
       </div>
 
-      {loading && <div className="empty">Chargement…</div>}
+      {loading && <SkeletonCards n={3} height={96} />}
       {err && <div className="empty err">Erreur : {err}</div>}
 
       {!loading && !err && (

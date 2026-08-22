@@ -26,7 +26,11 @@
 // Pour l'interface admin (CSV upload + édition inline), voir UCS-5.
 
 import { useEffect, useMemo, useState } from 'react'
+import toast from 'react-hot-toast'
 import { logger } from '../lib/logger'
+import { confirmDialog } from './ui/confirm'
+import SubTabs from './ui/SubTabs'
+import { SkeletonCards } from './ui/Skeleton'
 import * as ucsService from '../services/ucsStructures'
 import * as clientsService from '../services/clients'
 import * as structureursService from '../services/structureurs'
@@ -242,32 +246,16 @@ export default function UcsStructures({ profile, month }) {
           l'écran Structureurs est manager only (garde-fou interne en plus),
           donc pas de barre du tout pour les conseillers (écran inchangé). */}
       {isManager && (
-        <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-          {[
-            { v: 'catalogue', l: 'Catalogue' },
-            { v: 'partenaires', l: 'Partenaires' },
-          ].map(opt => {
-            const active = vue === opt.v
-            return (
-              <button
-                key={opt.v}
-                onClick={() => setVue(opt.v)}
-                style={{
-                  padding: '5px 14px',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  borderRadius: 14,
-                  border: `1px solid ${active ? 'var(--t1)' : 'var(--bd)'}`,
-                  background: active ? 'var(--t1)' : '#fff',
-                  color: active ? '#fff' : 'var(--t2)',
-                  cursor: 'pointer',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
-                }}
-              >{opt.l}</button>
-            )
-          })}
-        </div>
+        <SubTabs
+          ariaLabel="Sous-onglets UCS"
+          tabs={[
+            { key: 'catalogue', label: 'Catalogue' },
+            { key: 'partenaires', label: 'Partenaires' },
+          ]}
+          active={vue}
+          onChange={setVue}
+          style={{ marginBottom: 14 }}
+        />
       )}
 
       {/* Sous-vue Partenaires : écran Structureurs rendu tel quel */}
@@ -410,8 +398,8 @@ function Header({ isManager, adminMode, onToggleAdmin, tauxConseiller = 1.5, tau
 
 function LoadingState() {
   return (
-    <div style={{ padding: 32, textAlign: 'center', color: 'var(--t3)', fontSize: 13 }}>
-      Chargement du catalogue...
+    <div style={{ padding: '8px 0' }}>
+      <SkeletonCards n={6} height={110} />
     </div>
   )
 }
@@ -965,13 +953,13 @@ function AdminRowActions({ u, onReload }) {
 
   const handleStatus = async (newEtat) => {
     if (busy) return
-    if (!confirm(`Marquer "${u.nom_ucs}" comme ${newEtat} ?`)) return
+    if (!(await confirmDialog({title:`Marquer "${u.nom_ucs}" comme ${newEtat} ?`,confirmLabel:'Confirmer'}))) return
     setBusy(true)
     try {
       await ucsService.markStatus(u.id, newEtat)
       await onReload?.()
     } catch (e) {
-      alert(`Erreur : ${e.message}`)
+      toast.error(`Erreur : ${e.message}`)
     } finally {
       setBusy(false)
     }
@@ -986,7 +974,7 @@ function AdminRowActions({ u, onReload }) {
     if (raw == null) return
     const val = parseFloat(String(raw).replace(/[^\d.-]/g, ''))
     if (isNaN(val)) {
-      alert('Montant invalide')
+      toast.error('Montant invalide')
       return
     }
     setBusy(true)
@@ -994,7 +982,7 @@ function AdminRowActions({ u, onReload }) {
       await ucsService.update(u.id, { enveloppe_restante: val })
       await onReload?.()
     } catch (e) {
-      alert(`Erreur : ${e.message}`)
+      toast.error(`Erreur : ${e.message}`)
     } finally {
       setBusy(false)
     }
@@ -1923,7 +1911,7 @@ function StructureurSidePanel({ structureurId, onClose }) {
       const s = await structureursService.getById(structureurId)
       setStructureur(s)
     } catch (e) {
-      alert(`Erreur : ${e.message}`)
+      toast.error(`Erreur : ${e.message}`)
     } finally {
       setSaving(false)
     }
@@ -2139,7 +2127,7 @@ function NotesEditor({ structureurId, initial, onSaved }) {
       setSavedAt(Date.now())
       await onSaved?.()
     } catch (e) {
-      alert(`Erreur : ${e.message}`)
+      toast.error(`Erreur : ${e.message}`)
     } finally {
       setSaving(false)
     }

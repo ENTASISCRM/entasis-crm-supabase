@@ -14,6 +14,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
+import { confirmDialog } from './ui/confirm'
+import { SkeletonRows } from './ui/Skeleton'
 import * as conformiteService from '../services/conformite'
 import * as clientsService from '../services/clients'
 import { supabase } from '../lib/supabase'
@@ -290,7 +292,7 @@ export default function Conformite({ profile }) {
   }), [visibles])
 
   const handleDelete = async (row) => {
-    if (!confirm(`Supprimer le dossier de conformité de ${nomClientDossier(row)} ? Cette action est définitive.`)) return
+    if (!(await confirmDialog({title:`Supprimer le dossier de conformité de ${nomClientDossier(row)} ?`,message:'Cette action est définitive.',confirmLabel:'Supprimer',danger:true}))) return
     try {
       await conformiteService.remove(row.id)
       setDossiers((prev) => prev.filter((d) => d.id !== row.id))
@@ -401,7 +403,7 @@ export default function Conformite({ profile }) {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={isManager ? 7 : 6} style={{ textAlign: 'center', padding: 40, color: 'var(--t3)' }}>Chargement…</td></tr>
+              <SkeletonRows rows={5} cols={isManager ? 7 : 6} />
             ) : visibles.length === 0 ? (
               <tr><td colSpan={isManager ? 7 : 6} className="table-empty-state">
                 <div className="empty-title">Aucun dossier</div>

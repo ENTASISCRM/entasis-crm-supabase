@@ -24,6 +24,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
+import { SkeletonCards } from './ui/Skeleton'
 import { chargerDonnees, construireSections } from '../services/opportunites'
 
 export default function OpportunitesDuJour({ profile, embedded }) {
@@ -141,7 +142,7 @@ export default function OpportunitesDuJour({ profile, embedded }) {
         </div>
       )}
 
-      {loading && <div className="empty">Chargement…</div>}
+      {loading && <SkeletonCards n={3} height={84} />}
       {err && <div className="empty err">Erreur : {err}</div>}
 
       {embedded && !loading && !err && secShown.length === 0 && (

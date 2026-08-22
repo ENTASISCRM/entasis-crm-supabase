@@ -14,6 +14,9 @@ import * as conseillerContratsService from './services/conseillerContrats'
 import * as dossiersImmoService from './services/dossiersImmo'
 import MissionDuMois from './components/MissionDuMois'
 import CommandPalette from './components/CommandPalette'
+import { confirmDialog } from './components/ui/confirm'
+import { SkeletonPage } from './components/ui/Skeleton'
+import SubTabs from './components/ui/SubTabs'
 // Onglets lourds charges a la demande (code-splitting via React.lazy) : sortis du
 // bundle principal pour alleger le JS au login. jspdf/html2canvas (OutilsCGP) et
 // chart.js (ManagementView) ne se telechargent que quand l onglet s ouvre.
@@ -822,7 +825,7 @@ function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,mont
               <NavIcon/>
               {label}
               {badge>0&&(
-                <span className="nav-item-badge" style={badgeGold?{background:'var(--gold)',color:'white'}:{}}>
+                <span className={`nav-item-badge${badgeGold?' nav-item-badge--gold':''}`}>
                   {badge}
                 </span>
               )}
@@ -967,7 +970,9 @@ async function genererFicheParrainage(profile){
 /* ─────────────────────────────────────────────────────────────────────────────
    TOP BAR
 ───────────────────────────────────────────────────────────────────────────── */
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',immobilier:'Immobilier Neuf 🏠',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️',editorial:'Agent éditorial ✍️',cockpit:'Cockpit ratios'}
+// Titres sans emoji (design-system.md règle 4) : les icônes SVG de la sidebar
+// portent déjà l'identité visuelle de chaque écran.
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers',team:'Équipe',leads:'Leads Live','ucs-structures':'UCS Produits Structurés',immobilier:'Immobilier Neuf',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH','recrutement':'Recrutement',conformite:'Conformité',editorial:'Agent éditorial',cockpit:'Cockpit ratios'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile}){
   return (
@@ -1490,21 +1495,21 @@ function LeadRoom({leads,profile,onLeadsChange,onConvertDeal,onRefresh}){
     const ok = await leadsService.take(lead.id, profile.id)
     if (!ok) {
       onLeadsChange(prev=>prev.map(l=>l.id===lead.id?snapshot:l))
-      alert("Ce lead vient d'être pris par un autre conseiller.")
+      toast.error("Ce lead vient d'être pris par un autre conseiller.")
     }
   }
 
   async function releaseLead(lead){
-    if(!window.confirm("Libérer ce lead pour qu'un autre conseiller puisse le prendre ?"))return
+    if(!(await confirmDialog({title:'Libérer ce lead ?',message:"Un autre conseiller pourra le prendre.",confirmLabel:'Libérer'})))return
     onLeadsChange(prev=>prev.map(l=>l.id===lead.id?{...l,status:'released',taken_by:null,taken_at:null}:l))
     await leadsService.release(lead.id)
   }
   async function resetLead(lead){
-    if(!window.confirm(`Remettre "${lead.nom}" en disponible ?`))return
+    if(!(await confirmDialog({title:`Remettre "${lead.nom}" en disponible ?`,confirmLabel:'Remettre'})))return
     await leadsService.reset(lead.id)
   }
   async function killLead(lead){
-    if(!window.confirm(`Marquer "${lead.nom}" comme non-interesse ?`))return
+    if(!(await confirmDialog({title:`Marquer "${lead.nom}" comme non-intéressé ?`,confirmLabel:'Marquer',danger:true})))return
     await leadsService.markDead(lead.id, profile.id)
   }
 
@@ -2413,7 +2418,7 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
                           Reprogrammer +30j
                         </button>
                         <button className="btn btn-danger btn-sm" style={{fontSize:11,padding:'3px 8px',flex:1}}
-                          onClick={()=>{if(window.confirm(`Abandonner le dossier de ${getClientName(deal)} ? Il passera en Annulé.`))onQuickPatch(deal,{status:'Annulé'},'Dossier abandonné')}}>
+                          onClick={async()=>{if(await confirmDialog({title:`Abandonner le dossier de ${getClientName(deal)} ?`,message:'Il passera en Annulé.',confirmLabel:'Abandonner',danger:true}))onQuickPatch(deal,{status:'Annulé'},'Dossier abandonné')}}>
                           Abandonner
                         </button>
                       </div>
@@ -3215,7 +3220,7 @@ function AgendaView({deals,profile}){
   }
 
   async function deleteEvent(id){
-    if(!token||!window.confirm('Supprimer cet événement de Google Agenda ?'))return
+    if(!token||!(await confirmDialog({title:'Supprimer cet événement ?',message:'Il sera retiré de Google Agenda.',confirmLabel:'Supprimer',danger:true})))return
     await fetch(`${GCAL}/calendars/primary/events/${id}`,{method:'DELETE',headers:{Authorization:`Bearer ${token}`}})
     setEvents(prev=>prev.filter(e=>e.id!==id))
   }
@@ -3421,7 +3426,7 @@ function TeamView({deals,objectifs,teamProfiles,month,profile}){
 
   // Révoquer une invitation
   async function revokeInvitation(inviteId) {
-    if (!window.confirm('Révoquer cette invitation ?')) return
+    if (!(await confirmDialog({title:'Révoquer cette invitation ?',message:'Le lien envoyé ne fonctionnera plus.',confirmLabel:'Révoquer',danger:true}))) return
     try {
       await invitationsService.remove(inviteId)
       toast.success('Invitation révoquée')
@@ -3953,12 +3958,12 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                 {isClientLocked ? (
                   <div style={{
                     padding: '10px 14px',
-                    background: '#F5F2EC',
+                    background: 'rgba(0,0,0,0.03)',
                     borderRadius: '6px',
-                    border: '1px solid #E8E4DC',
-                    color: '#555'
+                    border: '1px solid var(--bd)',
+                    color: 'var(--t2)'
                   }}>
-                    🔒 {deal.client}
+                    {deal.client} <span style={{color:'var(--t3)',fontSize:11}}>(verrouillé)</span>
                   </div>
                 ) : selectedClient ? (
                   <div style={{
@@ -4455,15 +4460,15 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                   type="button"
                   className="btn btn-danger"
                   disabled={isSaving}
-                  onClick={() => {
-                    if (window.confirm(`Supprimer définitivement le dossier de ${getClientName(deal)} ? Cette action est irréversible.`)) {
+                  onClick={async () => {
+                    if (await confirmDialog({title:`Supprimer le dossier de ${getClientName(deal)} ?`,message:'Cette action est irréversible.',confirmLabel:'Supprimer définitivement',danger:true})) {
                       onDelete(deal);
                       onClose();
                     }
                   }}
                   title="Supprimer ce dossier"
                 >
-                  🗑 Supprimer
+                  Supprimer
                 </button>
               )}
             </div>
@@ -4691,7 +4696,7 @@ function ProspectionView({prospects,profile,teamProfiles,onRefresh,onProspectsCh
     try {
       await prospectsService.update(updatedProspect)
     } catch (e) {
-      alert(e.message)
+      toast.error(e.message)
       return
     }
     onProspectsChange(prev=>prev.map(p=>p.id===updatedProspect.id?updatedProspect:p))
@@ -4901,7 +4906,9 @@ export default function App(){
         setPaletteOpen(o=>!o)
         return
       }
-      if(typing||e.ctrlKey||e.metaKey||e.altKey||modalOpen||paletteOpen)return
+      // .confirm-overlay : dialogue de confirmation imperatif (ui/confirm.jsx),
+      // hors state React d'App — on le detecte via le DOM.
+      if(typing||e.ctrlKey||e.metaKey||e.altKey||modalOpen||paletteOpen||document.querySelector('.confirm-overlay'))return
       if(e.key==='/'){
         const el=document.querySelector('[data-global-search]')
         if(el){e.preventDefault();el.focus()}
@@ -5237,15 +5244,13 @@ export default function App(){
             const dub = doublons[0]
             const dateSign = dub.date_signed ? new Date(dub.date_signed).toLocaleDateString('fr-FR') : 'date inconnue'
             const clientNomAffiche = deal.client || cleanDeals[0]?.client || 'ce client'
-            const msg = `⚠ DOUBLON POTENTIEL DÉTECTÉ\n\n`
-              + `Le client "${clientNomAffiche}" a déjà un dossier "${dub.product}" `
-              + `signé par ${dub.advisor_code} (${dateSign}).\n\n`
+            const msg = `Le client "${clientNomAffiche}" a déjà un dossier "${dub.product}" `
+              + `signé par ${dub.advisor_code} (${dateSign}). `
               + `Si vous travaillez à 2 sur ce dossier, ${dub.advisor_code} devrait `
               + `te mettre en co-conseiller sur SON dossier — sinon la commission `
-              + `sera payée 2 fois.\n\n`
-              + `Continuer quand même ? (Cliquer Annuler si tu dois plutôt te mettre `
-              + `en co-conseiller sur le dossier existant)`
-            if (!window.confirm(msg)) {
+              + `sera payée 2 fois. Annule si tu dois plutôt te mettre en `
+              + `co-conseiller sur le dossier existant.`
+            if (!(await confirmDialog({title:'Doublon potentiel détecté',message:msg,confirmLabel:'Continuer quand même',danger:true}))) {
               toast('Save annulé. Demande à ' + dub.advisor_code + ' de t\'ajouter en co-conseiller sur son dossier.', { icon: 'ℹ️' })
               return
             }
@@ -5266,7 +5271,7 @@ export default function App(){
             await dealsService.create(deal)
           }
         } catch (e) {
-          alert(e.message)
+          toast.error(e.message)
           return
         }
       }
@@ -5295,7 +5300,7 @@ export default function App(){
       }
     } catch(e) {
       console.error('[saveDeal] Auth error:', e)
-      alert('Session expirée, veuillez vous reconnecter')
+      toast.error('Session expirée, veuillez vous reconnecter')
       await supabase.auth.signOut()
       return
     }
@@ -5309,7 +5314,7 @@ export default function App(){
     try {
       await dealsService.update(deal.id,patch)
     } catch (e) {
-      alert(e.message)
+      toast.error(e.message)
       return
     }
     setDeals(prev=>prev.map(d=>d.id===deal.id?{...d,...patch}:d))
@@ -5317,11 +5322,11 @@ export default function App(){
   }
 
   async function deleteDeal(deal){
-    if(!window.confirm(`Supprimer définitivement le dossier de ${getClientName(deal)} ?`))return
+    if(!(await confirmDialog({title:`Supprimer le dossier de ${getClientName(deal)} ?`,message:'Cette action est irréversible.',confirmLabel:'Supprimer définitivement',danger:true})))return
     try {
       await dealsService.remove(deal.id)
     } catch (e) {
-      alert(e.message)
+      toast.error(e.message)
       return
     }
     // Maj locale immediate (Realtime DELETE confirmera), au lieu de recharger tout.
@@ -5332,7 +5337,7 @@ export default function App(){
     try {
       await objectifsService.upsert(row)
     } catch (e) {
-      alert(e.message)
+      toast.error(e.message)
       return
     }
     // Maj locale ciblee (pas de Realtime sur objectifs), au lieu de recharger tout.
@@ -5455,7 +5460,7 @@ export default function App(){
           {error&&<div className="notice notice-error">{error}</div>}
           {!profile&&error&&<div className="notice notice-warn">Profil introuvable dans <span className="code">public.profiles</span>. Vérifie la table et les policies.</div>}
 
-          <Suspense fallback={<div style={{padding:24,color:'var(--t3)',fontSize:13}}>Chargement…</div>}>
+          <Suspense fallback={<SkeletonPage/>}>
           {activeTab==='dashboard'&&isManager&&<EditorialPendingBanner count={editorialPending.count} nextDeadline={editorialPending.nextDeadline} onOpen={()=>setActiveTab('editorial')}/>}
           {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles} profile={profile}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile}/>)}
           {activeTab==='leads'&&<LeadRoomEmbed/>}
@@ -5464,15 +5469,13 @@ export default function App(){
           {activeTab==='recrutement'&&(isManager||isRhDelegue)&&<Recrutement/>}
           {activeTab==='pipeline'&&<PipelineBoard deals={deals} month={month} profile={profile} onEdit={startEdit} onQuickPatch={quickPatchDeal}/>}
           {activeTab==='clients'&&!selectedClientId&&(
-            <div style={{display:'flex',gap:8,marginBottom:16}}>
-              {[['annuaire','Annuaire'],['dossiers','Dossiers du mois']].map(([k,label])=>(
-                <button key={k} onClick={()=>setClientsVue(k)}
-                  style={{border:'0.5px solid var(--bd)',cursor:'pointer',fontFamily:'inherit',fontSize:13,fontWeight:650,padding:'7px 16px',borderRadius:999,
-                    background:clientsVue===k?'var(--navy,#0A1628)':'rgba(0,0,0,0.03)',color:clientsVue===k?'#fff':'var(--t2)'}}>
-                  {label}
-                </button>
-              ))}
-            </div>
+            <SubTabs
+              ariaLabel="Sous-onglets Clients"
+              tabs={[{key:'annuaire',label:'Annuaire'},{key:'dossiers',label:'Dossiers du mois'}]}
+              active={clientsVue}
+              onChange={setClientsVue}
+              style={{marginBottom:16}}
+            />
           )}
           {activeTab==='clients'&&!selectedClientId&&clientsVue==='dossiers'&&<DealsTable deals={deals} month={month} profile={profile} onEdit={startEdit} onDelete={deleteDeal} onRefresh={loadAll} onSelectClient={(clientId) => {
             setSelectedClientId(clientId)

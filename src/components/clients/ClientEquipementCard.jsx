@@ -7,6 +7,7 @@
 
 import { useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
+import { SkeletonText } from '../ui/Skeleton'
 import { listFamilies } from '../../services/equipment'
 import { suggestionPour } from '../../config/multiEquipementRules'
 
@@ -86,7 +87,7 @@ export default function ClientEquipementCard({ clientId, client, supabase }) {
       </div>
       <div className="card-body" style={{ padding: '0 28px 24px 28px' }}>
         {loading ? (
-          <div style={{ color: 'var(--t2)', fontSize: '13px' }}>Chargement…</div>
+          <SkeletonText lines={2} />
         ) : (
           <>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>

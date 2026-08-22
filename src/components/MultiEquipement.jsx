@@ -22,6 +22,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
+import { SkeletonCards } from './ui/Skeleton'
 import {
   listEquipment, listFamilies, upsertDeclare, removeDeclare,
   listDeclaresForClient, listSignedDealsForClient, getSettings, saveSettings,
@@ -465,7 +466,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
         </div>
       </div>
 
-      {loading && <div className="empty">Chargement…</div>}
+      {loading && <SkeletonCards n={3} height={96} />}
       {err && <div className="empty errtxt">Erreur : {err}</div>}
 
       {!loading && !err && vue === 'missions' && (

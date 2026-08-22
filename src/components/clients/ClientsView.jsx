@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { toast } from 'react-hot-toast'
 import { statusLabel } from '../../lib/ui-shared'
 import ClientModal from './ClientModal.jsx'
+import { Skeleton, SkeletonTable } from '../ui/Skeleton'
 
 // Helper pour formatage monétaire
 function euro(amount) {
@@ -173,8 +174,9 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
-        <div>Chargement des clients...</div>
+      <div style={{ padding: '20px' }}>
+        <Skeleton h={24} w={220} style={{ marginBottom: 24 }} />
+        <SkeletonTable rows={8} cols={6} />
       </div>
     )
   }
@@ -265,29 +267,34 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
           </div>
         </div>
       ) : (
-        <div className="card">
-          <div className="table-container">
-            <table className="table" style={{ width: '100%' }}>
+        /* data-table : mêmes tokens que le reste du CRM (thead, hover CSS,
+           paddings) au lieu des couleurs héritées de l'ancien thème beige.
+           table-wrap porte déjà le style carte, pas besoin de .card autour. */
+        <div className="table-wrap">
+            <table className="data-table" style={{ width: '100%' }}>
               <thead>
-                <tr style={{ backgroundColor: '#F5F2EC' }}>
+                <tr>
                   <th
-                    style={{ fontWeight: '600', width: '35%', cursor: 'pointer', userSelect: 'none' }}
+                    style={{ width: '35%', cursor: 'pointer', userSelect: 'none' }}
                     onClick={() => toggleSort('client')}
                     title="Trier par nom"
+                    aria-sort={sort.col === 'client' ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
                   >Client{sortArrow('client')}</th>
-                  <th style={{ fontWeight: '600', width: '15%' }}>Conseiller</th>
+                  <th style={{ width: '15%' }}>Conseiller</th>
                   <th
-                    style={{ fontWeight: '600', width: '10%', cursor: 'pointer', userSelect: 'none' }}
+                    style={{ width: '10%', cursor: 'pointer', userSelect: 'none' }}
                     onClick={() => toggleSort('produits')}
                     title="Trier par nombre de produits"
+                    aria-sort={sort.col === 'produits' ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
                   >Produits{sortArrow('produits')}</th>
-                  <th style={{ fontWeight: '600', width: '15%' }}>Statut global</th>
+                  <th style={{ width: '15%' }}>Statut global</th>
                   <th
-                    style={{ fontWeight: '600', width: '15%', cursor: 'pointer', userSelect: 'none' }}
+                    style={{ width: '15%', cursor: 'pointer', userSelect: 'none' }}
                     onClick={() => toggleSort('ca')}
                     title="Trier par CA total"
+                    aria-sort={sort.col === 'ca' ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
                   >CA total{sortArrow('ca')}</th>
-                  <th style={{ fontWeight: '600', width: '10%' }}>Actions</th>
+                  <th style={{ width: '10%' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -295,67 +302,58 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
                   <tr
                     key={client.id}
                     onClick={() => onSelectClient(client.id)}
-                    style={{
-                      cursor: 'pointer',
-                      padding: '16px 20px',
-                      borderBottom: '1px solid #E8E4DC'
-                    }}
-                    onMouseEnter={e => e.target.closest('tr').style.backgroundColor = 'rgba(192, 155, 90, 0.05)'}
-                    onMouseLeave={e => e.target.closest('tr').style.backgroundColor = 'transparent'}
+                    style={{ cursor: 'pointer' }}
                   >
-                    <td style={{ padding: '16px 20px' }}>
+                    <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div>
-                          <div style={{ fontWeight: '600', fontSize: '14px' }}>
+                          <div className="cell-primary">
                             {client.prenom} {client.nom}
                           </div>
-                          <div style={{ fontSize: '12px', color: '#999', marginTop: '2px' }}>
+                          <div className="cell-sub">
                             {client.email || client.telephone || '—'}
                           </div>
                         </div>
                         {client.hasImmo && (
                           <span
+                            className="badge"
                             title="Client avec dossiers immobilier"
-                            style={{
-                              backgroundColor: 'var(--gold)',
-                              color: 'white',
-                              fontSize: '11px',
-                              padding: '2px 6px',
-                              borderRadius: '3px'
-                            }}
+                            style={{ background: 'var(--gold)', color: '#fff', borderColor: 'transparent' }}
                           >
-                            🏠
+                            Immo
                           </span>
                         )}
                       </div>
                     </td>
-                    <td style={{ padding: '16px 20px' }}>
-                      <div style={{ fontWeight: '600', fontSize: '14px' }}>{client.advisor_code || '—'}</div>
+                    <td>
+                      <div className="cell-primary">{client.advisor_code || '—'}</div>
                       {client.co_advisor_code && (
-                        <div style={{ fontSize: '11px', color: '#999', marginTop: '2px' }}>
+                        <div className="cell-sub">
                           Co: {client.co_advisor_code}
                         </div>
                       )}
                     </td>
-                    <td style={{ padding: '16px 20px' }}>
-                      <div style={{ fontWeight: '600', fontSize: '14px' }}>
+                    <td>
+                      <div className="cell-primary">
                         {(client.deals || []).length} produit{(client.deals || []).length > 1 ? 's' : ''}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#999', marginTop: '2px' }}>
-                        {client.dossiers_immo?.length > 0 && `${client.dossiers_immo.length} immo`}
-                      </div>
+                      {client.dossiers_immo?.length > 0 && (
+                        <div className="cell-sub">
+                          {client.dossiers_immo.length} immo
+                        </div>
+                      )}
                     </td>
-                    <td style={{ padding: '16px 20px' }}>
+                    <td>
                       <span className={`badge ${getStatusBadgeClass(client.globalStatus)}`}>
                         {statusLabel(client.globalStatus)}
                       </span>
                     </td>
-                    <td style={{ padding: '16px 20px' }}>
-                      <div style={{ fontWeight: '600', fontSize: '14px' }}>
+                    <td>
+                      <div className="cell-primary">
                         {euro(client.caTotal)}
                       </div>
                     </td>
-                    <td style={{ padding: '16px 20px' }}>
+                    <td>
                       <button
                         className="btn btn-secondary btn-sm"
                         onClick={e => {
@@ -370,7 +368,6 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
                 ))}
               </tbody>
             </table>
-          </div>
         </div>
       )}
 
