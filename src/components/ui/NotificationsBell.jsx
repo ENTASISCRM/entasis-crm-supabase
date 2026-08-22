@@ -41,18 +41,28 @@ export default function NotificationsBell({ items = [], scope = 'anon' }) {
     return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
   }, [open])
 
-  const nonLus = useMemo(
-    () => items.filter(i => !luJusqua || String(i.date || '') > String(luJusqua)).length,
-    [items, luJusqua]
-  )
+  // Comparaison sur des horodatages numériques : les dates arrivent en
+  // formats hétérogènes (PostgREST « …T10:00:00+00:00 », realtime
+  // « … 10:00:00+00 »), une comparaison de chaînes serait fausse.
+  const instant = (v) => { const t = Date.parse(v); return Number.isNaN(t) ? 0 : t }
+  const nonLus = useMemo(() => {
+    const seuil = luJusqua ? instant(luJusqua) : 0
+    const maintenant = Date.now()
+    // Un signal daté dans le futur (échéance) n'est pas « non lu ».
+    return items.filter(i => { const t = instant(i.date); return t > seuil && t <= maintenant }).length
+  }, [items, luJusqua])
 
   function basculer() {
     const ouvrir = !open
     setOpen(ouvrir)
     // Marqué lu à l'ouverture : le badge retombe, la liste reste consultable.
-    if (ouvrir && items.length) {
-      const plusRecent = items.reduce((max, i) => (String(i.date || '') > max ? String(i.date) : max), '')
-      if (plusRecent) setLuJusqua(plusRecent)
+    // On pose l'horodatage du MOMENT, pas la date du signal le plus récent :
+    // certains signaux portent une échéance FUTURE (veto éditorial) et le
+    // repère aurait sauté dans le futur, avalant les notifications réelles
+    // arrivant ensuite. Jamais de recul non plus (max avec l'existant).
+    if (ouvrir) {
+      const maintenant = new Date().toISOString()
+      setLuJusqua(prev => (prev && String(prev) > maintenant ? prev : maintenant))
     }
   }
 

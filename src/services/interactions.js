@@ -27,9 +27,12 @@ export const libelleSens = (v) => SENS_ECHANGE.find(s => s.value === v)?.label |
 
 /** Échanges d'un client, du plus récent au plus ancien. */
 export async function listByClient(clientId, limit = 100) {
+  // Pas de jointure sur `profiles` : sa RLS interdit à un conseiller de lire
+  // le profil d'un collègue, l'auteur reviendrait vide sur les échanges des
+  // autres. On s'appuie sur created_by_code, gravé par trigger à l'insertion.
   const { data, error } = await supabase
     .from('client_interactions')
-    .select('*, auteur:profiles!client_interactions_created_by_fkey(full_name, advisor_code)')
+    .select('*')
     .eq('client_id', clientId)
     .order('occurred_at', { ascending: false })
     .limit(limit)
@@ -54,13 +57,25 @@ export async function create({ clientId, type, sens, objet, contenu, occurredAt,
       deal_id: dealId || null,
       created_by: user?.id || null,
     })
-    .select('*, auteur:profiles!client_interactions_created_by_fkey(full_name, advisor_code)')
+    .select('*')
     .single()
   if (error) throw error
   return data
 }
 
+/**
+ * Supprime un échange. `select()` force PostgREST à renvoyer les lignes
+ * supprimées : sans lui, une suppression refusée par la RLS (échange d'un
+ * collègue) repart en succès et l'écran annonce à tort « supprimé ».
+ */
 export async function remove(id) {
-  const { error } = await supabase.from('client_interactions').delete().eq('id', id)
+  const { data, error } = await supabase
+    .from('client_interactions')
+    .delete()
+    .eq('id', id)
+    .select('id')
   if (error) throw error
+  if (!data || data.length === 0) {
+    throw new Error("Suppression refusée : cet échange a été consigné par un autre conseiller.")
+  }
 }

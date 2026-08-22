@@ -762,7 +762,7 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
       {/* Section Historique — D4 : une seule chronologie (échanges consignés
           à la main + activités système + jalons de signature des dossiers). */}
       {tab === 'historique' && (
-        <ClientTimeline clientId={client.id} deals={clientDeals} history={history} />
+        <ClientTimeline clientId={client.id} deals={clientDeals} history={history} profile={profile} />
       )}
 
       {/* Modal d'édition */}

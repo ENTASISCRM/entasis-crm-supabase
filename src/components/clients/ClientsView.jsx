@@ -282,16 +282,19 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
       {enrichedClients.length === 0 ? (
         <div className="card">
           <div className="card-body" style={{ textAlign: 'center', padding: '60px' }}>
+            {/* Le filtre d'appartenance est désormais mémorisé (D1) : il doit
+                entrer dans ce test, sinon l'écran annonce « aucun client »
+                alors qu'un filtre posé la semaine dernière est encore actif. */}
             <div style={{ fontSize: '18px', color: 'var(--t2)', marginBottom: '16px' }}>
-              {(search || statusFilter !== 'Tous') ? 'Aucun client trouvé' : 'Aucun client'}
+              {(search || statusFilter !== 'Tous' || filterType !== 'Tous') ? 'Aucun client trouvé' : 'Aucun client'}
             </div>
             <div style={{ color: 'var(--t3)', marginBottom: '24px' }}>
-              {(search || statusFilter !== 'Tous')
-                ? 'Essayez de modifier votre recherche ou vos filtres'
+              {(search || statusFilter !== 'Tous' || filterType !== 'Tous')
+                ? 'Aucun résultat avec les filtres actifs — élargissez la recherche ou les filtres.'
                 : 'Commencez par créer votre premier client'
               }
             </div>
-            {!search && statusFilter === 'Tous' && (
+            {!search && statusFilter === 'Tous' && filterType === 'Tous' && (
               <button
                 className="btn btn-primary"
                 onClick={() => setNewClientModalOpen(true)}

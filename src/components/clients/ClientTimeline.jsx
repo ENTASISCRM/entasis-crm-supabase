@@ -42,7 +42,7 @@ const fmtDate = (iso) => {
   } catch { return String(iso).slice(0, 10) }
 }
 
-export default function ClientTimeline({ clientId, deals = [], history = [] }) {
+export default function ClientTimeline({ clientId, deals = [], history = [], profile }) {
   const [echanges, setEchanges] = useState([])
   const [loading, setLoading] = useState(true)
   const [saisieOuverte, setSaisieOuverte] = useState(false)
@@ -66,11 +66,20 @@ export default function ClientTimeline({ clientId, deals = [], history = [] }) {
     }
   }, [clientId])
 
+  // Changement de client : on vide d'abord, et une réponse arrivée en retard
+  // pour le client précédent est ignorée (sinon elle s'afficherait sur la
+  // nouvelle fiche).
   useEffect(() => {
     if (!clientId) return
+    let vivant = true
+    setEchanges([])
     setLoading(true)
-    recharger()
-  }, [clientId, recharger])
+    interactionsService.listByClient(clientId)
+      .then(rows => { if (vivant) setEchanges(rows) })
+      .catch(e => { if (vivant) toast.error(messageErreur(e)) })
+      .finally(() => { if (vivant) setLoading(false) })
+    return () => { vivant = false }
+  }, [clientId])
 
   async function enregistrer(e) {
     e.preventDefault()
@@ -117,9 +126,11 @@ export default function ClientTimeline({ clientId, deals = [], history = [] }) {
       nature: e.type,
       titre: e.objet || libelleType(e.type),
       detail: e.contenu,
-      auteur: e.auteur?.full_name || e.auteur?.advisor_code || '',
+      auteur: e.created_by_code || '',
       meta: `${libelleType(e.type)}${e.sens === 'entrant' ? ' entrant' : e.sens === 'interne' ? ' interne' : ''}`,
-      supprimable: e,
+      // Seul l'auteur (ou un manager) peut supprimer : c'est la règle de la
+      // base, on n'affiche pas un bouton que la RLS refusera.
+      supprimable: (profile?.role === 'manager' || e.created_by === profile?.id) ? e : null,
     })),
     ...(history || []).map(a => ({
       id: `act-${a.id}`,

@@ -36,7 +36,17 @@ export default function InlineSelect({ value, options, onChange, renderLabel, ba
         value={value || ''}
         aria-label={title}
         onClick={e => e.stopPropagation()}
-        onChange={e => { e.stopPropagation(); if (e.target.value !== value) onChange(e.target.value) }}
+        onChange={e => {
+          e.stopPropagation()
+          const choisi = e.target.value
+          if (choisi === value) return
+          // Le parent peut refuser (modale, confirmation annulée) sans changer
+          // la prop : on remet aussitôt le select sur la valeur courante, sinon
+          // il resterait sur le choix refusé et le même choix ne pourrait plus
+          // être retenté (l'événement change ne se redéclencherait pas).
+          e.target.value = value || ''
+          onChange(choisi)
+        }}
       >
         {options.map(o => <option key={o} value={o}>{renderLabel ? renderLabel(o) : o}</option>)}
       </select>

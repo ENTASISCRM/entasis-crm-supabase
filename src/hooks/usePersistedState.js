@@ -35,6 +35,8 @@ export function usePersistedState(name, defaultValue, scope = 'anon') {
 
   // Changement de scope (connexion d'un autre conseiller sans rechargement) :
   // on relit les préférences du nouveau, sans écraser celles de l'ancien.
+  // La bascule de keyRef se fait DANS le rendu qui suit, pas ici, pour que
+  // l'effet d'écriture ci-dessous puisse détecter le décalage.
   useEffect(() => {
     if (keyRef.current === key) return
     keyRef.current = key
@@ -42,6 +44,11 @@ export function usePersistedState(name, defaultValue, scope = 'anon') {
   }, [key, defaultValue])
 
   useEffect(() => {
+    // Au commit où la clé change, cet effet s'exécute AVEC la nouvelle clé mais
+    // encore l'ancienne valeur : écrire ici écraserait les préférences du
+    // nouveau scope avec celles du précédent. On attend que la relecture
+    // ci-dessus ait aligné la valeur.
+    if (keyRef.current !== key) return
     try {
       window.localStorage.setItem(key, JSON.stringify(value))
     } catch { /* quota plein ou stockage bloqué : la session reste fonctionnelle */ }

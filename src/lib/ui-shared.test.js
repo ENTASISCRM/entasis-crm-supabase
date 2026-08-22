@@ -123,9 +123,27 @@ describe('normalizeDeal — prochaine action (D3)', () => {
     expect(d.next_action).toBeNull();
     expect(d.next_action_date).toBeNull();
   });
+  it("n'injecte pas les champs absents (pas d'effacement en sauvegarde partielle)", () => {
+    const d = normalizeDeal({ client: 'Dupont' });
+    expect('next_action' in d).toBe(false);
+    expect('next_action_date' in d).toBe(false);
+  });
   it('conserve une action renseignée', () => {
     const d = normalizeDeal({ next_action: ' Relancer après relevé ', next_action_date: '2026-09-01' });
     expect(d.next_action).toBe('Relancer après relevé');
     expect(d.next_action_date).toBe('2026-09-01');
+  });
+});
+
+describe('nombreFr — robustesse (revue Série D)', () => {
+  it('arrondit le bruit flottant des montants calculés', () => {
+    expect(nombreFr(102.88 * 12)).toBe('1234,56');
+    expect(nombreFr(0.1 + 0.2)).toBe('0,3');
+  });
+  it('ne rend pas 0 pour une valeur non numérique', () => {
+    expect(nombreFr('abc')).toBe('');
+  });
+  it('garde les entiers sans décimale', () => {
+    expect(nombreFr(1234)).toBe('1234');
   });
 });

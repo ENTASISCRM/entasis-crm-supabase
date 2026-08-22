@@ -47,4 +47,12 @@ export const suffixeDate = () => new Date().toISOString().slice(0, 10)
 
 // Nombre au format français sans séparateur de milliers (Excel FR le relit
 // comme un nombre, contrairement à « 12 345,00 » avec espace insécable).
-export const nombreFr = (v) => (v == null || v === '' ? '' : String(Number(v) || 0).replace('.', ','))
+// Arrondi à 2 décimales : les montants sont issus de calculs flottants
+// (pp_m × 12) et sortaient sinon en « 1234,5600000000001 ».
+export const nombreFr = (v) => {
+  if (v == null || v === '') return ''
+  const n = Number(v)
+  if (!Number.isFinite(n)) return ''
+  // Pas de décimale inutile : 1234 reste « 1234 », 1234.5 devient « 1234,5 ».
+  return String(Math.round(n * 100) / 100).replace('.', ',')
+}

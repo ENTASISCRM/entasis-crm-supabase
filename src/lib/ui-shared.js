@@ -83,6 +83,16 @@ export function emptyDeal(code = '') {
 }
 
 export function normalizeDeal(d) {
+  // Les champs « prochaine action » ne sont normalisés QUE s'ils sont présents
+  // dans l'objet source : les injecter à null systématiquement effacerait la
+  // valeur enregistrée lors d'une sauvegarde partielle (reprise de brouillon).
+  const prochaineAction = {};
+  if ('next_action' in d) {
+    prochaineAction.next_action = d.next_action ? String(d.next_action).trim() || null : null;
+  }
+  if ('next_action_date' in d) {
+    prochaineAction.next_action_date = d.next_action_date || null;
+  }
   return {
     ...d,
     pp_m: Number(d.pp_m || 0),
@@ -98,9 +108,8 @@ export function normalizeDeal(d) {
     is_ordre_placement: !!d.is_ordre_placement,
     client_age: d.client_age === '' || d.client_age == null ? null : Number(d.client_age),
     // D3 : colonnes `text` et `date` en base — une chaîne vide ferait
-    // échouer l'insert sur la colonne date, on renvoie null.
-    next_action: d.next_action ? String(d.next_action).trim() || null : null,
-    next_action_date: d.next_action_date || null,
+    // échouer l'insert sur la colonne date, on renvoie null (voir plus haut).
+    ...prochaineAction,
   };
 }
 

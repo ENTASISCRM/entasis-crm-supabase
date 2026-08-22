@@ -2244,13 +2244,22 @@ const PIPELINE_COLS=[
 // D3 — « Mes actions du jour » : les prochaines actions échues ou à mener
 // aujourd'hui, sur les dossiers vivants du conseiller. Le réflexe Pipedrive :
 // on ouvre le CRM et on sait quoi faire, sans chercher.
+// Date du jour en heure LOCALE : toISOString() renvoie l'UTC, ce qui décalait
+// les échéances d'un jour entre minuit et 2 h du matin en France.
+function jourLocal(d=new Date()){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+}
+
 function ActionsDuJour({deals,profile,onEdit}){
-  const today=new Date().toISOString().slice(0,10)
+  const today=jourLocal()
   const code=profile?.advisor_code
   const items=useMemo(()=>{
+    if(!code)return [] // sans code conseiller, on n'afficherait pas « mes » actions
     return (deals||[])
-      .filter(d=>isPipeline(d.status))
-      .filter(d=>!code||dealMatchesAdvisor(d,code))
+      // Tout sauf les dossiers abandonnés : une action de suivi peut aussi
+      // porter sur un dossier déjà signé (envoi de pièces, prise de RDV).
+      .filter(d=>d.status!=='Annulé')
+      .filter(d=>dealMatchesAdvisor(d,code))
       .filter(d=>d.next_action_date&&String(d.next_action_date).slice(0,10)<=today)
       .sort((a,b)=>String(a.next_action_date).localeCompare(String(b.next_action_date)))
   },[deals,code,today])
@@ -2292,7 +2301,7 @@ function ActionsDuJour({deals,profile,onEdit}){
 function NextActionChip({deal,compact}){
   if(!deal?.next_action&&!deal?.next_action_date)return null
   const iso=deal.next_action_date?String(deal.next_action_date).slice(0,10):null
-  const today=new Date().toISOString().slice(0,10)
+  const today=jourLocal()
   const enRetard=iso&&iso<today
   const aujourdhui=iso===today
   const couleur=enRetard
@@ -2322,10 +2331,12 @@ async function appliquerChangementStatut(deal,cible,{onEdit,onQuickPatch,undoabl
   // Signature : compagnie, dates et data client sont obligatoires → la modale
   // pré-basculée, jamais un dossier signé incomplet créé d'un seul geste.
   if(cible==='Signé'){onEdit?.({...deal,status:'Signé'});return false}
+  // Dé-signer retire le dossier du CA réalisé : jamais par simple glissement.
+  if(deal.status==='Signé'&&!(await confirmDialog({title:`Retirer la signature du dossier de ${getClientName(deal)} ?`,message:`Il repassera en « ${statusLabel(cible)||cible} » et sortira du chiffre d'affaires signé.`,confirmLabel:'Retirer la signature',danger:true})))return false
   // En cours / Prévu exigent une date de signature prévue.
   if((cible==='En cours'||cible==='Prévu')&&!deal.date_expected){onEdit?.({...deal,status:cible});return false}
   if(cible==='Annulé'&&!(await confirmDialog({title:`Abandonner le dossier de ${getClientName(deal)} ?`,message:'Il passera en Annulé.',confirmLabel:'Abandonner',danger:true})))return false
-  onQuickPatch?.(deal,{status:cible},`Dossier déplacé vers ${cible}`,{undoable})
+  onQuickPatch?.(deal,{status:cible},`Dossier déplacé vers ${statusLabel(cible)||cible}`,{undoable})
   return true
 }
 
@@ -2706,7 +2717,7 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
             Tous les mois
           </label>
           <button className="btn btn-ghost btn-sm" onClick={onRefresh}><Icon.Refresh/> Rafraîchir</button>
-          {/* D7 : exporte exactement la sélection affichée (filtres + tri). */}
+          {/* D7 : exporte les dossiers correspondant aux filtres actifs, une ligne par dossier. */}
           <button className="btn btn-outline btn-sm" onClick={exporterDossiers} disabled={!filtered.length} title="Exporter les dossiers affichés en CSV (Excel)">
             Exporter ({filtered.length})
           </button>
@@ -2754,7 +2765,7 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
                         {group.co_advisor_code && <span className="cell-sub"> co: {group.co_advisor_code}</span>}
                       </td>
                       <td>{group.latestSignedDate ? <span style={{fontSize:14,fontWeight:600,color:'var(--t1)',fontVariantNumeric:'tabular-nums'}}>{new Date(group.latestSignedDate).toLocaleDateString('fr-FR')}</span> : <span style={{color:'var(--t3)'}}>—</span>}</td>
-                      <td onClick={e=>e.stopPropagation()}>
+                      <td onClick={group.deals.length===1&&onQuickPatch?(e=>e.stopPropagation()):undefined}>
                         {/* D2 : statut modifiable sans ouvrir la modale quand le
                             client n'a qu'un dossier. Groupe multi-dossiers : le
                             statut affiché est un calcul, on l'édite ligne à ligne
@@ -5224,18 +5235,19 @@ export default function App(){
         setPaletteOpen(o=>!o)
         return
       }
+      // « ? » traité AVANT la garde : sinon, l'aide une fois ouverte ne
+      // pourrait plus être refermée par la même touche (helpOpen bloquait).
+      if(e.key==='?'&&!typing&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!modalOpen&&!paletteOpen&&!document.querySelector('.confirm-overlay')){
+        e.preventDefault()
+        setHelpOpen(o=>!o)
+        return
+      }
       // .confirm-overlay : dialogue de confirmation imperatif (ui/confirm.jsx),
       // hors state React d'App — on le detecte via le DOM.
       if(typing||e.ctrlKey||e.metaKey||e.altKey||modalOpen||paletteOpen||helpOpen||document.querySelector('.confirm-overlay'))return
       if(e.key==='/'){
         const el=document.querySelector('[data-global-search]')
         if(el){e.preventDefault();el.focus()}
-        return
-      }
-      // D8 : « ? » ouvre l'aide des raccourcis (pattern Attio/Linear/Gmail).
-      if(e.key==='?'){
-        e.preventDefault()
-        setHelpOpen(o=>!o)
         return
       }
       if(e.key==='n'&&activeTab!=='leads'&&activeTab!=='prospection'){
@@ -5876,7 +5888,10 @@ export default function App(){
     const ilYa7j = Date.now() - 7 * 24 * 60 * 60 * 1000
     for (const d of deals) {
       if (d.status !== 'Signé') continue
-      const quand = d.updated_at || d.created_at
+      // date_signed et non updated_at : ce dernier est remis à jour par la
+      // moindre modification, un dossier signé il y a 6 mois serait annoncé
+      // comme « signé » à chaque retouche.
+      const quand = d.date_signed ? `${String(d.date_signed).slice(0,10)}T12:00:00` : null
       if (!quand || new Date(quand).getTime() < ilYa7j) continue
       // Ses propres signatures ne sont pas une notification : on les connaît.
       if (profile?.advisor_code && d.advisor_code === profile.advisor_code) continue
