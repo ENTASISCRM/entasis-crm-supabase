@@ -2253,3 +2253,11 @@ table,
 
 /* A5 — variante or du badge sidebar (remplace le style inline). */
 .nav-item-badge--gold { background: var(--gold); color: #fff; }
+
+/* B5 — kanban partagé : surbrillance de la colonne survolée pendant un
+   glisser-déposer (pipeline commercial + pipeline VEFA). */
+.kanban-col--over {
+  outline: 2px dashed var(--gold);
+  outline-offset: -2px;
+  border-radius: var(--rad-lg, 12px);
+}

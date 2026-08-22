@@ -18,6 +18,7 @@ import { confirmDialog } from './components/ui/confirm'
 import { SkeletonPage } from './components/ui/Skeleton'
 import SubTabs from './components/ui/SubTabs'
 import { buildNavDomains, viewId, domainOf, visibleTabs } from './lib/navigation'
+import { KanbanDnd, KanbanColumn, KanbanCard, targetColumnOf } from './components/ui/kanban'
 // Onglets lourds charges a la demande (code-splitting via React.lazy) : sortis du
 // bundle principal pour alleger le JS au login. jspdf/html2canvas (OutilsCGP) et
 // chart.js (ManagementView) ne se telechargent que quand l onglet s ouvre.
@@ -2235,6 +2236,20 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
   const ppTotalMois=PIPELINE_COLS.filter(c=>c.id!=='Annulé').reduce((s,c)=>s+(ppByStatus[c.id]||0),0)
   const puTotalMois=PIPELINE_COLS.filter(c=>c.id!=='Annulé').reduce((s,c)=>s+(puByStatus[c.id]||0),0)
 
+  // B5 — drag & drop : lâcher une carte sur une colonne (ou sur une carte de
+  // cette colonne) change le statut via onQuickPatch (optimiste + Realtime).
+  // Exception « Signé » : les champs signature (compagnie, dates, montants)
+  // sont obligatoires → on ouvre la modale pré-basculée sur Signé plutôt que
+  // de créer un dossier signé incomplet d'un simple geste.
+  function handleCardMove({itemData,overId,overData}){
+    const deal=itemData?.deal
+    if(!deal)return
+    const target=targetColumnOf({overId,overData})
+    if(!target||target===deal.status)return
+    if(target==='Signé'){onEdit({...deal,status:'Signé'});return}
+    if(onQuickPatch)onQuickPatch(deal,{status:target},`Dossier déplacé vers ${target}`)
+  }
+
   return (
     <div>
       <div className="section-header mb-16">
@@ -2282,11 +2297,12 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
           </button>
         </div>
       )}
+      <KanbanDnd onMove={handleCardMove}>
       <div className="pipeline-board">
         {PIPELINE_COLS.map(col=>{
           const items=byStatus[col.id]||[]
           return (
-            <div key={col.id} className={`pipeline-col ${col.cls}`}>
+            <KanbanColumn key={col.id} id={col.id} className={`pipeline-col ${col.cls}`}>
               <div className="pipeline-col-head">
                 <div>
                   <div className="pipeline-col-title">{col.label}</div>
@@ -2309,7 +2325,7 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
               </div>
               <div className="pipeline-cards">
                 {items.map(deal=>(
-                  <div key={deal.id} className="pipeline-deal-card" onClick={()=>onEdit(deal)}>
+                  <KanbanCard key={deal.id} id={deal.id} data={{type:'card',colId:col.id,deal}} className="pipeline-deal-card" onClick={()=>onEdit(deal)}>
                     <div className="pipeline-deal-client">{getClientName(deal)}</div>
                     <div className="pipeline-deal-product">{deal.product} · {deal.company||'—'}</div>
                     {/* Brouillon créé depuis un RDV (produit Autre, 0 EUR) : déjà
@@ -2410,14 +2426,15 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
                         <AgeBadge deal={deal} compact/><span style={{fontSize:11,color:'var(--t3)'}}>{deal.advisor_code}</span>
                       </div>
                     </div>
-                  </div>
+                  </KanbanCard>
                 ))}
                 {!items.length&&<div className="pipeline-empty">Aucun dossier</div>}
               </div>
-            </div>
+            </KanbanColumn>
           )
         })}
       </div>
+      </KanbanDnd>
     </div>
   )
 }

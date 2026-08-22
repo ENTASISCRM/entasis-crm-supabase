@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+// B5 : primitives kanban partagées (mêmes gestes que le pipeline commercial).
+import { KanbanDnd, KanbanColumn, KanbanCard, targetColumnOf } from './ui/kanban'
 
 const euro = (v) => Number(v||0).toLocaleString('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0})
 
@@ -17,21 +16,12 @@ const COLUMNS = [
   { id: 'honoraires', label: 'Honoraires', color: '#10b981' },
 ]
 
-function KanbanCard({ dossier, conseillerName }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: dossier.id,
-    data: { dossier },
-  })
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  }
+function DossierCard({ dossier, conseillerName }) {
   const dateKey = dossier.date_reservation || dossier.date_acte || dossier.created_at
   const dateStr = dateKey ? new Date(dateKey).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) : ''
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="immo-kanban-card">
+    <KanbanCard id={dossier.id} data={{ type: 'card', colId: dossier.statut_pipeline, dossier }} className="immo-kanban-card">
       <div className="immo-kanban-card-name">{dossier.client_nom || 'Client'}</div>
       <div className="immo-kanban-card-programme">{dossier.programme?.nom || dossier.notes?.split('\n')[0]?.slice(0, 30) || '—'}</div>
       {dossier.prix_lot && <div className="immo-kanban-card-prix">{euro(dossier.prix_lot)}</div>}
@@ -39,7 +29,7 @@ function KanbanCard({ dossier, conseillerName }) {
         <span>{conseillerName}</span>
         <span>{dateStr}</span>
       </div>
-    </div>
+    </KanbanCard>
   )
 }
 
@@ -47,10 +37,6 @@ export default function PipelineVEFA({ profile, teamProfiles }) {
   const [dossiers, setDossiers] = useState([])
   const [loading, setLoading] = useState(true)
   const [filterConseiller, setFilterConseiller] = useState(profile?.role === 'manager' ? 'tous' : profile?.id || 'tous')
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
-  )
 
   useEffect(() => {
     loadDossiers()
@@ -81,29 +67,12 @@ export default function PipelineVEFA({ profile, teamProfiles }) {
     return p?.advisor_code || p?.full_name?.split(' ').map(n => n[0]).join('') || '—'
   }
 
-  async function handleDragEnd(event) {
-    const { active, over } = event
-    if (!over) return
-
-    const dossierId = active.id
+  async function handleMove({ itemId, overId, overData }) {
+    const dossierId = itemId
     const dossier = dossiers.find(d => d.id === dossierId)
     if (!dossier) return
 
-    // Find target column - could be dropping on a column or on another card
-    let targetColumn = null
-
-    // Check if dropping on a column droppable
-    const overCol = COLUMNS.find(c => c.id === over.id)
-    if (overCol) {
-      targetColumn = overCol.id
-    } else {
-      // Dropping on another card - find which column that card is in
-      const overDossier = dossiers.find(d => d.id === over.id)
-      if (overDossier) {
-        targetColumn = overDossier.statut_pipeline
-      }
-    }
-
+    const targetColumn = targetColumnOf({ overId, overData })
     if (!targetColumn || targetColumn === dossier.statut_pipeline) return
 
     // Optimistic update
@@ -145,47 +114,35 @@ export default function PipelineVEFA({ profile, teamProfiles }) {
       </div>
 
       {/* Kanban */}
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <KanbanDnd onMove={handleMove}>
         <div className="immo-kanban">
           {COLUMNS.map(col => {
             const colDossiers = columnDossiers[col.id] || []
             const totalMontant = colDossiers.reduce((s, d) => s + (d.prix_lot || 0), 0)
             return (
-              <DroppableColumn key={col.id} col={col} count={colDossiers.length} totalMontant={totalMontant}>
-                <SortableContext items={colDossiers.map(d => d.id)} strategy={verticalListSortingStrategy}>
+              <KanbanColumn key={col.id} id={col.id} className="immo-kanban-column">
+                <div className="immo-kanban-column-header" style={{ borderTopColor: col.color }}>
+                  <div className="immo-kanban-column-title">
+                    {col.label}
+                    <span className="immo-kanban-count">{colDossiers.length}</span>
+                  </div>
+                  {totalMontant > 0 && (
+                    <div className="immo-kanban-column-total">{euro(totalMontant)}</div>
+                  )}
+                </div>
+                <div className="immo-kanban-column-body">
                   {colDossiers.map(d => (
-                    <KanbanCard key={d.id} dossier={d} conseillerName={conseillerName(d.conseiller_id)} />
+                    <DossierCard key={d.id} dossier={d} conseillerName={conseillerName(d.conseiller_id)} />
                   ))}
-                </SortableContext>
-                {colDossiers.length === 0 && (
-                  <div className="immo-kanban-empty">Aucun dossier</div>
-                )}
-              </DroppableColumn>
+                  {colDossiers.length === 0 && (
+                    <div className="immo-kanban-empty">Aucun dossier</div>
+                  )}
+                </div>
+              </KanbanColumn>
             )
           })}
         </div>
-      </DndContext>
-    </div>
-  )
-}
-
-function DroppableColumn({ col, count, totalMontant, children }) {
-  const { setNodeRef } = useSortable({ id: col.id, data: { type: 'column' } })
-
-  return (
-    <div ref={setNodeRef} className="immo-kanban-column">
-      <div className="immo-kanban-column-header" style={{ borderTopColor: col.color }}>
-        <div className="immo-kanban-column-title">
-          {col.label}
-          <span className="immo-kanban-count">{count}</span>
-        </div>
-        {totalMontant > 0 && (
-          <div className="immo-kanban-column-total">{euro(totalMontant)}</div>
-        )}
-      </div>
-      <div className="immo-kanban-column-body">
-        {children}
-      </div>
+      </KanbanDnd>
     </div>
   )
 }
