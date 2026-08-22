@@ -2236,12 +2236,19 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
   // Exception « Signé » : les champs signature (compagnie, dates, montants)
   // sont obligatoires → on ouvre la modale pré-basculée sur Signé plutôt que
   // de créer un dossier signé incomplet d'un simple geste.
-  function handleCardMove({itemData,overId,overData}){
+  async function handleCardMove({itemData,overId,overData}){
     const deal=itemData?.deal
     if(!deal)return
     const target=targetColumnOf({overId,overData})
     if(!target||target===deal.status)return
     if(target==='Signé'){onEdit({...deal,status:'Signé'});return}
+    // Même règle que la modale : En cours/Prévu exigent une date de signature
+    // prévue. Si elle manque, le drop ouvre la modale pré-basculée au lieu de
+    // créer silencieusement un dossier hors règle.
+    if((target==='En cours'||target==='Prévu')&&!deal.date_expected){onEdit({...deal,status:target});return}
+    // Même garde-fou que le bouton « Abandonner » : annuler par un simple
+    // geste demande confirmation.
+    if(target==='Annulé'&&!(await confirmDialog({title:`Abandonner le dossier de ${getClientName(deal)} ?`,message:'Il passera en Annulé.',confirmLabel:'Abandonner',danger:true})))return
     if(onQuickPatch)onQuickPatch(deal,{status:target},`Dossier déplacé vers ${target}`)
   }
 
@@ -3769,12 +3776,22 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
     // démontée par App).
     dirtyRef.current = false
     setFullForm(!!initialDeal.created_at)
+    // Reset aussi la sélection client : sans lui, le chip du client choisi à
+    // la création précédente restait affiché (inputs verrouillés) alors que
+    // le nouveau deal n'avait plus de client_id → dossier orphelin possible.
+    setSelectedClient(null)
+    setShowClientSearch(false)
+    setClientSearch('')
+    setClientResults([])
     const locked = !initialDeal.created_at && !!initialDeal.client_id && !!initialDeal.client
     setProducts([locked
       ? { ...emptyProduct(), _localId: uid(), priority: initialDeal.priority || 'Normale' }
       : {
         _localId: uid(),
-        product: initialDeal.product || '',
+        // Produit volontairement vide à la création : le « -- Choisir -- »
+        // required force un choix conscient (emptyDeal pré-remplit PER, on
+        // ne veut pas de dossiers PER créés par inertie).
+        product: initialDeal.created_at ? (initialDeal.product || '') : '',
         company: initialDeal.company || '',
         pp_m: initialDeal.pp_m || 0,
         pu: initialDeal.pu || 0,
@@ -3911,7 +3928,10 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
     // Data client OBLIGATOIRE au passage en « Signé » (Louis 13/07) : statut,
     // profession, revenus, patrimoine, en plus de email + téléphone. Vaut pour
     // un nouveau client comme pour un existant (compléter la fiche avant signature).
-    if (deal.status === 'Signé') {
+    // anySigned et non deal.status : en création multi-produits le statut vit
+    // au niveau produit — un produit Signé avec deal.status 'En cours'
+    // contournait la garde.
+    if (anySigned) {
       const em2 = (deal.client_email || selectedClient?.email || '').trim();
       const tel2 = (deal.client_phone || selectedClient?.telephone || '').trim();
       const manquants = [];
@@ -4413,6 +4433,15 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+            {/* Mode express : l'attribution du dossier reste visible même si
+                la section Équipe & suivi est masquée — un manager qui crée
+                pour quelqu'un d'autre doit voir qu'il faut la changer. */}
+            {expressMode && (
+              <div className="form-hint" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                <span>Dossier attribué à <strong>{(teamProfiles||[]).find(t=>t.advisor_code===deal.advisor_code)?.full_name || deal.advisor_code || '—'}</strong></span>
+                <button type="button" className="btn btn-ghost btn-sm" style={{height:22,padding:'0 8px',fontSize:11}} onClick={()=>setFullForm(true)}>changer</button>
               </div>
             )}
             <div className="form-row form-row-2">
@@ -5008,20 +5037,37 @@ export default function App(){
   const applyingHash = useRef(false)
   const hashReady = useRef(false)
   const wroteHashOnce = useRef(false)
-  // Tabs accessibles au rôle courant — rempli à chaque rendu (voir plus bas),
-  // consulté par le listener hashchange sans re-abonnement.
+  // Tabs accessibles au rôle courant, consultés par le listener hashchange
+  // sans re-abonnement. Rempli ICI, à CHAQUE rendu : pendant le chargement,
+  // le rendu s'arrête au spinner avant la zone qui construit navDomains, or
+  // le premier apply() se déclenche dès que profile arrive (loading encore
+  // true) — sans ce remplissage précoce, tout deep link ≠ #/dashboard était
+  // rejeté au chargement à froid (F5, lien partagé).
   const visibleTabsRef = useRef(new Set(['dashboard']))
+  visibleTabsRef.current = visibleTabs(buildNavDomains({
+    isManager: profile?.role === 'manager',
+    isRhDelegue: profile?.rh_delegue === true,
+    canSmartRh: profile?.role === 'manager' || profile?.rh_delegue === true || !['STAGIAIRE', 'MANDATAIRE'].includes(String(contractType || '').toUpperCase()),
+  }))
 
   useEffect(() => {
     if (!session || !profile) return
     const apply = () => {
       const h = window.location.hash
       if (!h.startsWith('#/')) return
-      const parts = h.slice(2).split('/').filter(Boolean).map(decodeURIComponent)
+      // decodeURIComponent protégé : un hash malformé (séquence % invalide,
+      // lien tronqué par un mail) ne doit pas faire écran blanc.
+      const parts = h.slice(2).split('/').filter(Boolean).map((s) => {
+        try { return decodeURIComponent(s) } catch { return s }
+      })
       const tab = parts[0] || 'dashboard'
       applyingHash.current = true
+      // L'entrée d'historique du deep link existe déjà (le navigateur l'a
+      // chargée) : la prochaine navigation doit POUSSER, pas remplacer.
+      wroteHashOnce.current = true
       if (!visibleTabsRef.current.has(tab)) {
         setActiveTab('dashboard')
+        window.history.replaceState(null, '', '#/dashboard')
       } else {
         setActiveTab(tab)
         if (tab === 'clients') {
@@ -5581,8 +5627,8 @@ export default function App(){
   const canSmartRh = isManager || isRhDelegue || !['STAGIAIRE','MANDATAIRE'].includes(String(contractType||'').toUpperCase())
 
   // ── B1 : navigation en domaines (source unique lib/navigation.js) ──────
+  // (visibleTabsRef est rempli plus haut, avant les early returns.)
   const navDomains = buildNavDomains({ isManager, isRhDelegue, canSmartRh })
-  visibleTabsRef.current = visibleTabs(navDomains) // consommé par le routing hash
   // Vues accessibles → palette ⌘K : même source que la sidebar, fin de la
   // liste MANAGER_ONLY maintenue à la main dans CommandPalette.
   const palettePages = {}

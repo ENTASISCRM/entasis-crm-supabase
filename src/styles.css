@@ -602,7 +602,10 @@ a { color: inherit; text-decoration: none; }
   background: rgba(0,0,0,0.025);
   border: 0.5px solid var(--bd);
   border-radius: var(--rad-lg);
-  overflow: hidden;
+  /* B5 : overflow visible — une carte glissée hors de sa colonne restait
+     écrêtée au bord (overflow: hidden). L'arrondi du header est repris
+     ci-dessous puisqu'il n'est plus clippé par la colonne. */
+  overflow: visible;
 }
 .pipeline-col-head {
   display: flex;
@@ -611,6 +614,7 @@ a { color: inherit; text-decoration: none; }
   padding: 13px 14px 11px;
   border-bottom: 0.5px solid var(--bd);
   background: var(--paper-grad);
+  border-radius: var(--rad-lg) var(--rad-lg) 0 0;
 }
 .pipeline-col-title { font-size: 12.5px; font-weight: 600; color: var(--t1); letter-spacing: -0.005em; }
 .pipeline-col-count {

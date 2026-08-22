@@ -22,7 +22,12 @@ export default function ClientPeek({ client, onClose, onOpenFull }) {
   useEffect(() => {
     if (!client) return
     const onKey = (e) => {
-      if (e.key === 'Escape') { e.stopPropagation(); onClose() }
+      if (e.key !== 'Escape') return
+      // Une modale ouverte au-dessus du peek (édition client, confirm…)
+      // garde la priorité sur Échap.
+      if (document.querySelector('.modal-overlay')) return
+      e.stopPropagation()
+      onClose()
     }
     document.addEventListener('keydown', onKey, true)
     return () => document.removeEventListener('keydown', onKey, true)

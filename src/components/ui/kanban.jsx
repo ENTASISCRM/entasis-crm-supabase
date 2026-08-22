@@ -18,7 +18,7 @@
      cible (lâcher sur une colonne OU sur une carte) est triviale côté appelant.
    - Pas de tri intra-colonne : l'ordre vient des données, comme partout.
 ───────────────────────────────────────────────────────────────────────────── */
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { DndContext, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, closestCorners } from '@dnd-kit/core'
 
 export function KanbanDnd({ onMove, children }) {
@@ -60,11 +60,23 @@ export function KanbanCard({ id, data, className, style, onClick, children }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id, data })
   // Après un drop, le navigateur émet encore un click sur la carte : sans ce
   // garde-fou, chaque glisser-déposer ouvrait aussi la modale d'édition.
+  // Le drapeau expire de lui-même : si aucun click ne suit le drop (pointeur
+  // relâché hors de la carte), le clic suivant ne doit pas être avalé.
   const wasDragged = useRef(false)
   if (isDragging) wasDragged.current = true
-  const handleClick = (e) => {
-    if (wasDragged.current) { wasDragged.current = false; return }
-    onClick?.(e)
+  useEffect(() => {
+    if (isDragging || !wasDragged.current) return
+    const t = setTimeout(() => { wasDragged.current = false }, 180)
+    return () => clearTimeout(t)
+  }, [isDragging])
+  // Phase capture : couvre aussi un drag initié sur un lien tel:/mailto: ou
+  // un bouton interne de la carte — le click post-drop est neutralisé avant
+  // d'atteindre sa cible (sinon le drop composait le numéro / ouvrait le mail).
+  const handleClickCapture = (e) => {
+    if (!wasDragged.current) return
+    wasDragged.current = false
+    e.stopPropagation()
+    e.preventDefault()
   }
   const st = {
     ...style,
@@ -75,7 +87,7 @@ export function KanbanCard({ id, data, className, style, onClick, children }) {
     cursor: 'grab',
   }
   return (
-    <div ref={setNodeRef} className={className} style={st} onClick={handleClick} {...attributes} {...listeners}>
+    <div ref={setNodeRef} className={className} style={st} onClickCapture={handleClickCapture} onClick={onClick} {...attributes} {...listeners}>
       {children}
     </div>
   )
