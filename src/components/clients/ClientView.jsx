@@ -8,6 +8,7 @@ import ClientModal from './ClientModal.jsx'
 import ClientEquipementCard from './ClientEquipementCard.jsx'
 import ClientContratsCard from './ClientContratsCard.jsx'
 import ClientEspaceCard from './ClientEspaceCard.jsx'
+import ClientTimeline from './ClientTimeline.jsx'
 
 // Copie une valeur dans le presse papiers avec retour visuel
 function copier(valeur, label) {
@@ -758,40 +759,11 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
         </div>
       ))}
 
-      {/* Section Historique */}
-      {tab === 'historique' && (history.length > 0 ? (
-        <div className="card">
-          <div className="card-header">
-            <h3>Historique des actions</h3>
-          </div>
-          <div className="card-body">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {history.map(activity => (
-                <div key={activity.id} style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '8px 0',
-                  borderBottom: '1px solid var(--bd)',
-                  fontSize: '13px'
-                }}>
-                  <div>
-                    <strong>{activity.action_type}</strong> par {activity.user?.full_name || 'Système'}
-                  </div>
-                  <div style={{ color: 'var(--t2)', fontSize: '12px' }}>
-                    {new Date(activity.created_at).toLocaleDateString('fr-FR')}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="table-empty-state">
-          <div className="empty-title">Aucune action enregistrée</div>
-          <div className="empty-sub">Les créations et modifications de dossiers de ce client s'afficheront ici.</div>
-        </div>
-      ))}
+      {/* Section Historique — D4 : une seule chronologie (échanges consignés
+          à la main + activités système + jalons de signature des dossiers). */}
+      {tab === 'historique' && (
+        <ClientTimeline clientId={client.id} deals={clientDeals} history={history} />
+      )}
 
       {/* Modal d'édition */}
       <ClientModal

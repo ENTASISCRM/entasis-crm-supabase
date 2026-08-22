@@ -2423,3 +2423,34 @@ table,
 @media (prefers-reduced-motion: reduce) {
   .inline-select-face, .inline-select-chevron { transition: none; }
 }
+
+/* D4 — timeline de la fiche client : rail vertical + pastille par entrée. */
+.timeline { display: flex; flex-direction: column; }
+.timeline-entry { display: flex; gap: 14px; }
+.timeline-rail {
+  position: relative;
+  width: 12px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+}
+/* Le trait relie les pastilles ; la dernière entrée n'en porte pas. */
+.timeline-rail::before {
+  content: '';
+  position: absolute;
+  top: 14px;
+  bottom: -4px;
+  width: 1px;
+  background: var(--bd);
+}
+.timeline-entry:last-child .timeline-rail::before { display: none; }
+.timeline-bullet {
+  position: relative;
+  z-index: 1;
+  width: 11px;
+  height: 11px;
+  margin-top: 4px;
+  border-radius: 50%;
+  border: 2px solid;
+  flex-shrink: 0;
+}
