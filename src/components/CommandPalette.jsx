@@ -5,14 +5,11 @@ import * as clientsService from '../services/clients'
 // Palette de commandes Ctrl/Cmd+K : un champ unique qui cherche dans les
 // clients et dossiers deja charges en memoire, et liste les onglets de
 // navigation. Entree ouvre la fiche client, le dossier, ou change d onglet.
-// Aucune requete reseau : tout vient du state deals passe en prop.
+// `pages` arrive DEJA filtre par role : App le construit depuis
+// lib/navigation.js (meme source que la sidebar) — plus de liste
+// MANAGER_ONLY a maintenir a la main ici.
 
-// Onglets reserves au role manager, masques de la palette pour un conseiller.
-// Aligne sur la sidebar (App.jsx) : tout onglet reserve manager doit etre
-// liste ici, sinon il apparait dans la palette d un conseiller.
-const MANAGER_ONLY = new Set(['team', 'pilotage-rh', 'recrutement', 'editorial', 'structureurs', 'weekly-review', 'cockpit'])
-
-export default function CommandPalette({ open, onClose, deals, pages, isManager, onOpenDeal, onOpenClient, onGoTab }) {
+export default function CommandPalette({ open, onClose, deals, pages, onOpenDeal, onOpenClient, onGoTab }) {
   const [query, setQuery] = useState('')
   const [selIdx, setSelIdx] = useState(0)
   // Resultats de la table clients (recherche reseau debouncee) : un client
@@ -49,9 +46,8 @@ export default function CommandPalette({ open, onClose, deals, pages, isManager,
     if (!open) return []
     const q = query.trim().toLowerCase()
 
-    // Onglets de navigation (filtres par role).
+    // Onglets de navigation (deja filtres par role via `pages`).
     const tabs = Object.entries(pages || {})
-      .filter(([id]) => isManager || !MANAGER_ONLY.has(id))
       .filter(([, label]) => !q || label.toLowerCase().includes(q))
       .map(([id, label]) => ({ type: 'tab', key: `tab-${id}`, icon: '📁', label, sub: 'Onglet', run: () => onGoTab(id) }))
 
@@ -88,7 +84,7 @@ export default function CommandPalette({ open, onClose, deals, pages, isManager,
     }
 
     return [...clientHits, ...found, ...tabs.slice(0, 4)].slice(0, 12)
-  }, [open, query, deals, clientRows, pages, isManager, onGoTab, onOpenClient, onOpenDeal])
+  }, [open, query, deals, clientRows, pages, onGoTab, onOpenClient, onOpenDeal])
 
   // Garde l index de selection dans les bornes quand la liste change.
   useEffect(() => { setSelIdx(0) }, [query])

@@ -22,6 +22,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
+import { SkeletonCards } from './ui/Skeleton'
 import {
   listEquipment, listFamilies, upsertDeclare, removeDeclare,
   listDeclaresForClient, listSignedDealsForClient, getSettings, saveSettings,
@@ -34,6 +35,7 @@ import {
   RAISONS_REPORT, ECHEANCES_REPORT, simulationIndicative,
 } from '../config/multiEquipementRules'
 import { genererMail, genererRecommandation, genererRelance, CABINET } from '../config/mailsProduits'
+import { messageErreur } from '../lib/ui-shared'
 
 // Statuts pro (miroir de la fiche client) pour la capture inline.
 const STATUTS_PRO = ['Salarié', 'TNS', 'Chef d entreprise', 'Retraité', 'Profession libérale', 'Autre']
@@ -142,7 +144,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
   useEffect(() => {
     let vivant = true
     ;(async () => {
-      try { await reload() } catch (e) { if (vivant) setErr(e.message || 'Erreur de chargement') }
+      try { await reload() } catch (e) { if (vivant) setErr(messageErreur(e)) }
       finally { if (vivant) setLoading(false) }
     })()
     return () => { vivant = false }
@@ -351,7 +353,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
       toast.success(`Proposition ${labelFam(mi.famille)} initiée, le dossier s ouvre`)
       await refreshMissions()
       if (onCreateDeal) onCreateDeal(mi.client)
-    } catch (e) { toast.error(e.message || 'Échec du lancement de la mission') }
+    } catch (e) { toast.error(messageErreur(e)) }
   }
   // Depuis la modale Proposer : marque la mission en cours (sans ouvrir le
   // dossier), pour que le suivi reflete l envoi du mail. Silencieux : le mail
@@ -381,14 +383,14 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
     const note = window.prompt('Votre note de renfort (visible du conseiller titulaire) :', m.renfort_note || '')
     if (note === null) return
     try { await upsertMission({ client_id: m.client_id, famille: m.famille, patch: { renfort_note: note } }); toast.success('Note de renfort enregistrée'); await reloadCollab() }
-    catch (e) { toast.error(e.message || 'Échec') }
+    catch (e) { toast.error(messageErreur(e)) }
   }
   // #9 : le pair donne son second regard sur la ligne
   async function donnerAvis(m) {
     const avis = window.prompt('Votre second regard (adéquation, angle, point de vigilance) :', '')
     if (avis === null || !avis.trim()) return
     try { await upsertMission({ client_id: m.client_id, famille: m.famille, patch: { regard_avis: avis.trim(), regard_avis_by: profile?.advisor_code || null } }); toast.success('Avis transmis'); await reloadCollab() }
-    catch (e) { toast.error(e.message || 'Échec') }
+    catch (e) { toast.error(messageErreur(e)) }
   }
   // Ouvre Proposer pour un client hors portefeuille (expert en renfort)
   function proposerRenfort(m) {
@@ -422,7 +424,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
         : 'Client marqué non éligible sur cette mission')
       setReportPour(null)
       await refreshMissions()
-    } catch (e) { toast.error(e.message || 'Échec de l enregistrement') }
+    } catch (e) { toast.error(messageErreur(e)) }
   }
   function copierArgumentaire(famille) {
     const txt = ARGUMENTAIRES[famille]
@@ -436,7 +438,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
     setSettings(v)
     setEditCamp(false)
     try { await saveSettings(v); toast.success(`Campagne du mois : ${labelFam(famille)}`) }
-    catch (e) { toast.error(e.message || 'Échec (réservé aux managers)') }
+    catch (e) { toast.error(messageErreur(e)) }
   }
 
   const chips = [
@@ -465,7 +467,7 @@ export default function MultiEquipement({ profile, onCreateDeal }) {
         </div>
       </div>
 
-      {loading && <div className="empty">Chargement…</div>}
+      {loading && <SkeletonCards n={3} height={96} />}
       {err && <div className="empty errtxt">Erreur : {err}</div>}
 
       {!loading && !err && vue === 'missions' && (
@@ -916,7 +918,7 @@ function ProposerModal({ client, preset, relance, matCols, famMap, conseiller, a
       await upsertMission({ client_id: client.client_id, famille, patch: { regard_demande_a: code.trim(), advisor_code: advisorCode || client.advisor_code || null } })
       toast.success(`Second regard demandé à ${code.trim()}`)
       onRefresh && onRefresh()
-    } catch (e) { toast.error(e.message || 'Échec') }
+    } catch (e) { toast.error(messageErreur(e)) }
   }
 
   return (
@@ -1113,7 +1115,7 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
       await reload()
       const declares = await listDeclaresForClient(sel.client_id)
       setDetail((d) => ({ ...(d || { deals: [] }), declares }))
-    } catch (e) { toast.error(e.message || 'Échec de la déclaration') }
+    } catch (e) { toast.error(messageErreur(e)) }
     finally { setSaving(false) }
   }
   async function effacerDeclaration(famille) {
@@ -1125,7 +1127,7 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
       await reload()
       const declares = await listDeclaresForClient(sel.client_id)
       setDetail((d) => ({ ...(d || { deals: [] }), declares }))
-    } catch (e) { toast.error(e.message || 'Échec') }
+    } catch (e) { toast.error(messageErreur(e)) }
     finally { setSaving(false) }
   }
   // #8 : mise en veille relationnelle datée du client
@@ -1139,7 +1141,7 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
       toast.success('Client mis en veille')
       setPauseForm(false); setPauseMotif('')
       await reload()
-    } catch (e) { toast.error(e.message || 'Échec (réservé au conseiller du client)') }
+    } catch (e) { toast.error(messageErreur(e)) }
     finally { setSaving(false) }
   }
   async function leverPause() {
@@ -1149,7 +1151,7 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
       await setClientPause(sel.client_id, { pause_jusqu_au: null, pause_motif: null })
       toast.success('Veille levée')
       await reload()
-    } catch (e) { toast.error(e.message || 'Échec') }
+    } catch (e) { toast.error(messageErreur(e)) }
     finally { setSaving(false) }
   }
   // #10 : marque en une fois toutes les familles non renseignées comme absentes
@@ -1168,7 +1170,7 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
       await reload()
       const declares = await listDeclaresForClient(sel.client_id)
       setDetail((d) => ({ ...(d || { deals: [] }), declares }))
-    } catch (e) { toast.error(e.message || 'Échec') }
+    } catch (e) { toast.error(messageErreur(e)) }
     finally { setSaving(false) }
   }
   // #3 : demande de renfort à un référent sur une famille pointue
@@ -1180,7 +1182,7 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
     try {
       await upsertMission({ client_id: sel.client_id, famille, patch: { renfort_code: code.trim(), advisor_code: sel.advisor_code } })
       toast.success(`Renfort demandé à ${code.trim()}`)
-    } catch (e) { toast.error(e.message || 'Échec') }
+    } catch (e) { toast.error(messageErreur(e)) }
     finally { setSaving(false) }
   }
   // #1 vues sauvegardées (localStorage)
@@ -1202,11 +1204,11 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
       toast.success('Signal enregistré')
       setSigTxt(''); setSigFam(''); setSigEch('30')
       await reload()
-    } catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+    } catch (e) { toast.error(messageErreur(e)) } finally { setSaving(false) }
   }
   async function supprimerSignal(id) {
     setSaving(true)
-    try { await deleteSignal(id); await reload() } catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+    try { await deleteSignal(id); await reload() } catch (e) { toast.error(messageErreur(e)) } finally { setSaving(false) }
   }
   // #5 déclare une famille comme détenue ailleurs (chez un confrère)
   async function declarerAilleurs(famille) {
@@ -1220,7 +1222,7 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
       await reload()
       const declares = await listDeclaresForClient(sel.client_id)
       setDetail((d) => ({ ...(d || { deals: [] }), declares }))
-    } catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+    } catch (e) { toast.error(messageErreur(e)) } finally { setSaving(false) }
   }
   // #2 débrief RDV : un clic ferme la boucle vers les missions
   async function debriefAction(famille, action) {
@@ -1239,7 +1241,7 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
       await reload()
       const declares = await listDeclaresForClient(sel.client_id)
       setDetail((d) => ({ ...(d || { deals: [] }), declares }))
-    } catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+    } catch (e) { toast.error(messageErreur(e)) } finally { setSaving(false) }
   }
   // #4 rattache le client au foyer d un autre client (ou en crée un)
   async function rattacherFoyer() {
@@ -1256,20 +1258,20 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
       if (!target.foyerId) await patchClient(target.client_id, { foyer_id: fid })
       toast.success(`Foyer commun avec ${target.nom}`)
       await reload()
-    } catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+    } catch (e) { toast.error(messageErreur(e)) } finally { setSaving(false) }
   }
   async function detacherFoyer() {
     if (!sel) return
     setSaving(true)
     try { await patchClient(sel.client_id, { foyer_id: null }); toast.success('Détaché du foyer'); await reload() }
-    catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+    catch (e) { toast.error(messageErreur(e)) } finally { setSaving(false) }
   }
   // Auto-enrichissement : porte le patrimoine au plancher déduit des contrats signés
   async function appliquerPlancher(v) {
     if (!sel) return
     setSaving(true)
     try { await updateClientInfo(sel.client_id, { patrimoine_estime: v }); toast.success('Patrimoine mis à jour depuis les contrats'); await reload() }
-    catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+    catch (e) { toast.error(messageErreur(e)) } finally { setSaving(false) }
   }
   // #3 navigation client précédent / suivant dans la vue filtrée
   function navSel(dir) {
@@ -1298,7 +1300,7 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
     try {
       for (const id of multiSel) await setClientPause(id, { pause_jusqu_au: dansNJours(90), pause_motif: 'mise en veille groupée' })
       toast.success(`${multiSel.size} client(s) en veille`); setMultiSel(new Set()); await reload()
-    } catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+    } catch (e) { toast.error(messageErreur(e)) } finally { setSaving(false) }
   }
   async function batchReport() {
     setSaving(true)
@@ -1308,7 +1310,7 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
         if (r && sug) await upsertMission({ client_id: id, famille: sug.famille_suggeree, patch: { statut: 'reportee', raison_report: 'Report groupé', retour_le: dansNJours(90), advisor_code: r.advisor_code, montant_estime: baseMontant(r, sug.famille_suggeree).montant } })
       }
       toast.success('Missions reportées'); setMultiSel(new Set()); await reload()
-    } catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+    } catch (e) { toast.error(messageErreur(e)) } finally { setSaving(false) }
   }
   function batchRevue() {
     const items = []
@@ -1648,7 +1650,7 @@ function CaptureInline({ client, onSaved, onClose, compact }) {
       })
       toast.success('Fiche complétée, montants recalculés')
       onSaved && onSaved()
-    } catch (e) { toast.error(e.message || 'Échec de l enregistrement') }
+    } catch (e) { toast.error(messageErreur(e)) }
     finally { setSaving(false) }
   }
 

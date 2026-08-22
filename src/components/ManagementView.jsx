@@ -31,6 +31,10 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-hot-toast'
+import { confirmDialog } from './ui/confirm'
+import SubTabs from './ui/SubTabs'
+import { Skeleton, SkeletonText } from './ui/Skeleton'
+import SortableTh from './ui/SortableTh'
 import { leadroomAdmin } from '../lib/leadroom-api'
 import {
   advisorMetrics,
@@ -44,6 +48,7 @@ import { supabase } from '../lib/supabase'
 import * as profilesService from '../services/profiles'
 import { fetchRemuneration } from '../lib/remuneration-api'
 import WeeklyReview from './WeeklyReview'
+import { messageErreur } from '../lib/ui-shared'
 
 const fmtEur = (v) => Number(v || 0).toLocaleString('fr-FR', {
   style: 'currency', currency: 'EUR', maximumFractionDigits: 0,
@@ -308,23 +313,13 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           {/* Switch période Mois / Semaine (fusion WeeklyReview) */}
-          <div style={{ display: 'inline-flex', background: 'rgba(0,0,0,0.05)', borderRadius: 8, padding: 3 }}>
-            {[
-              { k: 'mois', l: 'Mois' },
-              { k: 'semaine', l: 'Semaine' },
-            ].map(opt => (
-              <button
-                key={opt.k}
-                onClick={() => setPeriode(opt.k)}
-                style={{
-                  padding: '5px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
-                  fontSize: 12, fontWeight: 600,
-                  background: periode === opt.k ? 'var(--gold)' : 'transparent',
-                  color: periode === opt.k ? '#fff' : 'var(--t2)',
-                }}
-              >{opt.l}</button>
-            ))}
-          </div>
+          <SubTabs
+            ariaLabel="Période"
+            tabs={[{ key: 'mois', label: 'Mois' }, { key: 'semaine', label: 'Semaine' }]}
+            active={periode}
+            onChange={setPeriode}
+            style={{ marginBottom: 0 }}
+          />
           {periode === 'mois' && (
             <button
               className="btn btn-ghost btn-sm"
@@ -607,19 +602,8 @@ function PodiumCard({ titre, subtitle, rows, color, emoji }) {
   )
 }
 
-function SortableTh({ label, col, sortKey, sortDir, onSort, align }) {
-  const active = sortKey === col
-  return (
-    <th onClick={() => onSort(col)}
-      style={{ cursor: 'pointer', userSelect: 'none', textAlign: align || 'left' }}
-      title={`Trier par ${label}`}>
-      {label}
-      <span style={{ marginLeft: 4, color: active ? 'var(--gold)' : 'var(--t3)', fontSize: 10 }}>
-        {active ? (sortDir === 'asc' ? '↑' : '↓') : '⇅'}
-      </span>
-    </th>
-  )
-}
+// SortableTh : déplacé dans ui/SortableTh.jsx (B7, source unique partagée
+// avec App.jsx) — importé en tête de fichier.
 
 // ─────────────────────────────────────────────────────────────────────────
 // Modal drill-down : détail complet d'un conseiller
@@ -1084,8 +1068,9 @@ function RdvLeadRoomSection({ rdvStats, activeAdvisors, onSelectAdvisor }) {
 
   if (rdvStats.loading) {
     return (
-      <div className="card mb-24" style={{ padding: 24, textAlign: 'center', color: 'var(--t3)' }}>
-        Chargement des stats RDV Lead Room…
+      <div className="card mb-24" style={{ padding: 24 }}>
+        <Skeleton h={14} w={220} style={{ marginBottom: 14 }} />
+        <SkeletonText lines={4} />
       </div>
     )
   }
@@ -1520,14 +1505,14 @@ function CaForecastSection() {
         setS({ loading: false, data: j, error: null })
         setConvPct(typeof j.conversion_defaut_pct === 'number' ? j.conversion_defaut_pct : 25)
       })
-      .catch(e => { if (!cancelled) setS({ loading: false, data: null, error: e.message }) })
+      .catch(e => { if (!cancelled) setS({ loading: false, data: null, error: messageErreur(e) }) })
     return () => { cancelled = true }
   }, [])
 
   const eur = (n) => new Intl.NumberFormat('fr-FR').format(Math.round(n || 0)) + ' €'
 
   if (s.loading) {
-    return <div style={{ padding: 16, color: 'var(--t3)', fontSize: 13 }}>Chargement de la prévision…</div>
+    return <div style={{ padding: 16 }}><SkeletonText lines={3} /></div>
   }
   if (!s.data) {
     return <div style={{ padding: 16, color: 'var(--t3)', fontSize: 13 }}>Prévision indisponible{s.error ? ` (${s.error})` : ''}.</div>
@@ -1611,7 +1596,7 @@ function FunnelBySourceSection({ deals }) {
     leadroomAdmin(`funnel-by-source`)
       .then(r => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then(j => { if (!cancelled) setState({ loading: false, meta: j.campaigns_meta || {}, leads: j.leads || [], error: null }) })
-      .catch(e => { if (!cancelled) setState({ loading: false, meta: {}, leads: [], error: e.message }) })
+      .catch(e => { if (!cancelled) setState({ loading: false, meta: {}, leads: [], error: messageErreur(e) }) })
     return () => { cancelled = true }
   }, [])
 
@@ -1716,17 +1701,17 @@ function FunnelBySourceSection({ deals }) {
           <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--t1)', marginTop: 2 }}>Funnel par source, coût et rendement</div>
           <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 2 }}>Quel canal rapporte vraiment. Signatures attribuées au lead d origine. Coûts internes, à ne pas diffuser.</div>
         </div>
-        <div style={{ display: 'inline-flex', background: 'rgba(0,0,0,0.05)', borderRadius: 8, padding: 3, flexShrink: 0 }}>
-          {[{ k: 'all', l: 'Tout' }, { k: 'year', l: 'Année' }, { k: 'quarter', l: 'Trimestre' }, { k: 'month', l: 'Mois' }].map(opt => (
-            <button key={opt.k} onClick={() => setPeriod(opt.k)}
-              style={{ padding: '5px 12px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                background: period === opt.k ? 'var(--gold)' : 'transparent', color: period === opt.k ? '#fff' : 'var(--t2)' }}>{opt.l}</button>
-          ))}
-        </div>
+        <SubTabs
+          ariaLabel="Période du funnel"
+          tabs={[{ key: 'all', label: 'Tout' }, { key: 'year', label: 'Année' }, { key: 'quarter', label: 'Trimestre' }, { key: 'month', label: 'Mois' }]}
+          active={period}
+          onChange={setPeriod}
+          style={{ marginBottom: 0, flexShrink: 0 }}
+        />
       </div>
       <div style={{ padding: '8px 20px 18px', overflowX: 'auto' }}>
         {state.loading ? (
-          <div style={{ textAlign: 'center', color: 'var(--t3)', fontSize: 13, padding: 24 }}>Chargement…</div>
+          <div style={{ padding: '16px 0' }}><SkeletonText lines={4} /></div>
         ) : state.error ? (
           <div style={{ textAlign: 'center', color: '#EF4444', fontSize: 13, padding: 24 }}>Erreur, {state.error}</div>
         ) : (
@@ -1820,7 +1805,7 @@ function LoginAuditSection() {
       if (error) throw error
       setLogs(data || [])
     } catch (e) {
-      setError(e.message || 'Erreur de chargement')
+      setError(messageErreur(e))
     } finally {
       setLoading(false)
     }
@@ -1864,20 +1849,20 @@ function LoginAuditSection() {
       {open && (
         <div style={{ padding: '0 20px 18px' }}>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
-            <div style={{ display: 'inline-flex', background: 'rgba(0,0,0,0.05)', borderRadius: 8, padding: 3 }}>
-              {[{ k: 'people', l: 'Par personne' }, { k: 'detail', l: 'Détail' }].map(opt => (
-                <button key={opt.k} onClick={() => setView(opt.k)}
-                  style={{ padding: '5px 12px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                    background: view === opt.k ? 'var(--gold)' : 'transparent', color: view === opt.k ? '#fff' : 'var(--t2)' }}>{opt.l}</button>
-              ))}
-            </div>
+            <SubTabs
+              ariaLabel="Vue de l'audit"
+              tabs={[{ key: 'people', label: 'Par personne' }, { key: 'detail', label: 'Détail' }]}
+              active={view}
+              onChange={setView}
+              style={{ marginBottom: 0 }}
+            />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Filtrer par email ou IP…"
               style={{ flex: 1, minWidth: 180, padding: '7px 10px', fontSize: 13, border: '1px solid var(--bd)', borderRadius: 8 }} />
             <button onClick={refresh} style={{ padding: '7px 12px', fontSize: 12, fontWeight: 600, border: '1px solid var(--bd)', borderRadius: 8, background: '#fff', cursor: 'pointer' }}>↻ Rafraîchir</button>
           </div>
 
           {loading ? (
-            <div style={{ textAlign: 'center', color: 'var(--t3)', fontSize: 13, padding: 24 }}>Chargement…</div>
+            <div style={{ padding: '16px 0' }}><SkeletonText lines={4} /></div>
           ) : error ? (
             <div style={{ textAlign: 'center', color: '#EF4444', fontSize: 13, padding: 24 }}>{error}</div>
           ) : filtered.length === 0 ? (
@@ -1980,7 +1965,7 @@ function RecyclageRefusesSection() {
   async function doAction(action) {
     if (selectedIds.size === 0) return
     const label = action === 'recontact' ? 'recontacter' : 'archiver'
-    if (!confirm(`Confirmer, ${label} ${selectedIds.size} lead(s) ?`)) return
+    if (!(await confirmDialog({title:`${label === 'recontacter' ? 'Recontacter' : 'Archiver'} ${selectedIds.size} lead(s) ?`,confirmLabel:'Confirmer'}))) return
     setWorking(true)
     try {
       const r = await leadroomAdmin(`recycle-lead`, {
@@ -1991,10 +1976,10 @@ function RecyclageRefusesSection() {
       const json = await r.json()
       if (!r.ok) throw new Error(json.error || 'échec')
       const did = action === 'recontact' ? json.recycled : json.archived
-      alert(`${did} lead(s) ${action === 'recontact' ? 'remis dans le pool' : 'archivés'}.`)
+      toast.success(`${did} lead(s) ${action === 'recontact' ? 'remis dans le pool' : 'archivés'}.`)
       refresh()
     } catch (e) {
-      alert(`Erreur, ${e.message}`)
+      toast.error(`Erreur, ${messageErreur(e)}`)
     } finally {
       setWorking(false)
     }
@@ -2143,7 +2128,7 @@ function RdvBucketDrilldownModal({ bucket, onClose }) {
       if (r.ok) setLeads(json.leads || [])
       else setError(json.error || 'erreur')
     } catch (e) {
-      setError(e.message || 'réseau')
+      setError(messageErreur(e))
     } finally { setLoading(false) }
   }
   useEffect(() => { refresh() }, [bucket])
@@ -2203,7 +2188,7 @@ function RdvBucketDrilldownModal({ bucket, onClose }) {
         }
       }
     } catch (e) {
-      alert(`Action impossible, ${e.message}`)
+      toast.error(`Action impossible, ${messageErreur(e)}`)
     } finally {
       setBusy(b => { const { [leadId]: _, ...rest } = b; return rest })
     }
@@ -2241,7 +2226,7 @@ function RdvBucketDrilldownModal({ bucket, onClose }) {
     }
     if (['passes', 'tenus', 'absents', 'pipe_perdus'].includes(bucket)) {
       a.push(<button key="ls" className="btn btn-sm" disabled={isBusy}
-        onClick={() => { if (confirm(`Marquer "${l.name}" comme perdu ?`)) doAction(l.id, 'lose') }}
+        onClick={async () => { if (await confirmDialog({title:`Marquer "${l.name}" comme perdu ?`,confirmLabel:'Marquer perdu',danger:true})) doAction(l.id, 'lose') }}
         style={{ background: 'rgba(239,68,68,0.10)', color: '#EF4444', fontSize: 11 }}>
         ✗ Perdu
       </button>)

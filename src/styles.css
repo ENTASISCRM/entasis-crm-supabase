@@ -602,7 +602,10 @@ a { color: inherit; text-decoration: none; }
   background: rgba(0,0,0,0.025);
   border: 0.5px solid var(--bd);
   border-radius: var(--rad-lg);
-  overflow: hidden;
+  /* B5 : overflow visible — une carte glissée hors de sa colonne restait
+     écrêtée au bord (overflow: hidden). L'arrondi du header est repris
+     ci-dessous puisqu'il n'est plus clippé par la colonne. */
+  overflow: visible;
 }
 .pipeline-col-head {
   display: flex;
@@ -611,6 +614,7 @@ a { color: inherit; text-decoration: none; }
   padding: 13px 14px 11px;
   border-bottom: 0.5px solid var(--bd);
   background: var(--paper-grad);
+  border-radius: var(--rad-lg) var(--rad-lg) 0 0;
 }
 .pipeline-col-title { font-size: 12.5px; font-weight: 600; color: var(--t1); letter-spacing: -0.005em; }
 .pipeline-col-count {
@@ -2120,8 +2124,8 @@ a { color: inherit; text-decoration: none; }
  * Sous-onglets de l'onglet Pilotage RH — mêmes tokens que le reste du CRM,
  * au lieu de couleurs écrites en dur dans le JSX.
  * ───────────────────────────────────────────────────────────────────────── */
-.rh-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-.rh-tab {
+.rh-tabs, .subtabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.rh-tab, .subtab {
   border: 0.5px solid var(--bd);
   cursor: pointer;
   font-family: inherit;
@@ -2132,9 +2136,372 @@ a { color: inherit; text-decoration: none; }
   background: rgba(0,0,0,0.03);
   color: var(--t2);
   transition: background var(--tr-fast), color var(--tr-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 }
-.rh-tab:hover { background: rgba(0,0,0,0.07); }
-.rh-tab.is-active { background: var(--navy, #0A1628); border-color: transparent; color: #fff; }
+.rh-tab:hover, .subtab:hover { background: rgba(0,0,0,0.07); }
+.rh-tab.is-active, .subtab.is-active { background: var(--navy, #0A1628); border-color: transparent; color: #fff; }
+.subtab-badge {
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  background: rgba(0,0,0,0.10);
+  color: inherit;
+  border-radius: 999px;
+  padding: 1px 7px;
+  line-height: 1.5;
+}
+.subtab.is-active .subtab-badge { background: rgba(255,255,255,0.18); }
 @media (prefers-reduced-motion: reduce) {
-  .rh-tab { transition: none; }
+  .rh-tab, .subtab { transition: none; }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * SÉRIE A — UI partagée (quick wins).
+ * A1 confirm dialog · A2 skeletons · A4 tabular-nums · A5 btn-secondary
+ * ───────────────────────────────────────────────────────────────────────── */
+
+/* A1 — Confirm dialog (remplace window.confirm). L'overlay réutilise
+   .modal-overlay ; la boîte est volontairement compacte. */
+.confirm-overlay { z-index: 1200; }
+.confirm-box {
+  background: var(--card);
+  border: 0.5px solid var(--bd);
+  border-radius: var(--rad-xl, 16px);
+  box-shadow: var(--sh-lg);
+  width: min(100%, 420px);
+  padding: 24px 26px 20px;
+}
+.confirm-title { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; color: var(--t1); }
+.confirm-message { font-size: 13.5px; color: var(--t2); margin-top: 8px; line-height: 1.55; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+/* A2 — Skeletons */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(0,0,0,0.07);
+  border-radius: 6px;
+  min-height: 8px;
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  100% { transform: translateX(100%); }
+}
+.skeleton-table {
+  background: var(--card);
+  border: 0.5px solid var(--bd);
+  border-radius: var(--rad-lg, 12px);
+  padding: 6px 0;
+}
+.skeleton-table-head,
+.skeleton-table-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 18px;
+  padding: 13px 18px;
+  border-bottom: 0.5px solid var(--bd);
+  align-items: center;
+}
+.skeleton-table-head { opacity: 0.7; }
+.skeleton-table-row:last-child { border-bottom: none; }
+.skeleton-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+.skeleton-card {
+  background: var(--card);
+  border: 0.5px solid var(--bd);
+  border-radius: var(--rad-lg, 12px);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after { animation: none; }
+}
+
+/* A4 — Chiffres tabulaires : les colonnes d'euros s'alignent au chiffre près
+   dans toutes les tables, KPIs et compteurs. */
+table,
+.kpi-value,
+.immo-kpi-value,
+.pipeline-col-count,
+.nav-item-badge,
+.subtab-badge,
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* A5 — btn-secondary : utilisé dans le JSX (DealModal, annuaire clients) mais
+   jamais défini jusqu'ici. Spec design-system.md §Boutons. */
+.btn-secondary {
+  background: linear-gradient(180deg, #FFFFFF 0%, #FAFAFA 100%);
+  border-color: var(--bd);
+  color: var(--t1);
+  box-shadow: 0 0.5px 0 rgba(255,255,255,0.95) inset, 0 1px 3px rgba(0,0,0,0.04);
+}
+.btn-secondary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 0.5px 0 rgba(255,255,255,0.95) inset, 0 4px 12px rgba(0,0,0,0.06); }
+
+/* A5 — variante or du badge sidebar (remplace le style inline). */
+.nav-item-badge--gold { background: var(--gold); color: #fff; }
+
+/* B5 — kanban partagé : surbrillance de la colonne survolée pendant un
+   glisser-déposer (pipeline commercial + pipeline VEFA). */
+.kanban-col--over {
+  outline: 2px dashed var(--gold);
+  outline-offset: -2px;
+  border-radius: var(--rad-lg, 12px);
+}
+
+/* B3 — sections de formulaire repliables (modale dossier). */
+.form-section {
+  border: 0.5px solid var(--bd);
+  border-radius: var(--rad-lg, 12px);
+  background: var(--card);
+  overflow: hidden;
+}
+.form-section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(0,0,0,0.02);
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+.form-section-toggle:disabled { cursor: default; }
+.form-section.is-open .form-section-toggle { border-bottom: 0.5px solid var(--bd); }
+.form-section-toggle-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--t1);
+  letter-spacing: -0.005em;
+}
+.form-section-toggle-hint {
+  flex: 1;
+  font-size: 12px;
+  color: var(--t3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
+.form-section-chevron {
+  margin-left: auto;
+  color: var(--t3);
+  transition: transform var(--tr-fast, 120ms ease);
+  flex-shrink: 0;
+}
+.form-section-toggle-hint + .form-section-chevron { margin-left: 0; }
+.form-section.is-open .form-section-chevron { transform: rotate(180deg); }
+.form-section-body { padding: 16px; }
+@media (prefers-reduced-motion: reduce) {
+  .form-section-chevron { transition: none; }
+}
+
+/* B4 — aperçu client en panneau latéral (pattern Attio). */
+.peek-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(0,0,0,0.25);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+.peek-panel {
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: min(440px, 100%);
+  background: var(--card);
+  border-left: 0.5px solid var(--bd);
+  box-shadow: -24px 0 60px rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  animation: peek-in 200ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+@keyframes peek-in {
+  from { transform: translateX(48px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+.peek-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 20px 22px 14px;
+  border-bottom: 0.5px solid var(--bd);
+}
+.peek-name { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; color: var(--t1); }
+.peek-sub { font-size: 12.5px; color: var(--t3); margin-top: 4px; display: flex; align-items: center; flex-wrap: wrap; }
+.peek-body { flex: 1; overflow-y: auto; padding: 16px 22px; }
+.peek-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 22px;
+  border-top: 0.5px solid var(--bd);
+}
+.peek-contact { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
+.peek-contact a { font-size: 13px; color: var(--gold-dk, #A6843F); text-decoration: none; }
+.peek-contact a:hover { text-decoration: underline; }
+.peek-stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0 18px; }
+.peek-stat { border: 0.5px solid var(--bd); border-radius: 10px; padding: 10px 12px; background: var(--paper-grad, var(--card)); }
+.peek-stat .v { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--t1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.peek-stat .l { font-size: 10.5px; font-weight: 600; color: var(--t3); margin-top: 2px; }
+.peek-section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--t3); margin: 6px 0 4px; }
+.peek-deal { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 0.5px solid var(--bd-soft); }
+.peek-deal:last-of-type { border-bottom: none; }
+.peek-deal-name { font-size: 13px; font-weight: 600; color: var(--t1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.peek-deal-amounts { font-size: 11.5px; color: var(--t3); font-variant-numeric: tabular-nums; }
+.peek-more { font-size: 12px; color: var(--t3); padding-top: 8px; }
+.peek-empty { font-size: 13px; color: var(--t3); padding: 12px 0; }
+@media (prefers-reduced-motion: reduce) {
+  .peek-panel { animation: none; }
+}
+
+/* D8 — touches clavier dans l'aide des raccourcis. */
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 6px;
+  border: 0.5px solid var(--bd-strong);
+  border-bottom-width: 2px;
+  background: var(--paper-grad, var(--card));
+  color: var(--t1);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* D2 — édition inline dans les tableaux : le select recouvre le badge,
+   invisible au repos, révélé au survol et au focus clavier. */
+.inline-select { position: relative; display: inline-flex; }
+.inline-select-face {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: box-shadow var(--tr-fast, 120ms ease);
+}
+.inline-select-chevron { opacity: 0; transition: opacity var(--tr-fast, 120ms ease); flex-shrink: 0; }
+.inline-select:hover .inline-select-chevron,
+.inline-select:focus-within .inline-select-chevron { opacity: 0.65; }
+.inline-select:hover .inline-select-face { box-shadow: 0 0 0 1px var(--bd-strong); }
+.inline-select:focus-within .inline-select-face { box-shadow: 0 0 0 2px var(--bd-focus); }
+.inline-select-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font: inherit;
+  border: none;
+  appearance: none;
+  background: transparent;
+}
+@media (prefers-reduced-motion: reduce) {
+  .inline-select-face, .inline-select-chevron { transition: none; }
+}
+
+/* D4 — timeline de la fiche client : rail vertical + pastille par entrée. */
+.timeline { display: flex; flex-direction: column; }
+.timeline-entry { display: flex; gap: 14px; }
+.timeline-rail {
+  position: relative;
+  width: 12px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+}
+/* Le trait relie les pastilles ; la dernière entrée n'en porte pas. */
+.timeline-rail::before {
+  content: '';
+  position: absolute;
+  top: 14px;
+  bottom: -4px;
+  width: 1px;
+  background: var(--bd);
+}
+.timeline-entry:last-child .timeline-rail::before { display: none; }
+.timeline-bullet {
+  position: relative;
+  z-index: 1;
+  width: 11px;
+  height: 11px;
+  margin-top: 4px;
+  border-radius: 50%;
+  border: 2px solid;
+  flex-shrink: 0;
+}
+
+/* D5 — centre de notifications (cloche de la topbar). */
+.notif-dot {
+  position: absolute;
+  top: 1px; right: 1px;
+  min-width: 15px; height: 15px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--cancelled, #FF3B30);
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+}
+.notif-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(360px, calc(100vw - 32px));
+  background: var(--card);
+  border: 0.5px solid var(--bd);
+  border-radius: var(--rad-lg, 12px);
+  box-shadow: var(--sh-lg);
+  z-index: 1150;
+  overflow: hidden;
+}
+.notif-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 0.5px solid var(--bd);
+  font-size: 13px; font-weight: 700; color: var(--t1);
+}
+.notif-body { max-height: 380px; overflow-y: auto; }
+.notif-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  width: 100%;
+  padding: 11px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 0.5px solid var(--bd-soft);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+.notif-item:last-child { border-bottom: none; }
+.notif-item:hover { background: rgba(0,0,0,0.03); }
+.notif-item-dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+.notif-item-titre { display: block; font-size: 13px; font-weight: 600; color: var(--t1); }
+.notif-item-detail { display: block; font-size: 11.5px; color: var(--t3); margin-top: 1px; }
+.notif-item-date { font-size: 11px; color: var(--t3); white-space: nowrap; flex-shrink: 0; padding-top: 1px; }

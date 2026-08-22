@@ -2,31 +2,40 @@ import { useState, useEffect, useMemo } from 'react'
 import { toast } from 'react-hot-toast'
 import { statusLabel } from '../../lib/ui-shared'
 import ClientModal from './ClientModal.jsx'
-
-// Helper pour formatage monétaire
-function euro(amount) {
-  if (amount === null || amount === undefined) return '—'
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(amount)
-}
-
-// Annualisation PP
-function annualize(pp) {
-  return (pp || 0) * 12
-}
+import ClientPeek from './ClientPeek.jsx'
+import { Skeleton, SkeletonTable } from '../ui/Skeleton'
+import { euro, annualize } from '../../lib/format'
+import { usePersistedState } from '../../hooks/usePersistedState'
+import { exporterCsv, suffixeDate, nombreFr } from '../../lib/export-csv'
 
 export default function ClientsView({ supabase, onSelectClient, profile }) {
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [filterType, setFilterType] = useState('Tous') // Tous | Mes clients | Par statut
-  const [statusFilter, setStatusFilter] = useState('Tous') // filtre sur le statut global calcule
-  const [sort, setSort] = useState({ col: null, dir: 'desc' }) // tri colonnes, null = ordre de creation
+  // D1 : filtres et tri mémorisés par conseiller entre deux visites.
+  const prefScope = profile?.advisor_code || profile?.id || 'anon'
+  const [filterType, setFilterType] = usePersistedState('clients.ownership', 'Tous', prefScope) // Tous | Mes clients
+  const [statusFilter, setStatusFilter] = usePersistedState('clients.status', 'Tous', prefScope) // statut global calculé
+  const [sort, setSort] = usePersistedState('clients.sort', { col: null, dir: 'desc' }, prefScope) // null = ordre de création
   const [newClientModalOpen, setNewClientModalOpen] = useState(false)
+  // B4 — aperçu latéral (pattern Attio) : un clic sur une ligne ouvre le
+  // panneau par-dessus la liste ; « Voir » ouvre directement la fiche.
+  const [peekClient, setPeekClient] = useState(null)
+  // B6 — rendu paginé : 50 lignes affichées, « Afficher plus » pour la
+  // suite. Le tri, la recherche et les filtres restent globaux (toute la
+  // base), seul le DOM est borné — l'écran reste instantané à 5 000 clients.
+  const PAGE_SIZE = 50
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  // B6 — recherche debouncée : le filtrage ne retravaille pas toute la
+  // liste à chaque frappe.
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 250)
+    return () => clearTimeout(t)
+  }, [search])
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE)
+  }, [debouncedSearch, filterType, statusFilter, sort])
 
   const isManager = profile?.role === 'manager'
 
@@ -43,8 +52,10 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
         // (Promise.all) au lieu d enchainer 3 allers-retours serie.
         // advisor_code + co_advisor_code necessaires pour le filtre "Mes clients"
         // (co-conseiller, cas Gianni Pichon co-conseiller de Clement).
+        // B6 — colonnes explicites au lieu de select('*') : l'annuaire ne
+        // transporte que ce qu'il affiche (payload réduit à volume égal).
         const [clientsRes, dealsRes, dossiersRes] = await Promise.all([
-          supabase.from('clients').select('*').order('created_at', { ascending: false }),
+          supabase.from('clients').select('id, nom, prenom, email, telephone, advisor_code, co_advisor_code, created_at').order('created_at', { ascending: false }),
           supabase.from('deals').select('id, client_id, product, status, pp_m, pu, advisor_code, co_advisor_code').not('client_id', 'is', null),
           supabase.from('dossiers_immo').select('id, client_id, statut_pipeline').not('client_id', 'is', null),
         ])
@@ -110,9 +121,9 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
       )
     }
 
-    // Recherche textuelle
-    if (search) {
-      const searchLower = search.toLowerCase()
+    // Recherche textuelle (valeur debouncée)
+    if (debouncedSearch) {
+      const searchLower = debouncedSearch.toLowerCase()
       filtered = filtered.filter(c =>
         (c.nom || '').toLowerCase().includes(searchLower) ||
         (c.prenom || '').toLowerCase().includes(searchLower) ||
@@ -123,7 +134,7 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
     }
 
     return filtered
-  }, [clients, search, filterType, isManager, profile])
+  }, [clients, debouncedSearch, filterType, isManager, profile])
 
   // Enrichir les clients avec métriques calculées, puis appliquer le filtre
   // sur le statut global (Sans deal correspond a la valeur Aucun deal)
@@ -166,6 +177,20 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
 
   const sortArrow = (col) => sort.col === col ? (sort.dir === 'asc' ? ' ▲' : ' ▼') : ''
 
+  // D7 — export CSV de l'annuaire tel qu'affiché (mêmes filtres, même tri).
+  function exporterClients() {
+    if (!sortedClients.length) { toast('Aucun client à exporter'); return }
+    const colonnes = ['Nom', 'Prénom', 'Email', 'Téléphone', 'Conseiller', 'Co-conseiller', 'Produits', 'Dossiers immobilier', 'Statut global', 'CA total']
+    const lignes = sortedClients.map(c => [
+      c.nom || '', c.prenom || '', c.email || '', c.telephone || '',
+      c.advisor_code || '', c.co_advisor_code || '',
+      (c.deals || []).length, (c.dossiers_immo || []).length,
+      statusLabel(c.globalStatus) || c.globalStatus || '', nombreFr(c.caTotal),
+    ])
+    exporterCsv(`clients-${suffixeDate()}`, colonnes, lignes)
+    toast.success(`${sortedClients.length} client${sortedClients.length > 1 ? 's' : ''} exporté${sortedClients.length > 1 ? 's' : ''}`)
+  }
+
   const handleClientCreated = (newClient) => {
     setClients(prev => [newClient, ...prev])
     setNewClientModalOpen(false)
@@ -173,8 +198,9 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
-        <div>Chargement des clients...</div>
+      <div style={{ padding: '20px' }}>
+        <Skeleton h={24} w={220} style={{ marginBottom: 24 }} />
+        <SkeletonTable rows={8} cols={6} />
       </div>
     )
   }
@@ -193,12 +219,23 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
             Clients ({enrichedClients.length})
           </h1>
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={() => setNewClientModalOpen(true)}
-        >
-          + Nouveau client
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {/* D7 : exporte la sélection affichée (filtres + tri), pas toute la base. */}
+          <button
+            className="btn btn-outline"
+            onClick={exporterClients}
+            disabled={!sortedClients.length}
+            title="Exporter les clients affichés en CSV (Excel)"
+          >
+            Exporter ({sortedClients.length})
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => setNewClientModalOpen(true)}
+          >
+            + Nouveau client
+          </button>
+        </div>
       </div>
 
       {/* Filtres et recherche */}
@@ -265,97 +302,94 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
           </div>
         </div>
       ) : (
-        <div className="card">
-          <div className="table-container">
-            <table className="table" style={{ width: '100%' }}>
+        /* data-table : mêmes tokens que le reste du CRM (thead, hover CSS,
+           paddings) au lieu des couleurs héritées de l'ancien thème beige.
+           table-wrap porte déjà le style carte, pas besoin de .card autour. */
+        <div className="table-wrap">
+            <table className="data-table" style={{ width: '100%' }}>
               <thead>
-                <tr style={{ backgroundColor: '#F5F2EC' }}>
+                <tr>
                   <th
-                    style={{ fontWeight: '600', width: '35%', cursor: 'pointer', userSelect: 'none' }}
+                    style={{ width: '35%', cursor: 'pointer', userSelect: 'none' }}
                     onClick={() => toggleSort('client')}
                     title="Trier par nom"
+                    aria-sort={sort.col === 'client' ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
                   >Client{sortArrow('client')}</th>
-                  <th style={{ fontWeight: '600', width: '15%' }}>Conseiller</th>
+                  <th style={{ width: '15%' }}>Conseiller</th>
                   <th
-                    style={{ fontWeight: '600', width: '10%', cursor: 'pointer', userSelect: 'none' }}
+                    style={{ width: '10%', cursor: 'pointer', userSelect: 'none' }}
                     onClick={() => toggleSort('produits')}
                     title="Trier par nombre de produits"
+                    aria-sort={sort.col === 'produits' ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
                   >Produits{sortArrow('produits')}</th>
-                  <th style={{ fontWeight: '600', width: '15%' }}>Statut global</th>
+                  <th style={{ width: '15%' }}>Statut global</th>
                   <th
-                    style={{ fontWeight: '600', width: '15%', cursor: 'pointer', userSelect: 'none' }}
+                    style={{ width: '15%', cursor: 'pointer', userSelect: 'none' }}
                     onClick={() => toggleSort('ca')}
                     title="Trier par CA total"
+                    aria-sort={sort.col === 'ca' ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
                   >CA total{sortArrow('ca')}</th>
-                  <th style={{ fontWeight: '600', width: '10%' }}>Actions</th>
+                  <th style={{ width: '10%' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {sortedClients.map(client => (
+                {sortedClients.slice(0, visibleCount).map(client => (
                   <tr
                     key={client.id}
-                    onClick={() => onSelectClient(client.id)}
-                    style={{
-                      cursor: 'pointer',
-                      padding: '16px 20px',
-                      borderBottom: '1px solid #E8E4DC'
-                    }}
-                    onMouseEnter={e => e.target.closest('tr').style.backgroundColor = 'rgba(192, 155, 90, 0.05)'}
-                    onMouseLeave={e => e.target.closest('tr').style.backgroundColor = 'transparent'}
+                    onClick={() => setPeekClient(client)}
+                    style={{ cursor: 'pointer' }}
+                    title="Aperçu rapide — « Voir » ouvre la fiche complète"
                   >
-                    <td style={{ padding: '16px 20px' }}>
+                    <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div>
-                          <div style={{ fontWeight: '600', fontSize: '14px' }}>
+                          <div className="cell-primary">
                             {client.prenom} {client.nom}
                           </div>
-                          <div style={{ fontSize: '12px', color: '#999', marginTop: '2px' }}>
+                          <div className="cell-sub">
                             {client.email || client.telephone || '—'}
                           </div>
                         </div>
                         {client.hasImmo && (
                           <span
+                            className="badge"
                             title="Client avec dossiers immobilier"
-                            style={{
-                              backgroundColor: 'var(--gold)',
-                              color: 'white',
-                              fontSize: '11px',
-                              padding: '2px 6px',
-                              borderRadius: '3px'
-                            }}
+                            style={{ background: 'var(--gold)', color: '#fff', borderColor: 'transparent' }}
                           >
-                            🏠
+                            Immo
                           </span>
                         )}
                       </div>
                     </td>
-                    <td style={{ padding: '16px 20px' }}>
-                      <div style={{ fontWeight: '600', fontSize: '14px' }}>{client.advisor_code || '—'}</div>
+                    <td>
+                      <div className="cell-primary">{client.advisor_code || '—'}</div>
                       {client.co_advisor_code && (
-                        <div style={{ fontSize: '11px', color: '#999', marginTop: '2px' }}>
+                        <div className="cell-sub">
                           Co: {client.co_advisor_code}
                         </div>
                       )}
                     </td>
-                    <td style={{ padding: '16px 20px' }}>
-                      <div style={{ fontWeight: '600', fontSize: '14px' }}>
+                    <td>
+                      <div className="cell-primary">
                         {(client.deals || []).length} produit{(client.deals || []).length > 1 ? 's' : ''}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#999', marginTop: '2px' }}>
-                        {client.dossiers_immo?.length > 0 && `${client.dossiers_immo.length} immo`}
-                      </div>
+                      {client.dossiers_immo?.length > 0 && (
+                        <div className="cell-sub">
+                          {client.dossiers_immo.length} immo
+                        </div>
+                      )}
                     </td>
-                    <td style={{ padding: '16px 20px' }}>
+                    <td>
                       <span className={`badge ${getStatusBadgeClass(client.globalStatus)}`}>
                         {statusLabel(client.globalStatus)}
                       </span>
                     </td>
-                    <td style={{ padding: '16px 20px' }}>
-                      <div style={{ fontWeight: '600', fontSize: '14px' }}>
+                    <td>
+                      <div className="cell-primary">
                         {euro(client.caTotal)}
                       </div>
                     </td>
-                    <td style={{ padding: '16px 20px' }}>
+                    <td>
                       <button
                         className="btn btn-secondary btn-sm"
                         onClick={e => {
@@ -370,9 +404,28 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
                 ))}
               </tbody>
             </table>
-          </div>
+            {sortedClients.length > visibleCount && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '14px 16px', borderTop: '0.5px solid var(--bd)' }}>
+                <span style={{ fontSize: 12.5, color: 'var(--t3)', fontVariantNumeric: 'tabular-nums' }}>
+                  {visibleCount} affichés sur {sortedClients.length}
+                </span>
+                <button className="btn btn-outline btn-sm" onClick={() => setVisibleCount(c => c + PAGE_SIZE)}>
+                  Afficher {Math.min(PAGE_SIZE, sortedClients.length - visibleCount)} de plus
+                </button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setVisibleCount(sortedClients.length)}>
+                  Tout afficher
+                </button>
+              </div>
+            )}
         </div>
       )}
+
+      {/* Aperçu latéral (B4) */}
+      <ClientPeek
+        client={peekClient}
+        onClose={() => setPeekClient(null)}
+        onOpenFull={(id) => { setPeekClient(null); onSelectClient(id) }}
+      />
 
       {/* Modal nouveau client */}
       <ClientModal

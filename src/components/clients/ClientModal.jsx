@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
-import { STATUTS_PRO } from '../../lib/ui-shared'
+import { STATUTS_PRO, messageErreur } from '../../lib/ui-shared'
 
 // Rouge charte pour le manque (semantique "champ obligatoire vide").
 const ROUGE_MANQUE = '#B4453B'
@@ -192,7 +192,7 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
           .eq('id', client.id)
 
         if (error) {
-          toast.error('Erreur: ' + error.message)
+          toast.error('Erreur: ' + messageErreur(error))
           return
         }
 
@@ -210,7 +210,7 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
           .single()
 
         if (error) {
-          toast.error('Erreur: ' + error.message)
+          toast.error('Erreur: ' + messageErreur(error))
           return
         }
 

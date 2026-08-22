@@ -6,6 +6,9 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'react-hot-toast'
+import { SkeletonText } from '../ui/Skeleton'
+import { confirmDialog } from '../ui/confirm'
+import { messageErreur } from '../../lib/ui-shared'
 
 const CATEGORIES = [
   { key: 'releve', label: 'Relevé' },
@@ -66,7 +69,7 @@ export default function ClientEspaceCard({ clientId, client, supabase, profile }
         : 'Accès ouvert (email non envoyé : prévenez le client)')
       recharger()
     } catch (e) {
-      toast.error(e.message || 'Invitation impossible')
+      toast.error(messageErreur(e))
     } finally {
       setInviting(false)
     }
@@ -127,7 +130,7 @@ export default function ClientEspaceCard({ clientId, client, supabase, profile }
   }
 
   async function supprimer(doc) {
-    if (!window.confirm(`Retirer « ${doc.titre} » de l'espace client ?`)) return
+    if (!(await confirmDialog({title:`Retirer « ${doc.titre} » de l'espace client ?`,message:'Le client ne verra plus ce document.',confirmLabel:'Retirer',danger:true}))) return
     try {
       const { error } = await supabase.from('client_documents').delete().eq('id', doc.id)
       if (error) throw error
@@ -164,7 +167,7 @@ export default function ClientEspaceCard({ clientId, client, supabase, profile }
       </div>
       <div className="card-body" style={{ padding: '0 28px 24px 28px' }}>
         {loading ? (
-          <div style={{ color: 'var(--t2)', fontSize: '13px' }}>Chargement…</div>
+          <SkeletonText lines={2} />
         ) : (
           <>
             {!compte && (

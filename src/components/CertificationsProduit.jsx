@@ -14,9 +14,11 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
+import { SkeletonCards } from './ui/Skeleton'
 import { listFamilies } from '../services/equipment'
 import { listTeam } from '../services/profiles'
 import { listCertifications, certifier, decertifier } from '../services/certifications'
+import { messageErreur } from '../lib/ui-shared'
 
 export default function CertificationsProduit({ profile }) {
   const isManager = profile?.role === 'manager'
@@ -46,7 +48,7 @@ export default function CertificationsProduit({ profile }) {
         )
         setCerts(new Set((cert || []).map((c) => `${c.advisor_code}|${c.famille}`)))
       } catch (e) {
-        if (vivant) setErr(e.message || 'Erreur de chargement')
+        if (vivant) setErr(messageErreur(e))
       } finally {
         if (vivant) setLoading(false)
       }
@@ -76,7 +78,7 @@ export default function CertificationsProduit({ profile }) {
       const revert = new Set(next)
       if (etait) revert.add(k); else revert.delete(k)
       setCerts(revert)
-      toast.error(e.message || 'Ecriture refusee (reserve aux managers)')
+      toast.error(messageErreur(e))
     } finally {
       setBusy(null)
     }
@@ -122,7 +124,7 @@ export default function CertificationsProduit({ profile }) {
           : 'Seul un manager peut modifier les habilitations.'}
       </div>
 
-      {loading && <div className="cr-empty">Chargement…</div>}
+      {loading && <SkeletonCards n={4} height={90} />}
       {err && <div className="cr-empty err">Erreur : {err}</div>}
       {!loading && !err && (conseillers.length === 0 || families.length === 0) && (
         <div className="cr-empty">Aucun conseiller actif ou aucune famille de produit.</div>

@@ -9,11 +9,14 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
+import { confirmDialog } from './ui/confirm'
+import { SkeletonCards } from './ui/Skeleton'
 import { listConges, createConge, createCongeDirection, decideConge, cancelConge, contreProposer, repondreContreProposition } from '../services/conges'
 import { getOwn as getOwnContrat, list as listContrats } from '../services/conseillerContrats'
 import { notifierRH } from '../lib/rh-notify-api'
 import { supabase } from '../lib/supabase'
 import { soldeConges, soldeAuRetour, joursDemande, joursDemandeSimples, joursOuvres, joursOuvresSimples, fmtJours, estFerie } from '../lib/conges-solde'
+import { messageErreur } from '../lib/ui-shared'
 
 const TYPES = ['Congé payé', 'RTT', 'Sans solde', 'Maladie', 'Autre']
 // Jours de formation des alternants : ni travailles au cabinet, ni conges.
@@ -213,7 +216,7 @@ export default function SmartRH({ profile, rhDelegue = false }) {
       notifierRH('absence_direction', { demandeur_id: abQui, type: abType, date_debut: abDu, date_fin: abDemi ? abDu : abAu, demi_journee: abDemi, motif: abMotif })
       setAbOpen(false); setAbQui(''); setAbType('Maladie'); setAbDu(''); setAbAu(''); setAbDemi(false); setAbMotif('')
       await reload()
-    } catch (e) { toast.error(e.message || 'Échec de l enregistrement') } finally { setSaving(false) }
+    } catch (e) { toast.error(messageErreur(e)) } finally { setSaving(false) }
   }
 
   // Feuille de temps PDF pour la comptable : mois choisi + generation en cours
@@ -237,7 +240,7 @@ export default function SmartRH({ profile, rhDelegue = false }) {
       if (!r.ok) throw new Error(j.error || 'Envoi refusé')
       toast.success(`Feuille de temps envoyée à ${j.destinataire}`)
     } catch (e) {
-      toast.error('Envoi impossible : ' + (e.message || ''))
+      toast.error('Envoi impossible : ' + (messageErreur(e)))
     } finally { setEnvoiBusy(false) }
   }
 
@@ -449,7 +452,7 @@ export default function SmartRH({ profile, rhDelegue = false }) {
       toast.success('Feuille de temps telechargee')
     } catch (e) {
       console.error('[SmartRH] feuille de temps', e)
-      toast.error('Generation impossible : ' + (e.message || ''))
+      toast.error('Generation impossible : ' + (messageErreur(e)))
     } finally { setPdfBusy(false) }
   }
 
@@ -462,7 +465,7 @@ export default function SmartRH({ profile, rhDelegue = false }) {
       setConges(cg)
       if (isManager) setContrats(contratData || [])
       else setMonContrat(contratData)
-    } catch (e) { setErr(e.message || 'Erreur de chargement') }
+    } catch (e) { setErr(messageErreur(e)) }
     finally { setLoading(false) }
   }
   useEffect(() => { reload() }, [])   // eslint-disable-line react-hooks/exhaustive-deps
@@ -529,7 +532,7 @@ export default function SmartRH({ profile, rhDelegue = false }) {
       notifierRH('nouvelle_demande', { ...congeMail, jours: `${nbJoursAffiche(congeMail)} j` })
       setDu(''); setAu(''); setMotif(''); setDemi(false); setType('Congé payé')
       await reload()
-    } catch (e) { toast.error(e.message || 'Échec de l envoi') } finally { setSaving(false) }
+    } catch (e) { toast.error(messageErreur(e)) } finally { setSaving(false) }
   }
   async function decider(c, statut) {
     let dmotif = null
@@ -539,7 +542,7 @@ export default function SmartRH({ profile, rhDelegue = false }) {
     }
     setSaving(true)
     try { await decideConge(c.id, statut, profile?.full_name || 'Direction', dmotif); toast.success(statut === 'valide' ? 'Congé validé' : 'Demande refusée'); notifierRH('decision', { ...c, statut, decision_motif: dmotif }); await reload() }
-    catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+    catch (e) { toast.error(messageErreur(e)) } finally { setSaving(false) }
   }
   function ouvrirContre(c) {
     setCpPour(c.id)
@@ -555,23 +558,23 @@ export default function SmartRH({ profile, rhDelegue = false }) {
       notifierRH('contre_proposition', { ...c, contre_date_debut: cpDu, contre_date_fin: cpDemi ? cpDu : cpAu, contre_demi_journee: cpDemi, contre_message: cpMsg })
       setCpPour(null)
       await reload()
-    } catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+    } catch (e) { toast.error(messageErreur(e)) } finally { setSaving(false) }
   }
   async function repondreContre(c, accepte) {
-    if (!accepte && !window.confirm('Refuser ces nouvelles dates ? La demande sera annulée.')) return
+    if (!accepte && !(await confirmDialog({title:'Refuser ces nouvelles dates ?',message:'La demande sera annulée.',confirmLabel:'Refuser',danger:true}))) return
     setSaving(true)
     try {
       await repondreContreProposition(c.id, accepte)
       toast.success(accepte ? 'Nouvelles dates acceptées, congé validé' : 'Contre-proposition refusée')
       notifierRH('reponse_contre', { ...c, accepte })
       await reload()
-    } catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+    } catch (e) { toast.error(messageErreur(e)) } finally { setSaving(false) }
   }
   async function annuler(c) {
-    if (!window.confirm('Annuler cette demande ?')) return
+    if (!(await confirmDialog({title:'Annuler cette demande de congé ?',confirmLabel:'Annuler la demande',cancelLabel:'Retour',danger:true}))) return
     setSaving(true)
     try { await cancelConge(c.id); toast.success('Demande annulée'); await reload() }
-    catch (e) { toast.error(e.message || 'Échec') } finally { setSaving(false) }
+    catch (e) { toast.error(messageErreur(e)) } finally { setSaving(false) }
   }
 
   const badge = (s) => <span className={`stag ${s}`}>{STATUT_LIB[s] || s}</span>
@@ -588,7 +591,7 @@ export default function SmartRH({ profile, rhDelegue = false }) {
         {aValider.length > 0 && isManager && <span className="kpi">{aValider.length} à valider</span>}
       </div>
 
-      {loading && <div className="empty">Chargement…</div>}
+      {loading && <SkeletonCards n={3} height={96} />}
       {err && <div className="empty err">Erreur : {err}</div>}
 
       {!loading && !err && (

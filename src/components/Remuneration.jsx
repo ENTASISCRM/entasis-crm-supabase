@@ -19,10 +19,12 @@
 
 import { useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
+import { SkeletonCards } from './ui/Skeleton'
 import * as contratsService from '../services/conseillerContrats'
 import { LIBELLE_TYPE_CONTRAT } from '../lib/contrat-enums'
 import { fetchRemuneration } from '../lib/remuneration-api'
 import { MONTHS } from '../lib/metrics'
+import { messageErreur } from '../lib/ui-shared'
 
 const fmtEur = (v) => Number(v || 0).toLocaleString('fr-FR', {
   style: 'currency', currency: 'EUR', maximumFractionDigits: 0,
@@ -68,8 +70,8 @@ export default function Remuneration({ profile, month }) {
 
   if (loading) {
     return (
-      <div style={{ padding: 40, textAlign: 'center', color: 'var(--t3)' }}>
-        Chargement…
+      <div style={{ padding: '24px 0' }}>
+        <SkeletonCards n={4} />
       </div>
     )
   }
@@ -162,7 +164,7 @@ function VueConseiller({ contrat, profile, month, isManager }) {
       } catch (e) {
         if (!alive) return
         console.error('[Remuneration] calcul perso', e)
-        setCalcError(e.message || 'Erreur de calcul')
+        setCalcError(messageErreur(e))
       } finally {
         if (alive) setCalcLoading(false)
       }
@@ -538,7 +540,7 @@ function VueManager({ month }) {
       } catch (e) {
         if (!alive) return
         console.error('[Remuneration] calcul manager', e)
-        setCalcError(e.message || 'Erreur de calcul')
+        setCalcError(messageErreur(e))
       } finally {
         if (alive) setCalcLoading(false)
       }

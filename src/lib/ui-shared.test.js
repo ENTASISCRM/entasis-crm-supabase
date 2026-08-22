@@ -87,3 +87,45 @@ describe('normalizeDeal', () => {
     expect(normalizeDeal({ pp_m: 0, pu: 0, client_age: null }).client_age).toBeNull();
   });
 });
+
+import { messageErreur } from './ui-shared';
+
+describe('messageErreur', () => {
+  it('traduit les erreurs réseau brutes en français', () => {
+    expect(messageErreur(new TypeError('Failed to fetch'))).toMatch(/Connexion impossible/);
+    expect(messageErreur('NetworkError when attempting to fetch resource.')).toMatch(/Connexion impossible/);
+  });
+  it('laisse passer les messages métier tels quels', () => {
+    expect(messageErreur(new Error('Montant invalide'))).toBe('Montant invalide');
+  });
+  it('a un repli quand le message est vide', () => {
+    expect(messageErreur(null)).toBe('Une erreur est survenue.');
+    expect(messageErreur(new Error(''))).toBe('Une erreur est survenue.');
+  });
+});
+
+import { exporterCsv, nombreFr } from './export-csv';
+
+describe('export CSV', () => {
+  it('formate les nombres à la française', () => {
+    expect(nombreFr(1234.5)).toBe('1234,5');
+    expect(nombreFr(null)).toBe('');
+    expect(nombreFr(0)).toBe('0');
+  });
+  it('expose une fonction d export', () => {
+    expect(typeof exporterCsv).toBe('function');
+  });
+});
+
+describe('normalizeDeal — prochaine action (D3)', () => {
+  it('convertit les valeurs vides en null pour la base', () => {
+    const d = normalizeDeal({ next_action: '   ', next_action_date: '' });
+    expect(d.next_action).toBeNull();
+    expect(d.next_action_date).toBeNull();
+  });
+  it('conserve une action renseignée', () => {
+    const d = normalizeDeal({ next_action: ' Relancer après relevé ', next_action_date: '2026-09-01' });
+    expect(d.next_action).toBe('Relancer après relevé');
+    expect(d.next_action_date).toBe('2026-09-01');
+  });
+});

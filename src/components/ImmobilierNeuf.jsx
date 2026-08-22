@@ -41,6 +41,7 @@
       suivra automatiquement la fusion des entrées.
 ───────────────────────────────────────────────────────────────────────────── */
 import { useState } from 'react'
+import SubTabs from './ui/SubTabs'
 import VueImmobilier from './VueImmobilier'
 import CatalogueProgrammes from './CatalogueProgrammes'
 import MesDossiersImmo from './MesDossiersImmo'
@@ -75,20 +76,12 @@ export default function ImmobilierNeuf({ profile, teamProfiles, initialView = 'd
 
   return (
     <div>
-      <div className="rh-tabs" role="tablist" aria-label="Sous-onglets Immobilier Neuf">
-        {VIEWS.map(({ key, label }) => (
-          <button
-            key={key}
-            type="button"
-            role="tab"
-            aria-selected={view === key}
-            className={`rh-tab${view === key ? ' is-active' : ''}`}
-            onClick={() => setView(key)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <SubTabs
+        ariaLabel="Sous-onglets Immobilier Neuf"
+        tabs={VIEWS}
+        active={view}
+        onChange={setView}
+      />
 
       {view === 'dashboard' && <VueImmobilier profile={profile} setActiveTab={navigate} />}
       {view === 'programmes' && <CatalogueProgrammes setActiveTab={navigate} />}
