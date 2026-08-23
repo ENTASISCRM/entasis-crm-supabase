@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
+import { Skeleton, SkeletonCards, SkeletonTable } from '../ui/Skeleton'
+import SubTabs from '../ui/SubTabs'
 import { statusLabel } from '../../lib/ui-shared'
+import { euro, annualize } from '../../lib/format'
 import ClientModal from './ClientModal.jsx'
 import ClientEquipementCard from './ClientEquipementCard.jsx'
 import ClientContratsCard from './ClientContratsCard.jsx'
 import ClientEspaceCard from './ClientEspaceCard.jsx'
+import ClientTimeline from './ClientTimeline.jsx'
 
 // Copie une valeur dans le presse papiers avec retour visuel
 function copier(valeur, label) {
@@ -13,21 +17,7 @@ function copier(valeur, label) {
     .catch(() => toast.error('Copie impossible'))
 }
 
-// Helper pour formatage monétaire
-function euro(amount) {
-  if (amount === null || amount === undefined) return '—'
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(amount)
-}
-
-// Annualisation PP
-function annualize(pp) {
-  return (pp || 0) * 12
-}
+// euro/annualize : source unique lib/format.js (B7).
 
 // Statuts avec couleurs
 const STATUS_CLASS = {
@@ -91,6 +81,9 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
   const [loading, setLoading] = useState(true)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [expandedDeal, setExpandedDeal] = useState(null)
+  // B4 — la fiche en onglets : Synthèse / Patrimoine & contrats /
+  // Documents & espace client / Immobilier / Historique.
+  const [tab, setTab] = useState('synthese')
 
   const isManager = profile?.role === 'manager'
 
@@ -189,8 +182,11 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
-        <div>Chargement...</div>
+      <div style={{ padding: 24 }}>
+        <Skeleton h={22} w={260} style={{ marginBottom: 18 }} />
+        <SkeletonCards n={5} />
+        <div style={{ height: 22 }} />
+        <SkeletonTable rows={4} cols={4} />
       </div>
     )
   }
@@ -341,6 +337,23 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
         </button>
       </div>
 
+      {/* B4 — sections en onglets : consultation ciblée au lieu d'un long
+          défilement ; les cartes Contrats/Espace/Équipement chargent leurs
+          données à leur montage, donc chaque onglet charge à la demande. */}
+      <SubTabs
+        ariaLabel="Sections de la fiche client"
+        tabs={[
+          { key: 'synthese', label: 'Synthèse' },
+          { key: 'patrimoine', label: 'Patrimoine & contrats', badge: clientDeals.length },
+          { key: 'documents', label: 'Documents & espace client' },
+          { key: 'immobilier', label: 'Immobilier', badge: clientDossiers.length },
+          { key: 'historique', label: 'Historique' },
+        ]}
+        active={tab}
+        onChange={setTab}
+      />
+
+      {tab === 'synthese' && (<>
       {/* Cards résumé */}
       <div className="grid grid-4" style={{ marginBottom: '32px' }}>
         <div className="card">
@@ -524,7 +537,9 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
           </div>
         </div>
       </div>
+      </>)}
 
+      {tab === 'patrimoine' && (<>
       {/* Section Produits financiers */}
       <div className="card" style={{ marginBottom: '32px' }}>
         <div className="card-header" style={{ padding: '24px 28px 16px 28px' }}>
@@ -558,9 +573,9 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         padding: '16px',
-                        backgroundColor: isExpanded ? 'rgba(192, 155, 90, 0.05)' : 'var(--bg)',
+                        backgroundColor: isExpanded ? 'rgba(201, 169, 97, 0.05)' : 'var(--bg)',
                         borderRadius: 'var(--rad)',
-                        border: isExpanded ? '2px solid #C09B5A' : '1px solid var(--bd)',
+                        border: isExpanded ? '2px solid var(--gold)' : '1px solid var(--bd)',
                         cursor: 'pointer'
                       }}
                       onClick={() => setExpandedDeal(isExpanded ? null : deal.id)}
@@ -604,9 +619,9 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
                       <div style={{
                         marginTop: '8px',
                         padding: '16px',
-                        backgroundColor: '#F9F8F6',
+                        backgroundColor: 'var(--bg)',
                         borderRadius: 'var(--rad)',
-                        border: '1px solid #E8E4DC',
+                        border: '1px solid var(--bd)',
                         marginLeft: '20px'
                       }}>
                         <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600' }}>
@@ -688,14 +703,17 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
           valorisations), alimente automatiquement par les deals signes */}
       <ClientContratsCard clientId={client.id} client={client} profile={profile} />
 
-      {/* Section Espace client : acces portail + documents partages */}
-      <ClientEspaceCard clientId={client.id} client={client} supabase={supabase} profile={profile} />
-
       {/* Section Equipement : familles detenues, absences et suggestion */}
       <ClientEquipementCard clientId={client.id} client={client} supabase={supabase} />
+      </>)}
+
+      {/* Section Espace client : acces portail + documents partages */}
+      {tab === 'documents' && (
+        <ClientEspaceCard clientId={client.id} client={client} supabase={supabase} profile={profile} />
+      )}
 
       {/* Section Dossiers immobilier */}
-      {clientDossiers.length > 0 && (
+      {tab === 'immobilier' && (clientDossiers.length > 0 ? (
         <div className="card" style={{ marginBottom: '32px' }}>
           <div className="card-header">
             <h3>Dossiers immobilier ({clientDossiers.length})</h3>
@@ -734,36 +752,17 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
             </div>
           </div>
         </div>
-      )}
-
-      {/* Section Historique */}
-      {history.length > 0 && (
-        <div className="card">
-          <div className="card-header">
-            <h3>Historique des actions</h3>
-          </div>
-          <div className="card-body">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {history.map(activity => (
-                <div key={activity.id} style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '8px 0',
-                  borderBottom: '1px solid var(--bd)',
-                  fontSize: '13px'
-                }}>
-                  <div>
-                    <strong>{activity.action_type}</strong> par {activity.user?.full_name || 'Système'}
-                  </div>
-                  <div style={{ color: 'var(--t2)', fontSize: '12px' }}>
-                    {new Date(activity.created_at).toLocaleDateString('fr-FR')}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+      ) : (
+        <div className="table-empty-state">
+          <div className="empty-title">Aucun dossier immobilier</div>
+          <div className="empty-sub">Les dossiers créés dans le module Immobilier Neuf pour ce client apparaîtront ici.</div>
         </div>
+      ))}
+
+      {/* Section Historique — D4 : une seule chronologie (échanges consignés
+          à la main + activités système + jalons de signature des dossiers). */}
+      {tab === 'historique' && (
+        <ClientTimeline clientId={client.id} deals={clientDeals} history={history} profile={profile} />
       )}
 
       {/* Modal d'édition */}

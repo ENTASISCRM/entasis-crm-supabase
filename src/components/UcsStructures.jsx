@@ -26,12 +26,17 @@
 // Pour l'interface admin (CSV upload + édition inline), voir UCS-5.
 
 import { useEffect, useMemo, useState } from 'react'
+import toast from 'react-hot-toast'
 import { logger } from '../lib/logger'
+import { confirmDialog } from './ui/confirm'
+import SubTabs from './ui/SubTabs'
+import { SkeletonCards } from './ui/Skeleton'
 import * as ucsService from '../services/ucsStructures'
 import * as clientsService from '../services/clients'
 import * as structureursService from '../services/structureurs'
 import { fetchRemuneration } from '../lib/remuneration-api'
 import Structureurs from './Structureurs'
+import { messageErreur } from '../lib/ui-shared'
 
 const ETATS = [
   { value: 'EN_COURS',   label: 'En cours',   color: '#15803d' },
@@ -155,7 +160,7 @@ export default function UcsStructures({ profile, month }) {
         // Valeur par défaut sûre (comme l ancien fallback local) et message
         // d erreur affiché à côté du taux.
         setTauxConseillerUcs(1.5)
-        setTauxError(e.message || 'Erreur de calcul du taux')
+        setTauxError(messageErreur(e))
       })
       .finally(() => { if (alive) setTauxLoading(false) })
     return () => { alive = false }
@@ -168,7 +173,7 @@ export default function UcsStructures({ profile, month }) {
       .then(data => { setUcs(data); setError('') })
       .catch(e => {
         logger.warn('[UCS] listAll failed', e)
-        setError(e.message || 'Erreur de chargement du catalogue')
+        setError(messageErreur(e))
       })
       .finally(() => setLoading(false))
   }
@@ -180,7 +185,7 @@ export default function UcsStructures({ profile, month }) {
       .then(data => { if (active) { setUcs(data); setError('') } })
       .catch(e => {
         logger.warn('[UCS] listAll failed', e)
-        if (active) setError(e.message || 'Erreur de chargement du catalogue')
+        if (active) setError(messageErreur(e))
       })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
@@ -242,32 +247,16 @@ export default function UcsStructures({ profile, month }) {
           l'écran Structureurs est manager only (garde-fou interne en plus),
           donc pas de barre du tout pour les conseillers (écran inchangé). */}
       {isManager && (
-        <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-          {[
-            { v: 'catalogue', l: 'Catalogue' },
-            { v: 'partenaires', l: 'Partenaires' },
-          ].map(opt => {
-            const active = vue === opt.v
-            return (
-              <button
-                key={opt.v}
-                onClick={() => setVue(opt.v)}
-                style={{
-                  padding: '5px 14px',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  borderRadius: 14,
-                  border: `1px solid ${active ? 'var(--t1)' : 'var(--bd)'}`,
-                  background: active ? 'var(--t1)' : '#fff',
-                  color: active ? '#fff' : 'var(--t2)',
-                  cursor: 'pointer',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
-                }}
-              >{opt.l}</button>
-            )
-          })}
-        </div>
+        <SubTabs
+          ariaLabel="Sous-onglets UCS"
+          tabs={[
+            { key: 'catalogue', label: 'Catalogue' },
+            { key: 'partenaires', label: 'Partenaires' },
+          ]}
+          active={vue}
+          onChange={setVue}
+          style={{ marginBottom: 14 }}
+        />
       )}
 
       {/* Sous-vue Partenaires : écran Structureurs rendu tel quel */}
@@ -410,23 +399,16 @@ function Header({ isManager, adminMode, onToggleAdmin, tauxConseiller = 1.5, tau
 
 function LoadingState() {
   return (
-    <div style={{ padding: 32, textAlign: 'center', color: 'var(--t3)', fontSize: 13 }}>
-      Chargement du catalogue...
+    <div style={{ padding: '8px 0' }}>
+      <SkeletonCards n={6} height={110} />
     </div>
   )
 }
 
+// C2 — états erreur/vide sur les composants charte.
 function ErrorState({ error }) {
   return (
-    <div style={{
-      padding: 16,
-      background: 'rgba(239,68,68,0.06)',
-      border: '1px solid rgba(239,68,68,0.2)',
-      borderRadius: 12,
-      color: '#b91c1c',
-      fontSize: 13,
-      marginBottom: 16,
-    }}>
+    <div className="notice notice-error" style={{ marginBottom: 16 }}>
       Erreur : {error}
       <br />
       <span style={{ fontSize: 11, opacity: 0.7 }}>
@@ -438,33 +420,12 @@ function ErrorState({ error }) {
 
 function EmptyState({ isManager, onAdminClick }) {
   return (
-    <div style={{
-      padding: 32,
-      textAlign: 'center',
-      color: 'var(--t3)',
-      fontSize: 13,
-      background: 'var(--bg)',
-      border: '1px dashed var(--bd)',
-      borderRadius: 12,
-    }}>
-      Aucune UCS dans le catalogue.
+    <div className="table-empty-state">
+      <div className="empty-title">Aucune UCS dans le catalogue</div>
+      <div className="empty-sub">Le catalogue se remplit par import du CSV du groupement.</div>
       {isManager && (
-        <div style={{ marginTop: 10 }}>
-          <button
-            onClick={onAdminClick}
-            style={{
-              padding: '8px 16px',
-              fontSize: 12,
-              fontWeight: 700,
-              color: '#fff',
-              background: 'var(--gold)',
-              border: 'none',
-              borderRadius: 6,
-              cursor: 'pointer',
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
-            }}
-          >
+        <div style={{ marginTop: 12 }}>
+          <button className="btn btn-gold btn-sm" onClick={onAdminClick}>
             Importer le CSV du groupement
           </button>
         </div>
@@ -480,7 +441,7 @@ function EmptyState({ isManager, onAdminClick }) {
 function FilterBar({ filters, setFilters, allCompagnies, toggleEtat, toggleCompagnie, resetFilters, count, total }) {
   return (
     <div style={{
-      background: '#fff',
+      background: 'var(--card)',
       border: '1px solid var(--bd)',
       borderRadius: 12,
       padding: 16,
@@ -641,31 +602,21 @@ function FilterBar({ filters, setFilters, allCompagnies, toggleEtat, toggleCompa
 function CatalogueTable({ ucs, selectedId, onSelect, adminMode, onReload, isManager, onStructureurClick, tauxConseiller = 1.5 }) {
   if (ucs.length === 0) {
     return (
-      <div style={{
-        padding: 24,
-        textAlign: 'center',
-        color: 'var(--t3)',
-        fontSize: 12,
-        background: 'var(--bg)',
-        border: '1px dashed var(--bd)',
-        borderRadius: 12,
-      }}>
-        Aucune UCS ne correspond aux filtres actuels.
+      <div className="table-empty-state">
+        <div className="empty-title">Aucune UCS ne correspond aux filtres</div>
+        <div className="empty-sub">Élargis les filtres (état, compagnie, SRI, ticket) pour retrouver des produits.</div>
       </div>
     )
   }
 
+  // C2 — table charte : le conteneur et l'en-tête viennent de data-table,
+  // Th/Td ne gardent que l'alignement et les styles spécifiques.
   return (
-    <div style={{
-      background: '#fff',
-      border: '1px solid var(--bd)',
-      borderRadius: 12,
-      overflow: 'hidden',
-    }}>
+    <div className="table-wrap">
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+        <table className="data-table" style={{ width: '100%', fontSize: 12 }}>
           <thead>
-            <tr style={{ background: 'var(--bg)', borderBottom: '1px solid var(--bd)' }}>
+            <tr>
               <Th>État</Th>
               {/* Structureur : visible managers seulement (info commerciale stratégique) */}
               {isManager && <Th>Structureur</Th>}
@@ -706,18 +657,11 @@ function CatalogueTable({ ucs, selectedId, onSelect, adminMode, onReload, isMana
   )
 }
 
+// C2 — Th/Td s'appuient sur data-table (padding, typographie, bordures,
+// hover charte) et ne gardent que l'alignement + les styles spécifiques.
 function Th({ children, align = 'left' }) {
   return (
-    <th style={{
-      padding: '8px 12px',
-      textAlign: align,
-      fontSize: 10,
-      fontWeight: 700,
-      color: 'var(--t3)',
-      textTransform: 'uppercase',
-      letterSpacing: '0.04em',
-      whiteSpace: 'nowrap',
-    }}>{children}</th>
+    <th style={{ padding: '10px 12px', textAlign: align }}>{children}</th>
   )
 }
 
@@ -727,8 +671,6 @@ function Td({ children, align = 'left', style = {} }) {
       padding: '10px 12px',
       textAlign: align,
       fontSize: 12,
-      color: 'var(--t1)',
-      borderTop: '1px solid var(--bd)',
       whiteSpace: 'nowrap',
       ...style,
     }}>{children}</td>
@@ -965,13 +907,13 @@ function AdminRowActions({ u, onReload }) {
 
   const handleStatus = async (newEtat) => {
     if (busy) return
-    if (!confirm(`Marquer "${u.nom_ucs}" comme ${newEtat} ?`)) return
+    if (!(await confirmDialog({title:`Marquer "${u.nom_ucs}" comme ${newEtat} ?`,confirmLabel:'Confirmer'}))) return
     setBusy(true)
     try {
       await ucsService.markStatus(u.id, newEtat)
       await onReload?.()
     } catch (e) {
-      alert(`Erreur : ${e.message}`)
+      toast.error(`Erreur : ${messageErreur(e)}`)
     } finally {
       setBusy(false)
     }
@@ -986,7 +928,7 @@ function AdminRowActions({ u, onReload }) {
     if (raw == null) return
     const val = parseFloat(String(raw).replace(/[^\d.-]/g, ''))
     if (isNaN(val)) {
-      alert('Montant invalide')
+      toast.error('Montant invalide')
       return
     }
     setBusy(true)
@@ -994,7 +936,7 @@ function AdminRowActions({ u, onReload }) {
       await ucsService.update(u.id, { enveloppe_restante: val })
       await onReload?.()
     } catch (e) {
-      alert(`Erreur : ${e.message}`)
+      toast.error(`Erreur : ${messageErreur(e)}`)
     } finally {
       setBusy(false)
     }
@@ -1047,7 +989,7 @@ function adminActionBtn(color) {
     fontSize: 12,
     fontWeight: 700,
     color,
-    background: '#fff',
+    background: 'var(--card)',
     border: `1px solid ${color}`,
     borderRadius: 4,
     cursor: 'pointer',
@@ -1178,7 +1120,7 @@ function Simulator({ ucs, profile, isManager, tauxConseiller = 1.5 }) {
       setSavedFeedback('Simulation enregistrée ✓')
     } catch (e) {
       logger.warn('[UCS] saveSimulation failed', e)
-      setSavedFeedback(`Erreur : ${e.message}`)
+      setSavedFeedback(`Erreur : ${messageErreur(e)}`)
     } finally {
       setSaving(false)
     }
@@ -1258,7 +1200,7 @@ function Simulator({ ucs, profile, isManager, tauxConseiller = 1.5 }) {
               borderRadius: 8,
               outline: 'none',
               fontFamily: 'inherit',
-              background: '#fff',
+              background: 'var(--card)',
             }}
           />
           <span style={{
@@ -1349,7 +1291,7 @@ function Simulator({ ucs, profile, isManager, tauxConseiller = 1.5 }) {
             marginTop: 14,
             marginBottom: isManager ? 10 : 0,
             padding: '10px 12px',
-            background: '#fff',
+            background: 'var(--card)',
             border: '2px solid var(--gold)',
             borderRadius: 8,
             display: 'flex',
@@ -1448,7 +1390,7 @@ function Simulator({ ucs, profile, isManager, tauxConseiller = 1.5 }) {
                 top: '100%',
                 left: 0,
                 right: 0,
-                background: '#fff',
+                background: 'var(--card)',
                 border: '1px solid var(--bd)',
                 borderRadius: 6,
                 marginTop: 2,
@@ -1630,7 +1572,7 @@ function AdminPanel({ onReload }) {
       await onReload?.()
     } catch (e) {
       logger.warn('[UCS] upsertMany failed', e)
-      setResult({ error: e.message })
+      setResult({ error: messageErreur(e) })
     } finally {
       setImporting(false)
     }
@@ -1644,7 +1586,7 @@ function AdminPanel({ onReload }) {
 
   return (
     <div style={{
-      background: '#fff',
+      background: 'var(--card)',
       border: `2px solid var(--gold)`,
       borderRadius: 12,
       padding: 20,
@@ -1743,7 +1685,7 @@ function AdminPanel({ onReload }) {
                 fontSize: 10,
                 margin: '6px 0 0',
                 padding: 8,
-                background: '#fff',
+                background: 'var(--card)',
                 borderRadius: 4,
                 overflowX: 'auto',
                 color: 'var(--t2)',
@@ -1856,7 +1798,7 @@ function parseUcsCsv(text) {
       }
       rows.push(row)
     } catch (e) {
-      errors.push(`Ligne ${i + 1} : ${e.message}`)
+      errors.push(`Ligne ${i + 1} : ${messageErreur(e)}`)
     }
   }
 
@@ -1923,7 +1865,7 @@ function StructureurSidePanel({ structureurId, onClose }) {
       const s = await structureursService.getById(structureurId)
       setStructureur(s)
     } catch (e) {
-      alert(`Erreur : ${e.message}`)
+      toast.error(`Erreur : ${messageErreur(e)}`)
     } finally {
       setSaving(false)
     }
@@ -1946,7 +1888,7 @@ function StructureurSidePanel({ structureurId, onClose }) {
         style={{
           width: 'min(520px, 92vw)',
           height: '100%',
-          background: '#fff',
+          background: 'var(--card)',
           boxShadow: '-8px 0 32px rgba(0,0,0,0.15)',
           overflowY: 'auto',
           padding: 24,
@@ -1971,7 +1913,7 @@ function StructureurSidePanel({ structureurId, onClose }) {
             width: 32, height: 32,
             border: '1px solid var(--bd)',
             borderRadius: 6,
-            background: '#fff',
+            background: 'var(--card)',
             cursor: 'pointer',
             fontSize: 16,
           }}>×</button>
@@ -2098,7 +2040,7 @@ function Section({ title, children }) {
     <div style={{
       marginBottom: 20,
       padding: 16,
-      background: '#fff',
+      background: 'var(--card)',
       border: '1px solid var(--bd)',
       borderRadius: 10,
     }}>
@@ -2139,7 +2081,7 @@ function NotesEditor({ structureurId, initial, onSaved }) {
       setSavedAt(Date.now())
       await onSaved?.()
     } catch (e) {
-      alert(`Erreur : ${e.message}`)
+      toast.error(`Erreur : ${messageErreur(e)}`)
     } finally {
       setSaving(false)
     }

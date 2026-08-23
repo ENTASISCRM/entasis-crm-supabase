@@ -14,6 +14,20 @@ import * as conseillerContratsService from './services/conseillerContrats'
 import * as dossiersImmoService from './services/dossiersImmo'
 import MissionDuMois from './components/MissionDuMois'
 import CommandPalette from './components/CommandPalette'
+import { confirmDialog } from './components/ui/confirm'
+import { Skeleton, SkeletonPage } from './components/ui/Skeleton'
+import SubTabs from './components/ui/SubTabs'
+import { buildNavDomains, viewId, domainOf, visibleTabs } from './lib/navigation'
+import { KanbanDnd, KanbanColumn, KanbanCard, targetColumnOf } from './components/ui/kanban'
+import FormSection from './components/ui/FormSection'
+import SortableTh from './components/ui/SortableTh'
+import ShortcutsHelp from './components/ui/ShortcutsHelp'
+import InlineSelect from './components/ui/InlineSelect'
+import NotificationsBell from './components/ui/NotificationsBell'
+import ChecklistAccueil from './components/ui/ChecklistAccueil'
+import * as congesService from './services/conges'
+import { usePersistedState } from './hooks/usePersistedState'
+import { exporterCsv, suffixeDate, nombreFr } from './lib/export-csv'
 // Onglets lourds charges a la demande (code-splitting via React.lazy) : sortis du
 // bundle principal pour alleger le JS au login. jspdf/html2canvas (OutilsCGP) et
 // chart.js (ManagementView) ne se telechargent que quand l onglet s ouvre.
@@ -70,8 +84,7 @@ import {
   getClientName,
   emptyDeal,
   normalizeDeal,
-  STATUTS_PRO,
-} from './lib/ui-shared'
+  STATUTS_PRO, messageErreur } from './lib/ui-shared'
 
 const EMPTY_OBJECTIFS = MONTHS.reduce((a,m)=>{a[m]={pp_target:0,pu_target:0};return a},{})
 const LEAD_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
@@ -112,15 +125,8 @@ function isDealACompleter(d){
 }
 
 // En tête de colonne triable, même motif que SortableTh de ManagementView.
-function SortableTh({label,col,sortKey,sortDir,onSort,align}){
-  const active=sortKey===col
-  return (
-    <th onClick={()=>onSort(col)} style={{cursor:'pointer',userSelect:'none',textAlign:align||'left'}} title={`Trier par ${label}`}>
-      {label}
-      <span style={{marginLeft:4,color:active?'var(--gold)':'var(--t3)',fontSize:10}}>{active?(sortDir==='asc'?'↑':'↓'):'⇅'}</span>
-    </th>
-  )
-}
+// SortableTh : déplacé dans components/ui/SortableTh.jsx (B7, source unique
+// partagée avec ManagementView) — importé en tête de fichier.
 
 /* ─────────────────────────────────────────────────────────────────────────────
    ICONS (inline SVG)
@@ -136,7 +142,9 @@ const Icon = {
   Close:     ()=><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>,
   Edit:      ()=><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M9 1.5l2.5 2.5-7 7L2 12l.5-2.5 7-7z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/></svg>,
   Trash:     ()=><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 3.5h10M5 3.5V2h3v1.5M3 3.5l.8 7.5h5.4l.8-7.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-  Refresh:   ()=><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M11 6.5A4.5 4.5 0 012 6.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/><path d="M11 3.5v3h-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  // Flèche circulaire complète : le demi-arc précédent se lisait comme un
+  // glyphe orphelin dans la barre du haut, présente sur tous les écrans.
+  Refresh:   ()=><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M11.1 8.13a4.88 4.88 0 1 1-1.15-5.07L12.46 5.42" stroke="currentColor" strokeWidth="1.35" fill="none" strokeLinecap="round" strokeLinejoin="round"/><polyline points="12.46,2.17 12.46,5.42 9.21,5.42" stroke="currentColor" strokeWidth="1.35" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>,
   Clock:     ()=><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" strokeWidth="1.2"/><path d="M5.5 3v2.5l1.5 1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>,
   Market:    ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><rect x="3" y="10" width="2" height="6" rx=".5" fill="currentColor" opacity=".9"/><line x1="4" y1="7" x2="4" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".7"/><line x1="4" y1="16" x2="4" y2="18" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".7"/><rect x="9" y="5" width="2" height="8" rx=".5" fill="currentColor" opacity=".7"/><line x1="10" y1="2" x2="10" y2="5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".5"/><line x1="10" y1="13" x2="10" y2="16" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".5"/><rect x="15" y="7" width="2" height="7" rx=".5" fill="currentColor" opacity=".5"/><line x1="16" y1="4" x2="16" y2="7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".4"/><line x1="16" y1="14" x2="16" y2="17" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".4"/></svg>,
   Calendar:  ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" strokeWidth="1.4" fill="none" opacity=".8"/><path d="M3 8h14" stroke="currentColor" strokeWidth="1.2" opacity=".5"/><path d="M7 2v3M13 2v3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".7"/><circle cx="7" cy="12" r="1" fill="currentColor" opacity=".6"/><circle cx="10" cy="12" r="1" fill="currentColor" opacity=".4"/><circle cx="13" cy="12" r="1" fill="currentColor" opacity=".4"/></svg>,
@@ -153,6 +161,16 @@ const Icon = {
   Editorial: ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><path d="M4.5 15.5l1-3.5 8-8a1.77 1.77 0 012.5 2.5l-8 8-3.5 1z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill="none" opacity=".85"/><path d="M11.5 6l2.5 2.5" stroke="currentColor" strokeWidth="1.2" opacity=".5"/><path d="M3.5 18.5h13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".4"/></svg>,
   Outils:    ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.4" fill="none" opacity=".8"/><path d="M10 2v3M10 15v3M2 10h3M15 10h3M4.2 4.2l2.1 2.1M13.7 13.7l2.1 2.1M4.2 15.8l2.1-2.1M13.7 6.3l2.1-2.1" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" opacity=".6"/></svg>,
   LinkedIn:  ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".8"/><path d="M7 9v4M7 7v.01" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" opacity=".7"/><path d="M10 13v-2.5c0-1 .5-1.5 1.5-1.5s1.5.5 1.5 1.5V13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity=".7"/></svg>,
+  Search:    ({size=13})=><svg width={size} height={size} viewBox="0 0 13 13" fill="none" aria-hidden="true"><circle cx="5.6" cy="5.6" r="4" stroke="currentColor" strokeWidth="1.4" fill="none"/><path d="M8.6 8.6L11.5 11.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
+  // Glyphes des états vides : 28 px, au trait, teintés par `.empty-icon`
+  // (les emoji juraient avec le reste de la charte).
+  EmptySearch: ()=><svg className="empty-glyph" viewBox="0 0 28 28" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="7.5" stroke="currentColor" strokeWidth="1.6"/><path d="M17.5 17.5L24 24" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>,
+  EmptySpark:  ()=><svg className="empty-glyph" viewBox="0 0 28 28" fill="none" aria-hidden="true"><path d="M15.5 3L6 16h6l-1.5 9L20 12h-6l1.5-9z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/></svg>,
+  EmptyCheck:  ()=><svg className="empty-glyph" viewBox="0 0 28 28" fill="none" aria-hidden="true"><circle cx="14" cy="14" r="10.5" stroke="currentColor" strokeWidth="1.6"/><path d="M9 14.3l3.4 3.4L19.2 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  EmptyPeople: ()=><svg className="empty-glyph" viewBox="0 0 28 28" fill="none" aria-hidden="true"><circle cx="10.5" cy="9.5" r="4" stroke="currentColor" strokeWidth="1.6"/><circle cx="19.5" cy="10.5" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M3.5 22c0-3.9 3.1-7 7-7s7 3.1 7 7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/><path d="M19.5 15.5c2.8 0 5 2.2 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
+  EmptyFolder: ()=><svg className="empty-glyph" viewBox="0 0 28 28" fill="none" aria-hidden="true"><path d="M3.5 8.5a2 2 0 012-2h5l2.5 3h9a2 2 0 012 2v9a2 2 0 01-2 2h-16.5a2 2 0 01-2-2v-12z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/></svg>,
+  EmptyChart:  ()=><svg className="empty-glyph" viewBox="0 0 28 28" fill="none" aria-hidden="true"><path d="M4 23h20" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/><rect x="6.5" y="13" width="4" height="7" rx="1" stroke="currentColor" strokeWidth="1.6"/><rect x="13" y="8" width="4" height="12" rx="1" stroke="currentColor" strokeWidth="1.6"/><rect x="19.5" y="16" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.6"/></svg>,
+  EmptyMail:   ()=><svg className="empty-glyph" viewBox="0 0 28 28" fill="none" aria-hidden="true"><rect x="3.5" y="7" width="21" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.6"/><path d="M4.5 9l9.5 6.5L23.5 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>,
   // Briefcase style pour l'onglet UCS Produits Structurés
   Ucs:       ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><rect x="2.5" y="6" width="15" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.4" fill="none" opacity=".85"/><path d="M7 6V4.5a1 1 0 011-1h4a1 1 0 011 1V6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".7"/><path d="M2.5 10h15" stroke="currentColor" strokeWidth="1.2" opacity=".5"/><rect x="8.5" y="10" width="3" height="2" rx=".4" fill="currentColor" opacity=".6"/></svg>,
 }
@@ -386,7 +404,7 @@ function AuthScreen() {
       },
     })
     if (error) {
-      setMsg('Erreur de connexion Google : ' + (error.message || 'inconnue'))
+      setMsg('Erreur de connexion Google : ' + (messageErreur(error)))
       setLoading(false)
     }
     // Pas de setLoading(false) en cas de succès : redirection vers Google.
@@ -410,7 +428,7 @@ function AuthScreen() {
       },
     })
     if (error) {
-      setMsg('Erreur : ' + (error.message || 'inconnue'))
+      setMsg('Erreur : ' + (messageErreur(error)))
     } else {
       setMsg('✓ Lien envoyé ! Vérifie ton email (et tes spams). Clique = connecté direct.')
     }
@@ -753,53 +771,38 @@ function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,mont
 
   const pipelineCount=useMemo(()=>deals.filter(d=>dealDuMois(d,month)&&isPipeline(d.status)).length,[deals,month])
 
-  const navItems = [
-    {key:'dashboard', label: isManager?'Vue cabinet':'Mon mois', Icon:Icon.Dashboard},
-    // Badge volontairement absent : la Lead Room est un projet Supabase
-    // séparé (mtqowhjshvgkpkhnpilb) avec sa propre table `leads` et ses
-    // propres statuts ('pending'/'taken'/...). La table `leads` du CRM
-    // ici (statuts 'available'/'released'/...) est un vestige legacy non
-    // synchronisé → le compteur 'leadsAvailable' donnait un chiffre faux
-    // qui ne correspondait pas à ce que les conseillers voient dans
-    // l'iframe Lead Room. On retire le badge plutôt que d'afficher faux.
-    {key:'leads',     label:'Leads Live',  Icon:Icon.Leads, badgeGold:true},
-    {key:'pipeline',  label:'Pipeline',  Icon:Icon.Pipeline,  badge:isManager?pipelineCount:hotCount},
-    {key:'clients',   label:'Clients',   Icon:Icon.Team},
-    {key:'multi-equipement', label:'Multi-équipement', Icon:Icon.Kanban},
-    {key:'conformite', label:'Conformité', Icon:Icon.Dossiers},
-    {key:'cockpit', label:'Cockpit', Icon:Icon.Forecast},
-    {key:'forecast',  label:(isManager||isRhDelegue)?'Management':'Prévisionnel', Icon:Icon.Forecast},
-    {key:'agenda',    label:'Agenda',    Icon:Icon.Calendar},
-    // Smart RH (congés) : tout le monde SAUF stagiaires et mandataires.
-    ...(canSmartRh?[{key:'smart-rh', label:'Smart RH', Icon:Icon.Calendar}]:[]),
-    {key:'market',    label:'Marchés',   Icon:Icon.Market},
-    {key:'ucs-structures', label:'UCS Produits Structurés', Icon:Icon.Ucs, badgeGold:true},
-    ...((!isManager && isRhDelegue)?[
-      {key:'team', label:'Équipe', Icon:Icon.Team},
-      {key:'pilotage-rh', label:'Pilotage RH', Icon:Icon.Team},
-      {key:'recrutement', label:'Recrutement', Icon:Icon.Team},
-    ]:[]),
-    ...(isManager?[
-      {key:'team', label:'Équipe', Icon:Icon.Team},
-      {key:'pilotage-rh', label:'Pilotage RH', Icon:Icon.Team, manager:true},
-      {key:'recrutement', label:'Recrutement', Icon:Icon.Team, manager:true},
-      // Éditorial : manager uniquement (double barrière avec le RLS
-      // manager-only de editorial_packages). Badge = packages en attente de veto.
-      {key:'editorial', label:'Éditorial', Icon:Icon.Editorial, manager:true, badge:editorialCount}
-    ]:[]),
-  ]
+  // B1 — la sidebar liste des DOMAINES (source unique lib/navigation.js,
+  // partagée avec la barre de sous-onglets, la palette ⌘K et le routing).
+  // Notes reprises de l'ancienne liste à plat :
+  // - Leads Live sans badge : la Lead Room est un projet Supabase séparé,
+  //   le compteur local donnait un chiffre faux.
+  // - Éditorial manager uniquement (double barrière avec le RLS
+  //   manager-only de editorial_packages). Badge = packages en attente.
+  // - Rémunération ouverte à tous : le composant sépare vue équipe /
+  //   vue personnelle via RLS conseiller_contrats.
+  const domains = buildNavDomains({ isManager, isRhDelegue, canSmartRh })
 
-  const immoItems = [
-    {key:'immobilier', label:'Immobilier Neuf', Icon:Icon.Building, badge:dossiersImmoCount||0},
-  ]
+  // Compteurs affichés en badge, agrégés au niveau du domaine.
+  const badgeValues = {
+    pipeline: isManager ? pipelineCount : hotCount,
+    immobilier: dossiersImmoCount || 0,
+    editorial: editorialCount || 0,
+  }
+  const domainBadge = (d) => d.views.reduce((s, v) => s + (badgeValues[v.badgeKey] || 0), 0)
 
-  // Rémunération : ouvert à tous (manager + conseillers).
-  // Le composant Remuneration gère la séparation : manager = vue équipe,
-  // conseiller = sa propre situation uniquement (via RLS conseiller_contrats).
-  const outilsItems = [
-    {key:'remuneration', label:'Rémunération', Icon:Icon.Outils},
-    {key:'outils', label:'Outils CGP', Icon:Icon.Outils},
-  ]
+  // Mémoire du dernier onglet visité par domaine : re-cliquer « Activité »
+  // ramène là où on était (Agenda, Cockpit…), pas systématiquement au 1er.
+  const lastTabRef = useRef({})
+  useEffect(() => {
+    const d = domainOf(domains, activeTab)
+    if (d) lastTabRef.current[d.key] = activeTab
+  })
+  const openDomain = (d) => {
+    const remembered = lastTabRef.current[d.key]
+    const target = d.views.some((v) => v.tab === remembered) ? remembered : d.views[0].tab
+    handleNavClick(target)
+  }
+  const activeDomain = domainOf(domains, activeTab)
 
   return (
     <>
@@ -817,38 +820,26 @@ function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,mont
         </div>
         <div className="sidebar-nav">
           <div className="nav-section-label">Navigation</div>
-          {navItems.map(({key,label,Icon:NavIcon,badge,badgeGold})=>(
-            <button key={key} className={`nav-item${activeTab===key?' active':''}`} onClick={()=>handleNavClick(key)}>
-              <NavIcon/>
-              {label}
-              {badge>0&&(
-                <span className="nav-item-badge" style={badgeGold?{background:'var(--gold)',color:'white'}:{}}>
-                  {badge}
-                </span>
-              )}
-            </button>
-          ))}
-          <div className="nav-divider"/>
-          <div className="nav-section-label">Immobilier Neuf</div>
-          {immoItems.map(({key,label,Icon:NavIcon,badge})=>(
-            <button key={key} className={`nav-item${activeTab===key?' active':''}`} onClick={()=>handleNavClick(key)}>
-              <NavIcon/>
-              {label}
-              {badge>0&&(
-                <span className="nav-item-badge">
-                  {badge}
-                </span>
-              )}
-            </button>
-          ))}
-          <div className="nav-divider"/>
-          <div className="nav-section-label">Outils</div>
-          {outilsItems.map(({key,label,Icon:NavIcon})=>(
-            <button key={key} className={`nav-item${activeTab===key?' active':''}`} onClick={()=>handleNavClick(key)}>
-              <NavIcon/>
-              {label}
-            </button>
-          ))}
+          {domains.map((d) => {
+            const NavIcon = Icon[d.icon] || Icon.Dashboard
+            const badge = domainBadge(d)
+            return (
+              <button
+                key={d.key}
+                className={`nav-item${activeDomain?.key === d.key ? ' active' : ''}`}
+                onClick={() => openDomain(d)}
+                aria-current={activeDomain?.key === d.key ? 'page' : undefined}
+              >
+                <NavIcon/>
+                {d.label}
+                {badge > 0 && (
+                  <span className={`nav-item-badge${d.key === 'editorial' ? ' nav-item-badge--gold' : ''}`}>
+                    {badge}
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </div>
         <div className="sidebar-footer">
           <div className="user-info">
@@ -967,9 +958,11 @@ async function genererFicheParrainage(profile){
 /* ─────────────────────────────────────────────────────────────────────────────
    TOP BAR
 ───────────────────────────────────────────────────────────────────────────── */
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers 📈',team:'Équipe',leads:'Leads Live ⚡','ucs-structures':'UCS Produits Structurés',immobilier:'Immobilier Neuf 🏠',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH 👥','recrutement':'Recrutement 🎯',conformite:'Conformité ⚖️',editorial:'Agent éditorial ✍️',cockpit:'Cockpit ratios'}
+// Titres sans emoji (design-system.md règle 4) : les icônes SVG de la sidebar
+// portent déjà l'identité visuelle de chaque écran.
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers',team:'Équipe',leads:'Leads Live','ucs-structures':'UCS Produits Structurés',immobilier:'Immobilier Neuf',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH','recrutement':'Recrutement',conformite:'Conformité',editorial:'Agent éditorial',cockpit:'Cockpit ratios'}
 
-function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile}){
+function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile,onHelp,notifications,notifScope}){
   return (
     <div className="topbar">
       {onMobileMenu && (
@@ -1002,7 +995,11 @@ function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profi
             </div>
           )
         })()}
-        <button className="btn btn-ghost btn-sm" onClick={onRefresh}><Icon.Refresh/></button>
+        <button className="btn btn-ghost btn-sm" onClick={onRefresh} title="Rafraîchir les données" aria-label="Rafraîchir"><Icon.Refresh/></button>
+        {/* D5 : signaux dérivés des données déjà chargées (aucun polling). */}
+        <NotificationsBell items={notifications||[]} scope={notifScope}/>
+        {/* D8 : aide des raccourcis, aussi accessible par la touche « ? ». */}
+        <button className="btn btn-ghost btn-sm btn-icon" onClick={onHelp} title="Raccourcis clavier (?)" aria-label="Raccourcis clavier">?</button>
         {/* Fiche de recommandation (idee 3) : outil papier remis en fin de RDV,
             genere un PDF pre rempli au nom du conseiller. Toujours accessible. */}
         <button className="btn btn-ghost btn-sm" title="Fiche de recommandation a remettre au client" onClick={async()=>{
@@ -1068,7 +1065,7 @@ function LeadCard({lead,profile,onTake,onRelease,onCreateRDV,onConvertDeal}){
 
   return (
     <div style={{
-      background:isMyLead?'rgba(192,155,90,0.04)':isBooked?'rgba(16,185,129,0.04)':'white',
+      background:isMyLead?'rgba(201,169,97,0.04)':isBooked?'rgba(16,185,129,0.04)':'white',
       border:`1.5px solid ${isMyLead?'var(--gold-line)':isBooked?'rgba(16,185,129,0.3)':'var(--bd)'}`,
       borderRadius:'var(--rad-lg)',padding:'11px 13px',
       opacity:isTaken&&!isMyLead?0.5:1,transition:'all .2s',
@@ -1266,11 +1263,11 @@ function LeadRow({lead,profile,onTake,onRelease,onCreateRDV,onConvertDeal,onRese
       alignItems:'center',
       minHeight:36,
       borderBottom:'1px solid var(--bd)',
-      background:isMyLead?'rgba(192,155,90,0.05)':isBooked?'rgba(16,185,129,0.04)':'transparent',
+      background:isMyLead?'rgba(201,169,97,0.05)':isBooked?'rgba(16,185,129,0.04)':'transparent',
       opacity:isDead?0.35:isTaken&&!isMyLead?0.45:1,textDecoration:isDead?'line-through':'none',
     }}
-    onMouseEnter={e=>e.currentTarget.style.background='rgba(192,155,90,0.07)'}
-    onMouseLeave={e=>e.currentTarget.style.background=isMyLead?'rgba(192,155,90,0.05)':isBooked?'rgba(16,185,129,0.04)':'transparent'}
+    onMouseEnter={e=>e.currentTarget.style.background='rgba(201,169,97,0.07)'}
+    onMouseLeave={e=>e.currentTarget.style.background=isMyLead?'rgba(201,169,97,0.05)':isBooked?'rgba(16,185,129,0.04)':'transparent'}
     >
       <div style={{padding:'0 8px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center',height:'100%'}}>
         <span style={{fontSize:9,fontWeight:700,padding:'1px 5px',borderRadius:2,background:cc+'15',color:cc,border:`1px solid ${cc}25`,whiteSpace:'nowrap'}}>{lead.campagne}</span>
@@ -1490,21 +1487,21 @@ function LeadRoom({leads,profile,onLeadsChange,onConvertDeal,onRefresh}){
     const ok = await leadsService.take(lead.id, profile.id)
     if (!ok) {
       onLeadsChange(prev=>prev.map(l=>l.id===lead.id?snapshot:l))
-      alert("Ce lead vient d'être pris par un autre conseiller.")
+      toast.error("Ce lead vient d'être pris par un autre conseiller.")
     }
   }
 
   async function releaseLead(lead){
-    if(!window.confirm("Libérer ce lead pour qu'un autre conseiller puisse le prendre ?"))return
+    if(!(await confirmDialog({title:'Libérer ce lead ?',message:"Un autre conseiller pourra le prendre.",confirmLabel:'Libérer'})))return
     onLeadsChange(prev=>prev.map(l=>l.id===lead.id?{...l,status:'released',taken_by:null,taken_at:null}:l))
     await leadsService.release(lead.id)
   }
   async function resetLead(lead){
-    if(!window.confirm(`Remettre "${lead.nom}" en disponible ?`))return
+    if(!(await confirmDialog({title:`Remettre "${lead.nom}" en disponible ?`,confirmLabel:'Remettre'})))return
     await leadsService.reset(lead.id)
   }
   async function killLead(lead){
-    if(!window.confirm(`Marquer "${lead.nom}" comme non-interesse ?`))return
+    if(!(await confirmDialog({title:`Marquer "${lead.nom}" comme non-intéressé ?`,confirmLabel:'Marquer',danger:true})))return
     await leadsService.markDead(lead.id, profile.id)
   }
 
@@ -1555,7 +1552,7 @@ function LeadRoom({leads,profile,onLeadsChange,onConvertDeal,onRefresh}){
       {/* Stats */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12,marginBottom:20}}>
         {[
-          {label:'Disponibles',value:available.length,color:'var(--gold)',bg:'rgba(192,155,90,0.06)',bd:'var(--gold-line)'},
+          {label:'Disponibles',value:available.length,color:'var(--gold)',bg:'rgba(201,169,97,0.06)',bd:'var(--gold-line)'},
           {label:'En appel',value:leads.filter(l=>l.status==='contacted').length,color:'var(--progress)',bg:'var(--progress-bg)',bd:'var(--progress-bd)'},
           {label:'RDV planifiés',value:booked.length,color:'#10B981',bg:'rgba(16,185,129,0.06)',bd:'rgba(16,185,129,0.2)'},
           {label:'Total leads',value:leads.length,color:'var(--t2)',bg:'var(--bg)',bd:'var(--bd)'},
@@ -1600,7 +1597,7 @@ function LeadRoom({leads,profile,onLeadsChange,onConvertDeal,onRefresh}){
             placeholder="Nom, téléphone, email…"
             style={{width:'100%',paddingLeft:32,height:34,fontSize:12}}
           />
-          <span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',fontSize:13,color:'var(--t3)',pointerEvents:'none'}}>🔍</span>
+          <span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',display:'flex',color:'var(--t3)',pointerEvents:'none'}}><Icon.Search/></span>
           {search&&<button onClick={()=>setSearch('')} style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'var(--t3)',fontSize:13,padding:0,lineHeight:1}}>×</button>}
         </div>
 
@@ -1640,7 +1637,7 @@ function LeadRoom({leads,profile,onLeadsChange,onConvertDeal,onRefresh}){
 
       {/* Alerte leads dispo */}
       {available.length>0&&filter!=='available'&&!search&&(
-        <div style={{background:'rgba(192,155,90,0.08)',border:'1.5px solid var(--gold-line)',borderRadius:'var(--rad-lg)',padding:'12px 16px',marginBottom:14,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div style={{background:'rgba(201,169,97,0.08)',border:'1.5px solid var(--gold-line)',borderRadius:'var(--rad-lg)',padding:'12px 16px',marginBottom:14,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
             <span style={{fontSize:20}}>⚡</span>
             <div>
@@ -1701,7 +1698,7 @@ function LeadRoom({leads,profile,onLeadsChange,onConvertDeal,onRefresh}){
         </>
       ):(
         <div className="table-empty-state">
-          <div className="empty-icon">{search?'🔍':'⚡'}</div>
+          <div className="empty-icon">{search?<Icon.EmptySearch/>:<Icon.EmptySpark/>}</div>
           <div className="empty-title">
             {search?`Aucun résultat pour "${search}"`:filter==='mine'?'Aucun lead en cours':filter==='available'?'Aucun lead disponible':'Aucun lead reçu'}
           </div>
@@ -1773,12 +1770,12 @@ function AreaChart({actual,projected,target,title,subtitle}){
         <svg viewBox={`0 0 ${W} ${H}`} className="chart-svg" style={{height:H}}>
           <defs>
             <linearGradient id={`fill-${title}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="rgba(192,155,90,0.22)"/>
-              <stop offset="100%" stopColor="rgba(192,155,90,0.02)"/>
+              <stop offset="0%" stopColor="rgba(201,169,97,0.22)"/>
+              <stop offset="100%" stopColor="rgba(201,169,97,0.02)"/>
             </linearGradient>
             <linearGradient id={`stroke-${title}`} x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="rgba(192,155,90,0.6)"/>
-              <stop offset="100%" stopColor="#C09B5A"/>
+              <stop offset="0%" stopColor="rgba(201,169,97,0.6)"/>
+              <stop offset="100%" stopColor="var(--gold)"/>
             </linearGradient>
           </defs>
           {[0.25,0.5,0.75,1].map(t=>{
@@ -1788,11 +1785,11 @@ function AreaChart({actual,projected,target,title,subtitle}){
           {target>0&&<line x1={PL} y1={targetY} x2={W-PR} y2={targetY} className="chart-target-line"/>}
           <path d={area} fill={`url(#fill-${title})`}/>
           <path d={path} fill="none" stroke={`url(#stroke-${title})`} strokeWidth="2.2" strokeLinecap="round"/>
-          <line x1={actualX} y1={PT} x2={actualX} y2={H-PT} stroke="rgba(192,155,90,0.2)" strokeWidth="1" strokeDasharray="3 3"/>
+          <line x1={actualX} y1={PT} x2={actualX} y2={H-PT} stroke="rgba(201,169,97,0.2)" strokeWidth="1" strokeDasharray="3 3"/>
           {pts.slice(1,3).map((pt,i)=>(
             <g key={i}>
-              <circle cx={pt.x} cy={pt.y} r="5" fill="white" stroke="#C09B5A" strokeWidth="2"/>
-              <circle cx={pt.x} cy={pt.y} r="2" fill="#C09B5A"/>
+              <circle cx={pt.x} cy={pt.y} r="5" fill="white" stroke="var(--gold)" strokeWidth="2"/>
+              <circle cx={pt.x} cy={pt.y} r="2" fill="var(--gold)"/>
             </g>
           ))}
           <text x={actualX-3} y={H-8} className="chart-label" textAnchor="end">Réalisé</text>
@@ -1872,8 +1869,8 @@ function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle,me
       <div className="chart-body">
         <svg viewBox={`0 0 ${W} ${H}`} className="chart-svg" style={{height:H}}>
           <defs>
-            <linearGradient id="bar-signed" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#C09B5A"/><stop offset="100%" stopColor="#9A7B3A"/></linearGradient>
-            <linearGradient id="bar-pipeline" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="rgba(192,155,90,0.35)"/><stop offset="100%" stopColor="rgba(192,155,90,0.15)"/></linearGradient>
+            <linearGradient id="bar-signed" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--gold)"/><stop offset="100%" stopColor="#9A7B3A"/></linearGradient>
+            <linearGradient id="bar-pipeline" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="rgba(201,169,97,0.35)"/><stop offset="100%" stopColor="rgba(201,169,97,0.15)"/></linearGradient>
           </defs>
           {gridVals.map((g,i)=><line key={i} x1={PL} y1={g.y} x2={W-PR} y2={g.y} stroke="var(--bd)" strokeWidth="0.5"/>)}
           <line x1={PL} y1={H-PB} x2={W-PR} y2={H-PB} stroke="var(--bd)" strokeWidth="1"/>
@@ -1886,7 +1883,7 @@ function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle,me
             return (
               <g key={d.month}>
                 {ph>0.5&&<rect x={bx} y={py} width={barW} height={ph} fill="url(#bar-pipeline)" rx="2" ry="2"/>}
-                {sh>0.5&&<rect x={bx} y={sy} width={barW} height={sh} fill={isCurrent?"url(#bar-signed)":"rgba(192,155,90,0.75)"} rx="2" ry="2"/>}
+                {sh>0.5&&<rect x={bx} y={sy} width={barW} height={sh} fill={isCurrent?"url(#bar-signed)":"rgba(201,169,97,0.75)"} rx="2" ry="2"/>}
                 {isCurrent&&hh>0.5&&<rect x={bx-1} y={Math.min(py,sy)-1} width={barW+2} height={hh+2} fill="none" stroke="var(--gold)" strokeWidth="1.5" rx="3" opacity="0.5"/>}
                 <text x={cx} y={H-8} textAnchor="middle" fontSize="9.5" fill={isCurrent?'var(--gold)':'var(--t3)'} fontWeight={isCurrent?'600':'400'} fontFamily="var(--font-sans)">{d.month.slice(0,3)}</text>
               </g>
@@ -1895,7 +1892,7 @@ function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle,me
         </svg>
         <div className="chart-legend">
           <div className="chart-legend-item"><div className="legend-dot" style={{background:'var(--gold)'}}/>{metricLabel} signée : {euro(data.reduce((s,d)=>s+d.ppSigned,0))}</div>
-          <div className="chart-legend-item"><div className="legend-dot" style={{background:'rgba(192,155,90,0.35)',border:'1px solid var(--gold)'}}/>{metricLabel} pipeline : {euro(data.reduce((s,d)=>s+d.ppPipeline,0))}</div>
+          <div className="chart-legend-item"><div className="legend-dot" style={{background:'rgba(201,169,97,0.35)',border:'1px solid var(--gold)'}}/>{metricLabel} pipeline : {euro(data.reduce((s,d)=>s+d.ppPipeline,0))}</div>
           <div className="chart-legend-item"><div className="legend-dot" style={{background:'var(--gold)',opacity:0.4}}/>Ligne objectif cabinet</div>
           <div className="chart-legend-item" style={{marginLeft:'auto'}}><div className="legend-dot" style={{background:'var(--gold)',outline:'1.5px solid var(--gold)',outlineOffset:1}}/>Mois en cours : <strong style={{color:'var(--t1)'}}>{currentMonth}</strong></div>
         </div>
@@ -1931,7 +1928,7 @@ function KpiCard({label,value,hint,accent,progressValue,delta}){
 /* ─────────────────────────────────────────────────────────────────────────────
    ADVISOR DASHBOARD
 ───────────────────────────────────────────────────────────────────────────── */
-function AdvisorDashboard({deals,objectifs,month,profile}){
+function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab}){
   const code=profile?.advisor_code||''
   const m=advisorMetrics(deals,month,code)
 
@@ -1992,8 +1989,51 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
     return () => { alive = false }
   }, [month])
 
+  // D9 — parcours d'accueil : les étapes se cochent d'elles-mêmes à partir
+  // de ce que le conseiller a déjà fait. Aucun état à maintenir en base.
+  const mesDeals = profile?.advisor_code ? deals.filter(d => dealMatchesAdvisor(d, profile.advisor_code)) : []
+  const etapesAccueil = [
+    {
+      cle: 'profil',
+      libelle: 'Compléter mon profil (nom et code conseiller)',
+      fait: !!(profile?.full_name && profile?.advisor_code),
+      aide: 'Demande à la direction si ton code est manquant.',
+    },
+    {
+      cle: 'dossier',
+      libelle: 'Créer mon premier dossier',
+      fait: mesDeals.length > 0,
+      aide: 'Bouton « Nouveau dossier » en haut à droite — 15 secondes en mode express.',
+      onAller: () => onEdit?.(emptyDeal(profile?.advisor_code)),
+      libelleAction: 'Créer',
+    },
+    {
+      cle: 'client',
+      libelle: 'Rattacher un client à un dossier',
+      fait: mesDeals.some(d => d.client_id),
+      aide: 'Un dossier rattaché alimente la fiche client et les opportunités.',
+      onAller: () => onGoTab?.('clients'),
+      libelleAction: 'Voir les clients',
+    },
+    {
+      cle: 'action',
+      libelle: 'Poser une prochaine action sur un dossier',
+      fait: mesDeals.some(d => d.next_action_date),
+      aide: 'Elle apparaîtra dans « Mes actions du jour » à la date choisie.',
+      onAller: () => onGoTab?.('pipeline'),
+      libelleAction: 'Ouvrir le pipeline',
+    },
+    {
+      cle: 'signature',
+      libelle: 'Signer un premier dossier',
+      fait: mesDeals.some(d => d.status === 'Signé'),
+      aide: 'La fiche client doit être complète pour pouvoir signer.',
+    },
+  ]
+
   return (
     <div>
+      <ChecklistAccueil etapes={etapesAccueil} scope={profile?.advisor_code || profile?.id || 'anon'}/>
       {/* Bloc Mission du mois (top of dashboard) — engagement émotionnel
           + leads chauds Lead Room. Affichage conditionnel : si pas
           d'objectif et pas de leads chauds, ne s'affiche pas. */}
@@ -2037,7 +2077,9 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
         <KpiCard label="Cabinet · PP signée" value={euro(cabinet.ppCab)} hint={`${cabinet.signedCount} dossier${cabinet.signedCount!==1?'s':''} signé${cabinet.signedCount!==1?'s':''} sur ${cabinet.totalCount}`} accent="gold"/>
         <KpiCard label="Cabinet · PU signée" value={euro(cabinet.puCab)} hint="Versements uniques équipe" accent="blue"/>
       </div>
-      <div>
+      {/* D3 : ce qui doit être fait aujourd'hui passe AVANT le reste. */}
+      <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit}/>
+      <div style={{marginTop:28}}>
         <div className="section-header"><div><div className="section-kicker">Actions immédiates</div><div className="section-title">Mes priorités</div></div></div>
         {priorities.length>0?(
           <div className="priorities-list">
@@ -2053,7 +2095,7 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
             ))}
           </div>
         ):(
-          <div className="table-empty-state"><div className="empty-icon">✓</div><div className="empty-title">Aucune priorité urgente</div><div className="empty-sub">Tous tes dossiers chauds sont traités.</div></div>
+          <div className="table-empty-state"><div className="empty-icon"><Icon.EmptyCheck/></div><div className="empty-title">Aucune priorité urgente</div><div className="empty-sub">Tous tes dossiers chauds sont traités.</div></div>
         )}
       </div>
       <div style={{marginTop:28}}>
@@ -2070,7 +2112,7 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
 /* ─────────────────────────────────────────────────────────────────────────────
    MANAGER DASHBOARD
 ───────────────────────────────────────────────────────────────────────────── */
-function ManagerDashboard({deals,objectifs,month,teamProfiles,profile}){
+function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit}){
   // Switch metric pour la vue annuelle, PP financiere par défaut, PU,
   // Mutuelle/Prevoyance et Total dispo via mini tabs (demande Louis
   // 2026-06-08, vue Direction).
@@ -2134,6 +2176,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile}){
         <KpiCard label="PP Mutuelle/Prévoyance" value={euro(ppMutS)} hint="Mutuelle Santé + Prévoyance TNS" accent="gold" delta={prevMonth?dPpMutS:null}/>
       </div>
       <div style={{marginBottom:24}}><Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded/></Suspense></div>
+      <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit}/>
       <div className="grid-2 gap-16 mb-24">
         <AreaChart title="PP cabinet annualisée" subtitle="Réalisé + pipeline → objectif" actual={ppS} projected={ppS+ppP} target={ppTarget}/>
         <AreaChart title="PU cabinet" subtitle="Versements uniques consolidés" actual={puS} projected={puS+puP} target={puTarget}/>
@@ -2180,7 +2223,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile}){
               <div><span className={`badge ${row.signRate>=60?'badge-signed':row.signRate>=30?'badge-progress':'badge-cancelled'}`}>{row.signRate}%</span></div>
             </div>
           ))}
-          {!advisorRows.length&&<div className="table-empty-state"><div className="empty-icon">👥</div><div className="empty-title">Aucun conseiller configuré</div><div className="empty-sub">Renseigne les profils dans <span className="code">public.profiles</span></div></div>}
+          {!advisorRows.length&&<div className="table-empty-state"><div className="empty-icon"><Icon.EmptyPeople/></div><div className="empty-title">Aucun conseiller configuré</div><div className="empty-sub">Renseigne les profils dans <span className="code">public.profiles</span></div></div>}
         </div>
       </div>
       {hotDeals.length>0&&<div>
@@ -2218,9 +2261,111 @@ const PIPELINE_COLS=[
   {id:'Annulé',   label:'Annulé',    cls:'col-cancelled'},
 ]
 
+// D3 — « Mes actions du jour » : les prochaines actions échues ou à mener
+// aujourd'hui, sur les dossiers vivants du conseiller. Le réflexe Pipedrive :
+// on ouvre le CRM et on sait quoi faire, sans chercher.
+// Date du jour en heure LOCALE : toISOString() renvoie l'UTC, ce qui décalait
+// les échéances d'un jour entre minuit et 2 h du matin en France.
+function jourLocal(d=new Date()){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+}
+
+function ActionsDuJour({deals,profile,onEdit}){
+  const today=jourLocal()
+  const code=profile?.advisor_code
+  const items=useMemo(()=>{
+    if(!code)return [] // sans code conseiller, on n'afficherait pas « mes » actions
+    return (deals||[])
+      // Tout sauf les dossiers abandonnés : une action de suivi peut aussi
+      // porter sur un dossier déjà signé (envoi de pièces, prise de RDV).
+      .filter(d=>d.status!=='Annulé')
+      .filter(d=>dealMatchesAdvisor(d,code))
+      .filter(d=>d.next_action_date&&String(d.next_action_date).slice(0,10)<=today)
+      .sort((a,b)=>String(a.next_action_date).localeCompare(String(b.next_action_date)))
+  },[deals,code,today])
+
+  if(!items.length)return null
+  const enRetard=items.filter(d=>String(d.next_action_date).slice(0,10)<today).length
+
+  return (
+    <div style={{marginTop:28}}>
+      <div className="section-header">
+        <div>
+          <div className="section-kicker">À faire</div>
+          <div className="section-title">Mes actions du jour</div>
+          <div className="section-sub">
+            {items.length} action{items.length>1?'s':''} à mener
+            {enRetard>0?` · ${enRetard} en retard`:''}
+          </div>
+        </div>
+      </div>
+      <div className="priorities-list">
+        {items.map(d=>(
+          <div key={d.id} className="priority-item" style={{cursor:'pointer'}} onClick={()=>onEdit?.(d)} title="Ouvrir le dossier">
+            <div className={`priority-item-dot ${String(d.next_action_date).slice(0,10)<today?'urgent':'high'}`}/>
+            <div style={{flex:1,minWidth:0}}>
+              <div className="priority-item-client truncate">{getClientName(d)}</div>
+              <div className="priority-item-detail">{d.next_action||'Action à mener'} · {d.product}</div>
+            </div>
+            <NextActionChip deal={d}/>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// D3 — chip « prochaine action » : visible sur la carte kanban et dans la
+// liste d'accueil. Rouge si l'échéance est dépassée, or si c'est pour
+// aujourd'hui, neutre sinon — l'urgence se lit sans réfléchir.
+function NextActionChip({deal,compact}){
+  if(!deal?.next_action&&!deal?.next_action_date)return null
+  const iso=deal.next_action_date?String(deal.next_action_date).slice(0,10):null
+  const today=jourLocal()
+  const enRetard=iso&&iso<today
+  const aujourdhui=iso===today
+  const couleur=enRetard
+    ?{c:'var(--cancelled)',bg:'var(--cancelled-bg)',bd:'var(--cancelled-bd, rgba(255,59,48,0.20))'}
+    :aujourdhui
+      ?{c:'var(--gold-dk, #A6843F)',bg:'rgba(201,169,97,0.12)',bd:'var(--gold-line, rgba(201,169,97,0.30))'}
+      :{c:'var(--t2)',bg:'rgba(0,0,0,0.04)',bd:'var(--bd)'}
+  const dt=iso?new Date(iso+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}):null
+  return (
+    <div title={deal.next_action||'Prochaine action'} style={{display:'inline-flex',alignItems:'center',gap:5,maxWidth:'100%',
+      padding:'2px 8px',borderRadius:6,background:couleur.bg,border:`1px solid ${couleur.bd}`,
+      fontSize:compact?10:11.5,fontWeight:650,color:couleur.c,marginBottom:compact?6:0}}>
+      <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+        {deal.next_action||'Action à mener'}
+      </span>
+      {dt&&<span className="tnum" style={{opacity:.85,flexShrink:0}}>· {enRetard?'en retard '+dt:aujourdhui?"aujourd'hui":dt}</span>}
+    </div>
+  )
+}
+
+// D2/D5 — règle unique de changement de statut, partagée par le kanban
+// (glisser-déposer) et les tableaux (édition inline). Renvoie true si le
+// changement a été appliqué, false s'il a été redirigé vers la modale ou
+// annulé — les garde-fous métier restent au même endroit pour les deux gestes.
+async function appliquerChangementStatut(deal,cible,{onEdit,onQuickPatch,undoable=false}={}){
+  if(!cible||cible===deal.status)return false
+  // Signature : compagnie, dates et data client sont obligatoires → la modale
+  // pré-basculée, jamais un dossier signé incomplet créé d'un seul geste.
+  if(cible==='Signé'){onEdit?.({...deal,status:'Signé'});return false}
+  // Dé-signer retire le dossier du CA réalisé : jamais par simple glissement.
+  if(deal.status==='Signé'&&!(await confirmDialog({title:`Retirer la signature du dossier de ${getClientName(deal)} ?`,message:`Il repassera en « ${statusLabel(cible)||cible} » et sortira du chiffre d'affaires signé.`,confirmLabel:'Retirer la signature',danger:true})))return false
+  // En cours / Prévu exigent une date de signature prévue.
+  if((cible==='En cours'||cible==='Prévu')&&!deal.date_expected){onEdit?.({...deal,status:cible});return false}
+  if(cible==='Annulé'&&!(await confirmDialog({title:`Abandonner le dossier de ${getClientName(deal)} ?`,message:'Il passera en Annulé.',confirmLabel:'Abandonner',danger:true})))return false
+  onQuickPatch?.(deal,{status:cible},`Dossier déplacé vers ${statusLabel(cible)||cible}`,{undoable})
+  return true
+}
+
 function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
+  // D1 : les filtres sont mémorisés par conseiller (plus besoin de les
+  // re-régler à chaque visite). La recherche reste volontairement volatile.
+  const prefScope=profile?.advisor_code||profile?.id||'anon'
   const [search,setSearch]=useState('')
-  const [advisorF,setAdvisorF]=useState('Tous')
+  const [advisorF,setAdvisorF]=usePersistedState('pipeline.advisor','Tous',prefScope)
   // Filtre spécial « brouillons périmés » (idée 38) : n'affiche que les
   // dossiers Prévu ou En cours dont l'échéance est dépassée de plus de 14
   // jours, tous mois confondus, pour purger le stock en quelques clics.
@@ -2263,6 +2408,17 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
   // des totaux déjà calculés par colonne.
   const ppTotalMois=PIPELINE_COLS.filter(c=>c.id!=='Annulé').reduce((s,c)=>s+(ppByStatus[c.id]||0),0)
   const puTotalMois=PIPELINE_COLS.filter(c=>c.id!=='Annulé').reduce((s,c)=>s+(puByStatus[c.id]||0),0)
+
+  // B5 — drag & drop : lâcher une carte sur une colonne (ou sur une carte de
+  // cette colonne) change le statut via onQuickPatch (optimiste + Realtime).
+  // Exception « Signé » : les champs signature (compagnie, dates, montants)
+  // sont obligatoires → on ouvre la modale pré-basculée sur Signé plutôt que
+  // de créer un dossier signé incomplet d'un simple geste.
+  async function handleCardMove({itemData,overId,overData}){
+    const deal=itemData?.deal
+    if(!deal)return
+    await appliquerChangementStatut(deal,targetColumnOf({overId,overData}),{onEdit,onQuickPatch,undoable:true})
+  }
 
   return (
     <div>
@@ -2311,11 +2467,12 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
           </button>
         </div>
       )}
+      <KanbanDnd onMove={handleCardMove}>
       <div className="pipeline-board">
         {PIPELINE_COLS.map(col=>{
           const items=byStatus[col.id]||[]
           return (
-            <div key={col.id} className={`pipeline-col ${col.cls}`}>
+            <KanbanColumn key={col.id} id={col.id} className={`pipeline-col ${col.cls}`}>
               <div className="pipeline-col-head">
                 <div>
                   <div className="pipeline-col-title">{col.label}</div>
@@ -2338,12 +2495,13 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
               </div>
               <div className="pipeline-cards">
                 {items.map(deal=>(
-                  <div key={deal.id} className="pipeline-deal-card" onClick={()=>onEdit(deal)}>
+                  <KanbanCard key={deal.id} id={deal.id} data={{type:'card',colId:col.id,deal}} className="pipeline-deal-card" onClick={()=>onEdit(deal)}>
                     <div className="pipeline-deal-client">{getClientName(deal)}</div>
                     <div className="pipeline-deal-product">{deal.product} · {deal.company||'—'}</div>
                     {/* Brouillon créé depuis un RDV (produit Autre, 0 EUR) : déjà
                         compté dans Dossiers mais invisible ici, badge ambre pour
                         que le conseiller le qualifie au lieu de le laisser dormir. */}
+                    <NextActionChip deal={deal} compact/>
                     {isDealACompleter(deal)&&(
                       <div style={{display:'inline-flex',alignItems:'center',gap:4,marginTop:4,padding:'2px 8px',borderRadius:6,background:'rgba(180,83,9,0.10)',border:'1px solid rgba(180,83,9,0.28)',fontSize:10,fontWeight:700,color:'#B45309'}}>
                         ✏️ À compléter
@@ -2421,7 +2579,7 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
                           Reprogrammer +30j
                         </button>
                         <button className="btn btn-danger btn-sm" style={{fontSize:11,padding:'3px 8px',flex:1}}
-                          onClick={()=>{if(window.confirm(`Abandonner le dossier de ${getClientName(deal)} ? Il passera en Annulé.`))onQuickPatch(deal,{status:'Annulé'},'Dossier abandonné')}}>
+                          onClick={async()=>{if(await confirmDialog({title:`Abandonner le dossier de ${getClientName(deal)} ?`,message:'Il passera en Annulé.',confirmLabel:'Abandonner',danger:true}))onQuickPatch(deal,{status:'Annulé'},'Dossier abandonné')}}>
                           Abandonner
                         </button>
                       </div>
@@ -2439,14 +2597,15 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
                         <AgeBadge deal={deal} compact/><span style={{fontSize:11,color:'var(--t3)'}}>{deal.advisor_code}</span>
                       </div>
                     </div>
-                  </div>
+                  </KanbanCard>
                 ))}
                 {!items.length&&<div className="pipeline-empty">Aucun dossier</div>}
               </div>
-            </div>
+            </KanbanColumn>
           )
         })}
       </div>
+      </KanbanDnd>
     </div>
   )
 }
@@ -2454,12 +2613,14 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
 /* ─────────────────────────────────────────────────────────────────────────────
    DEALS TABLE
 ───────────────────────────────────────────────────────────────────────────── */
-function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClient}){
+function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClient,onQuickPatch}){
+  // D1 : filtres mémorisés par conseiller d'une visite à l'autre.
+  const prefScope=profile?.advisor_code||profile?.id||'anon'
   const [search,setSearch]=useState('')
-  const [statusF,setStatusF]=useState('Tous')
-  const [productF,setProductF]=useState('Tous')
-  const [priorityF,setPriorityF]=useState('Tous')
-  const [allMonths,setAllMonths]=useState(false)
+  const [statusF,setStatusF]=usePersistedState('dossiers.status','Tous',prefScope)
+  const [productF,setProductF]=usePersistedState('dossiers.product','Tous',prefScope)
+  const [priorityF,setPriorityF]=usePersistedState('dossiers.priority','Tous',prefScope)
+  const [allMonths,setAllMonths]=usePersistedState('dossiers.allMonths',false,prefScope)
   const [expandedGroups,setExpandedGroups]=useState(new Set())
   // La recherche couvre aussi téléphone et email : retrouver un dossier en
   // tapant les derniers chiffres du numéro qui appelle.
@@ -2546,6 +2707,22 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
     })
   },[groupedDeals,sort])
 
+  // D7 — export CSV des dossiers filtrés : une ligne par dossier, colonnes
+  // dans l'ordre de lecture métier. Montants en nombres (pas de symbole €)
+  // pour rester calculables dans Excel.
+  function exporterDossiers(){
+    if(!filtered.length){toast('Aucun dossier à exporter');return}
+    const colonnes=['Client','Produit','Compagnie','Statut','Priorité','PP mensuelle','PP annualisée','PU','Conseiller','Co-conseiller','Mois','Date prévue','Date signature','Source','Email','Téléphone']
+    const lignes=filtered.map(d=>[
+      getClientName(d), d.product||'', d.company||'', statusLabel(d.status)||d.status||'', d.priority||'',
+      nombreFr(d.pp_m), nombreFr(annualize(d.pp_m)), nombreFr(d.pu),
+      d.advisor_code||'', d.co_advisor_code||'', d.month||'',
+      d.date_expected||'', d.date_signed||'', d.source||'', d.client_email||'', d.client_phone||'',
+    ])
+    exporterCsv(`dossiers-${suffixeDate()}`,colonnes,lignes)
+    toast.success(`${filtered.length} dossier${filtered.length>1?'s':''} exporté${filtered.length>1?'s':''}`)
+  }
+
   return (
     <div>
       <div className="section-header"><div><div className="section-kicker">Référentiel</div><div className="section-title">Dossiers clients</div><div className="section-sub">{groupedDeals.length} client{groupedDeals.length!==1?'s':''} · {travailles} dossier{travailles!==1?'s':''} travaillé{travailles!==1?'s':''}{aCompleter>0?` · ${aCompleter} RDV calé${aCompleter!==1?'s':''} à compléter`:''} · PP signée {euro(ppTotal)} · PU signée {euro(puTotal)}</div></div></div>
@@ -2560,6 +2737,10 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
             Tous les mois
           </label>
           <button className="btn btn-ghost btn-sm" onClick={onRefresh}><Icon.Refresh/> Rafraîchir</button>
+          {/* D7 : exporte les dossiers correspondant aux filtres actifs, une ligne par dossier. */}
+          <button className="btn btn-outline btn-sm" onClick={exporterDossiers} disabled={!filtered.length} title="Exporter les dossiers affichés en CSV (Excel)">
+            Exporter ({filtered.length})
+          </button>
         </div>
       </div>
       <div className="table-wrap">
@@ -2576,7 +2757,7 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
                       onClick={() => group.client_id && onSelectClient && onSelectClient(group.client_id)}
                       style={{
                         cursor: group.client_id && onSelectClient ? 'pointer' : 'default',
-                        backgroundColor: isExpanded ? 'rgba(192, 155, 90, 0.05)' : 'transparent'
+                        backgroundColor: isExpanded ? 'rgba(201, 169, 97, 0.05)' : 'transparent'
                       }}
                     >
                       <td>
@@ -2604,7 +2785,24 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
                         {group.co_advisor_code && <span className="cell-sub"> co: {group.co_advisor_code}</span>}
                       </td>
                       <td>{group.latestSignedDate ? <span style={{fontSize:14,fontWeight:600,color:'var(--t1)',fontVariantNumeric:'tabular-nums'}}>{new Date(group.latestSignedDate).toLocaleDateString('fr-FR')}</span> : <span style={{color:'var(--t3)'}}>—</span>}</td>
-                      <td><span className={STATUS_CLASS[group.globalStatus]||'badge'}>{statusLabel(group.globalStatus)}</span></td>
+                      <td onClick={group.deals.length===1&&onQuickPatch?(e=>e.stopPropagation()):undefined}>
+                        {/* D2 : statut modifiable sans ouvrir la modale quand le
+                            client n'a qu'un dossier. Groupe multi-dossiers : le
+                            statut affiché est un calcul, on l'édite ligne à ligne
+                            dans le détail. */}
+                        {group.deals.length===1&&onQuickPatch?(
+                          <InlineSelect
+                            value={group.deals[0].status}
+                            options={STATUS_OPTIONS}
+                            renderLabel={statusLabel}
+                            badgeClass={STATUS_CLASS[group.deals[0].status]||'badge'}
+                            title="Changer le statut du dossier"
+                            onChange={next=>appliquerChangementStatut(group.deals[0],next,{onEdit,onQuickPatch,undoable:true})}
+                          />
+                        ):(
+                          <span className={STATUS_CLASS[group.globalStatus]||'badge'}>{statusLabel(group.globalStatus)}</span>
+                        )}
+                      </td>
                       <td>
                         <div className="table-actions">
                           {group.client_id && onSelectClient && (
@@ -2627,7 +2825,7 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
                       </td>
                     </tr>
                     {isExpanded && group.deals.map(deal => (
-                      <tr key={`${currentGroupKey}-${deal.id}`} style={{ backgroundColor: '#F9F8F6' }}>
+                      <tr key={`${currentGroupKey}-${deal.id}`} style={{ backgroundColor: 'var(--bg)' }}>
                         <td style={{ paddingLeft: '40px' }}>
                           <div className="cell-sub">└─ {deal.product}</div>
                         </td>
@@ -2639,7 +2837,20 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
                         <td className="cell-mono">{deal.pu>0?euro(deal.pu):'—'}</td>
                         <td><span style={{fontSize:12,color:'var(--t3)'}}>{deal.company||'—'}</span></td>
                         <td>{deal.date_signed ? <span style={{fontSize:12,color:'var(--t2)',fontVariantNumeric:'tabular-nums'}}>{new Date(deal.date_signed).toLocaleDateString('fr-FR')}</span> : <span style={{color:'var(--t3)'}}>—</span>}</td>
-                        <td><span className={STATUS_CLASS[deal.status]||'badge'}>{statusLabel(deal.status)}</span></td>
+                        <td onClick={e=>e.stopPropagation()}>
+                          {onQuickPatch?(
+                            <InlineSelect
+                              value={deal.status}
+                              options={STATUS_OPTIONS}
+                              renderLabel={statusLabel}
+                              badgeClass={STATUS_CLASS[deal.status]||'badge'}
+                              title="Changer le statut du dossier"
+                              onChange={next=>appliquerChangementStatut(deal,next,{onEdit,onQuickPatch,undoable:true})}
+                            />
+                          ):(
+                            <span className={STATUS_CLASS[deal.status]||'badge'}>{statusLabel(deal.status)}</span>
+                          )}
+                        </td>
                         <td>
                           <div className="table-actions">
                             <button
@@ -2664,7 +2875,7 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
             </tbody>
           </table>
         ):(
-          <div className="table-empty-state"><div className="empty-icon">📂</div><div className="empty-title">Aucun dossier trouvé</div><div className="empty-sub">Modifie les filtres ou crée un nouveau dossier.</div></div>
+          <div className="table-empty-state"><div className="empty-icon"><Icon.EmptyFolder/></div><div className="empty-title">Aucun dossier trouvé</div><div className="empty-sub">Modifie les filtres ou crée un nouveau dossier.</div></div>
         )}
       </div>
     </div>
@@ -2733,7 +2944,7 @@ function ForecastView({deals,objectifs,month,profile,teamProfiles,canEditObjecti
           </div>
         )
       })}
-      {!visibleProfiles.length&&<div className="card"><div className="table-empty-state"><div className="empty-icon">📊</div><div className="empty-title">Aucun conseiller actif</div><div className="empty-sub">Renseigne les profils avec <span className="code">advisor_code</span> dans <span className="code">public.profiles</span></div></div></div>}
+      {!visibleProfiles.length&&<div className="card"><div className="table-empty-state"><div className="empty-icon"><Icon.EmptyChart/></div><div className="empty-title">Aucun conseiller actif</div><div className="empty-sub">Renseigne les profils avec <span className="code">advisor_code</span> dans <span className="code">public.profiles</span></div></div></div>}
     </div>
   )
 }
@@ -2919,15 +3130,16 @@ function MarketView(){
     el.appendChild(s)
   },[])
 
+  // Badge de performance sur les tokens sémantiques de la charte (C1).
   function PerfBadge({val}){
     if(val==null||val===0)return <span style={{color:'var(--t3)',fontSize:11}}>—</span>
-    const up=val>0,down=val<0
+    const up=val>0
     return(
-      <span style={{
-        fontSize:11.5,fontWeight:700,
-        color:up?'#10B981':down?'#EF4444':'var(--t2)',
-        background:up?'rgba(16,185,129,0.1)':down?'rgba(239,68,68,0.1)':'var(--bg)',
-        padding:'2px 7px',borderRadius:4,whiteSpace:'nowrap'
+      <span className="badge tnum" style={{
+        color:up?'var(--signed)':'var(--cancelled)',
+        background:up?'var(--signed-bg)':'var(--cancelled-bg)',
+        borderColor:'transparent',
+        whiteSpace:'nowrap',
       }}>
         {up?'+':''}{val.toFixed(2)}%
       </span>
@@ -2947,13 +3159,11 @@ function MarketView(){
           </div>
         </div>
         <div style={{display:'flex',gap:8}}>
-          <button onClick={()=>{setNewFund({name:'',isin:'',cat:'',refLabel:'',refSymbol:''});setAddError('');setAddModal(true)}}
-            style={{padding:'7px 14px',background:'var(--gold)',color:'white',border:'none',borderRadius:'var(--rad)',fontSize:12,fontWeight:600,cursor:'pointer'}}>
-            + Ajouter
+          <button className="btn btn-gold btn-sm" onClick={()=>{setNewFund({name:'',isin:'',cat:'',refLabel:'',refSymbol:''});setAddError('');setAddModal(true)}}>
+            <Icon.Plus/> Ajouter
           </button>
-          <button onClick={loadAllNAV} disabled={loading}
-            style={{padding:'7px 14px',background:loading?'var(--bd)':'var(--bg)',color:'var(--t1)',border:'1px solid var(--bd)',borderRadius:'var(--rad)',fontSize:12,fontWeight:600,cursor:loading?'not-allowed':'pointer'}}>
-            {loading?'Chargement…':'↻ Actualiser'}
+          <button className="btn btn-outline btn-sm" onClick={loadAllNAV} disabled={loading}>
+            {loading?'Chargement…':'Actualiser'}
           </button>
         </div>
       </div>
@@ -2965,108 +3175,100 @@ function MarketView(){
         </div>
       </div>
 
-      {/* Table */}
-      <div style={{border:'1px solid var(--bd)',borderRadius:'var(--rad-lg)',overflow:'hidden',marginBottom:selectedFund?20:0,background:'white'}}>
-        {/* Header */}
-        <div style={{display:'grid',gridTemplateColumns:'28px 1fr 100px 75px 80px 80px 80px 80px 130px 36px',background:'var(--bg)',borderBottom:'2px solid var(--bd)'}}>
-          {['#','Fonds','ISIN','VL','1 sem','1 mois','3 mois','1 an','Indice réf.',''].map(h=>(
-            <div key={h} style={{padding:'8px 10px',fontSize:10,fontWeight:700,color:'var(--t3)',textTransform:'uppercase',letterSpacing:'0.04em',borderRight:'1px solid var(--bd)'}}>{h}</div>
-          ))}
-        </div>
-
-        {funds.map((f,i)=>{
-          const d=navData[f.isin]
-          const isSelected=selectedFund?.isin===f.isin
-          return(
-            <div key={f.isin}
-              onClick={()=>setSelectedFund(isSelected?null:f)}
-              style={{
-                display:'grid',gridTemplateColumns:'28px 1fr 100px 75px 80px 80px 80px 80px 130px 36px',
-                borderBottom:'1px solid var(--bd)',
-                background:isSelected?'rgba(192,155,90,0.06)':i%2===0?'white':'rgba(248,246,242,0.4)',
-                cursor:'pointer',transition:'background .15s',
-                borderLeft:isSelected?'3px solid var(--gold)':'3px solid transparent',
-              }}
-              onMouseEnter={e=>!isSelected&&(e.currentTarget.style.background='rgba(192,155,90,0.04)')}
-              onMouseLeave={e=>!isSelected&&(e.currentTarget.style.background=i%2===0?'white':'rgba(248,246,242,0.4)')}
-            >
-              {/* # */}
-              <div style={{padding:'10px 8px',display:'flex',alignItems:'center',borderRight:'1px solid var(--bd)'}}>
-                <span style={{fontSize:11,fontWeight:700,color:'var(--t3)'}}>{i+1}</span>
-              </div>
-              {/* Nom */}
-              <div style={{padding:'10px',borderRight:'1px solid var(--bd)',minWidth:0,display:'flex',flexDirection:'column',justifyContent:'center'}}>
-                <div style={{fontSize:12.5,fontWeight:600,color:'var(--t1)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.name}</div>
-                <div style={{fontSize:10,color:'var(--t3)',marginTop:1}}>{f.cat}{d?.date?` · VL au ${d.date}`:''}</div>
-              </div>
-              {/* ISIN */}
-              <div style={{padding:'10px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center'}}>
-                <span style={{fontSize:10,color:'var(--t3)',fontFamily:'monospace'}}>{f.isin}</span>
-              </div>
-              {/* VL */}
-              <div style={{padding:'10px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center',justifyContent:'flex-end'}}>
-                {loading&&!d
-                  ?<div style={{width:42,height:14,background:'var(--bd)',borderRadius:3}}/>
-                  :d?.vl
-                    ?<div style={{textAlign:'right'}}>
-                      <div style={{fontSize:12.5,fontWeight:700,color:'var(--t1)'}}>{d.vl.toFixed(2)}</div>
-                      <div style={{fontSize:9.5,color:'var(--t3)'}}>{d.currency||'EUR'}</div>
+      {/* Table des fonds — data-table charte (C1), mêmes colonnes et actions */}
+      <div className="table-wrap" style={{marginBottom:selectedFund?20:0}}>
+        <table className="data-table" style={{width:'100%'}}>
+          <thead>
+            <tr>
+              <th style={{width:34}}>#</th>
+              <th>Fonds</th>
+              <th style={{width:110}}>ISIN</th>
+              <th style={{width:80,textAlign:'right'}}>VL</th>
+              <th style={{width:80,textAlign:'center'}}>1 sem</th>
+              <th style={{width:80,textAlign:'center'}}>1 mois</th>
+              <th style={{width:80,textAlign:'center'}}>3 mois</th>
+              <th style={{width:80,textAlign:'center'}}>1 an</th>
+              <th style={{width:140}}>Indice réf.</th>
+              <th style={{width:44}} aria-label="Actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {funds.map((f,i)=>{
+              const d=navData[f.isin]
+              const isSelected=selectedFund?.isin===f.isin
+              return(
+                <tr key={f.isin}
+                  onClick={()=>setSelectedFund(isSelected?null:f)}
+                  title={isSelected?'Masquer le graphique':'Afficher le graphique de l\'indice de référence'}
+                  style={{
+                    cursor:'pointer',
+                    background:isSelected?'rgba(201,169,97,0.07)':undefined,
+                    boxShadow:isSelected?'inset 3px 0 0 var(--gold)':undefined,
+                  }}
+                >
+                  <td className="tnum" style={{color:'var(--t3)',fontWeight:600}}>{i+1}</td>
+                  <td>
+                    <div className="cell-primary" style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:340}}>{f.name}</div>
+                    <div className="cell-sub">{f.cat}{d?.date?` · VL au ${d.date}`:''}</div>
+                  </td>
+                  <td><span className="cell-mono" style={{fontSize:11,color:'var(--t3)'}}>{f.isin}</span></td>
+                  <td style={{textAlign:'right'}}>
+                    {loading&&!d
+                      ?<Skeleton h={13} w={44} style={{marginLeft:'auto'}}/>
+                      :d?.vl
+                        ?<>
+                          <div className="cell-primary tnum">{d.vl.toFixed(2)}</div>
+                          <div className="cell-sub">{d.currency||'EUR'}</div>
+                        </>
+                        :<span style={{color:'var(--t3)'}}>—</span>
+                    }
+                  </td>
+                  <td style={{textAlign:'center'}}><PerfBadge val={d?.perf1W}/></td>
+                  <td style={{textAlign:'center'}}><PerfBadge val={d?.perf1M}/></td>
+                  <td style={{textAlign:'center'}}><PerfBadge val={d?.perf3M}/></td>
+                  <td style={{textAlign:'center'}}><PerfBadge val={d?.perf1Y}/></td>
+                  <td>
+                    <div style={{display:'flex',alignItems:'center',gap:6}}>
+                      <span style={{width:7,height:7,borderRadius:'50%',background:f.color,flexShrink:0}}/>
+                      <span style={{fontSize:11.5,color:'var(--t2)',fontWeight:500}}>{f.refLabel}</span>
                     </div>
-                    :<span style={{fontSize:11,color:'var(--t3)'}}>—</span>
-                }
-              </div>
-              {/* 1S */}
-              <div style={{padding:'10px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <PerfBadge val={d?.perf1W}/>
-              </div>
-              {/* 1M */}
-              <div style={{padding:'10px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <PerfBadge val={d?.perf1M}/>
-              </div>
-              {/* 3M */}
-              <div style={{padding:'10px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <PerfBadge val={d?.perf3M}/>
-              </div>
-              {/* 1Y */}
-              <div style={{padding:'10px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <PerfBadge val={d?.perf1Y}/>
-              </div>
-              {/* Indice réf */}
-              <div style={{padding:'10px',display:'flex',alignItems:'center',gap:6}}>
-                <div style={{width:7,height:7,borderRadius:'50%',background:f.color,flexShrink:0}}/>
-                <span style={{fontSize:11,color:'var(--t2)',fontWeight:500}}>{f.refLabel}</span>
-              </div>
-              {/* Supprimer */}
-              <div style={{display:'flex',alignItems:'center',justifyContent:'center'}}
-                onClick={e=>{e.stopPropagation();if(funds.length>1){setFunds(prev=>prev.filter((_,j)=>j!==i));if(selectedFund?.isin===f.isin)setSelectedFund(null)}}}>
-                <span style={{fontSize:13,color:'var(--t3)',cursor:funds.length>1?'pointer':'not-allowed',opacity:funds.length>1?1:0.3}}
-                  title="Supprimer ce fonds">✕</span>
-              </div>
-            </div>
-          )
-        })}
+                  </td>
+                  <td onClick={e=>e.stopPropagation()}>
+                    <button
+                      className="btn btn-ghost btn-icon btn-sm"
+                      disabled={funds.length<=1}
+                      title="Retirer ce fonds de la liste"
+                      aria-label={`Retirer ${f.name}`}
+                      onClick={()=>{if(funds.length>1){setFunds(prev=>prev.filter((_,j)=>j!==i));if(selectedFund?.isin===f.isin)setSelectedFund(null)}}}
+                    >✕</button>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
       </div>
 
-      {/* Chart détail */}
+      {/* Chart détail — carte charte (C1) */}
       {selectedFund&&(
-        <div style={{border:'1px solid var(--gold-line)',borderRadius:'var(--rad-lg)',overflow:'hidden',background:'white',marginBottom:20}}>
-          <div style={{padding:'10px 16px',borderBottom:'1px solid var(--bd)',display:'flex',alignItems:'center',gap:10,background:'rgba(192,155,90,0.04)'}}>
-            <div style={{width:8,height:8,borderRadius:'50%',background:selectedFund.color}}/>
+        <div className="card" style={{overflow:'hidden',marginBottom:20,borderTop:'2px solid var(--gold)'}}>
+          <div style={{padding:'10px 16px',borderBottom:'0.5px solid var(--bd)',display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+            <span style={{width:8,height:8,borderRadius:'50%',background:selectedFund.color,flexShrink:0}}/>
             <span style={{fontWeight:600,fontSize:13,color:'var(--t1)'}}>{selectedFund.name}</span>
             <span style={{fontSize:11,color:'var(--t3)'}}>· Indice de réf. : {selectedFund.refLabel}</span>
             {navData[selectedFund.isin]&&(
-              <div style={{marginLeft:8,display:'flex',gap:10,alignItems:'center'}}>
+              <div style={{marginLeft:8,display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
                 {[['1S','perf1W'],['1M','perf1M'],['3M','perf3M'],['1Y','perf1Y']].map(([lbl,key])=>{
                   const v=navData[selectedFund.isin][key]
                   return v!=null?(
-                    <span key={key} style={{fontSize:11,fontWeight:700,color:v>0?'#10B981':v<0?'#EF4444':'var(--t2)'}}>
+                    <span key={key} className="tnum" style={{fontSize:11,fontWeight:700,color:v>0?'var(--signed)':v<0?'var(--cancelled)':'var(--t2)'}}>
                       {lbl} : {v>0?'+':''}{v.toFixed(2)}%
                     </span>
                   ):null
                 })}
               </div>
             )}
-            <button onClick={()=>{
+            <button className="btn btn-ghost btn-sm" style={{marginLeft:8}} onClick={()=>{
               const d=navData[selectedFund.isin]
               setEditPerfVals({
                 perf1W: d?.perf1W!=null?String(d.perf1W):'',
@@ -3075,10 +3277,10 @@ function MarketView(){
                 perf1Y: d?.perf1Y!=null?String(d.perf1Y):'',
               })
               setEditPerfIsin(selectedFund.isin)
-            }} style={{marginLeft:8,padding:'3px 10px',fontSize:11,background:'var(--bg)',border:'1px solid var(--bd)',borderRadius:'var(--rad)',color:'var(--t2)',cursor:'pointer',fontWeight:500}}>
-              ✎ Saisir perfs
+            }}>
+              Saisir perfs
             </button>
-            <button onClick={()=>setSelectedFund(null)} style={{marginLeft:'auto',background:'transparent',border:'none',color:'var(--t3)',cursor:'pointer',fontSize:18,lineHeight:1}}>✕</button>
+            <button className="btn btn-ghost btn-icon btn-sm" style={{marginLeft:'auto'}} onClick={()=>setSelectedFund(null)} aria-label="Fermer le graphique">✕</button>
           </div>
           <div className="tradingview-widget-container" id="tv-detail-chart" style={{height:380}}>
             <div className="tradingview-widget-container__widget" style={{height:'100%'}}></div>
@@ -3086,32 +3288,37 @@ function MarketView(){
         </div>
       )}
 
-      <div style={{padding:'10px 14px',background:'rgba(192,155,90,0.04)',border:'1px solid var(--gold-line)',borderRadius:'var(--rad)',fontSize:11,color:'var(--t3)',lineHeight:1.6}}>
-        ℹ️ <strong style={{color:'var(--t2)'}}>VL quotidienne J+1</strong> — Performances calculées sur les VL historiques. Cliquez sur un fonds pour afficher le graphique de son indice de référence.
+      <div style={{padding:'10px 14px',background:'var(--gold-subtle, rgba(201,169,97,0.06))',border:'1px solid var(--gold-line, rgba(201,169,97,0.30))',borderRadius:'var(--rad)',fontSize:11.5,color:'var(--t3)',lineHeight:1.6,marginTop:selectedFund?0:16}}>
+        <strong style={{color:'var(--t2)'}}>VL quotidienne J+1</strong> — Performances calculées sur les VL historiques. Cliquez sur un fonds pour afficher le graphique de son indice de référence.
       </div>
 
-      {/* Modal saisie manuelle perfs */}
+      {/* Modal saisie manuelle perfs — structure modale charte (C1) */}
       {editPerfIsin&&(
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:1001,display:'flex',alignItems:'center',justifyContent:'center'}}
-          onClick={()=>setEditPerfIsin(null)}>
-          <div style={{background:'var(--surface)',borderRadius:'var(--rad-lg)',padding:28,width:360,boxShadow:'0 20px 60px rgba(0,0,0,0.3)'}}
-            onClick={e=>e.stopPropagation()}>
-            <div style={{fontWeight:700,fontSize:15,color:'var(--t1)',marginBottom:4}}>Saisie manuelle des performances</div>
-            <div style={{fontSize:11,color:'var(--t3)',marginBottom:18}}>{funds.find(f=>f.isin===editPerfIsin)?.name} · {editPerfIsin}</div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:18}}>
-              {[['1 semaine','perf1W'],['1 mois','perf1M'],['3 mois','perf3M'],['1 an','perf1Y']].map(([lbl,key])=>(
-                <div key={key}>
-                  <div style={{fontSize:11,fontWeight:600,color:'var(--t2)',marginBottom:4,textTransform:'uppercase',letterSpacing:'0.04em'}}>{lbl} (%)</div>
-                  <input type="number" step="0.01" value={editPerfVals[key]}
-                    onChange={e=>setEditPerfVals(p=>({...p,[key]:e.target.value}))}
-                    placeholder="ex: -3.12"
-                    style={{width:'100%',padding:'7px 10px',border:'1px solid var(--bd)',borderRadius:'var(--rad)',fontSize:13,background:'var(--bg)',color:'var(--t1)',boxSizing:'border-box'}}/>
-                </div>
-              ))}
+        <div className="modal-overlay" onClick={()=>setEditPerfIsin(null)}>
+          <div className="modal-box" style={{width:'min(100%, 420px)'}} onClick={e=>e.stopPropagation()}>
+            <div className="modal-head">
+              <div>
+                <div className="modal-title">Saisie manuelle des performances</div>
+                <div className="modal-subtitle">{funds.find(f=>f.isin===editPerfIsin)?.name} · {editPerfIsin}</div>
+              </div>
+              <button className="btn btn-ghost btn-icon" onClick={()=>setEditPerfIsin(null)} aria-label="Fermer"><Icon.Close/></button>
             </div>
-            <div style={{fontSize:10,color:'var(--t3)',marginBottom:14,fontStyle:'italic'}}>Source : fiches Morningstar. Valeurs en %, ex: -3.12 pour -3,12%</div>
-            <div style={{display:'flex',gap:8}}>
-              <button onClick={()=>{
+            <div className="modal-body">
+              <div className="form-row form-row-2">
+                {[['1 semaine','perf1W'],['1 mois','perf1M'],['3 mois','perf3M'],['1 an','perf1Y']].map(([lbl,key])=>(
+                  <div key={key} className="form-group">
+                    <label className="form-label">{lbl} (%)</label>
+                    <input className="form-input" type="number" step="0.01" value={editPerfVals[key]}
+                      onChange={e=>setEditPerfVals(p=>({...p,[key]:e.target.value}))}
+                      placeholder="ex: -3.12"/>
+                  </div>
+                ))}
+              </div>
+              <div className="form-hint">Source : fiches Morningstar. Valeurs en %, ex : -3.12 pour −3,12 %.</div>
+            </div>
+            <div className="modal-foot">
+              <button className="btn btn-outline" onClick={()=>setEditPerfIsin(null)}>Annuler</button>
+              <button className="btn btn-gold" onClick={()=>{
                 const patch={}
                 const keys=['perf1W','perf1M','perf3M','perf1Y']
                 keys.forEach(k=>{
@@ -3120,42 +3327,41 @@ function MarketView(){
                 })
                 setNavData(prev=>({...prev,[editPerfIsin]:{...(prev[editPerfIsin]||{}), ...patch}}))
                 setEditPerfIsin(null)
-              }} style={{flex:1,padding:'9px 0',background:'var(--gold)',color:'white',border:'none',borderRadius:'var(--rad)',fontWeight:600,fontSize:13,cursor:'pointer'}}>
+              }}>
                 Enregistrer
-              </button>
-              <button onClick={()=>setEditPerfIsin(null)}
-                style={{padding:'9px 18px',background:'var(--bg)',color:'var(--t2)',border:'1px solid var(--bd)',borderRadius:'var(--rad)',fontWeight:600,fontSize:13,cursor:'pointer'}}>
-                Annuler
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal ajout allocation */}
+      {/* Modal ajout allocation — structure modale charte (C1) */}
       {addModal&&(
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}
-          onClick={()=>setAddModal(false)}>
-          <div style={{background:'var(--surface)',borderRadius:'var(--rad-lg)',padding:28,width:420,boxShadow:'0 20px 60px rgba(0,0,0,0.3)'}}
-            onClick={e=>e.stopPropagation()}>
-            <div style={{fontWeight:700,fontSize:16,color:'var(--t1)',marginBottom:18}}>Ajouter une allocation</div>
-            {[
-              {label:'Nom du fonds *',key:'name',placeholder:'ex: Lazard Japon AC H EUR'},
-              {label:'ISIN *',key:'isin',placeholder:'ex: FR0014008M81'},
-              {label:'Catégorie',key:'cat',placeholder:'ex: Actions Japon'},
-              {label:'Indice de référence',key:'refLabel',placeholder:'ex: Nikkei 225'},
-              {label:'Symbole TradingView',key:'refSymbol',placeholder:'ex: INDEX:NKY'},
-            ].map(({label,key,placeholder})=>(
-              <div key={key} style={{marginBottom:12}}>
-                <div style={{fontSize:11,fontWeight:600,color:'var(--t2)',marginBottom:4,textTransform:'uppercase',letterSpacing:'0.04em'}}>{label}</div>
-                <input value={newFund[key]} onChange={e=>setNewFund(p=>({...p,[key]:e.target.value}))}
-                  placeholder={placeholder}
-                  style={{width:'100%',padding:'8px 10px',border:'1px solid var(--bd)',borderRadius:'var(--rad)',fontSize:12,background:'var(--bg)',color:'var(--t1)',boxSizing:'border-box'}}/>
-              </div>
-            ))}
-            {addError&&<div style={{color:'#EF4444',fontSize:12,marginBottom:10}}>{addError}</div>}
-            <div style={{display:'flex',gap:8,marginTop:4}}>
-              <button onClick={async()=>{
+        <div className="modal-overlay" onClick={()=>setAddModal(false)}>
+          <div className="modal-box" style={{width:'min(100%, 460px)'}} onClick={e=>e.stopPropagation()}>
+            <div className="modal-head">
+              <div><div className="modal-title">Ajouter une allocation</div></div>
+              <button className="btn btn-ghost btn-icon" onClick={()=>setAddModal(false)} aria-label="Fermer"><Icon.Close/></button>
+            </div>
+            <div className="modal-body">
+              {[
+                {label:'Nom du fonds *',key:'name',placeholder:'ex: Lazard Japon AC H EUR'},
+                {label:'ISIN *',key:'isin',placeholder:'ex: FR0014008M81'},
+                {label:'Catégorie',key:'cat',placeholder:'ex: Actions Japon'},
+                {label:'Indice de référence',key:'refLabel',placeholder:'ex: Nikkei 225'},
+                {label:'Symbole TradingView',key:'refSymbol',placeholder:'ex: INDEX:NKY'},
+              ].map(({label,key,placeholder})=>(
+                <div key={key} className="form-group">
+                  <label className="form-label">{label}</label>
+                  <input className="form-input" value={newFund[key]} onChange={e=>setNewFund(p=>({...p,[key]:e.target.value}))}
+                    placeholder={placeholder}/>
+                </div>
+              ))}
+              {addError&&<div className="notice notice-error" style={{margin:0}}>{addError}</div>}
+            </div>
+            <div className="modal-foot">
+              <button className="btn btn-outline" onClick={()=>setAddModal(false)}>Annuler</button>
+              <button className="btn btn-gold" disabled={addLoading} onClick={async()=>{
                 if(!newFund.name.trim()||!newFund.isin.trim()){setAddError('Nom et ISIN obligatoires');return}
                 const isin=newFund.isin.trim().toUpperCase()
                 if(funds.find(f=>f.isin===isin)){setAddError('Cet ISIN est déjà dans la liste');return}
@@ -3166,13 +3372,8 @@ function MarketView(){
                 setFunds(prev=>[...prev,fund])
                 if(d&&d.vl)setNavData(prev=>({...prev,[isin]:d}))
                 setAddLoading(false);setAddModal(false)
-              }} disabled={addLoading}
-                style={{flex:1,padding:'9px 0',background:'var(--gold)',color:'white',border:'none',borderRadius:'var(--rad)',fontWeight:600,fontSize:13,cursor:addLoading?'not-allowed':'pointer'}}>
+              }}>
                 {addLoading?'Vérification…':'Ajouter'}
-              </button>
-              <button onClick={()=>setAddModal(false)}
-                style={{padding:'9px 18px',background:'var(--bg)',color:'var(--t2)',border:'1px solid var(--bd)',borderRadius:'var(--rad)',fontWeight:600,fontSize:13,cursor:'pointer'}}>
-                Annuler
               </button>
             </div>
           </div>
@@ -3218,12 +3419,12 @@ function AgendaView({deals,profile}){
         setLoading(false);return
       }
       setEvents(d.items||[])
-    }catch(e){setError('Erreur réseau : '+e.message)}
+    }catch(e){setError('Erreur réseau : '+ messageErreur(e))}
     setLoading(false)
   }
 
   async function deleteEvent(id){
-    if(!token||!window.confirm('Supprimer cet événement de Google Agenda ?'))return
+    if(!token||!(await confirmDialog({title:'Supprimer cet événement ?',message:'Il sera retiré de Google Agenda.',confirmLabel:'Supprimer',danger:true})))return
     await fetch(`${GCAL}/calendars/primary/events/${id}`,{method:'DELETE',headers:{Authorization:`Bearer ${token}`}})
     setEvents(prev=>prev.filter(e=>e.id!==id))
   }
@@ -3262,7 +3463,9 @@ function AgendaView({deals,profile}){
     <div>
       <div className="section-header"><div><div className="section-kicker">Google Agenda</div><div className="section-title">Agenda & Relances</div></div></div>
       <div className="card" style={{maxWidth:460,margin:'48px auto',textAlign:'center',padding:'40px 32px'}}>
-        <div style={{fontSize:42,marginBottom:16}}>📅</div>
+        <div style={{width:56,height:56,borderRadius:'50%',background:'var(--gold-subtle, rgba(201,169,97,0.12))',color:'var(--gold-dk, #A6843F)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px'}}>
+          <Icon.Calendar/>
+        </div>
         <div style={{fontFamily:'var(--font-sans)',fontSize:22,fontWeight:700,letterSpacing:'-0.015em',color:'var(--t1)',marginBottom:10}}>Google Agenda non connecté</div>
         <div style={{fontSize:13.5,color:'var(--t2)',lineHeight:1.7,marginBottom:24}}>Connectez votre compte Google pour accéder à votre agenda depuis le CRM.</div>
         <button className="btn btn-gold" style={{margin:'0 auto 20px',padding:'12px 24px',fontSize:14}} onClick={reconnectGoogle}>Connecter Google Agenda</button>
@@ -3290,8 +3493,8 @@ function AgendaView({deals,profile}){
         {days.map(({date,events:dayEvts})=>{
           const isT=isToday(date)
           return (
-            <div key={date.toISOString()} style={{border:`1px solid ${isT?'var(--gold-line)':'var(--bd)'}`,borderRadius:'var(--rad-lg)',background:isT?'rgba(192,155,90,0.04)':'var(--card)',overflow:'hidden'}}>
-              <div style={{padding:'10px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:dayEvts.length>0?`1px solid ${isT?'var(--gold-line)':'var(--bd)'}`:'none',background:isT?'rgba(192,155,90,0.06)':'transparent'}}>
+            <div key={date.toISOString()} style={{border:`1px solid ${isT?'var(--gold-line)':'var(--bd)'}`,borderRadius:'var(--rad-lg)',background:isT?'rgba(201,169,97,0.04)':'var(--card)',overflow:'hidden'}}>
+              <div style={{padding:'10px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:dayEvts.length>0?`1px solid ${isT?'var(--gold-line)':'var(--bd)'}`:'none',background:isT?'rgba(201,169,97,0.06)':'transparent'}}>
                 <div style={{display:'flex',alignItems:'center',gap:10}}>
                   {isT&&<span style={{background:'var(--gold)',color:'white',fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:4,letterSpacing:'0.04em'}}>AUJOURD'HUI</span>}
                   <span style={{fontSize:13,fontWeight:isT?700:500,color:isT?'var(--t1)':'var(--t2)',textTransform:'capitalize'}}>{fmtDay(date)}</span>
@@ -3307,7 +3510,7 @@ function AgendaView({deals,profile}){
                     const linked=evt.extendedProperties?.private?.entasisDealId?deals.find(d=>d.id===evt.extendedProperties.private.entasisDealId):null
                     const allDay=!!evt.start?.date&&!evt.start?.dateTime
                     return (
-                      <div key={evt.id} style={{display:'flex',alignItems:'flex-start',gap:12,padding:'10px 12px',borderRadius:'var(--rad)',background:isCrm?'rgba(192,155,90,0.06)':'white',border:`1px solid ${isCrm?'var(--gold-line)':'var(--bd)'}`}}>
+                      <div key={evt.id} style={{display:'flex',alignItems:'flex-start',gap:12,padding:'10px 12px',borderRadius:'var(--rad)',background:isCrm?'rgba(201,169,97,0.06)':'var(--card)',border:`1px solid ${isCrm?'var(--gold-line)':'var(--bd)'}`}}>
                         <div style={{minWidth:48,textAlign:'right',flexShrink:0,paddingTop:1}}>
                           {allDay?<span style={{fontSize:10,fontWeight:600,color:'var(--t3)',textTransform:'uppercase'}}>Journée</span>
                             :<><div style={{fontSize:12,fontWeight:700,color:isCrm?'var(--gold)':'var(--t2)'}}>{fmtTime(start)}</div>{end&&<div style={{fontSize:10,color:'var(--t3)'}}>{fmtTime(end)}</div>}</>}
@@ -3316,12 +3519,12 @@ function AgendaView({deals,profile}){
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{fontWeight:600,fontSize:13,color:'var(--t1)',display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
                             {evt.summary||'(sans titre)'}
-                            {isCrm&&<span style={{fontSize:10,fontWeight:700,color:'var(--gold)',background:'rgba(192,155,90,0.12)',border:'1px solid var(--gold-line)',borderRadius:3,padding:'1px 5px',letterSpacing:'0.04em'}}>CRM</span>}
+                            {isCrm&&<span style={{fontSize:10,fontWeight:700,color:'var(--gold)',background:'rgba(201,169,97,0.12)',border:'1px solid var(--gold-line)',borderRadius:3,padding:'1px 5px',letterSpacing:'0.04em'}}>CRM</span>}
                           </div>
                           {linked&&<div style={{marginTop:4,display:'flex',gap:6,alignItems:'center',fontSize:12,color:'var(--t2)',flexWrap:'wrap'}}><Icon.Link/><span>{linked.client} · {linked.product}</span><span className={STATUS_CLASS[linked.status]||'badge'}>{linked.status}</span><strong>{euro(annualize(linked.pp_m))}</strong></div>}
-                          {evt.location&&<div style={{fontSize:11,color:'var(--t3)',marginTop:2}}>📍 {evt.location}</div>}
+                          {evt.location&&<div style={{fontSize:11,color:'var(--t3)',marginTop:2}}>{evt.location}</div>}
                         </div>
-                        {isCrm&&<button onClick={()=>deleteEvent(evt.id)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--t3)',padding:4,flexShrink:0,opacity:.7}} title="Supprimer"><Icon.Trash/></button>}
+                        {isCrm&&<button className="btn btn-ghost btn-icon btn-sm" onClick={()=>deleteEvent(evt.id)} style={{flexShrink:0}} title="Supprimer cette relance" aria-label="Supprimer cette relance"><Icon.Trash/></button>}
                       </div>
                     )
                   })}
@@ -3429,7 +3632,7 @@ function TeamView({deals,objectifs,teamProfiles,month,profile}){
 
   // Révoquer une invitation
   async function revokeInvitation(inviteId) {
-    if (!window.confirm('Révoquer cette invitation ?')) return
+    if (!(await confirmDialog({title:'Révoquer cette invitation ?',message:'Le lien envoyé ne fonctionnera plus.',confirmLabel:'Révoquer',danger:true}))) return
     try {
       await invitationsService.remove(inviteId)
       toast.success('Invitation révoquée')
@@ -3520,13 +3723,14 @@ function TeamView({deals,objectifs,teamProfiles,month,profile}){
         <div className="panel-body">
           {invitations.length === 0 ? (
             <div className="table-empty-state">
-              <div className="empty-icon">✉️</div>
               <div className="empty-title">Aucune invitation</div>
               <div className="empty-sub">Générez votre première invitation d'équipe</div>
             </div>
           ) : (
-            <div className="table-responsive">
-              <table className="table">
+            <div className="table-responsive" style={{overflowX:'auto'}}>
+              {/* C3 : data-table charte — la classe .table n'existait pas,
+                  cette table s'affichait avec le style brut du navigateur. */}
+              <table className="data-table" style={{width:'100%'}}>
                 <thead>
                   <tr>
                     <th>Email</th>
@@ -3564,7 +3768,7 @@ function TeamView({deals,objectifs,teamProfiles,month,profile}){
                                 ))
                                 toast.success('Type de contrat mis à jour')
                               } catch (err) {
-                                toast.error('Erreur : ' + (err.message || ''))
+                                toast.error('Erreur : ' + (messageErreur(err)))
                               }
                             }}
                             style={{
@@ -3672,7 +3876,7 @@ function TeamView({deals,objectifs,teamProfiles,month,profile}){
           </div>
         )
       })}
-      {!rows.length&&<div className="card"><div className="table-empty-state"><div className="empty-icon">👥</div><div className="empty-title">Aucun conseiller actif</div><div className="empty-sub">Configure les profils dans <span className="code">public.profiles</span></div></div></div>}
+      {!rows.length&&<div className="card"><div className="table-empty-state"><div className="empty-icon"><Icon.EmptyPeople/></div><div className="empty-title">Aucun conseiller actif</div><div className="empty-sub">Configure les profils dans <span className="code">public.profiles</span></div></div></div>}
     </div>
   )
 }
@@ -3689,6 +3893,14 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
   // Garde anti-double-clic, bouton Enregistrer disabled pendant le save.
   // Bug Jean 01/06/2026, doublon Celine Merle créé par double-clic rapide.
   const [isSaving,setIsSaving]=useState(false)
+
+  // B3 — création en 2 temps : à la création, mode « express » (client,
+  // produits, montants, dates — l'essentiel en ~15 s) ; « Tout renseigner »
+  // ou le passage d'un produit en Signé ouvre le formulaire complet.
+  // En édition, formulaire complet d'office (sections repliables).
+  const [fullForm,setFullForm]=useState(!!initialDeal?.created_at)
+  // B3 — garde anti-perte : fermer demande confirmation si un champ a bougé.
+  const dirtyRef=useRef(false)
 
   // Multi-produits pour création de nouveaux deals
   const isNew=!initialDeal?.created_at
@@ -3743,17 +3955,20 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
   })
 
   function setProductField(index, field, value) {
+    dirtyRef.current = true
     setProducts(prev => prev.map((p, i) =>
       i === index ? { ...p, [field]: value } : p
     ))
   }
 
   function addProduct() {
+    dirtyRef.current = true
     setProducts(prev => [...prev, { ...emptyProduct(), _localId: uid() }])
   }
 
   function removeProduct(index) {
     if (products.length === 1) return
+    dirtyRef.current = true
     setProducts(prev => prev.filter((_, i) => i !== index))
   }
 
@@ -3768,6 +3983,38 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
       enriched.advisor_code = profile.advisor_code
     }
     setDeal(enriched)
+    // B3 — réouverture : repartir propre. Saisie non modifiée, mode express
+    // pour une création / complet en édition, et produits réinitialisés
+    // depuis le deal ouvert (avant ce reset, les produits d'une création
+    // précédente restaient pré-remplis à la suivante — modale jamais
+    // démontée par App).
+    dirtyRef.current = false
+    setFullForm(!!initialDeal.created_at)
+    // Reset aussi la sélection client : sans lui, le chip du client choisi à
+    // la création précédente restait affiché (inputs verrouillés) alors que
+    // le nouveau deal n'avait plus de client_id → dossier orphelin possible.
+    setSelectedClient(null)
+    setShowClientSearch(false)
+    setClientSearch('')
+    setClientResults([])
+    const locked = !initialDeal.created_at && !!initialDeal.client_id && !!initialDeal.client
+    setProducts([locked
+      ? { ...emptyProduct(), _localId: uid(), priority: initialDeal.priority || 'Normale' }
+      : {
+        _localId: uid(),
+        // Produit volontairement vide à la création : le « -- Choisir -- »
+        // required force un choix conscient (emptyDeal pré-remplit PER, on
+        // ne veut pas de dossiers PER créés par inertie).
+        product: initialDeal.created_at ? (initialDeal.product || '') : '',
+        company: initialDeal.company || '',
+        pp_m: initialDeal.pp_m || 0,
+        pu: initialDeal.pu || 0,
+        status: initialDeal.status || 'En cours',
+        priority: initialDeal.priority || 'Normale',
+        date_expected: initialDeal.date_expected || '',
+        date_signed: initialDeal.date_signed || '',
+        notes: initialDeal.notes || '',
+      }])
   }, [initialDeal, profile?.advisor_code])
 
   // Recherche clients au fur et à mesure de la frappe
@@ -3796,6 +4043,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
   }, [deal?.client_data])
 
   const selectClient = (client) => {
+    dirtyRef.current = true
     setSelectedClient(client)
     setShowClientSearch(false)
     setClientSearch('')
@@ -3817,6 +4065,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
   }
 
   const clearSelectedClient = () => {
+    dirtyRef.current = true
     setSelectedClient(null)
     setDeal(prev => ({
       ...prev,
@@ -3825,8 +4074,24 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
     }))
   }
   if(!open||!deal)return null
-  const set=(k,v)=>setDeal(p=>({...p,[k]:v}))
+  const set=(k,v)=>{dirtyRef.current=true;setDeal(p=>({...p,[k]:v}))}
   const isManager=profile?.role==='manager'
+  // B3 — mode express : uniquement à la création, tant que rien ne passe en
+  // Signé (les données client de signature deviennent alors requises).
+  const anySigned = showMultiProducts ? products.some(p=>p.status==='Signé') : deal.status==='Signé'
+  const expressMode = isNew && !fullForm && !anySigned
+
+  // B3 — fermeture protégée : confirmation si la saisie a été modifiée.
+  async function requestClose(){
+    if(dirtyRef.current&&!(await confirmDialog({
+      title:'Abandonner les modifications ?',
+      message:'Les champs saisis dans ce dossier seront perdus.',
+      confirmLabel:'Abandonner',
+      cancelLabel:'Continuer la saisie',
+      danger:true,
+    })))return
+    onClose()
+  }
   // Validation des dates (Louis 27/05) : un deal signé DOIT avoir une date
   // de signature (sinon le mois n'est pas aligné, la valeur cabinet n'est
   // pas comptée correctement, etc.). Un deal en cours/prévu doit avoir une
@@ -3855,6 +4120,13 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
   }
 
   async function submitInner(e) {
+    // Conseiller principal obligatoire (NOT NULL en base). Pré-rempli pour un
+    // conseiller ; un manager sans code passe par la section Équipe & suivi.
+    if (!deal.advisor_code) {
+      toast.error('Choisis le conseiller principal (section Équipe & suivi).')
+      setFullForm(true)
+      return
+    }
     // Contact obligatoire a la creation d un NOUVEAU client : sans email ni
     // telephone, impossible de rattacher plus tard la signature au lead de la
     // Lead Room (trou d attribution). Si un client existant est selectionne,
@@ -3870,7 +4142,10 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
     // Data client OBLIGATOIRE au passage en « Signé » (Louis 13/07) : statut,
     // profession, revenus, patrimoine, en plus de email + téléphone. Vaut pour
     // un nouveau client comme pour un existant (compléter la fiche avant signature).
-    if (deal.status === 'Signé') {
+    // anySigned et non deal.status : en création multi-produits le statut vit
+    // au niveau produit — un produit Signé avec deal.status 'En cours'
+    // contournait la garde.
+    if (anySigned) {
       const em2 = (deal.client_email || selectedClient?.email || '').trim();
       const tel2 = (deal.client_phone || selectedClient?.telephone || '').trim();
       const manquants = [];
@@ -3943,11 +4218,19 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-box" onClick={e=>e.stopPropagation()}>
+    <div className="modal-overlay" onClick={requestClose}>
+      {/* key : remonte les sections repliables (FormSection) quand on passe
+          d'un dossier à un autre — leurs états ouverts/repliés repartent des
+          bons défauts (la modale elle-même n'est jamais démontée par App). */}
+      <div className="modal-box" key={deal.id || '__new__'} onClick={e=>e.stopPropagation()}>
         <div className="modal-head">
-          <div><div className="modal-title">{isNew?'Nouveau dossier':'Éditer le dossier'}</div>{getClientName(deal) !== 'Client' && <div className="modal-subtitle">{getClientName(deal)}</div>}</div>
-          <button className="btn btn-ghost btn-icon" onClick={onClose}><Icon.Close/></button>
+          <div>
+            <div className="modal-title">{isNew?(expressMode?'Nouveau dossier — express':'Nouveau dossier'):'Éditer le dossier'}</div>
+            {getClientName(deal) !== 'Client'
+              ? <div className="modal-subtitle">{getClientName(deal)}</div>
+              : (expressMode ? <div className="modal-subtitle">L'essentiel en 15 secondes — le reste peut attendre.</div> : null)}
+          </div>
+          <button className="btn btn-ghost btn-icon" onClick={requestClose} aria-label="Fermer"><Icon.Close/></button>
         </div>
         <form onSubmit={submit}>
           <div className="modal-body">
@@ -3961,12 +4244,12 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                 {isClientLocked ? (
                   <div style={{
                     padding: '10px 14px',
-                    background: '#F5F2EC',
+                    background: 'rgba(0,0,0,0.03)',
                     borderRadius: '6px',
-                    border: '1px solid #E8E4DC',
-                    color: '#555'
+                    border: '1px solid var(--bd)',
+                    color: 'var(--t2)'
                   }}>
-                    🔒 {deal.client}
+                    {deal.client} <span style={{color:'var(--t3)',fontSize:11}}>(verrouillé)</span>
                   </div>
                 ) : selectedClient ? (
                   <div style={{
@@ -4071,7 +4354,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                       className="btn btn-secondary"
                       style={{ width: '100%', marginBottom: '8px' }}
                     >
-                      🔍 Rechercher un client existant
+                      <Icon.Search size={14}/> Rechercher un client existant
                     </button>
                     <div style={{ fontSize: '12px', color: 'var(--t2)', textAlign: 'center' }}>
                       ou remplir les informations ci-dessous pour un nouveau client
@@ -4122,31 +4405,44 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
               {/* Data client structurée (Louis 13/07) : obligatoire au passage
                   en « Signé ». Éditable même pour un client existant, pour
                   compléter sa fiche avant la signature. Alimente le module
-                  Multi-équipement (statut = clé des règles de cross-sell). */}
-              <div className="form-row form-row-2 mt-16">
-                <div className="form-group">
-                  <label className="form-label">Statut {deal.status==='Signé' ? '*' : ''}</label>
-                  <select className="form-select" value={deal.client_statut_pro||''} onChange={e=>set('client_statut_pro',e.target.value)}>
-                    <option value="">— à préciser —</option>
-                    {STATUTS_PRO.map(s=><option key={s} value={s}>{s}</option>)}
-                  </select>
+                  Multi-équipement (statut = clé des règles de cross-sell).
+                  B3 : masquée en mode express, section repliable sinon —
+                  forcée ouverte dès qu'un produit passe en Signé. */}
+              {!expressMode && (
+                <div className="mt-16">
+                <FormSection
+                  title="Données client pour la signature"
+                  hint="statut, profession, revenus, patrimoine"
+                  defaultOpen={anySigned}
+                  forceOpen={anySigned}
+                >
+                  <div className="form-row form-row-2">
+                    <div className="form-group">
+                      <label className="form-label">Statut {deal.status==='Signé' ? '*' : ''}</label>
+                      <select className="form-select" value={deal.client_statut_pro||''} onChange={e=>set('client_statut_pro',e.target.value)}>
+                        <option value="">— à préciser —</option>
+                        {STATUTS_PRO.map(s=><option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Profession {deal.status==='Signé' ? '*' : ''}</label>
+                      <input className="form-input" value={deal.client_profession||''} onChange={e=>set('client_profession',e.target.value)} placeholder="Ex. avocat, mandataire immobilier…" />
+                    </div>
+                  </div>
+                  <div className="form-row form-row-2 mt-16">
+                    <div className="form-group">
+                      <label className="form-label">Revenus annuels (€) {deal.status==='Signé' ? '*' : ''}</label>
+                      <input className="form-input" type="number" min="0" value={deal.client_revenus??''} onChange={e=>set('client_revenus',e.target.value)} placeholder="Ex. 80000" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Patrimoine estimé (€) {deal.status==='Signé' ? '*' : ''}</label>
+                      <input className="form-input" type="number" min="0" value={deal.client_patrimoine??''} onChange={e=>set('client_patrimoine',e.target.value)} placeholder="Ex. 300000" />
+                    </div>
+                  </div>
+                  <div className="form-hint" style={{marginTop:8}}>Ces informations deviennent obligatoires au passage en « Signé » (data patrimoniale et cross-sell).</div>
+                </FormSection>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Profession {deal.status==='Signé' ? '*' : ''}</label>
-                  <input className="form-input" value={deal.client_profession||''} onChange={e=>set('client_profession',e.target.value)} placeholder="Ex. avocat, mandataire immobilier…" />
-                </div>
-              </div>
-              <div className="form-row form-row-2 mt-16">
-                <div className="form-group">
-                  <label className="form-label">Revenus annuels (€) {deal.status==='Signé' ? '*' : ''}</label>
-                  <input className="form-input" type="number" min="0" value={deal.client_revenus??''} onChange={e=>set('client_revenus',e.target.value)} placeholder="Ex. 80000" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Patrimoine estimé (€) {deal.status==='Signé' ? '*' : ''}</label>
-                  <input className="form-input" type="number" min="0" value={deal.client_patrimoine??''} onChange={e=>set('client_patrimoine',e.target.value)} placeholder="Ex. 300000" />
-                </div>
-              </div>
-              <div className="form-hint" style={{marginTop:8}}>Ces informations client deviennent obligatoires au passage en « Signé » (data patrimoniale et cross-sell).</div>
+              )}
             </div>
 {showMultiProducts ? (
               <div>
@@ -4353,6 +4649,15 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                 </div>
               </div>
             )}
+            {/* Mode express : l'attribution du dossier reste visible même si
+                la section Équipe & suivi est masquée — un manager qui crée
+                pour quelqu'un d'autre doit voir qu'il faut la changer. */}
+            {expressMode && (
+              <div className="form-hint" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                <span>Dossier attribué à <strong>{(teamProfiles||[]).find(t=>t.advisor_code===deal.advisor_code)?.full_name || deal.advisor_code || '—'}</strong></span>
+                <button type="button" className="btn btn-ghost btn-sm" style={{height:22,padding:'0 8px',fontSize:11}} onClick={()=>setFullForm(true)}>changer</button>
+              </div>
+            )}
             <div className="form-row form-row-2">
               <div className="form-group">
                 <label className="form-label">
@@ -4389,8 +4694,12 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                 />
               </div>
             </div>
-            <div>
-              <div className="form-section-title mb-16">Équipe & suivi</div>
+            {!expressMode && (
+            <FormSection
+              title="Équipe & suivi"
+              hint={[deal.advisor_code, deal.co_advisor_code && `co ${deal.co_advisor_code}`, deal.source].filter(Boolean).join(' · ') || 'conseiller, co-conseiller, priorité, source'}
+              defaultOpen={isNew}
+            >
               <div className="form-row form-row-3">
                 <div className="form-group">
                   <label className="form-label">Conseiller principal *</label>
@@ -4451,34 +4760,56 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                 </div>
               </div>
               <div className="form-group mt-16"><label className="form-label">Source</label><select className="form-select" value={deal.source||''} onChange={e=>set('source',e.target.value)}>{SOURCES.map(s=><option key={s}>{s}</option>)}</select></div>
-            </div>
-            <div className="form-group"><label className="form-label">Notes</label><textarea className="form-textarea" rows={4} value={deal.notes||''} onChange={e=>set('notes',e.target.value)} placeholder="Contexte client, objections, prochaine étape, pièces manquantes…"/></div>
+            </FormSection>
+            )}
+            {/* D3 — prochaine action : la discipline des CRM de vente, aucun
+                dossier vivant sans étape suivante datée. Alimente la liste
+                « Mes actions du jour » de l'accueil. */}
+            {!expressMode && (<>
+              <div className="form-row form-row-2">
+                <div className="form-group">
+                  <label className="form-label">Prochaine action</label>
+                  <input className="form-input" value={deal.next_action||''} onChange={e=>set('next_action',e.target.value)} placeholder="Ex. Relancer après réception du relevé"/>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Pour le</label>
+                  <input className="form-input" type="date" value={deal.next_action_date||''} onChange={e=>set('next_action_date',e.target.value)}/>
+                  <div className="form-hint">Apparaît dans « Mes actions du jour » à cette date.</div>
+                </div>
+              </div>
+              <div className="form-group"><label className="form-label">Notes</label><textarea className="form-textarea" rows={4} value={deal.notes||''} onChange={e=>set('notes',e.target.value)} placeholder="Contexte client, objections, prochaine étape, pièces manquantes…"/></div>
+            </>)}
           </div>
           <div className="modal-foot" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-            {/* Bouton Supprimer à gauche, visible uniquement en édition
-                (pas pour les nouveaux dossiers, rien à supprimer). */}
+            {/* Gauche : Supprimer en édition, « Tout renseigner » en express
+                (bascule vers le formulaire complet — équipe, source, notes). */}
             <div>
+              {expressMode && (
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => setFullForm(true)}>
+                  Tout renseigner (équipe, source, notes…)
+                </button>
+              )}
               {!isNew && onDelete && (
                 <button
                   type="button"
                   className="btn btn-danger"
                   disabled={isSaving}
-                  onClick={() => {
-                    if (window.confirm(`Supprimer définitivement le dossier de ${getClientName(deal)} ? Cette action est irréversible.`)) {
+                  onClick={async () => {
+                    if (await confirmDialog({title:`Supprimer le dossier de ${getClientName(deal)} ?`,message:'Cette action est irréversible.',confirmLabel:'Supprimer définitivement',danger:true})) {
                       onDelete(deal);
                       onClose();
                     }
                   }}
                   title="Supprimer ce dossier"
                 >
-                  🗑 Supprimer
+                  Supprimer
                 </button>
               )}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" className="btn btn-outline" onClick={onClose} disabled={isSaving}>Annuler</button>
+              <button type="button" className="btn btn-outline" onClick={requestClose} disabled={isSaving}>Annuler</button>
               <button type="submit" className="btn btn-gold" disabled={isSaving}>
-                {isSaving ? 'Enregistrement…' : 'Enregistrer'}
+                {isSaving ? 'Enregistrement…' : isNew ? 'Créer le dossier' : 'Enregistrer'}
               </button>
             </div>
           </div>
@@ -4510,7 +4841,7 @@ const PROSPECT_STATUS_COLOR = {
   a_contacter:    {bg:'var(--bg)',bd:'var(--bd)',color:'var(--t3)'},
   invite:         {bg:'rgba(14,165,233,0.07)',bd:'rgba(14,165,233,0.2)',color:'#0EA5E9'},
   connecte:       {bg:'rgba(124,58,237,0.07)',bd:'rgba(124,58,237,0.2)',color:'#7C3AED'},
-  message_envoye: {bg:'rgba(192,155,90,0.08)',bd:'var(--gold-line)',color:'var(--gold)'},
+  message_envoye: {bg:'rgba(201,169,97,0.08)',bd:'var(--gold-line)',color:'var(--gold)'},
   en_discussion:  {bg:'var(--progress-bg)',bd:'var(--progress-bd)',color:'var(--progress)'},
   rdv_propose:    {bg:'rgba(249,115,22,0.07)',bd:'rgba(249,115,22,0.2)',color:'#F97316'},
   rdv_pris:       {bg:'rgba(16,185,129,0.07)',bd:'rgba(16,185,129,0.2)',color:'#10B981'},
@@ -4569,7 +4900,7 @@ function ProspectModal({open,prospect,profile,teamProfiles,onClose,onSave}){
             <div className="form-group">
               <label className="form-label">Message LinkedIn généré par IA</label>
               <div style={{
-                background:'rgba(192,155,90,0.05)',border:'1px solid var(--gold-line)',
+                background:'rgba(201,169,97,0.05)',border:'1px solid var(--gold-line)',
                 borderRadius:'var(--rad)',padding:'12px 14px',fontSize:13,
                 color:'var(--t2)',lineHeight:1.6,whiteSpace:'pre-wrap',
               }}>
@@ -4699,7 +5030,7 @@ function ProspectionView({prospects,profile,teamProfiles,onRefresh,onProspectsCh
     try {
       await prospectsService.update(updatedProspect)
     } catch (e) {
-      alert(e.message)
+      toast.error(messageErreur(e))
       return
     }
     onProspectsChange(prev=>prev.map(p=>p.id===updatedProspect.id?updatedProspect:p))
@@ -4729,7 +5060,7 @@ function ProspectionView({prospects,profile,teamProfiles,onRefresh,onProspectsCh
       <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12,marginBottom:20}}>
         {[
           {label:'Total prospects',value:kpis.total,color:'var(--t1)',bg:'var(--bg)',bd:'var(--bd)'},
-          {label:'Messages envoyés',value:kpis.messagesSent,color:'var(--gold)',bg:'rgba(192,155,90,0.06)',bd:'var(--gold-line)'},
+          {label:'Messages envoyés',value:kpis.messagesSent,color:'var(--gold)',bg:'rgba(201,169,97,0.06)',bd:'var(--gold-line)'},
           {label:'Taux réponse',value:`${tauxReponse}%`,color:'var(--progress)',bg:'var(--progress-bg)',bd:'var(--progress-bd)'},
           {label:'RDV pris',value:kpis.rdvPris,color:'#10B981',bg:'rgba(16,185,129,0.07)',bd:'rgba(16,185,129,0.2)'},
           {label:'Convertis',value:kpis.convertis,color:'var(--signed)',bg:'var(--signed-bg)',bd:'var(--signed-bd)'},
@@ -4747,7 +5078,7 @@ function ProspectionView({prospects,profile,teamProfiles,onRefresh,onProspectsCh
           <input className="search-input" value={search} onChange={e=>setSearch(e.target.value)}
             placeholder="Nom, entreprise, poste…"
             style={{width:'100%',paddingLeft:32,height:34,fontSize:12}}/>
-          <span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',fontSize:13,color:'var(--t3)',pointerEvents:'none'}}>🔍</span>
+          <span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',display:'flex',color:'var(--t3)',pointerEvents:'none'}}><Icon.Search/></span>
           {search&&<button onClick={()=>setSearch('')} style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'var(--t3)',fontSize:13,padding:0}}>×</button>}
         </div>
         {niches.length>1&&(
@@ -4797,7 +5128,7 @@ function ProspectionView({prospects,profile,teamProfiles,onRefresh,onProspectsCh
                     >
                       <div style={{fontWeight:600,fontSize:12.5,color:'var(--t1)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:3}}>{p.nom}</div>
                       <div style={{fontSize:11,color:'var(--t3)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.poste||p.entreprise||'—'}</div>
-                      {p.niche&&<div style={{marginTop:5,display:'inline-block',fontSize:9.5,fontWeight:600,padding:'1px 5px',borderRadius:3,background:'rgba(192,155,90,0.1)',color:'var(--gold)',border:'1px solid var(--gold-line)'}}>{p.niche}</div>}
+                      {p.niche&&<div style={{marginTop:5,display:'inline-block',fontSize:9.5,fontWeight:600,padding:'1px 5px',borderRadius:3,background:'rgba(201,169,97,0.1)',color:'var(--gold)',border:'1px solid var(--gold-line)'}}>{p.niche}</div>}
                       {p.advisor_code&&isManager&&<div style={{marginTop:3,fontSize:10,color:'var(--t3)'}}>{p.advisor_code}</div>}
                       {p.message_linkedin&&col.id==='a_contacter'&&(
                         <div style={{marginTop:5,fontSize:10,color:'var(--gold)',display:'flex',alignItems:'center',gap:3}}>
@@ -4814,7 +5145,7 @@ function ProspectionView({prospects,profile,teamProfiles,onRefresh,onProspectsCh
         </div>
       {filtered.length===0&&(
         <div className="table-empty-state" style={{marginTop:20}}>
-          <div className="empty-icon">📧</div>
+          <div className="empty-icon"><Icon.EmptyMail/></div>
           <div className="empty-title">Aucun prospect</div>
           <div className="empty-sub">Les prospects Clay arriveront ici via Zapier.</div>
         </div>
@@ -4864,6 +5195,8 @@ export default function App(){
   const [editorialPending,setEditorialPending]=useState({count:0,nextDeadline:null})
   const [reloadCallback,setReloadCallback]=useState(null) // Callback après sauvegarde deal
   const [paletteOpen,setPaletteOpen]=useState(false) // Palette de commandes Ctrl+K
+  const [helpOpen,setHelpOpen]=useState(false) // D8 : overlay des raccourcis (touche ?)
+  const [congesEnAttente,setCongesEnAttente]=useState([]) // D5 : congés à valider (direction/RH)
 
   // Anti race condition : empêche les appels parallèles à loadAll() depuis
   // getSession() et onAuthStateChange au mount.
@@ -4896,6 +5229,19 @@ export default function App(){
       })
   }, [profile, activeTab])
 
+  // D5 — congés en attente de validation : signal de la cloche pour la
+  // direction et le RH délégué. Rafraîchi au changement d'onglet, comme le
+  // compteur éditorial : pas de polling supplémentaire.
+  useEffect(() => {
+    const peutValider = profile?.role === 'manager' || profile?.rh_delegue === true
+    if (!peutValider) { setCongesEnAttente([]); return }
+    congesService.listConges()
+      .then(list => {
+        if (isMounted.current) setCongesEnAttente((list || []).filter(c => c.statut === 'en_attente'))
+      })
+      .catch(() => { /* signal secondaire : un échec ne doit rien casser */ })
+  }, [profile, activeTab])
+
   // Raccourcis clavier globaux : Ctrl/Cmd+K ouvre la palette, « / » focus la
   // recherche de la vue active (input marque data-global-search), « n » ouvre
   // la modale Nouveau dossier. Garde systematique si un champ a le focus.
@@ -4909,7 +5255,16 @@ export default function App(){
         setPaletteOpen(o=>!o)
         return
       }
-      if(typing||e.ctrlKey||e.metaKey||e.altKey||modalOpen||paletteOpen)return
+      // « ? » traité AVANT la garde : sinon, l'aide une fois ouverte ne
+      // pourrait plus être refermée par la même touche (helpOpen bloquait).
+      if(e.key==='?'&&!typing&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!modalOpen&&!paletteOpen&&!document.querySelector('.confirm-overlay')){
+        e.preventDefault()
+        setHelpOpen(o=>!o)
+        return
+      }
+      // .confirm-overlay : dialogue de confirmation imperatif (ui/confirm.jsx),
+      // hors state React d'App — on le detecte via le DOM.
+      if(typing||e.ctrlKey||e.metaKey||e.altKey||modalOpen||paletteOpen||helpOpen||document.querySelector('.confirm-overlay'))return
       if(e.key==='/'){
         const el=document.querySelector('[data-global-search]')
         if(el){e.preventDefault();el.focus()}
@@ -4923,7 +5278,89 @@ export default function App(){
     }
     window.addEventListener('keydown',onKey)
     return()=>window.removeEventListener('keydown',onKey)
-  },[session,modalOpen,paletteOpen,activeTab,profile])
+  },[session,modalOpen,paletteOpen,helpOpen,activeTab,profile])
+
+  // ── B2 : deep links — synchronisation hash ⇄ navigation ────────────────
+  // Formats : #/pipeline · #/clients · #/clients/dossiers · #/clients/c/<id>
+  // Le hash Supabase auth (#access_token=…) ne commence jamais par « #/ » :
+  // il est ignoré ici (et consommé par supabase-js avant que session existe).
+  const applyingHash = useRef(false)
+  const hashReady = useRef(false)
+  const wroteHashOnce = useRef(false)
+  // Tabs accessibles au rôle courant, consultés par le listener hashchange
+  // sans re-abonnement. Rempli ICI, à CHAQUE rendu : pendant le chargement,
+  // le rendu s'arrête au spinner avant la zone qui construit navDomains, or
+  // le premier apply() se déclenche dès que profile arrive (loading encore
+  // true) — sans ce remplissage précoce, tout deep link ≠ #/dashboard était
+  // rejeté au chargement à froid (F5, lien partagé).
+  const visibleTabsRef = useRef(new Set(['dashboard']))
+  visibleTabsRef.current = visibleTabs(buildNavDomains({
+    isManager: profile?.role === 'manager',
+    isRhDelegue: profile?.rh_delegue === true,
+    canSmartRh: profile?.role === 'manager' || profile?.rh_delegue === true || !['STAGIAIRE', 'MANDATAIRE'].includes(String(contractType || '').toUpperCase()),
+  }))
+
+  useEffect(() => {
+    if (!session || !profile) return
+    const apply = () => {
+      const h = window.location.hash
+      if (!h.startsWith('#/')) return
+      // decodeURIComponent protégé : un hash malformé (séquence % invalide,
+      // lien tronqué par un mail) ne doit pas faire écran blanc.
+      const parts = h.slice(2).split('/').filter(Boolean).map((s) => {
+        try { return decodeURIComponent(s) } catch { return s }
+      })
+      const tab = parts[0] || 'dashboard'
+      applyingHash.current = true
+      // L'entrée d'historique du deep link existe déjà (le navigateur l'a
+      // chargée) : la prochaine navigation doit POUSSER, pas remplacer.
+      wroteHashOnce.current = true
+      if (!visibleTabsRef.current.has(tab)) {
+        setActiveTab('dashboard')
+        window.history.replaceState(null, '', '#/dashboard')
+      } else {
+        setActiveTab(tab)
+        if (tab === 'clients') {
+          if (parts[1] === 'c' && parts[2]) { setSelectedClientId(parts[2]); setClientsVue('annuaire') }
+          else { setSelectedClientId(null); setClientsVue(parts[1] === 'dossiers' ? 'dossiers' : 'annuaire') }
+        }
+      }
+      // Libéré après le commit du batch : l'effet écrivain (ci-dessous) voit
+      // encore le drapeau levé et ne réécrit pas le hash qu'on vient de lire.
+      setTimeout(() => { applyingHash.current = false }, 0)
+    }
+    apply() // état initial : F5 ou lien partagé
+    hashReady.current = true
+    window.addEventListener('hashchange', apply)
+    return () => window.removeEventListener('hashchange', apply)
+  }, [session, profile])
+
+  useEffect(() => {
+    if (!session || !profile || !hashReady.current || applyingHash.current) return
+    let next = '#/' + activeTab
+    if (activeTab === 'clients') {
+      if (selectedClientId) next = '#/clients/c/' + encodeURIComponent(selectedClientId)
+      else if (clientsVue === 'dossiers') next = '#/clients/dossiers'
+      else next = '#/clients'
+    }
+    if (window.location.hash !== next) {
+      // Première écriture en replaceState (pas d'entrée d'historique parasite
+      // au chargement) ; ensuite chaque navigation pousse une entrée → le
+      // bouton retour du navigateur fonctionne.
+      if (wroteHashOnce.current) window.location.hash = next
+      else window.history.replaceState(null, '', next)
+    }
+    wroteHashOnce.current = true
+  }, [session, profile, activeTab, clientsVue, selectedClientId])
+
+  // Si l'onglet actif devient inaccessible après coup — contractType arrive
+  // en async et peut retirer Smart RH d'un stagiaire, un rôle peut changer —
+  // retour à l'accueil plutôt qu'un écran vide. visibleTabsRef est rempli à
+  // chaque rendu depuis buildNavDomains.
+  useEffect(() => {
+    if (!session || !profile) return
+    if (!visibleTabsRef.current.has(activeTab)) setActiveTab('dashboard')
+  }, [session, profile, activeTab, contractType])
 
   const fetchProspects=()=>prospectsService.listAll().then(({ list, aContacter })=>{
     setProspects(list)
@@ -5124,7 +5561,7 @@ export default function App(){
       setDossiersImmoCount(await dossiersImmoService.countSafe())
     } catch(e) {
       console.error('[App] loadAll error:', e)
-      setError(`Erreur chargement: ${e.message}`)
+      setError(`Erreur chargement: ${messageErreur(e)}`)
     } finally {
       loadAllInProgress.current = false  // toujours resetter (même si unmount)
       if (isMounted.current) setLoading(false)
@@ -5245,15 +5682,13 @@ export default function App(){
             const dub = doublons[0]
             const dateSign = dub.date_signed ? new Date(dub.date_signed).toLocaleDateString('fr-FR') : 'date inconnue'
             const clientNomAffiche = deal.client || cleanDeals[0]?.client || 'ce client'
-            const msg = `⚠ DOUBLON POTENTIEL DÉTECTÉ\n\n`
-              + `Le client "${clientNomAffiche}" a déjà un dossier "${dub.product}" `
-              + `signé par ${dub.advisor_code} (${dateSign}).\n\n`
+            const msg = `Le client "${clientNomAffiche}" a déjà un dossier "${dub.product}" `
+              + `signé par ${dub.advisor_code} (${dateSign}). `
               + `Si vous travaillez à 2 sur ce dossier, ${dub.advisor_code} devrait `
               + `te mettre en co-conseiller sur SON dossier — sinon la commission `
-              + `sera payée 2 fois.\n\n`
-              + `Continuer quand même ? (Cliquer Annuler si tu dois plutôt te mettre `
-              + `en co-conseiller sur le dossier existant)`
-            if (!window.confirm(msg)) {
+              + `sera payée 2 fois. Annule si tu dois plutôt te mettre en `
+              + `co-conseiller sur le dossier existant.`
+            if (!(await confirmDialog({title:'Doublon potentiel détecté',message:msg,confirmLabel:'Continuer quand même',danger:true}))) {
               toast('Save annulé. Demande à ' + dub.advisor_code + ' de t\'ajouter en co-conseiller sur son dossier.', { icon: 'ℹ️' })
               return
             }
@@ -5274,7 +5709,7 @@ export default function App(){
             await dealsService.create(deal)
           }
         } catch (e) {
-          alert(e.message)
+          toast.error(messageErreur(e))
           return
         }
       }
@@ -5303,7 +5738,7 @@ export default function App(){
       }
     } catch(e) {
       console.error('[saveDeal] Auth error:', e)
-      alert('Session expirée, veuillez vous reconnecter')
+      toast.error('Session expirée, veuillez vous reconnecter')
       await supabase.auth.signOut()
       return
     }
@@ -5313,23 +5748,37 @@ export default function App(){
   // périmés : reprogrammation ou abandon) sans ouvrir la modale. Update
   // partiel via dealsService + maj locale immédiate, le canal Realtime
   // confirmera, même motif que deleteDeal.
-  async function quickPatchDeal(deal,patch,message){
+  // D6 : `undoable` ajoute un bouton « Annuler » au toast — le geste
+  // glisser-déposer devient réversible (filet de sécurité type Gmail).
+  // L'annulation restaure les valeurs d'AVANT le patch, champ par champ.
+  async function quickPatchDeal(deal,patch,message,{undoable=false}={}){
     try {
       await dealsService.update(deal.id,patch)
     } catch (e) {
-      alert(e.message)
+      toast.error(messageErreur(e))
       return
     }
     setDeals(prev=>prev.map(d=>d.id===deal.id?{...d,...patch}:d))
-    if(message)toast.success(message)
+    if(!message)return
+    if(!undoable){toast.success(message);return}
+    const avant=Object.fromEntries(Object.keys(patch).map(k=>[k,deal[k]??null]))
+    toast.success(t=>(
+      <span style={{display:'inline-flex',alignItems:'center',gap:12}}>
+        {message}
+        <button className="btn btn-outline btn-sm" onClick={()=>{
+          toast.dismiss(t.id)
+          quickPatchDeal({...deal,...patch},avant,'Déplacement annulé')
+        }}>Annuler</button>
+      </span>
+    ),{duration:7000})
   }
 
   async function deleteDeal(deal){
-    if(!window.confirm(`Supprimer définitivement le dossier de ${getClientName(deal)} ?`))return
+    if(!(await confirmDialog({title:`Supprimer le dossier de ${getClientName(deal)} ?`,message:'Cette action est irréversible.',confirmLabel:'Supprimer définitivement',danger:true})))return
     try {
       await dealsService.remove(deal.id)
     } catch (e) {
-      alert(e.message)
+      toast.error(messageErreur(e))
       return
     }
     // Maj locale immediate (Realtime DELETE confirmera), au lieu de recharger tout.
@@ -5340,7 +5789,7 @@ export default function App(){
     try {
       await objectifsService.upsert(row)
     } catch (e) {
-      alert(e.message)
+      toast.error(messageErreur(e))
       return
     }
     // Maj locale ciblee (pas de Realtime sur objectifs), au lieu de recharger tout.
@@ -5441,6 +5890,73 @@ export default function App(){
   const isRhDelegue = profile?.rh_delegue === true
   const canSmartRh = isManager || isRhDelegue || !['STAGIAIRE','MANDATAIRE'].includes(String(contractType||'').toUpperCase())
 
+  // ── B1 : navigation en domaines (source unique lib/navigation.js) ──────
+  // (visibleTabsRef est rempli plus haut, avant les early returns.)
+  const navDomains = buildNavDomains({ isManager, isRhDelegue, canSmartRh })
+  // Vues accessibles → palette ⌘K : même source que la sidebar, fin de la
+  // liste MANAGER_ONLY maintenue à la main dans CommandPalette.
+  const palettePages = {}
+  for (const d of navDomains) for (const v of d.views) if (!palettePages[v.tab]) palettePages[v.tab] = PAGE_TITLES[v.tab] || v.label
+  const activeDomain = domainOf(navDomains, activeTab)
+  // Badges de la barre de sous-onglets (mêmes règles que la sidebar).
+  // ── D5 : signaux de la cloche, dérivés des données déjà en mémoire ──────
+  // Trois sources utiles au quotidien : les signatures récentes de l'équipe
+  // (motivation + vigilance doublons), les congés à valider, les packages
+  // éditoriaux en attente de veto. Chacun ouvre l'écran concerné.
+  const notifications = (() => {
+    const out = []
+    const ilYa7j = Date.now() - 7 * 24 * 60 * 60 * 1000
+    for (const d of deals) {
+      if (d.status !== 'Signé') continue
+      // date_signed et non updated_at : ce dernier est remis à jour par la
+      // moindre modification, un dossier signé il y a 6 mois serait annoncé
+      // comme « signé » à chaque retouche.
+      const quand = d.date_signed ? `${String(d.date_signed).slice(0,10)}T12:00:00` : null
+      if (!quand || new Date(quand).getTime() < ilYa7j) continue
+      // Ses propres signatures ne sont pas une notification : on les connaît.
+      if (profile?.advisor_code && d.advisor_code === profile.advisor_code) continue
+      out.push({
+        id: `signe-${d.id}`,
+        date: quand,
+        couleur: 'var(--signed, #34C759)',
+        titre: `${getClientName(d)} — dossier signé`,
+        detail: `${d.product} · ${d.advisor_code} · ${euro(annualize(d.pp_m) + (d.pu || 0))}`,
+        onOpen: () => { setActiveTab('clients'); setClientsVue('dossiers') },
+      })
+    }
+    for (const c of congesEnAttente) {
+      out.push({
+        id: `conge-${c.id}`,
+        date: c.created_at || c.date_debut,
+        couleur: 'var(--progress, #FF9500)',
+        titre: `Congé à valider — ${c.demandeur_nom || c.advisor_code || 'demande'}`,
+        detail: `${c.type || 'Congé'} du ${c.date_debut} au ${c.date_fin}`,
+        onOpen: () => setActiveTab('smart-rh'),
+      })
+    }
+    if (isManager && editorialPending.count > 0) {
+      out.push({
+        id: 'editorial',
+        date: editorialPending.nextDeadline || new Date().toISOString(),
+        couleur: 'var(--gold)',
+        titre: `${editorialPending.count} package éditorial en attente de veto`,
+        detail: editorialPending.nextDeadline ? `Échéance ${new Date(editorialPending.nextDeadline).toLocaleDateString('fr-FR')}` : null,
+        onOpen: () => setActiveTab('editorial'),
+      })
+    }
+    return out.sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 20)
+  })()
+
+  const subBadges = {
+    pipeline: isManager
+      ? deals.filter(d => dealDuMois(d, month) && isPipeline(d.status)).length
+      : (profile?.advisor_code
+        ? deals.filter(d => dealDuMois(d, month) && dealMatchesAdvisor(d, profile.advisor_code) && (d.priority === 'Urgente' || d.priority === 'Haute') && isPipeline(d.status)).length
+        : 0),
+    immobilier: dossiersImmoCount || 0,
+    editorial: editorialPending.count || 0,
+  }
+
   return (
     <div className="app-shell">
       <Sidebar
@@ -5458,31 +5974,37 @@ export default function App(){
         onCloseMobile={()=>setMobileMenuOpen(false)}
       />
       <div className="app-main">
-        <TopBar activeTab={activeTab} month={month} setMonth={setMonth} onNewDeal={startCreate} onRefresh={loadAll} onMobileMenu={()=>setMobileMenuOpen(true)} profile={effectiveProfile}/>
+        <TopBar activeTab={activeTab} month={month} setMonth={setMonth} onNewDeal={startCreate} onRefresh={loadAll} onMobileMenu={()=>setMobileMenuOpen(true)} profile={effectiveProfile} onHelp={()=>setHelpOpen(true)} notifications={notifications} notifScope={profile?.advisor_code||profile?.id||'anon'}/>
         <div className="app-content">
           {error&&<div className="notice notice-error">{error}</div>}
           {!profile&&error&&<div className="notice notice-warn">Profil introuvable dans <span className="code">public.profiles</span>. Vérifie la table et les policies.</div>}
 
-          <Suspense fallback={<div style={{padding:24,color:'var(--t3)',fontSize:13}}>Chargement…</div>}>
+          {/* B1 : sous-onglets du domaine actif (Activité, Clients, RH…). */}
+          {activeDomain && activeDomain.views.length > 1 && (
+            <SubTabs
+              ariaLabel={`Vues ${activeDomain.label}`}
+              tabs={activeDomain.views.map(v => ({ key: viewId(v), label: v.label, badge: subBadges[v.badgeKey] || 0 }))}
+              active={activeTab === 'clients' ? `clients:${selectedClientId ? 'annuaire' : clientsVue}` : activeTab}
+              onChange={(id) => {
+                if (id.startsWith('clients:')) {
+                  setActiveTab('clients'); setSelectedClientId(null); setClientsVue(id.split(':')[1])
+                } else {
+                  setActiveTab(id)
+                }
+              }}
+              style={{ marginBottom: 16 }}
+            />
+          )}
+
+          <Suspense fallback={<SkeletonPage/>}>
           {activeTab==='dashboard'&&isManager&&<EditorialPendingBanner count={editorialPending.count} nextDeadline={editorialPending.nextDeadline} onOpen={()=>setActiveTab('editorial')}/>}
-          {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles} profile={profile}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile}/>)}
+          {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles} profile={profile} onEdit={startEdit}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile} onEdit={startEdit} onGoTab={setActiveTab}/>)}
           {activeTab==='leads'&&<LeadRoomEmbed/>}
           {activeTab==='smart-rh'&&canSmartRh&&<SmartRH profile={profile} rhDelegue={isRhDelegue}/>}
           {activeTab==='pilotage-rh'&&(isManager||isRhDelegue)&&<PilotageRH profile={profile}/>}
           {activeTab==='recrutement'&&(isManager||isRhDelegue)&&<Recrutement/>}
           {activeTab==='pipeline'&&<PipelineBoard deals={deals} month={month} profile={profile} onEdit={startEdit} onQuickPatch={quickPatchDeal}/>}
-          {activeTab==='clients'&&!selectedClientId&&(
-            <div style={{display:'flex',gap:8,marginBottom:16}}>
-              {[['annuaire','Annuaire'],['dossiers','Dossiers du mois']].map(([k,label])=>(
-                <button key={k} onClick={()=>setClientsVue(k)}
-                  style={{border:'0.5px solid var(--bd)',cursor:'pointer',fontFamily:'inherit',fontSize:13,fontWeight:650,padding:'7px 16px',borderRadius:999,
-                    background:clientsVue===k?'var(--navy,#0A1628)':'rgba(0,0,0,0.03)',color:clientsVue===k?'#fff':'var(--t2)'}}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
-          {activeTab==='clients'&&!selectedClientId&&clientsVue==='dossiers'&&<DealsTable deals={deals} month={month} profile={profile} onEdit={startEdit} onDelete={deleteDeal} onRefresh={loadAll} onSelectClient={(clientId) => {
+          {activeTab==='clients'&&!selectedClientId&&clientsVue==='dossiers'&&<DealsTable deals={deals} month={month} profile={profile} onEdit={startEdit} onDelete={deleteDeal} onRefresh={loadAll} onQuickPatch={quickPatchDeal} onSelectClient={(clientId) => {
             setSelectedClientId(clientId)
             setClientsVue('annuaire')
           }}/>}
@@ -5555,12 +6077,12 @@ export default function App(){
         </div>
       </div>
 
+      <ShortcutsHelp open={helpOpen} onClose={()=>setHelpOpen(false)}/>
       <CommandPalette
         open={paletteOpen}
         onClose={()=>setPaletteOpen(false)}
         deals={deals}
-        pages={PAGE_TITLES}
-        isManager={isManager}
+        pages={palettePages}
         onOpenDeal={(d)=>{setPaletteOpen(false);startEdit(d)}}
         onOpenClient={(id)=>{setPaletteOpen(false);setSelectedClientId(id);setActiveTab('clients')}}
         onGoTab={(t)=>{setPaletteOpen(false);setActiveTab(t)}}

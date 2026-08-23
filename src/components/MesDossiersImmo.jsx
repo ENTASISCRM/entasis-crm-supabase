@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
+import { messageErreur } from '../lib/ui-shared'
 
 const euro = (v) => Number(v||0).toLocaleString('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0})
 
@@ -136,7 +137,7 @@ export default function MesDossiersImmo({ profile, teamProfiles, setActiveTab })
       if (data.error) throw new Error(data.error)
       setAiResponse(data.content || 'Pas de réponse')
     } catch (err) {
-      setAiResponse('Erreur : ' + err.message)
+      setAiResponse('Erreur : ' + messageErreur(err))
     }
     setAiLoading(false)
   }

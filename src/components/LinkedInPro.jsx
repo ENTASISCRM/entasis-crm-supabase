@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
+import { messageErreur } from '../lib/ui-shared'
 
 /* ─────────────────────────────────────────────────────────────────────────────
    DESIGN TOKENS
@@ -146,7 +147,7 @@ export default function LinkedInPro({ profile }) {
       const text = await generateLinkedInPost(theme, tone, context)
       setGeneratedPost(text)
     } catch (e) {
-      setGeneratedPost('Erreur : ' + e.message)
+      setGeneratedPost('Erreur : ' + messageErreur(e))
     }
     setLoading(false)
   }
@@ -174,7 +175,7 @@ export default function LinkedInPro({ profile }) {
     }
     const { error } = await supabase.from('linkedin_posts').insert([record])
     if (error) {
-      toast.error('Erreur sauvegarde : ' + error.message)
+      toast.error('Erreur sauvegarde : ' + messageErreur(error))
     } else {
       toast.success('Post sauvegardé')
       await loadPosts()
@@ -185,7 +186,7 @@ export default function LinkedInPro({ profile }) {
   async function handleDelete(id) {
     const { error } = await supabase.from('linkedin_posts').delete().eq('id', id)
     if (error) {
-      toast.error('Erreur : ' + error.message)
+      toast.error('Erreur : ' + messageErreur(error))
     } else {
       setPosts(prev => prev.filter(p => p.id !== id))
       toast.success('Post supprimé')

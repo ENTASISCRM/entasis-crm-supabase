@@ -13,6 +13,9 @@
 
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
+import { confirmDialog } from './ui/confirm'
+import SubTabs from './ui/SubTabs'
+import { SkeletonRows, SkeletonText } from './ui/Skeleton'
 import * as service from '../services/conseillerContrats'
 import * as profilesService from '../services/profiles'
 import * as contratDocs from '../services/contratDocs'
@@ -21,6 +24,7 @@ import MandatairesConformite from './MandatairesConformite'
 import { soldeConges, fmtJours } from '../lib/conges-solde'
 import { impersonate } from '../services/impersonation'
 import { TYPES_CONTRAT, LIBELLE_TYPE_CONTRAT } from '../lib/contrat-enums'
+import { messageErreur } from '../lib/ui-shared'
 
 const fmtEur = (v) => Number(v || 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '—')
@@ -153,7 +157,7 @@ export default function PilotageRH({ profile }) {
       setConges(cg)
       refreshDocs()
     } catch (e) {
-      toast.error('Erreur de chargement : ' + (e.message || ''))
+      toast.error('Erreur de chargement : ' + (messageErreur(e)))
     } finally {
       setLoading(false)
     }
@@ -218,13 +222,13 @@ export default function PilotageRH({ profile }) {
       toast.success('Contrat lié')
       reload()
     } catch (e) {
-      toast.error('Erreur : ' + (e.message || ''))
+      toast.error('Erreur : ' + (messageErreur(e)))
     }
   }
 
   const handleLierTous = async () => {
     if (liaisonsPossibles.length === 0) return
-    if (!confirm(`Lier automatiquement ${liaisonsPossibles.length} contrat(s) existant(s) à leur profil ? Les contrats sont matchés par nom ou code.`)) return
+    if (!(await confirmDialog({title:`Lier ${liaisonsPossibles.length} contrat(s) à leur profil ?`,message:'Les contrats sont matchés automatiquement par nom ou code.',confirmLabel:'Lier automatiquement'}))) return
     let ok = 0
     for (const p of liaisonsPossibles) {
       try {
@@ -357,7 +361,7 @@ export default function PilotageRH({ profile }) {
       setCreating(false)
       reload()
     } catch (e) {
-      toast.error('Erreur : ' + (e.message || ''))
+      toast.error('Erreur : ' + (messageErreur(e)))
     }
   }
 
@@ -365,7 +369,7 @@ export default function PilotageRH({ profile }) {
   // stage ou de CDD passée) : ils sortent des listes mais restent
   // consultables via le filtre Inactifs.
   const handleDesactiverTermines = async (list) => {
-    if (!confirm(`Désactiver ${list.length} contrat(s) terminé(s) ? Ils restent consultables via le filtre Inactifs.`)) return
+    if (!(await confirmDialog({title:`Désactiver ${list.length} contrat(s) terminé(s) ?`,message:'Ils restent consultables via le filtre Inactifs.',confirmLabel:'Désactiver'}))) return
     let ok = 0
     for (const c of list) {
       try { await service.setActif(c.id, false); ok++ } catch (e) { console.error('[PilotageRH] désactiver terminés', e) }
@@ -378,11 +382,12 @@ export default function PilotageRH({ profile }) {
   // les documents archives du bucket sont effaces avec la fiche pour ne
   // pas laisser d orphelins. Pour un depart, le bon geste reste Desactiver.
   const handleSupprimer = async (contrat) => {
-    const ok = confirm(
-      `Supprimer définitivement la fiche de ${contrat.full_name} ?\n\n` +
-      `Cette action est irréversible : le contrat, son historique et ses documents archivés seront effacés.\n` +
-      `Pour un départ ou une fin de contrat, utilise plutôt Désactiver.`
-    )
+    const ok = await confirmDialog({
+      title: `Supprimer la fiche de ${contrat.full_name} ?`,
+      message: 'Cette action est irréversible : le contrat, son historique et ses documents archivés seront effacés. Pour un départ ou une fin de contrat, utilise plutôt Désactiver.',
+      confirmLabel: 'Supprimer définitivement',
+      danger: true,
+    })
     if (!ok) return
     try {
       try {
@@ -396,19 +401,19 @@ export default function PilotageRH({ profile }) {
       reload()
       return true
     } catch (e) {
-      toast.error('Erreur : ' + (e.message || ''))
+      toast.error('Erreur : ' + (messageErreur(e)))
     }
     return false
   }
 
   const handleToggleActif = async (contrat) => {
-    if (!confirm(`${contrat.actif ? 'Désactiver' : 'Réactiver'} le contrat de ${contrat.full_name} ?`)) return
+    if (!(await confirmDialog({title:`${contrat.actif ? 'Désactiver' : 'Réactiver'} le contrat de ${contrat.full_name} ?`,confirmLabel:contrat.actif ? 'Désactiver' : 'Réactiver',danger:contrat.actif}))) return
     try {
       await service.setActif(contrat.id, !contrat.actif)
       toast.success(contrat.actif ? 'Contrat désactivé' : 'Contrat réactivé')
       reload()
     } catch (e) {
-      toast.error('Erreur : ' + (e.message || ''))
+      toast.error('Erreur : ' + (messageErreur(e)))
     }
   }
 
@@ -435,7 +440,7 @@ export default function PilotageRH({ profile }) {
       // et on prévient l'utilisateur.
       window.open(link, '_blank', 'noopener,noreferrer')
     } catch (e) {
-      toast.error('Erreur : ' + (e.message || ''), { id: toastId })
+      toast.error('Erreur : ' + (messageErreur(e)), { id: toastId })
     }
   }
 
@@ -454,20 +459,15 @@ export default function PilotageRH({ profile }) {
       {/* Sous onglets : l equipe salariee d un cote, la conformite des
           mandataires independants de l autre (obligations INPI, ORIAS,
           declarations URSSAF trimestrielles). */}
-      <div className="rh-tabs">
-        {[
+      <SubTabs
+        ariaLabel="Sous-onglets Pilotage RH"
+        tabs={[
           { key: 'equipe', label: 'Équipe salariée' },
-          { key: 'mandataires', label: `Mandataires · conformité${nbMandataires ? ` (${nbMandataires})` : ''}` },
-        ].map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setVue(t.key)}
-            className={`rh-tab${vue === t.key ? ' is-active' : ''}`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+          { key: 'mandataires', label: 'Mandataires · conformité', badge: nbMandataires },
+        ]}
+        active={vue}
+        onChange={setVue}
+      />
 
       {vue === 'mandataires' && <MandatairesConformite contrats={contrats} profile={profile} />}
 
@@ -709,7 +709,7 @@ export default function PilotageRH({ profile }) {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40, color: 'var(--t3)' }}>Chargement…</td></tr>
+              <SkeletonRows rows={5} cols={6} />
             ) : filtered.length === 0 ? (
               <tr><td colSpan={6} className="table-empty-state">
                 <div className="empty-title">Aucun contrat trouvé</div>
@@ -965,7 +965,7 @@ function DocsContrat({ contratId, typeContrat, nomSalarie, onChange }) {
     try { setDocs(await contratDocs.listDocsParCategorie(contratId)) }
     catch (e) {
       console.error('[DocsContrat] chargement', e)
-      setErreur(e.message || 'Erreur de chargement des documents')
+      setErreur(messageErreur(e))
       setDocs(null)
     }
   }
@@ -988,7 +988,7 @@ function DocsContrat({ contratId, typeContrat, nomSalarie, onChange }) {
       await reloadDocs()
       onChange && onChange()
     } catch (err) {
-      toast.error('Envoi impossible : ' + (err.message || ''))
+      toast.error('Envoi impossible : ' + (messageErreur(err)))
     } finally { setBusy(false) }
   }
 
@@ -996,18 +996,18 @@ function DocsContrat({ contratId, typeContrat, nomSalarie, onChange }) {
     try {
       const url = await contratDocs.urlPath(path)
       window.open(url, '_blank', 'noopener')
-    } catch (err) { toast.error('Ouverture impossible : ' + (err.message || '')) }
+    } catch (err) { toast.error('Ouverture impossible : ' + (messageErreur(err))) }
   }
 
   const supprimer = async (d) => {
-    if (!confirm(`Supprimer « ${contratDocs.nomAffiche(d.name)} » ? Le fichier sera définitivement effacé.`)) return
+    if (!(await confirmDialog({title:`Supprimer « ${contratDocs.nomAffiche(d.name)} » ?`,message:'Le fichier sera définitivement effacé.',confirmLabel:'Supprimer',danger:true}))) return
     setBusy(true)
     try {
       await contratDocs.deletePath(d.path)
       toast.success('Document supprimé')
       await reloadDocs()
       onChange && onChange()
-    } catch (err) { toast.error('Suppression impossible : ' + (err.message || '')) }
+    } catch (err) { toast.error('Suppression impossible : ' + (messageErreur(err))) }
     finally { setBusy(false) }
   }
 
@@ -1038,7 +1038,7 @@ function DocsContrat({ contratId, typeContrat, nomSalarie, onChange }) {
       URL.revokeObjectURL(a.href)
       toast.success(`${n} document${n > 1 ? 's' : ''} téléchargé${n > 1 ? 's' : ''} (zip)`)
     } catch (e) {
-      toast.error('Téléchargement impossible : ' + (e.message || ''))
+      toast.error('Téléchargement impossible : ' + (messageErreur(e)))
     } finally { setBusy(false) }
   }
 
@@ -1077,7 +1077,7 @@ function DocsContrat({ contratId, typeContrat, nomSalarie, onChange }) {
             >Réessayer</button>
           </div>
         ) : docs === null ? (
-          <div style={{ fontSize: 12, color: 'var(--t3)', padding: '8px 0' }}>Chargement…</div>
+          <div style={{ padding: '8px 0' }}><SkeletonText lines={3} gap={8} /></div>
         ) : categories.map((cat) => {
           const fichiers = docs[cat.key] || []
           const fourni = fichiers.length > 0

@@ -17,13 +17,14 @@
 // les noms. Charte navy et or.
 
 import { useEffect, useMemo, useState } from 'react'
+import { SkeletonCards } from './ui/Skeleton'
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip,
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
 import { loadCockpit, computeCockpit, listClientsCompletude, completudeParConseiller, completudeGlobale } from '../services/ratios'
 import { listTeam } from '../services/profiles'
-import { euro } from '../lib/ui-shared'
+import { euro, messageErreur } from '../lib/ui-shared'
 import toast from 'react-hot-toast'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip)
@@ -248,7 +249,7 @@ function SectionCompletude({ isManager }) {
         ])
         if (vivant) setSt({ loading: false, err: null, clients, team })
       } catch (e) {
-        if (vivant) setSt({ loading: false, err: e.message || 'Erreur de chargement', clients: [], team: [] })
+        if (vivant) setSt({ loading: false, err: messageErreur(e), clients: [], team: [] })
       }
     })()
     return () => { vivant = false }
@@ -266,7 +267,7 @@ function SectionCompletude({ isManager }) {
         <div className="cmpl-why">Une fiche complète = un dossier signable et des opportunités de vente chiffrées.</div>
       </div>
 
-      {st.loading && <div className="ck-empty">Chargement…</div>}
+      {st.loading && <SkeletonCards n={3} height={96} />}
       {st.err && <div className="ck-empty err">Erreur : {st.err}</div>}
 
       {!st.loading && !st.err && (
@@ -297,7 +298,7 @@ export default function CockpitRatios({ profile }) {
         })
         if (vivant) setState({ loading: false, err: null, mois, moisCourant, lignes })
       } catch (e) {
-        if (vivant) setState({ loading: false, err: e.message || 'Erreur de chargement', mois: [], lignes: [] })
+        if (vivant) setState({ loading: false, err: messageErreur(e), mois: [], lignes: [] })
       }
     })()
     return () => { vivant = false }
@@ -340,7 +341,7 @@ export default function CockpitRatios({ profile }) {
         La collecte additionne les versements uniques et les versements programmes annualises des dossiers signes.
       </div>
 
-      {state.loading && <div className="ck-empty">Chargement…</div>}
+      {state.loading && <SkeletonCards n={3} height={96} />}
       {state.err && <div className="ck-empty err">Erreur : {state.err}</div>}
       {!state.loading && !state.err && state.lignes.length === 0 && (
         <div className="ck-empty">Aucune donnee sur la periode.</div>

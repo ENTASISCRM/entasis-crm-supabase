@@ -9,7 +9,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { marked } from 'marked'
 import toast from 'react-hot-toast'
+import { SkeletonCards } from './ui/Skeleton'
 import { supabase } from '../lib/supabase'
+import { messageErreur } from '../lib/ui-shared'
 
 const SITE_JOURNAL = 'https://www.entasis-conseil.fr/journal'
 
@@ -186,7 +188,7 @@ function PackageDetail({ pkg, onBack, onModerated }) {
       setRejectModal(false)
       await onModerated()
     } catch (err) {
-      toast.error(`Échec : ${err.message}`)
+      toast.error(`Échec : ${messageErreur(err)}`)
     } finally {
       setBusy(false)
     }
@@ -460,7 +462,7 @@ function NewsletterConfig() {
       setCurrent(body.brevo_list_id)
       toast.success('Liste de la newsletter enregistrée')
     } catch (err) {
-      toast.error(`Échec : ${err.message}`)
+      toast.error(`Échec : ${messageErreur(err)}`)
     } finally {
       setSaving(false)
     }
@@ -571,7 +573,7 @@ export default function EditorialHub({ onPendingChange }) {
       </div>
 
       {error && <div className="notice notice-error">{error}</div>}
-      {loading && <div style={{ padding: 24, color: 'var(--t3)', fontSize: 13 }}>Chargement…</div>}
+      {loading && <SkeletonCards n={2} height={120} />}
       {!loading && !visible.length && (
         <div style={{ padding: 32, textAlign: 'center', color: 'var(--t3)', fontSize: 13 }}>
           Aucun package {statutFilter !== 'tous' || themeFilter !== 'tous' ? 'pour ces filtres' : 'généré pour le moment'}.

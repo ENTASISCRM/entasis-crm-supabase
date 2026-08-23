@@ -11,7 +11,9 @@
 //   • Modale détail avec timeline d'actions
 
 import { useEffect, useMemo, useState } from 'react'
+import toast from 'react-hot-toast'
 import * as recrutementService from '../services/recrutement'
+import { messageErreur } from '../lib/ui-shared'
 
 const { STATUS_LABELS, PIPELINE_STATUSES, SOURCE_LABELS } = recrutementService
 
@@ -54,7 +56,7 @@ export default function Recrutement() {
       setCandidates(list)
       setStats(statsData)
     } catch (e) {
-      setError(e.message || 'Erreur de chargement (la table existe-t-elle ? colle la migration SQL dans Supabase SQL Editor)')
+      setError(messageErreur(e))
     } finally {
       setLoading(false)
     }
@@ -96,7 +98,7 @@ export default function Recrutement() {
       const statsData = await recrutementService.getStats()
       setStats(statsData)
     } catch (e) {
-      alert(`Impossible de changer le statut, ${e.message}`)
+      toast.error(`Impossible de changer le statut, ${messageErreur(e)}`)
       refresh()
     }
   }
@@ -106,7 +108,7 @@ export default function Recrutement() {
       <div className="section-header mb-24">
         <div>
           <div className="section-kicker">Acquisition talents · pilotage</div>
-          <div className="section-title">Recrutement 🎯</div>
+          <div className="section-title">Recrutement</div>
           <div className="section-sub">
             {stats ? `${stats.total} candidat${stats.total > 1 ? 's' : ''} total · ${stats.last30days} sur 30j` : 'Chargement…'}
           </div>
@@ -114,7 +116,7 @@ export default function Recrutement() {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <input
             type="text"
-            placeholder="🔍 Rechercher (nom, email, poste)…"
+            placeholder="Rechercher (nom, email, poste)…"
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="search-input"
@@ -376,13 +378,13 @@ function AddCandidateModal({ onClose, onCreated }) {
 
   async function submit(e) {
     e.preventDefault()
-    if (!form.full_name.trim()) { alert('Nom requis'); return }
+    if (!form.full_name.trim()) { toast.error('Nom requis'); return }
     setSaving(true)
     try {
       await recrutementService.create(form)
       onCreated()
     } catch (e) {
-      alert(`Erreur, ${e.message}`)
+      toast.error(`Erreur, ${messageErreur(e)}`)
     } finally { setSaving(false) }
   }
 
@@ -501,7 +503,7 @@ function CandidateDetailModal({ candidate: initial, onClose, onUpdated, onDelete
       reload()
       onUpdated()
     } catch (e) {
-      alert(`Erreur, ${e.message}`)
+      toast.error(`Erreur, ${messageErreur(e)}`)
     } finally { setSaving(false) }
   }
 
@@ -514,7 +516,7 @@ function CandidateDetailModal({ candidate: initial, onClose, onUpdated, onDelete
       reload()
       onUpdated()
     } catch (e) {
-      alert(`Erreur, ${e.message}`)
+      toast.error(`Erreur, ${messageErreur(e)}`)
     } finally { setSaving(false) }
   }
 
@@ -525,18 +527,18 @@ function CandidateDetailModal({ candidate: initial, onClose, onUpdated, onDelete
       reload()
       onUpdated()
     } catch (e) {
-      alert(`Erreur, ${e.message}`)
+      toast.error(`Erreur, ${messageErreur(e)}`)
     }
   }
 
   async function doReject() {
-    if (!rejectReason.trim()) { alert('Indique une raison'); return }
+    if (!rejectReason.trim()) { toast.error('Indique une raison'); return }
     try {
       await recrutementService.reject(candidate.id, rejectReason.trim())
       setRejecting(false)
       onDeleted()
     } catch (e) {
-      alert(`Erreur, ${e.message}`)
+      toast.error(`Erreur, ${messageErreur(e)}`)
     }
   }
 

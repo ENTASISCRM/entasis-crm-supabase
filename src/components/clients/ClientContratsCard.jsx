@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'react-hot-toast'
+import { SkeletonText } from '../ui/Skeleton'
 import {
   listContratsForClient, createContrat, updateContrat,
   addContratEvent, upsertValorisation, valeurConnue,
@@ -274,7 +275,7 @@ export default function ClientContratsCard({ clientId, client, profile }) {
         )}
 
         {loading ? (
-          <div style={{ color: 'var(--t2)', fontSize: '13px' }}>Chargement…</div>
+          <SkeletonText lines={3} />
         ) : contrats.length === 0 ? (
           <div style={{ textAlign: 'center', color: 'var(--t2)', padding: '32px', fontSize: '13px' }}>
             Aucun contrat. Ils se créent automatiquement à la signature d'un deal,
@@ -297,9 +298,9 @@ export default function ClientContratsCard({ clientId, client, profile }) {
                     style={{
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       gap: '12px', flexWrap: 'wrap', padding: '16px', cursor: 'pointer',
-                      backgroundColor: isExpanded ? 'rgba(192, 155, 90, 0.05)' : 'var(--bg)',
+                      backgroundColor: isExpanded ? 'rgba(201, 169, 97, 0.05)' : 'var(--bg)',
                       borderRadius: 'var(--rad)',
-                      border: isExpanded ? '2px solid #C09B5A' : '1px solid var(--bd)',
+                      border: isExpanded ? '2px solid var(--gold)' : '1px solid var(--bd)',
                     }}
                   >
                     <div style={{ minWidth: '220px' }}>
