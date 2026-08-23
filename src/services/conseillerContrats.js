@@ -44,14 +44,23 @@ export async function list() {
 export async function getOwn() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
+  // Plusieurs contrats actifs sont possibles (alternance qui se termine et
+  // CDI qui prend la suite). maybeSingle() echouait alors, et l appelant
+  // retombait sur un objectif faux : on prend le contrat EN COURS
+  // aujourd hui, le plus recent en cas d egalite.
   const { data, error } = await supabase
     .from(TABLE)
     .select('*')
     .eq('profile_id', user.id)
     .eq('actif', true)
-    .maybeSingle()
-  if (error && error.code !== 'PGRST116') throw error
-  return data || null
+    .order('date_debut', { ascending: false })
+  if (error) throw error
+  const lignes = data || []
+  if (lignes.length === 0) return null
+  const aujourd = new Date().toISOString().slice(0, 10)
+  const enCours = lignes.find((c) =>
+    (!c.date_debut || c.date_debut <= aujourd) && (!c.date_fin || c.date_fin >= aujourd))
+  return enCours || lignes[0]
 }
 
 /**
