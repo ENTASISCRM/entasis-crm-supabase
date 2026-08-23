@@ -1938,21 +1938,29 @@ function AdvisorDashboard({deals,objectifs,month,profile}){
   // Objectif PP individuel = palier_pp_mensuel du contrat du conseiller.
   // Fallback sur l'objectif cabinet (table objectifs) si pas de contrat lié.
   const [contratPerso, setContratPerso] = useState(null)
+  const [contratCharge, setContratCharge] = useState(false)
   useEffect(() => {
     let alive = true
+    setContratCharge(false)
     conseillerContratsService.getOwn().catch(() => null).then(c => {
-      if (alive) setContratPerso(c)
+      if (!alive) return
+      setContratPerso(c)
+      setContratCharge(true)
     })
     return () => { alive = false }
   }, [profile?.id])
 
-  const targetsCab=objectifs[month]||{pp_target:0,pu_target:0}
   const palierPpPerso = Number(contratPerso?.palier_pp_mensuel || 0)
   const palierPuPerso = Number(contratPerso?.palier_pu_mensuel || 0)
-  // Si le conseiller a un palier individuel → on l'utilise. Sinon cabinet.
-  const ppTarget = palierPpPerso > 0 ? palierPpPerso : Number(targetsCab.pp_target||0)
-  const puTarget = palierPuPerso > 0 ? palierPuPerso : Number(targetsCab.pu_target||0)
-  const targetSource = palierPpPerso > 0 ? 'perso' : 'cabinet'
+  // L'objectif affiché à un conseiller est UNIQUEMENT son palier individuel.
+  // Jamais l'objectif cabinet : afficher « il te manque 80 000 € de PP » à un
+  // alternant seul n'a aucun sens (bug signalé par Louis le 28/07/2026, le
+  // chiffre sautait de 80 000 à 15 000 selon que le contrat était chargé).
+  // Tant que le contrat n'est pas chargé, pas d'objectif : le bloc Mission
+  // se masque de lui-même plutôt que d'afficher un chiffre faux.
+  const ppTarget = contratCharge ? palierPpPerso : 0
+  const puTarget = contratCharge ? palierPuPerso : 0
+  const targetSource = 'perso'
   const ppPct=pct(m.ppSigned,ppTarget),ppProjPct=pct(m.ppProjected,ppTarget)
   const landing=ppTarget>0?m.ppProjected-ppTarget:null
   const prevIdx=MONTHS.indexOf(month)-1,prevMonth=prevIdx>=0?MONTHS[prevIdx]:null
