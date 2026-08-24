@@ -1973,12 +1973,22 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab}){
   // On utilise une RPC Postgres (SECURITY DEFINER) car les RLS deals
   // filtrent par advisor_code → sans RPC, le calcul local ne refléterait
   // que les deals du conseiller connecté, pas le cabinet entier.
+  // Un échec de cette RPC affichait 0 € — indiscernable d'un mois sans
+  // signature, et donc alarmant à tort. On distingue maintenant trois états :
+  // chargement, échec (on le dit), et chiffre réel.
   const [cabinet, setCabinet] = useState({ ppCab: 0, puCab: 0, signedCount: 0, totalCount: 0 })
+  const [cabinetEtat, setCabinetEtat] = useState('chargement')
   useEffect(() => {
     let alive = true
+    setCabinetEtat('chargement')
     supabase.rpc('cabinet_totals_month', { p_month: month })
       .then(({ data, error }) => {
-        if (!alive || error || !data?.[0]) return
+        if (!alive) return
+        if (error || !data?.[0]) {
+          logger.error('cabinet_totals_month', error || 'réponse vide')
+          setCabinetEtat('erreur')
+          return
+        }
         const r = data[0]
         setCabinet({
           ppCab: Number(r.pp_signee || 0),
@@ -1986,10 +1996,22 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab}){
           signedCount: Number(r.signed_count || 0),
           totalCount: Number(r.total_count || 0),
         })
+        setCabinetEtat('ok')
       })
-      .catch(() => {})
+      .catch((e) => {
+        if (!alive) return
+        logger.error('cabinet_totals_month', e)
+        setCabinetEtat('erreur')
+      })
     return () => { alive = false }
   }, [month])
+  // « — » plutôt qu'un 0 € qui ferait croire à un mois blanc.
+  const euroCab = (v) => (cabinetEtat === 'ok' ? euro(v) : '—')
+  const hintCab = (siOk) => (
+    cabinetEtat === 'erreur' ? 'Chiffres cabinet indisponibles'
+      : cabinetEtat === 'chargement' ? 'Chargement…'
+        : siOk
+  )
 
   // D9 — parcours d'accueil : les étapes se cochent d'elles-mêmes à partir
   // de ce que le conseiller a déjà fait. Aucun état à maintenir en base.
@@ -2076,8 +2098,8 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab}){
         </div>
       </div>
       <div className="kpi-grid mb-24" style={{gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))'}}>
-        <KpiCard label="Cabinet · PP signée" value={euro(cabinet.ppCab)} hint={`${cabinet.signedCount} dossier${cabinet.signedCount!==1?'s':''} signé${cabinet.signedCount!==1?'s':''} sur ${cabinet.totalCount}`} accent="gold"/>
-        <KpiCard label="Cabinet · PU signée" value={euro(cabinet.puCab)} hint="Versements uniques équipe" accent="blue"/>
+        <KpiCard label="Cabinet · PP signée" value={euroCab(cabinet.ppCab)} hint={hintCab(`${cabinet.signedCount} dossier${cabinet.signedCount!==1?'s':''} signé${cabinet.signedCount!==1?'s':''} sur ${cabinet.totalCount}`)} accent="gold"/>
+        <KpiCard label="Cabinet · PU signée" value={euroCab(cabinet.puCab)} hint={hintCab('Versements uniques équipe')} accent="blue"/>
       </div>
       {/* D3 : ce qui doit être fait aujourd'hui passe AVANT le reste. */}
       <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit}/>
