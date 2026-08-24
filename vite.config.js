@@ -11,6 +11,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          // Le helper __vitePreload de Vite n'est pas dans node_modules : sans
+          // regle explicite, Rollup le range dans le premier chunk venu. Il
+          // avait atterri dans 'pdf', ce qui forcait l'entry a importer les
+          // 533 kB de jsPDF a chaque ouverture du CRM pour une seule fonction.
+          if (id.includes('vite/preload-helper')) return 'react-vendor'
           if (!id.includes('node_modules')) return undefined
           if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'react-vendor'
           if (id.includes('@supabase')) return 'supabase'
