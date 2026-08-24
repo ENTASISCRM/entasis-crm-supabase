@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
 import { STATUTS_PRO, messageErreur } from '../../lib/ui-shared'
+import { confirmDialog } from '../ui/confirm'
+import * as clientsService from '../../services/clients'
 
 // Rouge charte pour le manque (semantique "champ obligatoire vide").
 const ROUGE_MANQUE = '#B4453B'
@@ -202,7 +204,43 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
         // completude sans rechargement de page.
         if (onSave) onSave({ ...client, ...payload, updated_at: updatedAt })
       } else {
-        // Création
+        // Création — garde anti-doublon. Le service sait détecter les fiches
+        // proches (email exact, téléphone, nom fuzzy) mais ce formulaire ne
+        // l'appelait pas : c'est le chemin le plus évident pour créer un
+        // client, et il n'avait aucun contrôle. Sur 379 fiches, une quinzaine
+        // faisaient double emploi.
+        //
+        // On avertit, on ne bloque pas : deux homonymes existent, et le
+        // conseiller sait ce qu'il fait. Mais il doit le voir avant.
+        let proches = null
+        try {
+          proches = await clientsService.findPotentialDuplicates({
+            nom: payload.nom, email: payload.email, telephone: payload.telephone,
+          })
+        } catch (e) {
+          // Une recherche qui échoue n'est PAS « aucun doublon » : on le dit
+          // plutôt que de créer une fiche en aveugle.
+          const continuer = await confirmDialog({
+            title: 'Vérification des doublons impossible',
+            message: `${messageErreur(e)}\n\nCréer la fiche sans avoir pu vérifier qu'elle n'existe pas déjà ?`,
+            confirmLabel: 'Créer quand même',
+          })
+          if (!continuer) return
+        }
+
+        if (proches && proches.length > 0) {
+          const liste = proches.slice(0, 4)
+            .map(c => `• ${[c.nom, c.prenom].filter(Boolean).join(' ')}${c.email ? ` — ${c.email}` : ''}${c.telephone ? ` — ${c.telephone}` : ''}`)
+            .join('\n')
+          const continuer = await confirmDialog({
+            title: proches.length === 1 ? 'Une fiche ressemblante existe déjà' : `${proches.length} fiches ressemblantes existent déjà`,
+            message: `${liste}\n\nCréer quand même une nouvelle fiche ? Si c'est le même client, annulez et ouvrez la fiche existante depuis l'annuaire.`,
+            confirmLabel: 'Créer une nouvelle fiche',
+            danger: true,
+          })
+          if (!continuer) return
+        }
+
         const { data, error } = await supabase
           .from('clients')
           .insert({ ...payload, created_by: profile?.id })

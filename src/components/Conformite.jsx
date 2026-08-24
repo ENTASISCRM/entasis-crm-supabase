@@ -532,9 +532,18 @@ function ModaleCreation({ profile, onClose, onCreated }) {
     if (!nom) { toast.error('Nom du client requis'); return null }
     const email = nvEmail.trim() || null
     const telephone = nvTel.trim() || null
-    const existant = await clientsService
-      .findExisting({ email, telephone, nom, advisor_code: profile?.advisor_code })
-      .catch(() => null)
+    // Une recherche de doublon qui échoue n'est PAS « aucun doublon » : le
+    // .catch(() => null) d'origine rendait les deux cas indistinguables, et
+    // une panne réseau créait donc une fiche en double en silence.
+    let existant = null
+    try {
+      existant = await clientsService.findExisting({
+        email, telephone, nom, advisor_code: profile?.advisor_code,
+      })
+    } catch (e) {
+      toast.error(`Vérification des doublons impossible : ${messageErreur(e)}`)
+      return null
+    }
     if (existant?.id) {
       toast.success('Client déjà présent dans le CRM, fiche réutilisée')
       return { id: existant.id, nom, prenom: nvPrenom.trim(), email, telephone }
