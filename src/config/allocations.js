@@ -92,31 +92,47 @@ export const ALLOCATIONS = [
   },
 
   // ── Abeille Assurances ────────────────────────────────────────────────
-  // Les deux pôles existent, mais uniquement dans des PDF :
-  //   prudent   → stratégie patrimoniale Blanc, projet Cavalaire (31/07/2026)
-  //               cinq fonds, cinq sociétés de gestion, 6,3 % nets visés
-  //   dynamique → portefeuille modèle six fonds (fil ALLOCATION, 30/07/2026)
-  // Aucun des deux n'apparaît dans le corps d'un mail. Laissés vides plutôt
-  // que reconstitués : c'est la seule position tenable.
+  // Les deux pôles viennent de PDF transmis par Louis le 24/08. Les ISIN
+  // absents du prudent ont été vérifiés un par un chez les émetteurs — aucun
+  // n'est reconstitué de mémoire.
   {
     id: 'ab-prudent',
     partenaire: 'abeille',
     nom: 'Prudent',
-    horizon: 'Projet à échéance connue',
+    horizon: '24 mois (projet à échéance connue)',
     cible: '6,3 % nets par an (hypothèse centrale)',
-    source: 'Stratégie patrimoniale Blanc · projet Cavalaire, 31/07/2026 — cinq fonds, cinq sociétés de gestion',
-    note: "Sécurisation progressive du cœur du portefeuille à mesure que le projet se concrétise. Lignes à reprendre depuis le PDF.",
-    lignes: [],
+    source: 'Stratégie patrimoniale Blanc · projet Cavalaire, 31/07/2026 — contrat Abeille en gestion libre, cinq sociétés de gestion, aucun doublon de stratégie',
+    note: "Note de risque moyenne 2,55 sur 7. Le PDF ne porte pas les ISIN : chacun a été vérifié auprès de l'émetteur (classes A1, A, B, A, A).",
+    lignes: [
+      // Cœur Cavalaire (85 %), sécurisé par étapes à mesure que l'achat se concrétise
+      { fonds: 'Eleva Absolute Return Europe A1',    isin: 'LU1331971769', poids: 25 },
+      { fonds: 'Moneta Long Short A',                isin: 'FR0010400762', poids: 20 },
+      { fonds: 'Helium Selection B',                 isin: 'LU1112771503', poids: 20 },
+      { fonds: 'Varenne Valeur A',                   isin: 'LU2358392376', poids: 20 },
+      // Poche performance (15 %), seule à rester investie après l'acquisition
+      { fonds: 'Carmignac Investissement Latitude A', isin: 'FR0010147603', poids: 15 },
+    ],
   },
   {
     id: 'ab-dynamique',
     partenaire: 'abeille',
     nom: 'Dynamique',
     horizon: 'Long terme',
-    cible: '—',
-    source: 'Portefeuille modèle six fonds, fil ALLOCATION du 30/07/2026 (PDF)',
-    note: "Lignes à reprendre depuis le PDF.",
-    lignes: [],
+    cible: '7 à 9 % par an (volatilité attendue 12 à 14 %)',
+    source: 'Proposition Sophie Salem, juin 2026 — contrat Abeille Épargne Active, versements programmés, 100 % unités de compte',
+    note: 'Architecture cœur-satellite : cœur patrimonial 40 %, technologie 29 %, électrification 15 %, diversification 11 %, or tactique 5 %.',
+    lignes: [
+      { fonds: 'Robeco BP US Large Cap Equities D-EUR',             isin: 'LU0474363974', poids: 22 },
+      { fonds: 'Comgest Monde C',                                    isin: 'FR0000284689', poids: 18 },
+      { fonds: 'Fidelity Global Technology A-Acc-EUR',               isin: 'LU1213836080', poids: 12 },
+      { fonds: 'CPR Invest Global Disruptive Opportunities A EUR',   isin: 'FR0010836163', poids: 9 },
+      { fonds: 'DWS Invest Artificial Intelligence LC',              isin: 'LU1863263346', poids: 8 },
+      { fonds: 'Pictet Clean Energy Transition P EUR',               isin: 'LU0280435388', poids: 8 },
+      { fonds: 'Ofi Invest Energy Strategic Metals R',               isin: 'FR0014008NN3', poids: 7 },
+      { fonds: 'DNCA Actions Euro PME R',                            isin: 'FR0011891506', poids: 6 },
+      { fonds: 'abrdn Japanese Sustainable Equity S Acc Hgd EUR',    isin: 'LU0505784883', poids: 5 },
+      { fonds: 'Amundi Actions Or P-C',                              isin: 'FR0012336683', poids: 5 },
+    ],
   },
 ]
 
