@@ -1170,7 +1170,18 @@ function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose,
     return profiles.filter(p => p.is_active && !lies.has(p.id))
   }, [profiles, contratsExistants, contrat.id])
 
-  const handleSubmit = (e) => {
+  // Nom du profil lié quand il diffère de celui du contrat : c'est exactement
+  // la situation qui a rendu l'écrasement invisible pendant trois semaines.
+  const profilDiscordant = useMemo(() => {
+    if (!form.profile_id) return null
+    const p = profiles.find(x => x.id === form.profile_id)
+    const nomProfil = (p?.full_name || '').trim()
+    const nomContrat = (form.full_name || '').trim()
+    if (!nomProfil || !nomContrat) return null
+    return nomProfil.toLowerCase() === nomContrat.toLowerCase() ? null : nomProfil
+  }, [form.profile_id, form.full_name, profiles])
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.full_name?.trim()) return toast.error('Nom requis')
     if (!form.type_contrat) return toast.error('Type de contrat requis')
@@ -1180,6 +1191,23 @@ function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose,
     }
     if (form.date_fin && form.date_debut && form.date_fin < form.date_debut) {
       return toast.error('La date de fin doit être après la date de début')
+    }
+    // Réutiliser un contrat existant comme modèle pour quelqu'un d'autre écrase
+    // la fiche de son titulaire — historique, salaire et dates compris. C'est
+    // arrivé : la fiche de Jean Decamps est devenue celle de Charlotte Billard.
+    // On ne l'interdit pas (une correction de nom reste légitime), on le dit.
+    const ancienNom = (contrat.full_name || '').trim()
+    const nouveauNom = form.full_name.trim()
+    if (!isNew && ancienNom && nouveauNom.toLowerCase() !== ancienNom.toLowerCase()) {
+      const ok = await confirmDialog({
+        title: `Remplacer la fiche de ${ancienNom} ?`,
+        message: `Vous êtes en train de renommer un contrat existant en « ${nouveauNom} ». `
+          + `La fiche de ${ancienNom} sera écrasée : son type de contrat, son salaire, ses dates et son historique deviendront ceux de ${nouveauNom}.\n\n`
+          + `Pour ajouter une personne, fermez cette fenêtre et utilisez « Nouveau contrat ».`,
+        confirmLabel: `Écraser la fiche de ${ancienNom}`,
+        danger: true,
+      })
+      if (!ok) return
     }
     onSave(form)
   }
@@ -1227,6 +1255,13 @@ function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose,
               <div className="form-hint">
                 Sans lien, le conseiller ne pourra pas voir sa rémunération côté CRM (RLS).
               </div>
+              {profilDiscordant && (
+                <div className="form-hint" style={{ color: 'var(--cancelled)', marginTop: 6 }}>
+                  Ce contrat est au nom de <strong>{form.full_name}</strong> mais il est rattaché
+                  au profil de <strong>{profilDiscordant}</strong>. Les dossiers de {profilDiscordant} et
+                  son salaire seront comptés sur cette fiche. Vérifiez le profil lié.
+                </div>
+              )}
             </div>
 
             <div className="form-row form-row-2">
