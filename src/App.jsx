@@ -3,6 +3,7 @@ import { Toaster, toast } from 'react-hot-toast'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import { FUNDS_DEFAULT } from './config/fonds'
 import { logger } from './lib/logger'
+import { alertesContrats } from './lib/alertes-contrats'
 import { recordLogin } from './lib/record-login'
 import * as leadsService from './services/leads'
 import * as dealsService from './services/deals'
@@ -5219,6 +5220,18 @@ export default function App(){
     conseillerContratsService.getOwn().then(c=>{if(alive)setContractType(c?.type_contrat||null)}).catch(()=>{})
     return ()=>{alive=false}
   },[profile?.id])
+  // Contrats pour les alertes de la cloche (fins proches, arrivées sans
+  // compte). La RLS cadre d'elle-même : un conseiller ne récupère que sa
+  // ligne, donc les alertes ne fuient pas l'effectif à qui ne le voit pas.
+  const [contratsRh,setContratsRh]=useState([])
+  useEffect(()=>{
+    if(!profile?.id){setContratsRh([]);return}
+    let alive=true
+    conseillerContratsService.list()
+      .then(l=>{if(alive)setContratsRh(l||[])})
+      .catch(e=>{logger.error('contrats (alertes)',e)})
+    return ()=>{alive=false}
+  },[profile?.id])
   const [teamProfiles,setTeamProfiles]=useState([])
   const [deals,setDeals]=useState([])
   const [mobileMenuOpen,setMobileMenuOpen]=useState(false)
@@ -5979,6 +5992,25 @@ export default function App(){
         onOpen: () => setActiveTab('smart-rh'),
       })
     }
+    // Alertes RH : l'écran Pilotage RH les affichait déjà, mais il fallait y
+    // aller. Trois producteurs finissaient leur alternance la même semaine de
+    // septembre sans que rien ne le dise à l'accueil.
+    for (const a of alertesContrats(contratsRh)) {
+      out.push({
+        id: a.id,
+        date: a.date,
+        // Épinglé en tête : ces alertes portent une date future, le tri
+        // antichronologique commun placerait la plus lointaine en premier.
+        prio: 0,
+        urgence: a.urgence,
+        couleur: a.type === 'termine-actif' ? 'var(--t3)'
+          : a.type === 'sans-compte' ? 'var(--forecast)'
+            : 'var(--progress)',
+        titre: a.titre,
+        detail: a.detail,
+        onOpen: () => setActiveTab('pilotage-rh'),
+      })
+    }
     if (isManager && editorialPending.count > 0) {
       out.push({
         id: 'editorial',
@@ -5989,7 +6021,14 @@ export default function App(){
         onOpen: () => setActiveTab('editorial'),
       })
     }
-    return out.sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 20)
+    // Deux groupes : les alertes RH d'abord, par urgence croissante ; puis le
+    // reste, du plus récent au plus ancien.
+    return out
+      .sort((a, b) =>
+        (a.prio ?? 1) - (b.prio ?? 1)
+        || (a.prio === 0 ? a.urgence - b.urgence : String(b.date).localeCompare(String(a.date))),
+      )
+      .slice(0, 20)
   })()
 
   const subBadges = {
