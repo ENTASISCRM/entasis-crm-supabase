@@ -55,6 +55,7 @@ export function buildNavDomains({ isManager, isRhDelegue, canSmartRh }) {
       views: [
         { tab: 'market', label: 'Marchés financiers' },
         { tab: 'ucs-structures', label: 'UCS Structurés' },
+        { tab: 'allocations', label: 'Allocations types' },
       ],
     },
     {

@@ -6,7 +6,30 @@
 export const MONTHS = ['JANVIER','FÉVRIER','MARS','AVRIL','MAI','JUIN','JUILLET','AOÛT','SEPTEMBRE','OCTOBRE','NOVEMBRE','DÉCEMBRE'];
 export const STATUS_OPTIONS = ['Signé','En cours','Prévu','Annulé'];
 export const PRIORITY_OPTIONS = ['Normale','Haute','Urgente'];
-export const PRODUCTS = ['PER Individuel','PERO','Assurance Vie Française','Contrat de Capitalisation','SCPI','Produits Structurés','Private Equity','Prévoyance TNS','Mutuelle Santé','Assurance de Prêt','Autre'];
+export const PRODUCTS = ['PER Individuel','PERO','Assurance Vie Française','Contrat de Capitalisation','SCPI','Produits Structurés','Private Equity','Prévoyance TNS','Mutuelle Santé','Assurance de Prêt','Bilan Patrimonial','Autre'];
+
+// Produits rémunérés sur un montant libre, et non sur un pourcentage d'une
+// prime : le montant se saisit dans le champ PU, il constitue à lui seul
+// l'assiette, et il est partagé à parts égales avec le cabinet.
+//   • Assurance de Prêt   → frais de dossier fixés par le cabinet (Louis 24/08)
+//   • Bilan Patrimonial   → honoraires fixés par le conseiller  (Louis 24/08)
+// Le barème correspondant vit côté serveur (api/_lib/bareme-entasis.js) ;
+// un test vérifie que les deux listes ne divergent pas.
+export const PRODUITS_HONORAIRES = ['Assurance de Prêt', 'Bilan Patrimonial'];
+
+// Qui fixe le montant, pour le dire dans le formulaire sans se tromper.
+export const LIBELLE_MONTANT_HONORAIRES = {
+  'Assurance de Prêt': {
+    champ: 'Frais de dossier (€)',
+    aide: 'Montant fixé par le cabinet et facturé au client.',
+  },
+  'Bilan Patrimonial': {
+    champ: 'Honoraires (€)',
+    aide: 'Montant fixé librement par le conseiller qui vend le bilan.',
+  },
+};
+
+export const estProduitHonoraires = (produit) => PRODUITS_HONORAIRES.includes(produit);
 // Statut professionnel du client (structuré, obligatoire a la signature).
 // Pilote les regles de cross-sell du module Multi-equipement (ex. TNS ou
 // profession liberale sans prevoyance = opportunite).

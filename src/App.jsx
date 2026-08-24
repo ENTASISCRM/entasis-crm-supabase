@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState, useRef, lazy, Suspense } from 'react'
 import { Toaster, toast } from 'react-hot-toast'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
+import { FUNDS_DEFAULT } from './config/fonds'
 import { logger } from './lib/logger'
 import { recordLogin } from './lib/record-login'
 import * as leadsService from './services/leads'
@@ -42,6 +43,7 @@ const SmartRH = lazy(() => import('./components/SmartRH'))
 const Remuneration = lazy(() => import('./components/Remuneration'))
 const ManagementView = lazy(() => import('./components/ManagementView'))
 const UcsStructures = lazy(() => import('./components/UcsStructures'))
+const AllocationsTypes = lazy(() => import('./components/AllocationsTypes'))
 const ClientsView = lazy(() => import('./components/clients/ClientsView'))
 const ClientView = lazy(() => import('./components/clients/ClientView'))
 // Conformite embarque jspdf : lazy pour rester hors du bundle de login.
@@ -84,7 +86,7 @@ import {
   getClientName,
   emptyDeal,
   normalizeDeal,
-  STATUTS_PRO, messageErreur } from './lib/ui-shared'
+  STATUTS_PRO, messageErreur, estProduitHonoraires, LIBELLE_MONTANT_HONORAIRES } from './lib/ui-shared'
 
 const EMPTY_OBJECTIFS = MONTHS.reduce((a,m)=>{a[m]={pp_target:0,pu_target:0};return a},{})
 const LEAD_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
@@ -960,7 +962,7 @@ async function genererFicheParrainage(profile){
 ───────────────────────────────────────────────────────────────────────────── */
 // Titres sans emoji (design-system.md règle 4) : les icônes SVG de la sidebar
 // portent déjà l'identité visuelle de chaque écran.
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers',team:'Équipe',leads:'Leads Live','ucs-structures':'UCS Produits Structurés',immobilier:'Immobilier Neuf',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH','recrutement':'Recrutement',conformite:'Conformité',editorial:'Agent éditorial',cockpit:'Cockpit ratios'}
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers',team:'Équipe',leads:'Leads Live','ucs-structures':'UCS Produits Structurés',allocations:'Allocations types',immobilier:'Immobilier Neuf',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH','recrutement':'Recrutement',conformite:'Conformité',editorial:'Agent éditorial',cockpit:'Cockpit ratios'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile,onHelp,notifications,notifScope}){
   return (
@@ -3014,36 +3016,6 @@ function RelanceModal({open,onClose,deals,defaultDate}){
 }
 
 
-const FUNDS_DEFAULT=[
-    // ─── Fonds historiques ──────────────────────────────────────────────
-    {name:'Lazard Japon AC H EUR',        isin:'FR0014008M81', cat:'Actions Japon',        refSymbol:'INDEX:NKY',        refLabel:'Nikkei 225', color:'#EF4444'},
-    {name:'AXA Or et Matières Premières', isin:'FR0010011171', cat:'Matières premières',   refSymbol:'TVC:GOLD',       refLabel:'Or',         color:'#F59E0B'},
-    {name:'AP Meeschaert Gl. Convictions',isin:'FR001400CSI0', cat:'Actions Monde Value',  refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',    color:'#10B981'},
-    {name:'Fidelity Em Mkts A-USD',       isin:'LU0261950470', morningstarId:'FOGBR05KLN', cat:'Actions Ém. Marchés',  refSymbol:'AMEX:EEM',       refLabel:'EEM ETF',    color:'#F97316'},
-    {name:'Fidelity Global Technology',   isin:'LU0099574567', morningstarId:'F0GBR04D20', cat:'Actions Technologie',  refSymbol:'NASDAQ:QQQ',       refLabel:'Nasdaq QQQ', color:'#7C3AED'},
-    {name:'Quadrige France Smallcaps',    isin:'FR0011466093', cat:'Actions France Small', refSymbol:'INDEX:CAC40',      refLabel:'CAC 40',     color:'#0EA5E9'},
-    {name:'Pictet Clean Energy Transtn',  isin:'LU0280435461', yahooTicker:'0P00008OBP.F', cat:'Énergie Propre',       refSymbol:'AMEX:ICLN',        refLabel:'ICLN ETF',   color:'#06B6D4'},
-    {name:'First Eagle Amundi Intl',      isin:'LU0068578508', yahooTicker:'0P0000RXYQ.F', cat:'Actions Monde Flex.',  refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',    color:'#84CC16'},
-    {name:'Groupama Global Disruption',   isin:'LU1897556517', cat:'Actions Innovation',   refSymbol:'NASDAQ:QQQ',       refLabel:'Nasdaq QQQ', color:'#EC4899'},
-    {name:'Claresco USA',                 isin:'LU1379103812', cat:'Actions USA',          refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',    color:'#6366F1'},
-    // ─── Fonds ajoutés 27/05 (contrats clients Louis) ───────────────────
-    // ISIN vérifiés + tickers Yahoo / IDs Morningstar ajoutés pour les
-    // fonds que Yahoo ne résout pas par ISIN seul (Carmignac LU, BGF,
-    // Pictet, Echiquier Agenor).
-    {name:'Carmignac Patrimoine A EUR',        isin:'FR0010135103', morningstarId:'F0GBR04F90', cat:'Allocation flexible',     refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',     color:'#14B8A6'},
-    {name:'CPR Actions USA Responsable P',     isin:'FR0010501858', cat:'Actions USA ISR',         refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',     color:'#8B5CF6'},
-    {name:'DNCA Alpha Bonds B EUR',            isin:'LU1694789535', cat:'Obligataire absolu',      refSymbol:'NASDAQ:AGG',       refLabel:'AGG ETF',     color:'#F43F5E'},
-    {name:'Echiquier Agenor SRI Mid Cap Eur',  isin:'FR0010321810', morningstarId:'F0GBR04VT4',    cat:'Actions Mid Cap Europe',  refSymbol:'INDEX:CAC40',      refLabel:'CAC 40',      color:'#22C55E'},
-    {name:'BDL Rempart C',                     isin:'FR0010174144', cat:'Actions Europe Long/Short',refSymbol:'INDEX:CAC40',     refLabel:'CAC 40',      color:'#3B82F6'},
-    {name:'Eurose C',                          isin:'FR0007051040', cat:'Allocation prudent',      refSymbol:'INDEX:CAC40',      refLabel:'CAC 40',      color:'#EAB308'},
-    {name:'Carmignac Pf Asia Discovery',       isin:'LU0336083810', yahooTicker:'0P0000RXYR.F',    cat:'Actions Asie',            refSymbol:'INDEX:HSI',        refLabel:'Hang Seng',   color:'#DC2626'},
-    {name:'BGF World Healthscience A2 H EUR',  isin:'LU1822774284', yahooTicker:'0P0001DIJB.F',    cat:'Actions Santé',           refSymbol:'AMEX:XLV',         refLabel:'XLV ETF',     color:'#0891B2'},
-    {name:'Pictet Security P EUR',             isin:'LU0270904781', morningstarId:'F0000000LF',    cat:'Actions Sécurité',        refSymbol:'NASDAQ:QQQ',       refLabel:'Nasdaq QQQ',  color:'#7E22CE'},
-    {name:'Echiquier Space B',                 isin:'LU2466448532', cat:'Actions Espace/Tech',     refSymbol:'NASDAQ:QQQ',       refLabel:'Nasdaq QQQ',  color:'#1D4ED8'},
-    {name:'BGF World Energy A2',               isin:'LU0252965963', morningstarId:'F0GBR04K8F',    cat:'Actions Énergie',         refSymbol:'AMEX:XLE',         refLabel:'XLE ETF',     color:'#B45309'},
-    {name:'Lazard Actions Emergentes R',       isin:'FR0010380675', cat:'Actions Émergents',       refSymbol:'AMEX:EEM',         refLabel:'EEM ETF',     color:'#DB2777'},
-    {name:'Pictet Water P EUR',                isin:'LU0104884860', morningstarId:'F0GBR04BC7',    cat:'Actions Eau',             refSymbol:'NASDAQ:PHO',       refLabel:'PHO ETF',     color:'#0EA5E9'},
-  ]
 
 const FUND_COLORS=['#EF4444','#F59E0B','#10B981','#F97316','#7C3AED','#0EA5E9','#06B6D4','#84CC16','#EC4899','#6366F1','#14B8A6','#8B5CF6','#F43F5E','#22C55E','#3B82F6']
 
@@ -4544,10 +4516,16 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                           onChange={e => setProductField(index, 'pp_m', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                           onFocus={e => e.target.select()}
                         />
-                        <div className="form-hint">→ PP annualisée : <strong>{euro(annualize(prod.pp_m))}</strong></div>
+                        <div className="form-hint">
+                          {estProduitHonoraires(prod.product)
+                            ? <>Suivi uniquement — <strong>la prime mensuelle n&apos;est pas commissionnée</strong>.</>
+                            : <>→ PP annualisée : <strong>{euro(annualize(prod.pp_m))}</strong></>}
+                        </div>
                       </div>
                       <div className="form-group">
-                        <label className="form-label">PU (€)</label>
+                        <label className="form-label">
+                          {LIBELLE_MONTANT_HONORAIRES[prod.product]?.champ ?? 'PU (€)'}
+                        </label>
                         <input
                           className="form-input"
                           type="number"
@@ -4556,6 +4534,12 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                           onChange={e => setProductField(index, 'pu', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                           onFocus={e => e.target.select()}
                         />
+                        {estProduitHonoraires(prod.product) && (
+                          <div className="form-hint">
+                            {LIBELLE_MONTANT_HONORAIRES[prod.product]?.aide}{' '}
+                            C&apos;est la seule base de rémunération du dossier.
+                          </div>
+                        )}
                       </div>
                       <div className="form-group">
                         <label className="form-label">Statut</label>
@@ -4581,10 +4565,16 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                   <div className="form-group"><label className="form-label">Compagnie</label><select className="form-select" value={deal.company||''} onChange={e=>set('company',e.target.value)}><option value="">— Choisir une compagnie —</option>{COMPANIES.map(c=><option key={c} value={c}>{c}</option>)}</select></div>
                 </div>
                 <div className="form-row form-row-3 mt-16">
-                  <div className="form-group"><label className="form-label">PP mensuelle (€)</label><input className="form-input" type="number" min="0" value={deal.pp_m === 0 ? '' : deal.pp_m} onChange={e=>set('pp_m', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()}/><div className="form-hint">→ PP annualisée : <strong>{euro(annualize(deal.pp_m))}</strong></div></div>
-                  <div className="form-group"><label className="form-label">{deal.product === 'Assurance de Prêt' ? 'Frais de dossier (€)' : 'PU (€)'}</label><input className="form-input" type="number" min="0" value={deal.pu === 0 ? '' : deal.pu} onChange={e=>set('pu', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()}/>{deal.product === 'Assurance de Prêt' && <div className="form-hint">Montant total des frais de dossier facturés au client</div>}</div>
+                  <div className="form-group"><label className="form-label">PP mensuelle (€)</label><input className="form-input" type="number" min="0" value={deal.pp_m === 0 ? '' : deal.pp_m} onChange={e=>set('pp_m', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()}/><div className="form-hint">{estProduitHonoraires(deal.product) ? <>Suivi uniquement — <strong>la prime mensuelle n&apos;est pas commissionnée</strong>.</> : <>→ PP annualisée : <strong>{euro(annualize(deal.pp_m))}</strong></>}</div></div>
+                  <div className="form-group"><label className="form-label">{LIBELLE_MONTANT_HONORAIRES[deal.product]?.champ ?? 'PU (€)'}</label><input className="form-input" type="number" min="0" value={deal.pu === 0 ? '' : deal.pu} onChange={e=>set('pu', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()}/>{estProduitHonoraires(deal.product) && <div className="form-hint">{LIBELLE_MONTANT_HONORAIRES[deal.product]?.aide} C&apos;est la seule base de rémunération du dossier.</div>}</div>
                   <div className="form-group"><label className="form-label">Statut</label><select className="form-select" value={deal.status} onChange={e=>set('status',e.target.value)}>{STATUS_OPTIONS.map(s=><option key={s} value={s}>{statusLabel(s)}</option>)}</select></div>
                 </div>
+                {/* L'ordre de placement n'a pas de sens en assurance emprunteur : il
+                    annule la commission sur l'assiette PU, donc ici la totalité des
+                    frais de dossier. On masque la case, sauf si un dossier l'a déjà
+                    cochée — auquel cas on l'affiche avec l'alerte, pour pouvoir la
+                    décocher plutôt que de laisser le drapeau bloqué. */}
+                {(!estProduitHonoraires(deal.product) || deal.is_ordre_placement) && (
                 <div className="form-group mt-16" style={{ background: 'var(--gold-subtle, #FBF6EC)', border: '1px solid var(--gold-line, rgba(201,169,97,0.30))', borderRadius: 'var(--rad)', padding: '10px 14px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', margin: 0 }}>
                     <input
@@ -4598,55 +4588,72 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                         Ordre de placement / replacement
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--t2)', marginTop: 1 }}>
-                        Le client transfère un contrat existant en gestion chez nous (versement unique uniquement) → <strong>la PU n'est pas commissionnée</strong>, mais la PP mensuelle reste commissionnée normalement.
+                        {estProduitHonoraires(deal.product) ? (
+                          <span style={{ color: 'var(--cancelled)' }}>
+                            À décocher : sur ce produit, cette case annule
+                            <strong> la totalité de la commission</strong> (le montant saisi
+                            est l&apos;unique base de rémunération).
+                          </span>
+                        ) : (
+                          <>Le client transfère un contrat existant en gestion chez nous (versement unique uniquement) → <strong>la PU n&apos;est pas commissionnée</strong>, mais la PP mensuelle reste commissionnée normalement.</>
+                        )}
                       </div>
                     </div>
                   </label>
                 </div>
-                <div className="form-row form-row-2 mt-16">
-                  <div className="form-group">
-                    <label className="form-label">Frais d'entrée PP (%)</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <input
-                        className="form-input"
-                        type="range"
-                        min="0"
-                        max="4"
-                        step="0.05"
-                        value={Number(deal.frais_entree_pp_pct ?? deal.frais_entree_pct ?? 1)}
-                        onChange={e => set('frais_entree_pp_pct', parseFloat(e.target.value))}
-                        style={{ flex: 1, accentColor: 'var(--gold)' }}
-                      />
-                      <div style={{ minWidth: 60, fontFamily: 'var(--font-mono, monospace)', fontWeight: 700, fontSize: 15, color: 'var(--t1)', textAlign: 'right' }}>
-                        {Number(deal.frais_entree_pp_pct ?? deal.frais_entree_pct ?? 1).toFixed(2)} %
+                )}
+                {estProduitHonoraires(deal.product) ? (
+                  <div className="form-hint mt-16" style={{ borderLeft: '2px solid var(--gold-line)', paddingLeft: 12 }}>
+                    Pas de frais d&apos;entrée sur ce produit : le montant est fixé librement,
+                    et rien n&apos;est prélevé sur une prime. La rémunération se calcule sur le
+                    montant saisi ci-dessus, partagé à parts égales avec le cabinet.
+                  </div>
+                ) : (
+                  <div className="form-row form-row-2 mt-16">
+                    <div className="form-group">
+                      <label className="form-label">Frais d'entrée PP (%)</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <input
+                          className="form-input"
+                          type="range"
+                          min="0"
+                          max="4"
+                          step="0.05"
+                          value={Number(deal.frais_entree_pp_pct ?? deal.frais_entree_pct ?? 1)}
+                          onChange={e => set('frais_entree_pp_pct', parseFloat(e.target.value))}
+                          style={{ flex: 1, accentColor: 'var(--gold)' }}
+                        />
+                        <div style={{ minWidth: 60, fontFamily: 'var(--font-mono, monospace)', fontWeight: 700, fontSize: 15, color: 'var(--t1)', textAlign: 'right' }}>
+                          {Number(deal.frais_entree_pp_pct ?? deal.frais_entree_pct ?? 1).toFixed(2)} %
+                        </div>
+                      </div>
+                      <div className="form-hint">
+                        Frais sur la PP mensuelle (0 à 4 %, défaut 1 %).
                       </div>
                     </div>
-                    <div className="form-hint">
-                      Frais sur la PP mensuelle (0 à 4 %, défaut 1 %).
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Frais d'entrée PU (%)</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <input
-                        className="form-input"
-                        type="range"
-                        min="0"
-                        max="4"
-                        step="0.05"
-                        value={Number(deal.frais_entree_pu_pct ?? deal.frais_entree_pct ?? 1)}
-                        onChange={e => set('frais_entree_pu_pct', parseFloat(e.target.value))}
-                        style={{ flex: 1, accentColor: 'var(--gold)' }}
-                      />
-                      <div style={{ minWidth: 60, fontFamily: 'var(--font-mono, monospace)', fontWeight: 700, fontSize: 15, color: 'var(--t1)', textAlign: 'right' }}>
-                        {Number(deal.frais_entree_pu_pct ?? deal.frais_entree_pct ?? 1).toFixed(2)} %
+                    <div className="form-group">
+                      <label className="form-label">Frais d'entrée PU (%)</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <input
+                          className="form-input"
+                          type="range"
+                          min="0"
+                          max="4"
+                          step="0.05"
+                          value={Number(deal.frais_entree_pu_pct ?? deal.frais_entree_pct ?? 1)}
+                          onChange={e => set('frais_entree_pu_pct', parseFloat(e.target.value))}
+                          style={{ flex: 1, accentColor: 'var(--gold)' }}
+                        />
+                        <div style={{ minWidth: 60, fontFamily: 'var(--font-mono, monospace)', fontWeight: 700, fontSize: 15, color: 'var(--t1)', textAlign: 'right' }}>
+                          {Number(deal.frais_entree_pu_pct ?? deal.frais_entree_pct ?? 1).toFixed(2)} %
+                        </div>
+                      </div>
+                      <div className="form-hint">
+                        Frais sur le versement unique (0 à 4 %, défaut 1 %).
                       </div>
                     </div>
-                    <div className="form-hint">
-                      Frais sur le versement unique (0 à 4 %, défaut 1 %).
-                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
             {/* Mode express : l'attribution du dossier reste visible même si
@@ -6064,6 +6071,7 @@ export default function App(){
           {activeTab==='market'&&<MarketView/>}
           {activeTab==='team'&&(isManager||isRhDelegue)&&<TeamView deals={deals} objectifs={objectifs} teamProfiles={teamProfiles} month={month} profile={profile}/>}
           {activeTab==='ucs-structures'&&<UcsStructures profile={profile} month={month}/>}
+          {activeTab==='allocations'&&<AllocationsTypes/>}
           {activeTab==='prospection'&&<ProspectionView prospects={prospects} profile={profile} teamProfiles={teamProfiles} onRefresh={fetchProspects} onProspectsChange={setProspects}/>}
           {activeTab==='immobilier'&&<ImmobilierNeuf profile={profile} teamProfiles={teamProfiles}/>}
           {activeTab==='linkedin-pro'&&<LinkedInPro profile={profile}/>}
