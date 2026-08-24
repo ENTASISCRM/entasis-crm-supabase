@@ -4516,10 +4516,16 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                           onChange={e => setProductField(index, 'pp_m', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                           onFocus={e => e.target.select()}
                         />
-                        <div className="form-hint">→ PP annualisée : <strong>{euro(annualize(prod.pp_m))}</strong></div>
+                        <div className="form-hint">
+                          {prod.product === 'Assurance de Prêt'
+                            ? <>Suivi uniquement — <strong>la prime mensuelle n&apos;est pas commissionnée</strong>.</>
+                            : <>→ PP annualisée : <strong>{euro(annualize(prod.pp_m))}</strong></>}
+                        </div>
                       </div>
                       <div className="form-group">
-                        <label className="form-label">PU (€)</label>
+                        <label className="form-label">
+                          {prod.product === 'Assurance de Prêt' ? 'Frais de dossier (€)' : 'PU (€)'}
+                        </label>
                         <input
                           className="form-input"
                           type="number"
@@ -4528,6 +4534,12 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                           onChange={e => setProductField(index, 'pu', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                           onFocus={e => e.target.select()}
                         />
+                        {prod.product === 'Assurance de Prêt' && (
+                          <div className="form-hint">
+                            Montant fixé par le cabinet et facturé au client. C&apos;est la seule
+                            base de rémunération du dossier.
+                          </div>
+                        )}
                       </div>
                       <div className="form-group">
                         <label className="form-label">Statut</label>
@@ -4553,10 +4565,16 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                   <div className="form-group"><label className="form-label">Compagnie</label><select className="form-select" value={deal.company||''} onChange={e=>set('company',e.target.value)}><option value="">— Choisir une compagnie —</option>{COMPANIES.map(c=><option key={c} value={c}>{c}</option>)}</select></div>
                 </div>
                 <div className="form-row form-row-3 mt-16">
-                  <div className="form-group"><label className="form-label">PP mensuelle (€)</label><input className="form-input" type="number" min="0" value={deal.pp_m === 0 ? '' : deal.pp_m} onChange={e=>set('pp_m', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()}/><div className="form-hint">→ PP annualisée : <strong>{euro(annualize(deal.pp_m))}</strong></div></div>
-                  <div className="form-group"><label className="form-label">{deal.product === 'Assurance de Prêt' ? 'Frais de dossier (€)' : 'PU (€)'}</label><input className="form-input" type="number" min="0" value={deal.pu === 0 ? '' : deal.pu} onChange={e=>set('pu', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()}/>{deal.product === 'Assurance de Prêt' && <div className="form-hint">Montant total des frais de dossier facturés au client</div>}</div>
+                  <div className="form-group"><label className="form-label">PP mensuelle (€)</label><input className="form-input" type="number" min="0" value={deal.pp_m === 0 ? '' : deal.pp_m} onChange={e=>set('pp_m', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()}/><div className="form-hint">{deal.product === 'Assurance de Prêt' ? <>Suivi uniquement — <strong>la prime mensuelle n&apos;est pas commissionnée</strong>.</> : <>→ PP annualisée : <strong>{euro(annualize(deal.pp_m))}</strong></>}</div></div>
+                  <div className="form-group"><label className="form-label">{deal.product === 'Assurance de Prêt' ? 'Frais de dossier (€)' : 'PU (€)'}</label><input className="form-input" type="number" min="0" value={deal.pu === 0 ? '' : deal.pu} onChange={e=>set('pu', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()}/>{deal.product === 'Assurance de Prêt' && <div className="form-hint">Montant fixé par le cabinet et facturé au client. C&apos;est la seule base de rémunération du dossier.</div>}</div>
                   <div className="form-group"><label className="form-label">Statut</label><select className="form-select" value={deal.status} onChange={e=>set('status',e.target.value)}>{STATUS_OPTIONS.map(s=><option key={s} value={s}>{statusLabel(s)}</option>)}</select></div>
                 </div>
+                {/* L'ordre de placement n'a pas de sens en assurance emprunteur : il
+                    annule la commission sur l'assiette PU, donc ici la totalité des
+                    frais de dossier. On masque la case, sauf si un dossier l'a déjà
+                    cochée — auquel cas on l'affiche avec l'alerte, pour pouvoir la
+                    décocher plutôt que de laisser le drapeau bloqué. */}
+                {(deal.product !== 'Assurance de Prêt' || deal.is_ordre_placement) && (
                 <div className="form-group mt-16" style={{ background: 'var(--gold-subtle, #FBF6EC)', border: '1px solid var(--gold-line, rgba(201,169,97,0.30))', borderRadius: 'var(--rad)', padding: '10px 14px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', margin: 0 }}>
                     <input
@@ -4570,55 +4588,72 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                         Ordre de placement / replacement
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--t2)', marginTop: 1 }}>
-                        Le client transfère un contrat existant en gestion chez nous (versement unique uniquement) → <strong>la PU n'est pas commissionnée</strong>, mais la PP mensuelle reste commissionnée normalement.
+                        {deal.product === 'Assurance de Prêt' ? (
+                          <span style={{ color: 'var(--cancelled)' }}>
+                            À décocher : sur une assurance emprunteur, cette case annule
+                            <strong> la totalité de la commission</strong> (les frais de dossier
+                            sont l&apos;unique base de rémunération).
+                          </span>
+                        ) : (
+                          <>Le client transfère un contrat existant en gestion chez nous (versement unique uniquement) → <strong>la PU n&apos;est pas commissionnée</strong>, mais la PP mensuelle reste commissionnée normalement.</>
+                        )}
                       </div>
                     </div>
                   </label>
                 </div>
-                <div className="form-row form-row-2 mt-16">
-                  <div className="form-group">
-                    <label className="form-label">Frais d'entrée PP (%)</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <input
-                        className="form-input"
-                        type="range"
-                        min="0"
-                        max="4"
-                        step="0.05"
-                        value={Number(deal.frais_entree_pp_pct ?? deal.frais_entree_pct ?? 1)}
-                        onChange={e => set('frais_entree_pp_pct', parseFloat(e.target.value))}
-                        style={{ flex: 1, accentColor: 'var(--gold)' }}
-                      />
-                      <div style={{ minWidth: 60, fontFamily: 'var(--font-mono, monospace)', fontWeight: 700, fontSize: 15, color: 'var(--t1)', textAlign: 'right' }}>
-                        {Number(deal.frais_entree_pp_pct ?? deal.frais_entree_pct ?? 1).toFixed(2)} %
+                )}
+                {deal.product === 'Assurance de Prêt' ? (
+                  <div className="form-hint mt-16" style={{ borderLeft: '2px solid var(--gold-line)', paddingLeft: 12 }}>
+                    Pas de frais d&apos;entrée en assurance emprunteur : les frais de dossier
+                    sont fixés librement par le cabinet, et rien n&apos;est prélevé sur la prime
+                    mensuelle. La rémunération se calcule sur le montant saisi ci-dessus.
+                  </div>
+                ) : (
+                  <div className="form-row form-row-2 mt-16">
+                    <div className="form-group">
+                      <label className="form-label">Frais d'entrée PP (%)</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <input
+                          className="form-input"
+                          type="range"
+                          min="0"
+                          max="4"
+                          step="0.05"
+                          value={Number(deal.frais_entree_pp_pct ?? deal.frais_entree_pct ?? 1)}
+                          onChange={e => set('frais_entree_pp_pct', parseFloat(e.target.value))}
+                          style={{ flex: 1, accentColor: 'var(--gold)' }}
+                        />
+                        <div style={{ minWidth: 60, fontFamily: 'var(--font-mono, monospace)', fontWeight: 700, fontSize: 15, color: 'var(--t1)', textAlign: 'right' }}>
+                          {Number(deal.frais_entree_pp_pct ?? deal.frais_entree_pct ?? 1).toFixed(2)} %
+                        </div>
+                      </div>
+                      <div className="form-hint">
+                        Frais sur la PP mensuelle (0 à 4 %, défaut 1 %).
                       </div>
                     </div>
-                    <div className="form-hint">
-                      Frais sur la PP mensuelle (0 à 4 %, défaut 1 %).
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Frais d'entrée PU (%)</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <input
-                        className="form-input"
-                        type="range"
-                        min="0"
-                        max="4"
-                        step="0.05"
-                        value={Number(deal.frais_entree_pu_pct ?? deal.frais_entree_pct ?? 1)}
-                        onChange={e => set('frais_entree_pu_pct', parseFloat(e.target.value))}
-                        style={{ flex: 1, accentColor: 'var(--gold)' }}
-                      />
-                      <div style={{ minWidth: 60, fontFamily: 'var(--font-mono, monospace)', fontWeight: 700, fontSize: 15, color: 'var(--t1)', textAlign: 'right' }}>
-                        {Number(deal.frais_entree_pu_pct ?? deal.frais_entree_pct ?? 1).toFixed(2)} %
+                    <div className="form-group">
+                      <label className="form-label">Frais d'entrée PU (%)</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <input
+                          className="form-input"
+                          type="range"
+                          min="0"
+                          max="4"
+                          step="0.05"
+                          value={Number(deal.frais_entree_pu_pct ?? deal.frais_entree_pct ?? 1)}
+                          onChange={e => set('frais_entree_pu_pct', parseFloat(e.target.value))}
+                          style={{ flex: 1, accentColor: 'var(--gold)' }}
+                        />
+                        <div style={{ minWidth: 60, fontFamily: 'var(--font-mono, monospace)', fontWeight: 700, fontSize: 15, color: 'var(--t1)', textAlign: 'right' }}>
+                          {Number(deal.frais_entree_pu_pct ?? deal.frais_entree_pct ?? 1).toFixed(2)} %
+                        </div>
+                      </div>
+                      <div className="form-hint">
+                        Frais sur le versement unique (0 à 4 %, défaut 1 %).
                       </div>
                     </div>
-                    <div className="form-hint">
-                      Frais sur le versement unique (0 à 4 %, défaut 1 %).
-                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
             {/* Mode express : l'attribution du dossier reste visible même si
