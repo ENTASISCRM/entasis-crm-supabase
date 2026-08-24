@@ -34,16 +34,35 @@ export const FUNDS_DEFAULT = [
     {name:'Echiquier Space B',                 isin:'LU2466448532', cat:'Actions Espace/Tech',     refSymbol:'NASDAQ:QQQ',       refLabel:'Nasdaq QQQ',  color:'#1D4ED8'},
     {name:'BGF World Energy A2',               isin:'LU0252965963', morningstarId:'F0GBR04K8F',    cat:'Actions Énergie',         refSymbol:'AMEX:XLE',         refLabel:'XLE ETF',     color:'#B45309'},
     {name:'Lazard Actions Emergentes R',       isin:'FR0010380675', cat:'Actions Émergents',       refSymbol:'AMEX:EEM',         refLabel:'EEM ETF',     color:'#DB2777'},
-    {name:'Pictet Water P EUR',                isin:'LU0104884860', morningstarId:'F0GBR04BC7',    cat:'Actions Eau',             refSymbol:'NASDAQ:PHO',       refLabel:'PHO ETF',     color:'#0EA5E9'},
-    // ─── Fonds ajoutés 24/08 (fonds cités dans nos allocations) ─────────
-    // Robeco Smart Energy : 12 % de la proposition PER SwissLife du 04/06.
-    //   Classe D-EUR Cap, ISIN LU2145461757 (source : robeco.com).
-    // Eleva Absolute Return Europe : validé côté Abeille par Sébastien Pesce
-    //   le 30/07 (SRI 2, catégorie 3, donc commissionné). Classe R (EUR) acc,
-    //   ISIN LU1331973468 (source : elevacapital.com). Vérifier que c'est bien
-    //   la classe référencée au contrat Abeille avant de la proposer.
+    {name:'Pictet Water P EUR',                isin:'LU0104884860', morningstarId:'F0GBR04BC7',    cat:'Actions Eau',             refSymbol:'NASDAQ:PHO',       refLabel:'PHO ETF',     color:'#0284C7'},
+    // ─── Fonds ajoutés 24/08 · proposition PER SwissLife du 04/06 ───────
+    // Robeco Smart Energy : 12 % de l'allocation. Classe D-EUR Cap,
+    // ISIN LU2145461757 (source : robeco.com).
     {name:'Robeco Smart Energy D-EUR Cap',     isin:'LU2145461757', yahooTicker:'0P0001KWJF.F',    cat:'Énergie Propre',          refSymbol:'AMEX:ICLN',        refLabel:'ICLN ETF',    color:'#65A30D'},
-    {name:'Eleva Absolute Return Europe R',    isin:'LU1331973468', cat:'Performance absolue',     refSymbol:'INDEX:CAC40',      refLabel:'CAC 40',      color:'#64748B'},
+
+    // ─── Fonds ajoutés 24/08 · les deux allocations Abeille ─────────────
+    // Les cinq premiers viennent du pôle prudent (stratégie Blanc · Cavalaire),
+    // dont le PDF ne portait aucun ISIN : chacun a été vérifié chez l'émetteur.
+    // Les sept suivants viennent du pôle dynamique (proposition Salem), dont
+    // le PDF fournissait les ISIN.
+    //
+    // Eleva : la part retenue est la A1, celle du contrat Abeille. La part R
+    // (LU1331973468) que j'avais saisie d'abord ne sert sur aucun contrat ;
+    // SwissLife utilise la A2 (LU1920211973), à ajouter le jour où l'on
+    // encodera l'allocation SwissLife 70/30 du même document.
+    {name:'Eleva Absolute Return Europe A1',   isin:'LU1331971769', cat:'Performance absolue',     refSymbol:'INDEX:CAC40',      refLabel:'CAC 40',      color:'#64748B'},
+    {name:'Moneta Long Short A',               isin:'FR0010400762', cat:'Actions Europe Long/Short',refSymbol:'INDEX:CAC40',     refLabel:'CAC 40',      color:'#A21CAF'},
+    {name:'Helium Selection B',                isin:'LU1112771503', cat:'Performance absolue',     refSymbol:'INDEX:CAC40',      refLabel:'CAC 40',      color:'#0D9488'},
+    {name:'Varenne Valeur A',                  isin:'LU2358392376', cat:'Multi-stratégies',        refSymbol:'INDEX:CAC40',      refLabel:'CAC 40',      color:'#C2410C'},
+    {name:'Carmignac Invest. Latitude A',      isin:'FR0010147603', cat:'Actions Monde Flex.',     refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',     color:'#4338CA'},
+    {name:'Robeco BP US Large Cap D-EUR',      isin:'LU0474363974', cat:'Actions USA',             refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',     color:'#BE123C'},
+    {name:'Comgest Monde C',                   isin:'FR0000284689', cat:'Actions Monde Croissance',refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',     color:'#15803D'},
+    {name:'CPR Global Disruptive Opp. A',      isin:'FR0010836163', cat:'Actions Innovation',      refSymbol:'NASDAQ:QQQ',       refLabel:'Nasdaq QQQ',  color:'#1E40AF'},
+    {name:'DWS Invest AI LC',                  isin:'LU1863263346', cat:'Actions IA',              refSymbol:'NASDAQ:QQQ',       refLabel:'Nasdaq QQQ',  color:'#5B21B6'},
+    {name:'Ofi Energy Strategic Metals R',     isin:'FR0014008NN3', cat:'Métaux stratégiques',     refSymbol:'AMEX:ICLN',        refLabel:'ICLN ETF',    color:'#A16207'},
+    {name:'DNCA Actions Euro PME R',           isin:'FR0011891506', cat:'Actions Europe Small',    refSymbol:'INDEX:CAC40',      refLabel:'CAC 40',      color:'#047857'},
+    {name:'abrdn Japanese Sust. Eq. S Hgd',    isin:'LU0505784883', cat:'Actions Japon',           refSymbol:'INDEX:NKY',        refLabel:'Nikkei 225',  color:'#9F1239'},
+    {name:'Amundi Actions Or P-C',             isin:'FR0012336683', cat:'Or et mines',             refSymbol:'TVC:GOLD',         refLabel:'Or',          color:'#7C2D12'},
   ]
 
 // Index par ISIN, pour rattacher une ligne d'allocation à son fonds.
