@@ -4,6 +4,7 @@ import { isSupabaseConfigured, supabase } from './lib/supabase'
 import { FUNDS_DEFAULT } from './config/fonds'
 import { logger } from './lib/logger'
 import { alertesContrats } from './lib/alertes-contrats'
+import { insererDeal, majDeal, retirerDeal, completerDeal } from './lib/deals-realtime'
 import { recordLogin } from './lib/record-login'
 import * as leadsService from './services/leads'
 import * as dealsService from './services/deals'
@@ -5456,25 +5457,27 @@ export default function App(){
     const dealsChannel=supabase.channel('deals-realtime')
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'deals'},payload=>{
         const fresh=payload.new
-        setDeals(prev=>prev.some(d=>d.id===fresh.id)?prev:[...prev,fresh])
+        // En tete : listAll() trie par created_at decroissant et l'annuaire
+        // affiche le tableau dans son ordre. Ajoute en queue, un dossier tout
+        // juste signe s'affichait tout en bas, a la place du plus ancien.
+        setDeals(prev=>insererDeal(prev,fresh))
         // Le payload Realtime ne porte pas la jointure clients(...) chargee
         // partout ailleurs : fetch cible de ce seul deal pour completer la
         // ligne, sinon la fiche reste sans donnees client jusqu au prochain
         // rechargement complet.
         dealsService.getById(fresh.id).then(full=>{
-          if(full)setDeals(prev=>prev.map(d=>d.id===full.id?full:d))
+          if(full)setDeals(prev=>completerDeal(prev,full))
         })
       })
       .on('postgres_changes',{event:'UPDATE',schema:'public',table:'deals'},payload=>{
         const fresh=payload.new
-        setDeals(prev=>prev.map(d=>d.id===fresh.id?{...d,...fresh}:d))
+        setDeals(prev=>majDeal(prev,fresh))
         if(fresh.status==='Signé'&&payload.old?.status!=='Signé'){
           toast.success(`Deal signé, ${fresh.client||fresh.id} (${fresh.advisor_code})`,{duration:5000})
         }
       })
       .on('postgres_changes',{event:'DELETE',schema:'public',table:'deals'},payload=>{
-        const oldId=payload.old?.id
-        if(oldId)setDeals(prev=>prev.filter(d=>d.id!==oldId))
+        setDeals(prev=>retirerDeal(prev,payload.old?.id))
       })
       .subscribe()
 
