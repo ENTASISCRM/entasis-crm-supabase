@@ -1170,15 +1170,30 @@ function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose,
     return profiles.filter(p => p.is_active && !lies.has(p.id))
   }, [profiles, contratsExistants, contrat.id])
 
-  // Nom du profil lié quand il diffère de celui du contrat : c'est exactement
-  // la situation qui a rendu l'écrasement invisible pendant trois semaines.
+  // Nom du profil lié quand il désigne quelqu'un d'autre que le contrat :
+  // c'est ce qui a rendu l'écrasement de la fiche de Jean invisible.
+  //
+  // La comparaison ne peut pas être une égalité stricte : en base, la moitié
+  // des fiches abrègent ou écorchent le nom du profil (« Arthur » pour Arthur
+  // Follezou Gicquiaud, « Victor OSCHENSEI » pour Victor Ochsenbein). Alerter
+  // dessus rendrait le signal inutile. On ne parle donc de discordance que
+  // lorsque les deux noms n'ont AUCUN mot en commun — Charlotte Billard face
+  // à Jean Decamps, oui ; Nans MARRO-DUZAT face à Nans Marro-Dauzat, non.
   const profilDiscordant = useMemo(() => {
     if (!form.profile_id) return null
     const p = profiles.find(x => x.id === form.profile_id)
     const nomProfil = (p?.full_name || '').trim()
     const nomContrat = (form.full_name || '').trim()
     if (!nomProfil || !nomContrat) return null
-    return nomProfil.toLowerCase() === nomContrat.toLowerCase() ? null : nomProfil
+    const mots = (n) => new Set(
+      n.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase().split(/[^a-z0-9]+/).filter(m => m.length > 2),
+    )
+    const a = mots(nomProfil)
+    const b = mots(nomContrat)
+    if (!a.size || !b.size) return null
+    const enCommun = [...a].some(m => b.has(m))
+    return enCommun ? null : nomProfil
   }, [form.profile_id, form.full_name, profiles])
 
   const handleSubmit = async (e) => {
