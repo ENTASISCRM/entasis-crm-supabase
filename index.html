@@ -16,7 +16,18 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!-- Chargement non bloquant : une <link rel="stylesheet"> classique retarde
+         le premier pixel du temps d'aller-retour vers Google. Ici la feuille est
+         recuperee comme une feuille d'impression (donc sans bloquer le rendu),
+         puis basculee sur tous les media une fois arrivee. display=swap fait le
+         reste : le texte s'affiche immediatement avec la police systeme, puis
+         bascule sur Inter Tight. <noscript> couvre le cas sans JavaScript. -->
+    <link rel="stylesheet" media="print" onload="this.media='all';this.onload=null"
+          href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" />
+    <noscript>
+      <link rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap" />
+    </noscript>
   </head>
   <body>
     <div id="root"></div>

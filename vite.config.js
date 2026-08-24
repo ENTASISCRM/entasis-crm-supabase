@@ -22,6 +22,13 @@ export default defineConfig({
           if (id.includes('jspdf') || id.includes('html2canvas')) return 'pdf'
           if (id.includes('chart.js') || id.includes('react-chartjs')) return 'charts'
           if (id.includes('@dnd-kit') || id.includes('react-dnd') || id.includes('react-beautiful')) return 'dnd'
+          // jszip et marked tombaient dans 'vendor', qui est charge d'emblee,
+          // alors que le premier est deja en import() dynamique (PilotageRH) et
+          // le second ne sert qu'a l'ecran Editorial, lui-meme lazy. Sans regle
+          // explicite, 'vendor' sert de fourre-tout et embarque tout ce qui n'a
+          // pas de chunk : c'est ce qui les rendait eager.
+          if (id.includes('jszip')) return 'jszip'
+          if (id.includes('marked')) return 'marked'
           return 'vendor'
         },
       },

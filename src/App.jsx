@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef, lazy, Suspense } from 'react'
+import React, { useEffect, useMemo, useState, useRef, useCallback, lazy, Suspense } from 'react'
 import { Toaster, toast } from 'react-hot-toast'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import { FUNDS_DEFAULT } from './config/fonds'
@@ -3067,21 +3067,37 @@ function MarketView(){
     }catch{return null}
   }
 
-  async function loadAllNAV(){
+  // Un seul aller-retour pour tout le tableau. Avant, c'etait un appel
+  // /api/nav par fonds — 25 requetes, puis 37 apres l'ajout des supports
+  // Abeille, chacune repayant le TLS et la verification du jeton. Le serveur
+  // interroge desormais Yahoo et Morningstar en parallele (cf. api/nav-batch).
+  const loadAllNAV=useCallback(async()=>{
     setLoading(true)
-    const results=await Promise.all(funds.map(f=>fetchNAV(f.isin, f.yahooTicker, f.morningstarId)))
-    const map={}
-    results.forEach((d,i)=>{if(d&&d.vl)map[funds[i].isin]=d})
-    setNavData(map)
-    setLastUpdate(new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}))
+    try{
+      const { data:{ session } }=await supabase.auth.getSession()
+      if(!session){setLoading(false);return}
+      const r=await fetch('/api/nav-batch',{
+        method:'POST',
+        headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},
+        body:JSON.stringify({fonds:funds.map(f=>({isin:f.isin,ticker:f.yahooTicker,msId:f.morningstarId}))}),
+      })
+      if(!r.ok){logger.error('nav-batch',r.status);setLoading(false);return}
+      const { resultats }=await r.json()
+      const map={}
+      for(const f of funds){const d=resultats?.[f.isin];if(d&&d.vl)map[f.isin]=d}
+      setNavData(map)
+      setLastUpdate(new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}))
+    }catch(e){logger.error('nav-batch',e)}
     setLoading(false)
-  }
+  },[funds])
 
+  // funds change quand on ajoute un fonds : la dependance evite la closure
+  // perimee qui rechargeait l'ancienne liste.
   useEffect(()=>{
     loadAllNAV()
     const t=setInterval(loadAllNAV,4*60*60*1000)
     return()=>clearInterval(t)
-  },[])
+  },[loadAllNAV])
 
   useEffect(()=>{
     if(!selectedFund)return
