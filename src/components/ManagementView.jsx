@@ -35,7 +35,7 @@ import { confirmDialog } from './ui/confirm'
 import SubTabs from './ui/SubTabs'
 import { Skeleton, SkeletonText } from './ui/Skeleton'
 import SortableTh from './ui/SortableTh'
-import { leadroomAdmin } from '../lib/leadroom-api'
+import { leadroomAdmin, lireJson } from '../lib/leadroom-api'
 import {
   advisorMetrics,
   MONTHS,
@@ -1940,8 +1940,7 @@ function RecyclageRefusesSection() {
       const params = new URLSearchParams({ minDays: String(minDays) })
       if (campaignFilter) params.set('campaign', campaignFilter)
       const r = await leadroomAdmin(`refused-recyclables?${params}`)
-      const json = await r.json()
-      if (r.ok) setData(json)
+      setData(await lireJson(r))
     } catch (e) {
       console.error(e)
     } finally {
@@ -1973,8 +1972,7 @@ function RecyclageRefusesSection() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ leadIds: Array.from(selectedIds), action }),
       })
-      const json = await r.json()
-      if (!r.ok) throw new Error(json.error || 'échec')
+      const json = await lireJson(r)
       const did = action === 'recontact' ? json.recycled : json.archived
       toast.success(`${did} lead(s) ${action === 'recontact' ? 'remis dans le pool' : 'archivés'}.`)
       refresh()
@@ -2124,9 +2122,8 @@ function RdvBucketDrilldownModal({ bucket, onClose }) {
     setLoading(true)
     try {
       const r = await leadroomAdmin(`rdv-bucket-detail?bucket=${bucket}`)
-      const json = await r.json()
-      if (r.ok) setLeads(json.leads || [])
-      else setError(json.error || 'erreur')
+      setLeads((await lireJson(r)).leads || [])
+      setError(null)
     } catch (e) {
       setError(messageErreur(e))
     } finally { setLoading(false) }
@@ -2173,8 +2170,7 @@ function RdvBucketDrilldownModal({ bucket, onClose }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ leadId, action, callbackAtIso }),
       })
-      const json = await r.json()
-      if (!r.ok) throw new Error(json.error || 'échec action')
+      await lireJson(r)
       // Retire localement les leads qui sortent du bucket
       if (action === 'sign' || action === 'lose') {
         setLeads(prev => prev.filter(l => l.id !== leadId))

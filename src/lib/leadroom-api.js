@@ -25,3 +25,26 @@ export async function leadroomAdmin(pathAndQuery, options = {}) {
     },
   })
 }
+
+/**
+ * Lit la réponse du proxy en JSON, sans jamais lever de SyntaxError.
+ *
+ * Trois écrans faisaient `await r.json()` AVANT de tester `r.ok` : dès que le
+ * proxy renvoyait autre chose que du JSON — page d'erreur Vercel, 502, délai
+ * de passerelle — le parse explosait et l'écran cassait, au lieu que la garde
+ * `if (r.ok)` fasse son travail. On lit le texte d'abord, on tente le parse,
+ * et on lève une erreur lisible que l'appelant peut afficher.
+ */
+export async function lireJson(reponse) {
+  const texte = await reponse.text()
+  let json = null
+  try { json = texte ? JSON.parse(texte) : null } catch { /* réponse non JSON */ }
+
+  if (!reponse.ok) {
+    throw new Error(json?.error || `Lead Room indisponible (HTTP ${reponse.status})`)
+  }
+  if (json === null) {
+    throw new Error('Réponse inattendue de la Lead Room')
+  }
+  return json
+}
