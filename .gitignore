@@ -35,3 +35,9 @@ data/*.csv
 data/*.xlsx
 data/*.xls
 .env*
+
+# Artefact de build : scripts/build-version.mjs le reecrit a chaque
+# `npm run build`, y compris sur Vercel (le script precede vite build dans le
+# script npm). Sa valeur commitee n'etait donc jamais servie, mais elle
+# salissait l'arbre de travail a chaque build local.
+public/version.json
