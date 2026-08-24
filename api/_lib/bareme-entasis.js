@@ -104,6 +104,16 @@ export const BAREME_PRODUITS = {
     cdi: () => 50.0, mandataire: () => 50.0,
   },
 
+  // Bilan patrimonial : prestation de conseil facturée au client. Le conseiller
+  // fixe librement ses honoraires, et le cabinet en prend la moitié
+  // (Louis 24/08/2026). Même mécanique que l assurance de prêt : le montant se
+  // saisit dans le champ PU, il est l assiette entière, et rien n est prélevé
+  // ailleurs. Hors palier : commission dès le premier euro.
+  bilan_patrimonial: {
+    libelle: 'Bilan Patrimonial', categorie: 'conseil', assiette: 'pu', horsPalier: true,
+    cdi: () => 50.0, mandataire: () => 50.0,
+  },
+
   // PU (Prime Unique) — palier PU séparé
   // Louis 27/05 (révision après calcul à la main) :
   //   • Mandataire (pour valeur cabinet / remboursement salaire) : frais/2

@@ -52,6 +52,11 @@ export function mapProduitDeal(deal) {
     return 'assurance_pret'
   }
 
+  // Bilan patrimonial : honoraires de conseil, partagés 50/50 avec Entasis.
+  if (produit.includes('bilan patrimonial') || produit.includes('bilan')) {
+    return 'bilan_patrimonial'
+  }
+
   // Assurance Vie, et contrat de capitalisation payé comme une assurance vie
   // (Louis 24/07/2026)
   if (produit.includes('assurance vie') || produit === 'av' || produit.includes('capitalisation')) {

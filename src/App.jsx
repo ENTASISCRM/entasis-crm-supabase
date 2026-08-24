@@ -86,7 +86,7 @@ import {
   getClientName,
   emptyDeal,
   normalizeDeal,
-  STATUTS_PRO, messageErreur } from './lib/ui-shared'
+  STATUTS_PRO, messageErreur, estProduitHonoraires, LIBELLE_MONTANT_HONORAIRES } from './lib/ui-shared'
 
 const EMPTY_OBJECTIFS = MONTHS.reduce((a,m)=>{a[m]={pp_target:0,pu_target:0};return a},{})
 const LEAD_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
@@ -4517,14 +4517,14 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                           onFocus={e => e.target.select()}
                         />
                         <div className="form-hint">
-                          {prod.product === 'Assurance de Prêt'
+                          {estProduitHonoraires(prod.product)
                             ? <>Suivi uniquement — <strong>la prime mensuelle n&apos;est pas commissionnée</strong>.</>
                             : <>→ PP annualisée : <strong>{euro(annualize(prod.pp_m))}</strong></>}
                         </div>
                       </div>
                       <div className="form-group">
                         <label className="form-label">
-                          {prod.product === 'Assurance de Prêt' ? 'Frais de dossier (€)' : 'PU (€)'}
+                          {LIBELLE_MONTANT_HONORAIRES[prod.product]?.champ ?? 'PU (€)'}
                         </label>
                         <input
                           className="form-input"
@@ -4534,10 +4534,10 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                           onChange={e => setProductField(index, 'pu', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                           onFocus={e => e.target.select()}
                         />
-                        {prod.product === 'Assurance de Prêt' && (
+                        {estProduitHonoraires(prod.product) && (
                           <div className="form-hint">
-                            Montant fixé par le cabinet et facturé au client. C&apos;est la seule
-                            base de rémunération du dossier.
+                            {LIBELLE_MONTANT_HONORAIRES[prod.product]?.aide}{' '}
+                            C&apos;est la seule base de rémunération du dossier.
                           </div>
                         )}
                       </div>
@@ -4565,8 +4565,8 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                   <div className="form-group"><label className="form-label">Compagnie</label><select className="form-select" value={deal.company||''} onChange={e=>set('company',e.target.value)}><option value="">— Choisir une compagnie —</option>{COMPANIES.map(c=><option key={c} value={c}>{c}</option>)}</select></div>
                 </div>
                 <div className="form-row form-row-3 mt-16">
-                  <div className="form-group"><label className="form-label">PP mensuelle (€)</label><input className="form-input" type="number" min="0" value={deal.pp_m === 0 ? '' : deal.pp_m} onChange={e=>set('pp_m', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()}/><div className="form-hint">{deal.product === 'Assurance de Prêt' ? <>Suivi uniquement — <strong>la prime mensuelle n&apos;est pas commissionnée</strong>.</> : <>→ PP annualisée : <strong>{euro(annualize(deal.pp_m))}</strong></>}</div></div>
-                  <div className="form-group"><label className="form-label">{deal.product === 'Assurance de Prêt' ? 'Frais de dossier (€)' : 'PU (€)'}</label><input className="form-input" type="number" min="0" value={deal.pu === 0 ? '' : deal.pu} onChange={e=>set('pu', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()}/>{deal.product === 'Assurance de Prêt' && <div className="form-hint">Montant fixé par le cabinet et facturé au client. C&apos;est la seule base de rémunération du dossier.</div>}</div>
+                  <div className="form-group"><label className="form-label">PP mensuelle (€)</label><input className="form-input" type="number" min="0" value={deal.pp_m === 0 ? '' : deal.pp_m} onChange={e=>set('pp_m', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()}/><div className="form-hint">{estProduitHonoraires(deal.product) ? <>Suivi uniquement — <strong>la prime mensuelle n&apos;est pas commissionnée</strong>.</> : <>→ PP annualisée : <strong>{euro(annualize(deal.pp_m))}</strong></>}</div></div>
+                  <div className="form-group"><label className="form-label">{LIBELLE_MONTANT_HONORAIRES[deal.product]?.champ ?? 'PU (€)'}</label><input className="form-input" type="number" min="0" value={deal.pu === 0 ? '' : deal.pu} onChange={e=>set('pu', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()}/>{estProduitHonoraires(deal.product) && <div className="form-hint">{LIBELLE_MONTANT_HONORAIRES[deal.product]?.aide} C&apos;est la seule base de rémunération du dossier.</div>}</div>
                   <div className="form-group"><label className="form-label">Statut</label><select className="form-select" value={deal.status} onChange={e=>set('status',e.target.value)}>{STATUS_OPTIONS.map(s=><option key={s} value={s}>{statusLabel(s)}</option>)}</select></div>
                 </div>
                 {/* L'ordre de placement n'a pas de sens en assurance emprunteur : il
@@ -4574,7 +4574,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                     frais de dossier. On masque la case, sauf si un dossier l'a déjà
                     cochée — auquel cas on l'affiche avec l'alerte, pour pouvoir la
                     décocher plutôt que de laisser le drapeau bloqué. */}
-                {(deal.product !== 'Assurance de Prêt' || deal.is_ordre_placement) && (
+                {(!estProduitHonoraires(deal.product) || deal.is_ordre_placement) && (
                 <div className="form-group mt-16" style={{ background: 'var(--gold-subtle, #FBF6EC)', border: '1px solid var(--gold-line, rgba(201,169,97,0.30))', borderRadius: 'var(--rad)', padding: '10px 14px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', margin: 0 }}>
                     <input
@@ -4588,11 +4588,11 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                         Ordre de placement / replacement
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--t2)', marginTop: 1 }}>
-                        {deal.product === 'Assurance de Prêt' ? (
+                        {estProduitHonoraires(deal.product) ? (
                           <span style={{ color: 'var(--cancelled)' }}>
-                            À décocher : sur une assurance emprunteur, cette case annule
-                            <strong> la totalité de la commission</strong> (les frais de dossier
-                            sont l&apos;unique base de rémunération).
+                            À décocher : sur ce produit, cette case annule
+                            <strong> la totalité de la commission</strong> (le montant saisi
+                            est l&apos;unique base de rémunération).
                           </span>
                         ) : (
                           <>Le client transfère un contrat existant en gestion chez nous (versement unique uniquement) → <strong>la PU n&apos;est pas commissionnée</strong>, mais la PP mensuelle reste commissionnée normalement.</>
@@ -4602,11 +4602,11 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                   </label>
                 </div>
                 )}
-                {deal.product === 'Assurance de Prêt' ? (
+                {estProduitHonoraires(deal.product) ? (
                   <div className="form-hint mt-16" style={{ borderLeft: '2px solid var(--gold-line)', paddingLeft: 12 }}>
-                    Pas de frais d&apos;entrée en assurance emprunteur : les frais de dossier
-                    sont fixés librement par le cabinet, et rien n&apos;est prélevé sur la prime
-                    mensuelle. La rémunération se calcule sur le montant saisi ci-dessus.
+                    Pas de frais d&apos;entrée sur ce produit : le montant est fixé librement,
+                    et rien n&apos;est prélevé sur une prime. La rémunération se calcule sur le
+                    montant saisi ci-dessus, partagé à parts égales avec le cabinet.
                   </div>
                 ) : (
                   <div className="form-row form-row-2 mt-16">
