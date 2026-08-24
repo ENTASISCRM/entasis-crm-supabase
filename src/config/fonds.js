@@ -35,6 +35,15 @@ export const FUNDS_DEFAULT = [
     {name:'BGF World Energy A2',               isin:'LU0252965963', morningstarId:'F0GBR04K8F',    cat:'Actions Énergie',         refSymbol:'AMEX:XLE',         refLabel:'XLE ETF',     color:'#B45309'},
     {name:'Lazard Actions Emergentes R',       isin:'FR0010380675', cat:'Actions Émergents',       refSymbol:'AMEX:EEM',         refLabel:'EEM ETF',     color:'#DB2777'},
     {name:'Pictet Water P EUR',                isin:'LU0104884860', morningstarId:'F0GBR04BC7',    cat:'Actions Eau',             refSymbol:'NASDAQ:PHO',       refLabel:'PHO ETF',     color:'#0EA5E9'},
+    // ─── Fonds ajoutés 24/08 (fonds cités dans nos allocations) ─────────
+    // Robeco Smart Energy : 12 % de la proposition PER SwissLife du 04/06.
+    //   Classe D-EUR Cap, ISIN LU2145461757 (source : robeco.com).
+    // Eleva Absolute Return Europe : validé côté Abeille par Sébastien Pesce
+    //   le 30/07 (SRI 2, catégorie 3, donc commissionné). Classe R (EUR) acc,
+    //   ISIN LU1331973468 (source : elevacapital.com). Vérifier que c'est bien
+    //   la classe référencée au contrat Abeille avant de la proposer.
+    {name:'Robeco Smart Energy D-EUR Cap',     isin:'LU2145461757', yahooTicker:'0P0001KWJF.F',    cat:'Énergie Propre',          refSymbol:'AMEX:ICLN',        refLabel:'ICLN ETF',    color:'#65A30D'},
+    {name:'Eleva Absolute Return Europe R',    isin:'LU1331973468', cat:'Performance absolue',     refSymbol:'INDEX:CAC40',      refLabel:'CAC 40',      color:'#64748B'},
   ]
 
 // Index par ISIN, pour rattacher une ligne d'allocation à son fonds.

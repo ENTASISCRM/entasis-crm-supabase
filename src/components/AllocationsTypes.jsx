@@ -1,15 +1,20 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // ALLOCATIONS TYPES PAR PARTENAIRE
 //
-// Un onglet par partenaire, les profils de gestion en dessous. Le but tient
-// en une phrase : un conseiller qui arrive doit pouvoir sortir une allocation
-// validée correspondant au profil de son client, sans la reconstruire.
+// Un onglet par partenaire, et une molette prudent / équilibré / dynamique.
+// Le but tient en une phrase : un conseiller qui arrive doit pouvoir sortir
+// l'allocation correspondant au profil de son client sans la reconstruire.
 //
-// L'écran ne conçoit rien. Il affiche ce qui a été validé, et il contrôle
-// deux choses que l'œil rate :
+// La molette applique littéralement la règle de Louis — « pour faire un
+// modéré ou un équilibré, tu mets un peu de dynamique et un peu de prudent ».
+// Elle interpole entre les deux pôles du partenaire choisi. Les allocations
+// ne sont pas les mêmes d'un partenaire à l'autre : chacun a ses pôles.
+//
+// L'écran ne conçoit rien. Il affiche, il mélange, et il contrôle deux choses
+// que l'œil rate :
 //   • la somme des poids tombe-t-elle à 100 % ;
-//   • chaque ligne correspond-elle bien à un fonds du référentiel Marchés,
-//     et avec le même ISIN.
+//   • chaque ligne correspond-elle à un fonds du référentiel Marchés, et avec
+//     le même ISIN.
 // Les écarts sont signalés, jamais corrigés en silence.
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -17,7 +22,15 @@ import { useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import SubTabs from './ui/SubTabs'
 import { FONDS_PAR_ISIN } from '../config/fonds'
-import { ALLOCATIONS, PARTENAIRES, AVERTISSEMENTS_PARTENAIRE, totalPoids } from '../config/allocations'
+import {
+  ALLOCATIONS,
+  PARTENAIRES,
+  AVERTISSEMENTS_PARTENAIRE,
+  CRANS,
+  melanger,
+  normaliser,
+  totalPoids,
+} from '../config/allocations'
 
 // Rapproche une ligne d'allocation du référentiel de fonds. Trois issues :
 // l'ISIN est connu (rattaché), le nom est connu mais sous un autre ISIN
@@ -37,30 +50,63 @@ function rapprocher(ligne) {
 }
 
 const pct = (n) => `${String(n).replace('.', ',')} %`
+const parId = (id) => ALLOCATIONS.find((a) => a.id === id) || null
 
 export default function AllocationsTypes() {
-  const [partenaire, setPartenaire] = useState(PARTENAIRES[0].cle)
-
-  const profils = useMemo(
-    () => ALLOCATIONS.filter((a) => a.partenaire === partenaire),
-    [partenaire],
+  const [partenaireCle, setPartenaireCle] = useState(PARTENAIRES[0].cle)
+  // Un curseur par partenaire : passer de SwissLife à Abeille ne doit pas
+  // réinitialiser le profil sur lequel on travaillait.
+  const [curseurs, setCurseurs] = useState(() =>
+    Object.fromEntries(PARTENAIRES.map((p) => [p.cle, 50])),
   )
+  const [ramene, setRamene] = useState(false)
 
-  const onglets = PARTENAIRES.map((p) => ({
-    key: p.cle,
-    label: p.nom,
-    badge: ALLOCATIONS.filter((a) => a.partenaire === p.cle).length,
-  }))
+  const partenaire = PARTENAIRES.find((p) => p.cle === partenaireCle)
+  const poleBas = parId(partenaire.poleBas)
+  const poleHaut = parId(partenaire.poleHaut)
+  const curseur = curseurs[partenaireCle] ?? 50
+  const complet = (poleBas?.lignes?.length || 0) > 0 && (poleHaut?.lignes?.length || 0) > 0
 
-  function copier(profil) {
-    const lignes = profil.lignes.map((l) => `${l.fonds} (${l.isin}) — ${pct(l.poids)}`)
-    const texte = [`${profil.nom} · ${PARTENAIRES.find(p => p.cle === profil.partenaire)?.nom}`, ...lignes].join('\n')
-    navigator.clipboard?.writeText(texte)
+  const lignesBrutes = useMemo(
+    () => (complet ? melanger(poleBas, poleHaut, curseur / 100) : []),
+    [complet, poleBas, poleHaut, curseur],
+  )
+  const lignes = useMemo(
+    () => (ramene ? normaliser(lignesBrutes) : lignesBrutes),
+    [ramene, lignesBrutes],
+  )
+  const rapprochements = useMemo(() => lignes.map(rapprocher), [lignes])
+
+  const total = totalPoids(lignes)
+  const sommeJuste = total === 100
+  const nbDivergents = rapprochements.filter((r) => r.etat === 'isin-divergent').length
+  const nbInconnus = rapprochements.filter((r) => r.etat === 'inconnu').length
+
+  const cran = CRANS.find((c) => c.valeur === curseur)
+  const partBas = 100 - curseur
+  // Sur un cran extrême, n'annoncer que le pôle réellement utilisé : afficher
+  // « 0 % Offensif diversifié » ne dit rien à personne.
+  const libelleMix = complet
+    ? [partBas && `${pct(partBas)} ${poleBas.nom}`, curseur && `${pct(curseur)} ${poleHaut.nom}`]
+      .filter(Boolean).join(' · ')
+    : ''
+
+  const onglets = PARTENAIRES.map((p) => ({ key: p.cle, label: p.nom }))
+
+  function deplacer(v) {
+    setCurseurs((c) => ({ ...c, [partenaireCle]: v }))
+    setRamene(false)
+  }
+
+  function copier() {
+    const entete = `${cran ? cran.libelle : 'Sur mesure'} · ${partenaire.nom}`
+    const corps = lignes.map((l) => `${l.fonds} (${l.isin}) — ${pct(l.poids)}`)
+    navigator.clipboard?.writeText([entete, libelleMix, '', ...corps, '', `Total ${pct(total)}`].join('\n'))
       .then(() => toast.success('Allocation copiée'))
       .catch(() => toast.error('Copie impossible'))
   }
 
-  const avertissement = AVERTISSEMENTS_PARTENAIRE[partenaire]
+  const avertissement = AVERTISSEMENTS_PARTENAIRE[partenaireCle]
 
   return (
     <div>
@@ -69,130 +115,175 @@ export default function AllocationsTypes() {
           <div className="section-kicker">Allocations types · par partenaire</div>
           <div className="section-title">Allocations par profil de gestion</div>
           <div className="section-sub">
-            Les allocations validées, prêtes à reprendre en rendez-vous. Le CRM les
-            affiche et les contrôle — il ne les conçoit pas.
+            Choisissez le partenaire, réglez la molette sur le profil du client,
+            l&apos;allocation se compose. Le CRM affiche et contrôle — il ne conçoit pas.
           </div>
         </div>
       </div>
 
-      <SubTabs tabs={onglets} active={partenaire} onChange={setPartenaire} />
+      <SubTabs
+        tabs={onglets}
+        active={partenaireCle}
+        onChange={(k) => { setPartenaireCle(k); setRamene(false) }}
+        ariaLabel="Partenaires"
+      />
 
       {avertissement && (
-        <div className="form-hint" style={{ marginTop: 16, borderLeft: '2px solid var(--warn, #B45309)', paddingLeft: 12 }}>
+        <div className="form-hint" style={{ marginTop: 16, borderLeft: '2px solid var(--progress)', paddingLeft: 12 }}>
           {avertissement}
         </div>
       )}
+      {partenaire.reserve && (
+        <div className="form-hint" style={{ marginTop: 10, borderLeft: '2px solid var(--progress)', paddingLeft: 12 }}>
+          {partenaire.reserve}
+        </div>
+      )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginTop: 20 }}>
-        {profils.map((profil) => {
-          const total = totalPoids(profil.lignes)
-          const vide = profil.lignes.length === 0
-          const sommeJuste = total === 100
-          const rapprochements = profil.lignes.map(rapprocher)
-          const nbDivergents = rapprochements.filter((r) => r.etat === 'isin-divergent').length
-          const nbInconnus = rapprochements.filter((r) => r.etat === 'inconnu').length
-
-          return (
-            <div className="card" key={profil.id}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', padding: '18px 20px 0' }}>
-                <div style={{ flex: 1, minWidth: 240 }}>
-                  <div className="section-title" style={{ fontSize: 17 }}>{profil.nom}</div>
-                  <div className="section-sub">
-                    Horizon {profil.horizon} · cible {profil.cible}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  {!vide && (
-                    <span
-                      className={`badge ${sommeJuste ? 'badge-signed' : 'badge-cancelled'}`}
-                      title={sommeJuste ? 'La somme des poids tombe juste' : 'La somme des poids ne fait pas 100 %'}
-                    >
-                      Total {pct(total)}
-                    </span>
-                  )}
-                  {!vide && (
-                    <button className="btn btn-outline btn-sm" onClick={() => copier(profil)}>
-                      Copier l'allocation
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div style={{ padding: '14px 20px 20px' }}>
-                <div className="form-hint" style={{ marginBottom: 14 }}>
-                  <strong>Source :</strong> {profil.source}
-                  {profil.note && <><br />{profil.note}</>}
-                </div>
-
-                {vide ? (
-                  <div className="table-empty-state">
-                    <div className="empty-title">Lignes non reprises</div>
-                    <div className="empty-sub">
-                      Le détail des supports est dans le document source et doit être
-                      recopié ici. Rien n'a été reconstitué de mémoire.
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {(nbDivergents > 0 || nbInconnus > 0) && (
-                      <div className="form-hint" style={{ marginBottom: 12, color: 'var(--danger, #9A2F1C)' }}>
-                        {nbDivergents > 0 && (
-                          <>
-                            {nbDivergents} support{nbDivergents > 1 ? 's' : ''} porte
-                            {nbDivergents > 1 ? 'nt' : ''} un ISIN différent de celui du
-                            référentiel Marchés — classe de parts à trancher avant usage.
-                          </>
-                        )}
-                        {nbInconnus > 0 && (
-                          <> {nbInconnus} support{nbInconnus > 1 ? 's' : ''} absent
-                          {nbInconnus > 1 ? 's' : ''} du référentiel.</>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="table-wrap">
-                      <table className="data-table">
-                        <thead>
-                          <tr>
-                            <th>Support</th>
-                            <th>ISIN</th>
-                            <th style={{ textAlign: 'right' }}>Poids</th>
-                            <th>Référentiel</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {profil.lignes.map((l, i) => {
-                            const r = rapprochements[i]
-                            return (
-                              <tr key={l.isin + i}>
-                                <td><div className="cell-primary">{l.fonds}</div></td>
-                                <td style={{ fontVariantNumeric: 'tabular-nums' }}>{l.isin}</td>
-                                <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
-                                  {pct(l.poids)}
-                                </td>
-                                <td>
-                                  {r.etat === 'ok' && <span className="badge badge-signed">Rattaché</span>}
-                                  {r.etat === 'isin-divergent' && (
-                                    <span className="badge badge-cancelled" title={`Référentiel : ${r.fonds.isin}`}>
-                                      ISIN différent — {r.fonds.isin}
-                                    </span>
-                                  )}
-                                  {r.etat === 'inconnu' && (
-                                    <span className="badge badge-forecast">Hors référentiel</span>
-                                  )}
-                                </td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </>
-                )}
+      <div className="card" style={{ marginTop: 20, padding: 20 }}>
+        <div className="molette">
+          <div className="molette-head">
+            <div>
+              <div className="molette-profil">{cran ? cran.libelle : 'Sur mesure'}</div>
+              <div className="molette-mix">
+                {complet
+                  ? libelleMix
+                  : 'Molette indisponible tant que les deux pôles ne sont pas saisis'}
               </div>
             </div>
-          )
-        })}
+            {complet && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <span
+                  className={`badge ${sommeJuste ? 'badge-signed' : 'badge-cancelled'}`}
+                  title={sommeJuste ? 'La somme des poids tombe juste' : 'La somme des poids ne fait pas 100 %'}
+                >
+                  Total {pct(total)}
+                </span>
+                {!sommeJuste && (
+                  <button className="btn btn-outline btn-sm" onClick={() => setRamene(true)}>
+                    Ramener à 100 %
+                  </button>
+                )}
+                {ramene && (
+                  <button className="btn btn-ghost btn-sm" onClick={() => setRamene(false)}>
+                    Revenir aux poids d&apos;origine
+                  </button>
+                )}
+                <button className="btn btn-outline btn-sm" onClick={copier}>
+                  Copier l&apos;allocation
+                </button>
+              </div>
+            )}
+          </div>
+
+          <input
+            type="range"
+            className="molette-range"
+            min={0}
+            max={100}
+            step={5}
+            value={curseur}
+            disabled={!complet}
+            onChange={(e) => deplacer(Number(e.target.value))}
+            aria-label="Profil de gestion, du plus prudent au plus dynamique"
+            aria-valuetext={cran ? cran.libelle : `${partBas} % prudent, ${curseur} % dynamique`}
+          />
+
+          <div className="molette-crans">
+            {CRANS.map((c) => (
+              <button
+                key={c.valeur}
+                type="button"
+                className={`molette-cran${curseur === c.valeur ? ' is-active' : ''}`}
+                disabled={!complet}
+                onClick={() => deplacer(c.valeur)}
+              >
+                {c.libelle}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="form-hint" style={{ marginTop: 16 }}>
+          <strong>Côté prudent :</strong> {poleBas.nom} — {poleBas.source}
+          {poleBas.note && <> · {poleBas.note}</>}
+          <br />
+          <strong>Côté dynamique :</strong> {poleHaut.nom} — {poleHaut.source}
+          {poleHaut.note && <> · {poleHaut.note}</>}
+        </div>
+
+        {ramene && (
+          <div className="form-hint" style={{ marginTop: 10, color: 'var(--forecast)' }}>
+            Poids recalculés au prorata pour tomber à 100 %. Ils ne sont plus
+            identiques à ceux des documents source.
+          </div>
+        )}
+
+        {!complet ? (
+          <div className="table-empty-state" style={{ marginTop: 16 }}>
+            <div className="empty-title">Pôles non repris</div>
+            <div className="empty-sub">
+              Les deux allocations de référence existent, mais uniquement dans les
+              documents cités ci-dessus. Le détail des supports doit être recopié ici :
+              rien n&apos;a été reconstitué de mémoire.
+            </div>
+          </div>
+        ) : (
+          <>
+            {(nbDivergents > 0 || nbInconnus > 0) && (
+              <div className="form-hint" style={{ marginTop: 14, color: 'var(--cancelled)' }}>
+                {nbDivergents > 0 && (
+                  <>
+                    {nbDivergents} support{nbDivergents > 1 ? 's' : ''} porte
+                    {nbDivergents > 1 ? 'nt' : ''} un ISIN différent de celui du
+                    référentiel Marchés — classe de parts à trancher avant usage.
+                  </>
+                )}
+                {nbInconnus > 0 && (
+                  <> {nbInconnus} support{nbInconnus > 1 ? 's' : ''} absent
+                  {nbInconnus > 1 ? 's' : ''} du référentiel Marchés.</>
+                )}
+              </div>
+            )}
+
+            <div className="table-wrap" style={{ marginTop: 14 }}>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Support</th>
+                    <th>ISIN</th>
+                    <th style={{ textAlign: 'right' }}>Poids</th>
+                    <th>Référentiel</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lignes.map((l, i) => {
+                    const r = rapprochements[i]
+                    return (
+                      <tr key={l.isin}>
+                        <td><div className="cell-primary">{l.fonds}</div></td>
+                        <td style={{ fontVariantNumeric: 'tabular-nums' }}>{l.isin}</td>
+                        <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+                          {pct(l.poids)}
+                        </td>
+                        <td>
+                          {r.etat === 'ok' && <span className="badge badge-signed">Rattaché</span>}
+                          {r.etat === 'isin-divergent' && (
+                            <span className="badge badge-cancelled" title={`Référentiel : ${r.fonds.isin}`}>
+                              ISIN différent — {r.fonds.isin}
+                            </span>
+                          )}
+                          {r.etat === 'inconnu' && (
+                            <span className="badge badge-forecast">Hors référentiel</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
