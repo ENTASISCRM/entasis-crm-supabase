@@ -3912,7 +3912,13 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
     priority: 'Normale',
     date_expected: '',
     date_signed: '',
-    notes: ''
+    notes: '',
+    // Frais negocies PAR PRODUIT : dans un meme dossier, une assurance vie
+    // peut etre a 2,5 % et un PER a 1 %. Ils sont poses ici et non au niveau
+    // du dossier, sinon un seul taux s appliquerait a tout.
+    frais_entree_pp_pct: deal?.frais_entree_pp_pct ?? deal?.frais_entree_pct ?? 1,
+    frais_entree_pu_pct: deal?.frais_entree_pu_pct ?? deal?.frais_entree_pct ?? 1,
+    is_ordre_placement: false
   })
 
   // Vérifier si le client est verrouillé (ajout depuis fiche client uniquement, pas en édition)
@@ -3943,6 +3949,9 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
       company: deal?.company || '',
       pp_m: deal?.pp_m || 0,
       pu: deal?.pu || 0,
+      frais_entree_pp_pct: deal?.frais_entree_pp_pct ?? deal?.frais_entree_pct ?? 1,
+      frais_entree_pu_pct: deal?.frais_entree_pu_pct ?? deal?.frais_entree_pct ?? 1,
+      is_ordre_placement: !!deal?.is_ordre_placement,
       status: deal?.status || 'En cours',
       priority: deal?.priority || 'Normale',
       date_expected: deal?.date_expected || '',
@@ -4579,6 +4588,47 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                         </select>
                       </div>
                     </div>
+                    {/* Frais negocies, produit par produit : une assurance vie a
+                        2,5 % et un PER a 1 % dans le meme dossier, c est courant.
+                        Sans commission a la cle sur les honoraires, on masque. */}
+                    {!estProduitHonoraires(prod.product) && (
+                      <div className="form-row form-row-3 mt-16">
+                        <div className="form-group">
+                          <label className="form-label">Frais d&apos;entrée PP (%)</label>
+                          <input
+                            className="form-input"
+                            type="number" min="0" max="5" step="0.25"
+                            value={prod.frais_entree_pp_pct ?? 1}
+                            onChange={e => setProductField(index, 'frais_entree_pp_pct', e.target.value === '' ? 1 : parseFloat(e.target.value))}
+                            onFocus={e => e.target.select()}
+                          />
+                          <div className="form-hint">Sur le versement mensuel. Défaut 1 %.</div>
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Frais d&apos;entrée PU (%)</label>
+                          <input
+                            className="form-input"
+                            type="number" min="0" max="5" step="0.25"
+                            value={prod.frais_entree_pu_pct ?? 1}
+                            onChange={e => setProductField(index, 'frais_entree_pu_pct', e.target.value === '' ? 1 : parseFloat(e.target.value))}
+                            onFocus={e => e.target.select()}
+                          />
+                          <div className="form-hint">Sur le versement unique. Défaut 1 %.</div>
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Ordre de placement</label>
+                          <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',height:38,margin:0}}>
+                            <input
+                              type="checkbox"
+                              checked={!!prod.is_ordre_placement}
+                              onChange={e => setProductField(index, 'is_ordre_placement', e.target.checked)}
+                            />
+                            <span style={{fontSize:12.5,color:'var(--t2)'}}>Transfert de contrat</span>
+                          </label>
+                          <div className="form-hint">Le versement unique n&apos;est pas commissionné.</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -4605,7 +4655,10 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                 <button type="button" className="btn btn-ghost btn-sm" style={{height:22,padding:'0 8px',fontSize:11}} onClick={()=>setFullForm(true)}>changer</button>
               </div>
             )}
-            {/* Ordre de placement et frais d entree : ils valent pour TOUT le
+            {/* Frais d entree au niveau du dossier : uniquement a la reouverture
+                d une fiche mono produit. A la creation, chaque carte produit
+                porte ses propres frais (voir plus haut). */}
+            {!(showMultiProducts || isClientLocked) && (<>
                 dossier, donc pour chacun de ses produits. Ils vivaient dans la
                 branche reservee a la reouverture : a la creation le curseur
                 restait invisible et bloque a 1 %, si bien qu un dossier negocie
@@ -4695,6 +4748,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                     </div>
                   </div>
                 )}
+            </>)}
             <div className="form-row form-row-2">
               <div className="form-group">
                 <label className="form-label">
