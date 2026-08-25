@@ -1976,7 +1976,6 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab}){
   const dPpSigned={raw:m.ppSigned-prev.ppSigned,label:euro(Math.abs(m.ppSigned-prev.ppSigned))}
   const dPuSigned={raw:m.puSigned-prev.puSigned,label:euro(Math.abs(m.puSigned-prev.puSigned))}
   const dPpPipeline={raw:m.ppPipeline-prev.ppPipeline,label:euro(Math.abs(m.ppPipeline-prev.ppPipeline))}
-  const priorities=[...m.hotDeals].sort((a,b)=>({'Urgente':0,'Haute':1,'Normale':2}[a.priority]||2)-({'Urgente':0,'Haute':1,'Normale':2}[b.priority]||2))
 
   // Stats cabinet (totaux équipe, transparence + émulation).
   // On utilise une RPC Postgres (SECURITY DEFINER) car les RLS deals
@@ -2110,25 +2109,6 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab}){
       </div>
       {/* D3 : ce qui doit être fait aujourd'hui passe AVANT le reste. */}
       <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit}/>
-      <div style={{marginTop:28}}>
-        <div className="section-header"><div><div className="section-kicker">Actions immédiates</div><div className="section-title">Mes priorités</div></div></div>
-        {priorities.length>0?(
-          <div className="priorities-list">
-            {priorities.map(deal=>(
-              <div key={deal.id} className="priority-item">
-                <div className={`priority-item-dot ${deal.priority==='Urgente'?'urgent':deal.priority==='Haute'?'high':'normal'}`}/>
-                <div style={{flex:1,minWidth:0}}>
-                  <div className="priority-item-client truncate">{getClientName(deal)}</div>
-                  <div className="priority-item-detail">{deal.product} · <span className={STATUS_CLASS[deal.status]||'badge'}>{deal.status}</span></div>
-                </div>
-                <div className="priority-item-amount">{euro(annualize(deal.pp_m))}</div>
-              </div>
-            ))}
-          </div>
-        ):(
-          <div className="table-empty-state"><div className="empty-icon"><Icon.EmptyCheck/></div><div className="empty-title">Aucune priorité urgente</div><div className="empty-sub">Tous tes dossiers chauds sont traités.</div></div>
-        )}
-      </div>
       <div style={{marginTop:28}}>
         <Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded/></Suspense>
       </div>

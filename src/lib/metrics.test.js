@@ -165,14 +165,6 @@ describe('advisorMetrics', () => {
     ], 'MAI', 'LH');
     expect(m.signRate).toBe(100);
   });
-
-  it('hotDeals = priorité Urgente ou Haute', () => {
-    const m = advisorMetrics([
-      { id: 'a', month: 'MAI', advisor_code: 'LH', status: 'En cours', pp_m: 100, priority: 'Urgente' },
-      { id: 'b', month: 'MAI', advisor_code: 'LH', status: 'En cours', pp_m: 100, priority: 'Normale' },
-    ], 'MAI', 'LH');
-    expect(m.hotDeals.length).toBe(1);
-  });
 });
 
 describe('monthFromDate', () => {

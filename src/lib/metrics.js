@@ -181,9 +181,11 @@ export function advisorMetrics(deals, month, code) {
       ? Math.round((signedCount / dossiersReels.length) * 100)
       : 0,
     avgPp: signedCount > 0 ? ppS / signedCount : 0,
-    // Les priorités remontées au conseiller : des dossiers, pas des RDV non
-    // qualifiés, qui portent la priorité par défaut de la Lead Room.
-    hotDeals: dossiersReels.filter(d => d.priority === 'Urgente' || d.priority === 'Haute'),
+    // hotDeals a disparu avec la carte « Mes priorités » (25/08/2026) : en
+    // cinq mois, 2 dossiers sur 465 ont porté une priorité au-dessus de
+    // « Normale », et aucun n'a jamais été marqué « Urgente ». La carte était
+    // donc vide en permanence — et son message vide, « tous tes dossiers
+    // chauds sont traités », affirmait un travail que personne n'avait fait.
   };
 }
 
