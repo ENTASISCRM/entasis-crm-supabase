@@ -137,7 +137,43 @@ describe('advisorMetrics', () => {
     // signés MAI LH, deal 1 (full) + deal 5 (co-conseil 50%)
     expect(m.ppSigned).toBe(500 * 12 + 400 * 12 * 0.5);
     expect(m.puSigned).toBe(10000 + 12000 * 0.5);
-    expect(m.signedCount).toBe(1 + 0.5);
+    // Deux dossiers signes, dont un a deux : c est bien DEUX signatures pour
+    // lui. Ce test verrouillait 1,5, la valeur qui produisait un taux de
+    // signature faux pour toute la moitie du cabinet qui travaille en binome.
+    expect(m.signedCount).toBe(2);
+    // La part ponderee reste disponible pour les montants (ticket moyen).
+    expect(m.signedPart).toBe(1.5);
+  });
+
+  it('compte un dossier signe a deux comme UNE signature pour chacun', () => {
+    const lh = advisorMetrics(deals, 'MAI', 'LH');
+    const partage = deals.filter(d => d.month === 'MAI' && d.status === 'Signé' && d.co_advisor_code);
+    expect(partage.length).toBeGreaterThan(0);
+    const co = advisorMetrics(deals, 'MAI', partage[0].co_advisor_code);
+    // Le meme dossier compte 1 chez le titulaire ET 1 chez le co conseiller,
+    // alors que la PP, elle, est bien coupee en deux de chaque cote.
+    expect(lh.signedCount).toBeGreaterThanOrEqual(1);
+    expect(co.signedCount).toBeGreaterThanOrEqual(1);
+  });
+
+  it('ne descend pas le taux de signature d un conseiller en binome', () => {
+    // Deux dossiers reels, les deux signes, dont un a deux : 100 pourcent.
+    const jeu = [
+      { id: 'a', month: 'MAI', status: 'Signé', advisor_code: 'ZZ', pp_m: 100, pu: 0, product: 'PER Individuel', date_signed: '2026-05-10' },
+      { id: 'b', month: 'MAI', status: 'Signé', advisor_code: 'ZZ', co_advisor_code: 'YY', pp_m: 100, pu: 0, product: 'PER Individuel', date_signed: '2026-05-11' },
+    ];
+    expect(advisorMetrics(jeu, 'MAI', 'ZZ').signRate).toBe(100);
+  });
+
+  it('garde le ticket moyen pondere sur pondere', () => {
+    const jeu = [
+      { id: 'a', month: 'MAI', status: 'Signé', advisor_code: 'ZZ', co_advisor_code: 'YY', pp_m: 100, pu: 0, product: 'PER Individuel', date_signed: '2026-05-11' },
+    ];
+    const m = advisorMetrics(jeu, 'MAI', 'ZZ');
+    // 1200 de PP annualisee, coupee a 600, divisee par une demi signature :
+    // le ticket du dossier reste 1200, pas 600.
+    expect(m.ppSigned).toBe(600);
+    expect(m.avgPp).toBe(1200);
   });
 
   it('filtre LH MAI pipeline', () => {

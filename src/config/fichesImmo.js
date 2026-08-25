@@ -81,7 +81,7 @@ export const FICHES_IMMO = [
       'La location meublée relève des BIC, pas des revenus fonciers : c’est de là que vient tout l’intérêt.',
       'Au régime réel, le client déduit les charges, les intérêts d’emprunt, et surtout amortit le bien (hors terrain) et le mobilier.',
       'Résultat courant : un revenu locatif effacé fiscalement pendant dix à quinze ans, sans que le loyer cesse de tomber.',
-      'Le statut reste non professionnel tant que les recettes restent sous 23 000 € par an ou sous les autres revenus du foyer.',
+      'Le statut reste non professionnel tant que l’une au moins de ces deux conditions tient : recettes sous 23 000 € par an, ou recettes inférieures aux revenus d’activité du foyer. Il faut franchir les DEUX seuils pour basculer en professionnel.',
     ],
     avantage: {
       titre: 'Ce qui plaît au client',
@@ -93,7 +93,7 @@ export const FICHES_IMMO = [
       ],
     },
     chiffres: [
-      { label: 'Plafond du statut non professionnel', valeur: '23 000 € de recettes par an' },
+      { label: 'Bascule en professionnel', valeur: 'recettes > 23 000 € ET > revenus d’activité du foyer' },
       { label: 'Durée d’amortissement du bâti', valeur: '25 à 40 ans selon les composants' },
       { label: 'Régime réel', valeur: 'obligatoire au delà des seuils du micro BIC' },
     ],
@@ -243,7 +243,7 @@ export const FICHES_IMMO = [
       'Êtes-vous redevable de l’IFI ?',
       'Avez-vous des revenus fonciers déjà imposés sur lesquels imputer des intérêts ?',
       'À quel horizon ce capital doit-il redevenir disponible ?',
-      'Un de vos enfants aura besoin d’un logement besoin d’un logement dans quinze ans ?',
+      'Un de vos enfants aura besoin d’un logement dans quinze ans ?',
     ],
   },
 

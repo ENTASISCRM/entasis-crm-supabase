@@ -154,10 +154,23 @@ export function advisorMetrics(deals, month, code) {
   const ppMutS = sumAnnualPpMutuelle(signed, code);
   const ppMutP = sumAnnualPpMutuelle(pipeline, code);
 
-  // Comptage 0.5 si co-conseil pour ne pas double compter au global.
-  const signedCount = signed.reduce((s, d) => s + (d.co_advisor_code ? 0.5 : 1), 0);
-  const pipelineCount = pipeline.reduce((s, d) => s + (d.co_advisor_code ? 0.5 : 1), 0);
-  const rdvCount = rdv.reduce((s, d) => s + (d.co_advisor_code ? 0.5 : 1), 0);
+  // L'argent se partage, pas le travail. Un dossier signé à deux est UN dossier
+  // signé pour chacun des deux : celui qui l'a porté ne l'a pas signé à moitié.
+  //
+  // Ces trois compteurs valaient 0,5 sur un co-conseil, ce qui produisait deux
+  // effets, tous deux faux. Un affichage absurde d'abord (« 5,5 dossiers
+  // signés »). Un taux de signature systématiquement trop bas surtout, parce
+  // que le numérateur était pondéré et le dénominateur entier : sur juillet
+  // 2026, GIANNI a signé 12 dossiers sur 12 et l'écran affichait 67 %, VICTOR
+  // 11 sur 12 affichés 46 %, NANS 10 sur 13 affichés 42 %. La moitié des
+  // signatures du cabinet portent un co-conseiller, donc la moitié du cabinet
+  // passait au badge orange en signant très bien.
+  const signedCount = signed.length;
+  const pipelineCount = pipeline.length;
+  const rdvCount = rdv.length;
+  // La part pondérée reste, mais réservée aux MONTANTS : le ticket moyen
+  // divise une PP déjà partagée, il lui faut un dénominateur partagé aussi.
+  const signedPart = signed.reduce((s, d) => s + (d.co_advisor_code ? 0.5 : 1), 0);
   // Dénominateur du taux de signature : les dossiers réels. Un rendez-vous
   // qui n'a jamais été qualifié n'est pas une occasion manquée de signer.
   const dossiersReels = scoped.filter(d => !estSimpleRdv(d));
@@ -180,7 +193,10 @@ export function advisorMetrics(deals, month, code) {
     signRate: dossiersReels.length > 0
       ? Math.round((signedCount / dossiersReels.length) * 100)
       : 0,
-    avgPp: signedCount > 0 ? ppS / signedCount : 0,
+    signedPart,
+    // Pondéré sur pondéré : la PP est déjà divisée par deux sur un co-conseil,
+    // le dénominateur doit l'être aussi, sinon le ticket moyen s'effondre.
+    avgPp: signedPart > 0 ? ppS / signedPart : 0,
     // hotDeals a disparu avec la carte « Mes priorités » (25/08/2026) : en
     // cinq mois, 2 dossiers sur 465 ont porté une priorité au-dessus de
     // « Normale », et aucun n'a jamais été marqué « Urgente ». La carte était

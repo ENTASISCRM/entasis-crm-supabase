@@ -2422,7 +2422,7 @@ function ForecastView({deals,objectifs,month,profile,teamProfiles,canEditObjecti
                 <div className="forecast-metric"><div className="forecast-metric-label">PP signée</div><div className="forecast-metric-value">{euro(m.ppSigned)}</div></div>
                 <div className="forecast-metric"><div className="forecast-metric-label">PP projetée</div><div className="forecast-metric-value">{euro(m.ppProjected)}</div></div>
                 <div className="forecast-metric"><div className="forecast-metric-label">PU projetée</div><div className="forecast-metric-value">{euro(m.puProjected)}</div></div>
-                <div className="forecast-metric"><div className="forecast-metric-label">Dossiers</div><div className="forecast-metric-value">{m.total}</div></div>
+                <div className="forecast-metric"><div className="forecast-metric-label">Dossiers</div><div className="forecast-metric-value" title={m.rdvCount>0?`${m.rdvCount} RDV cale(s) en plus, non comptes ici`:undefined}>{m.totalHorsRdv}</div></div>
               </div>
             </div>
             <div className="forecast-charts-grid">
