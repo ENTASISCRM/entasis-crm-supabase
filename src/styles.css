@@ -2180,3 +2180,42 @@ table,
   font-size: 11.5px; line-height: 1.65; color: var(--t2);
   white-space: pre-wrap; max-height: 260px; overflow-y: auto;
 }
+
+/* Fiches dispositif sur les cartes partenaires immobilier */
+.immo2-fiches {
+  padding: 14px 16px;
+  border-radius: var(--rad-md);
+  background: var(--bg-subtle);
+  border: 1px solid var(--bd-soft);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.immo2-fiches-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.immo2-fiches-titre {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--t3);
+}
+.immo2-fiches-tout {
+  border: none; background: transparent; cursor: pointer; padding: 0;
+  font-family: inherit; font-size: 11.5px; font-weight: 600; color: var(--gold-dk);
+  transition: opacity .16s ease;
+}
+.immo2-fiches-tout:hover:not(:disabled) { opacity: .7; }
+.immo2-fiches-tout:disabled { color: var(--t3); cursor: default; }
+.immo2-fiches-aide { font-size: 11.5px; line-height: 1.5; color: var(--t3); margin: 0; }
+.immo2-fiches-liste { display: flex; flex-wrap: wrap; gap: 6px; }
+.immo2-fiche {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 28px; padding: 0 11px; border-radius: 999px;
+  border: 1px solid var(--bd-strong); background: var(--card);
+  font-family: inherit; font-size: 11.5px; font-weight: 600; color: var(--t2);
+  cursor: pointer;
+  transition: color .16s ease, border-color .16s ease, transform .16s ease, box-shadow .16s ease;
+}
+.immo2-fiche svg { color: var(--t3); transition: color .16s ease; }
+.immo2-fiche:hover:not(:disabled) {
+  color: var(--gold-dk); border-color: var(--gold-line);
+  background: var(--gold-subtle);
+  transform: translateY(-1px); box-shadow: 0 2px 8px rgba(201,169,97,0.16);
+}
+.immo2-fiche:hover:not(:disabled) svg { color: var(--gold-dk); }
+.immo2-fiche:disabled { opacity: .5; cursor: default; }

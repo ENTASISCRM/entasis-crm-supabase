@@ -25,6 +25,8 @@ import {
   chercherClients,
 } from '../services/dossiersImmo'
 import { euro, messageErreur } from '../lib/ui-shared'
+import { fichesDuPartenaire } from '../config/fichesImmo'
+import { telechargerFiche, telechargerLot } from '../lib/fiches-immo-pdf'
 import { brouillonMail, ouvrirGmail } from '../lib/mail-immo'
 
 const MONOGRAMMES = { althera: 'AP', francois1er: 'F1' }
@@ -220,9 +222,7 @@ export default function ImmobilierNeuf({ profile }) {
               </div>
             </div>
 
-            <div className="immo2-dispositifs">
-              {p.dispositifs.map((d) => <span key={d} className="immo2-disp">{d}</span>)}
-            </div>
+            <FichesPartenaire partenaire={p} conseiller={profile?.full_name} />
 
             <div className="immo2-partner-actions">
               <button className="immo2-btn immo2-btn-gold" onClick={() => ouvrir(p)}>
@@ -230,7 +230,13 @@ export default function ImmobilierNeuf({ profile }) {
               </button>
               {p.extranet && (
                 <a className="immo2-btn immo2-btn-ghost" href={p.extranet} target="_blank" rel="noreferrer">
-                  Ouvrir l extranet
+                  Ouvrir l’extranet
+                </a>
+              )}
+              {p.site && (
+                <a className="immo2-btn immo2-btn-ghost" href={p.site} target="_blank" rel="noreferrer"
+                  title="Programmes et disponibilités publiés par le partenaire">
+                  Voir ses programmes
                 </a>
               )}
             </div>
@@ -337,6 +343,59 @@ export default function ImmobilierNeuf({ profile }) {
           fermer={() => setModale(null)}
         />
       )}
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Fiches dispositif : une par produit du partenaire, en PDF, a lire avant le
+// rendez vous. Elles disent a qui le dispositif s adresse, comment il marche,
+// ce qui fait capoter un dossier, et quoi demander au client. Rien sur la
+// remuneration. Le PDF se fabrique dans le navigateur, au clic : aucun
+// fichier a heberger, aucune version qui traine.
+// ═══════════════════════════════════════════════════════════════════════════
+function FichesPartenaire({ partenaire, conseiller }) {
+  const fiches = useMemo(() => fichesDuPartenaire(partenaire.cle), [partenaire.cle])
+  const [enCours, setEnCours] = useState(null)
+  const [erreur, setErreur] = useState(null)
+
+  if (fiches.length === 0) return null
+
+  const telecharger = async (fiche) => {
+    setEnCours(fiche.cle); setErreur(null)
+    try { await telechargerFiche(fiche, partenaire, conseiller) }
+    catch (e) { setErreur(messageErreur(e)) }
+    finally { setEnCours(null) }
+  }
+
+  const toutTelecharger = async () => {
+    setEnCours('lot'); setErreur(null)
+    try { await telechargerLot(fiches, partenaire, conseiller) }
+    catch (e) { setErreur(messageErreur(e)) }
+    finally { setEnCours(null) }
+  }
+
+  return (
+    <div className="immo2-fiches">
+      <div className="immo2-fiches-head">
+        <span className="immo2-fiches-titre">Fiches dispositif</span>
+        <button className="immo2-fiches-tout" onClick={toutTelecharger} disabled={enCours === 'lot'}>
+          {enCours === 'lot' ? 'Préparation…' : 'Tout télécharger'}
+        </button>
+      </div>
+      <p className="immo2-fiches-aide">
+        À qui ça s’adresse, ce qui fait capoter un dossier, les questions à poser. À lire avant le rendez-vous.
+      </p>
+      <div className="immo2-fiches-liste">
+        {fiches.map((f) => (
+          <button key={f.cle} className="immo2-fiche" onClick={() => telecharger(f)}
+            disabled={enCours === f.cle} title={f.accroche}>
+            <IcoPdf />
+            <span>{f.dispositif}</span>
+          </button>
+        ))}
+      </div>
+      {erreur && <span className="form-hint" style={{ color: 'var(--cancelled)' }}>{erreur}</span>}
     </div>
   )
 }
@@ -576,6 +635,12 @@ const IcoSend = () => (
 const IcoCheck = () => (
   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20 6 9 17l-5-5" />
+  </svg>
+)
+const IcoPdf = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" />
+    <path d="M12 18v-6" /><path d="m9 15 3 3 3-3" />
   </svg>
 )
 const IcoKeys = () => (

@@ -22,6 +22,7 @@ export const PARTENAIRES_IMMO = [
     // Renseigner l URL de l extranet quand elle est connue : le bouton
     // « Ouvrir l extranet » n apparait que si elle est presente.
     extranet: null,
+    site: null,
   },
   {
     cle: 'francois1er',
@@ -33,6 +34,8 @@ export const PARTENAIRES_IMMO = [
     accroche: 'Ancien à rénover et dispositifs patrimoniaux de défiscalisation.',
     dispositifs: ['Malraux', 'Monuments Historiques', 'Déficit foncier', 'Denormandie'],
     extranet: null,
+    // Le partenaire publie ses programmes et leurs disponibilites sur son site.
+    site: 'https://www.francois1er.com',
   },
 ]
 
