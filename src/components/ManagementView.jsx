@@ -33,6 +33,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { confirmDialog } from './ui/confirm'
 import SubTabs from './ui/SubTabs'
+import { santeFlux, resumeSante } from '../lib/sante-flux'
 import { Skeleton, SkeletonText } from './ui/Skeleton'
 import SortableTh from './ui/SortableTh'
 import { leadroomAdmin, lireJson } from '../lib/leadroom-api'
@@ -42,8 +43,7 @@ import {
   annualize,
   dealMatchesAdvisor,
   dealDuMois,
-  isPipeline,
-} from '../lib/metrics'
+  isPipeline, entonnoirLeads } from '../lib/metrics'
 import { supabase } from '../lib/supabase'
 import * as profilesService from '../services/profiles'
 import { fetchRemuneration } from '../lib/remuneration-api'
@@ -58,11 +58,17 @@ const safeDiv = (a, b) => (b > 0 ? a / b : 0)
 
 const LEADROOM_API = import.meta.env.VITE_LEADROOM_URL || 'https://entasis-leadroom.vercel.app'
 
-export default function ManagementView({ deals, objectifs, month, profile, teamProfiles, canEditObjectifs, onSaveObjectif }) {
+export default function ManagementView({ deals, objectifs, month, profile, teamProfiles, canEditObjectifs, onSaveObjectif, dernieresEcritures }) {
   const isManager = profile?.role === 'manager'
   // Période affichée : 'mois' (corps mensuel existant) ou 'semaine'
   // (WeeklyReview rendu tel quel à la place du corps mensuel).
   const [periode, setPeriode] = useState('mois')
+  // Ce que rapporte l'acquisition, cumulé. Le CRM portait le chiffre sans
+  // jamais le montrer : 216 RDV issus des leads pour 6 contrats signés.
+  const entonnoir = useMemo(() => entonnoirLeads(deals), [deals])
+  // Flux entrants muets. Trois se sont tus le 4 mai 2026 sans alerte.
+  const flux = useMemo(() => (dernieresEcritures ? santeFlux(dernieresEcritures) : []), [dernieresEcritures])
+  const resumeFlux = useMemo(() => (flux.length ? resumeSante(flux) : null), [flux])
   const [formObj, setFormObj] = useState({ pp_target: '', pu_target: '' })
   useEffect(() => {
     setFormObj({
@@ -310,6 +316,65 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
           <div className="section-sub">
             Vue d'ensemble équipe : performances individuelles, top, retardataires.
           </div>
+
+      {resumeFlux && (
+        <div className="card mb-24" style={{ borderLeft: '3px solid var(--cancelled)' }}>
+          <div className="panel-head" style={{ flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <div className="section-kicker" style={{ marginBottom: 2, color: 'var(--cancelled)' }}>Flux entrants</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t1)' }}>{resumeFlux.texte}</div>
+            </div>
+          </div>
+          <div className="panel-body">
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead><tr><th>Flux</th><th>Dernière donnée</th><th>État</th></tr></thead>
+                <tbody>
+                  {flux.map(f => (
+                    <tr key={f.cle}>
+                      <td><div className="cell-primary">{f.libelle}</div><div className="text-xs text-muted">{f.note}</div></td>
+                      <td style={{ fontVariantNumeric: 'tabular-nums' }}>{f.derniere ? new Date(f.derniere).toLocaleDateString('fr-FR') : '—'}</td>
+                      <td>
+                        {f.etat === 'ok' && <span className="badge badge-signed">à jour</span>}
+                        {f.etat === 'decroche' && <span className="badge badge-cancelled">muet depuis {f.jours} j</span>}
+                        {f.etat === 'vide' && <span className="badge badge-forecast">aucune donnée</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="form-hint" style={{ marginTop: 12 }}>
+              Un flux muet ne se voit pas : les écrans continuent d&apos;afficher les
+              dernières données reçues comme si elles étaient fraîches.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {entonnoir.rdvPris > 0 && (
+        <div className="card mb-24">
+          <div className="panel-head" style={{ flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <div className="section-kicker" style={{ marginBottom: 2 }}>Acquisition · depuis le début</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t1)' }}>Ce que rapportent les leads</div>
+            </div>
+            <div className="text-xs text-muted">Cumulé, tous mois confondus</div>
+          </div>
+          <div className="panel-body">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12 }}>
+              <MiniKpi label="RDV pris via les leads" value={entonnoir.rdvPris} color="#0071E3" hint="Créés par la Lead Room" />
+              <MiniKpi label="Qualifiés en dossier" value={entonnoir.qualifies} color="var(--gold)" hint={`${entonnoir.tauxQualification} % ont reçu un produit ou un montant`} />
+              <MiniKpi label="Contrats signés" value={entonnoir.signes} color={entonnoir.tauxSignature >= 10 ? '#10B981' : 'var(--cancelled)'} hint={`${entonnoir.tauxSignature} % des RDV aboutissent`} />
+            </div>
+            <div className="form-hint" style={{ marginTop: 14 }}>
+              À comparer au reste : <strong>{entonnoir.horsLeadsSignes} contrats signés</strong> sur {entonnoir.horsLeads} dossiers
+              saisis à la main{entonnoir.horsLeads > 0 ? ` (${Math.round(entonnoir.horsLeadsSignes / entonnoir.horsLeads * 100)} %)` : ''} —
+              réseau, parrainage, apporteurs.
+            </div>
+          </div>
+        </div>
+      )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           {/* Switch période Mois / Semaine (fusion WeeklyReview) */}

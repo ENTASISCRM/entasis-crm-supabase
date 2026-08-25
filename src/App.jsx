@@ -4,6 +4,8 @@ import { isSupabaseConfigured, supabase } from './lib/supabase'
 import { FUNDS_DEFAULT } from './config/fonds'
 import { logger } from './lib/logger'
 import { alertesContrats } from './lib/alertes-contrats'
+import { santeFlux, resumeSante } from './lib/sante-flux'
+import { chargerSanteFlux } from './services/santeFlux'
 import { insererDeal, majDeal, retirerDeal, completerDeal } from './lib/deals-realtime'
 import { recordLogin } from './lib/record-login'
 import * as leadsService from './services/leads'
@@ -2923,36 +2925,10 @@ function ForecastView({deals,objectifs,month,profile,teamProfiles,canEditObjecti
   async function submitObj(e){e.preventDefault();if(!canEditObjectifs)return;await onSaveObjectif({month,pp_target:Number(formObj.pp_target||0),pu_target:Number(formObj.pu_target||0)})}
   const visibleProfiles=useMemo(()=>{const base=(teamProfiles||[]).filter(p=>p?.is_active&&p?.advisor_code);if(isManager)return base;return base.filter(p=>p.advisor_code===profile?.advisor_code)},[teamProfiles,profile,isManager])
   const targets=objectifs[month]||{pp_target:0,pu_target:0}
-  // Ce que rapporte l'acquisition, cumulé sur tout l'historique. Le CRM
-  // portait ce chiffre sans jamais le montrer.
-  const entonnoir=useMemo(()=>entonnoirLeads(deals),[deals])
 
   return (
     <div>
       <div className="section-header"><div><div className="section-kicker">Atterrissage commercial</div><div className="section-title">{isManager?'Prévisionnels équipe':'Mon prévisionnel'}</div><div className="section-sub">Dossiers signés, en cours et prévus uniquement · {month}</div></div></div>
-      {isManager&&entonnoir.rdvPris>0&&(
-        <div className="card mb-24">
-          <div className="panel-head" style={{flexWrap:'wrap',gap:12}}>
-            <div>
-              <div className="section-kicker" style={{marginBottom:2}}>Acquisition · depuis le début</div>
-              <div style={{fontSize:14,fontWeight:600,color:'var(--t1)'}}>Ce que rapportent les leads</div>
-            </div>
-            <div className="text-xs text-muted">Cumulé, tous mois confondus</div>
-          </div>
-          <div className="panel-body">
-            <div className="kpi-grid">
-              <KpiCard label="RDV pris via les leads" value={entonnoir.rdvPris} hint="Rendez-vous créés par la Lead Room" accent="blue"/>
-              <KpiCard label="Qualifiés en dossier" value={entonnoir.qualifies} hint={`${entonnoir.tauxQualification} % des RDV ont reçu un produit ou un montant`} accent="amber"/>
-              <KpiCard label="Contrats signés" value={entonnoir.signes} hint={`${entonnoir.tauxSignature} % des RDV aboutissent`} accent={entonnoir.tauxSignature>=10?'green':'red'}/>
-            </div>
-            <div className="form-hint" style={{marginTop:14}}>
-              À comparer au reste : <strong>{entonnoir.horsLeadsSignes} contrats signés</strong> sur {entonnoir.horsLeads} dossiers
-              saisis à la main{entonnoir.horsLeads>0?` (${Math.round(entonnoir.horsLeadsSignes/entonnoir.horsLeads*100)} %)`:''} —
-              réseau, parrainage, apporteurs.
-            </div>
-          </div>
-        </div>
-      )}
       <div className="card mb-24">
         <div className="panel-head" style={{flexWrap:'wrap',gap:12}}>
           <div><div className="section-kicker" style={{marginBottom:2}}>Objectif global · {month}</div><div style={{fontSize:14,fontWeight:600,color:'var(--t1)'}}>Objectifs du cabinet — consolidé équipe</div></div>
@@ -5255,6 +5231,18 @@ export default function App(){
   // Contrats pour les alertes de la cloche (fins proches, arrivées sans
   // compte). La RLS cadre d'elle-même : un conseiller ne récupère que sa
   // ligne, donc les alertes ne fuient pas l'effectif à qui ne le voit pas.
+  // Dernière écriture de chaque flux entrant. Trois d'entre eux se sont tus le
+  // 4 mai 2026 sans que rien ne le signale ; l'email quotidien a continué de
+  // partir en lisant une table figée.
+  const [dernieresEcritures,setDernieresEcritures]=useState(null)
+  useEffect(()=>{
+    if(!profile?.id||profile?.role!=='manager'){setDernieresEcritures(null);return}
+    let alive=true
+    chargerSanteFlux()
+      .then(d=>{if(alive)setDernieresEcritures(d)})
+      .catch(e=>{logger.error('santé des flux',e)})
+    return ()=>{alive=false}
+  },[profile?.id,profile?.role])
   const [contratsRh,setContratsRh]=useState([])
   useEffect(()=>{
     if(!profile?.id){setContratsRh([]);return}
@@ -6026,6 +6014,24 @@ export default function App(){
         onOpen: () => setActiveTab('smart-rh'),
       })
     }
+    // Flux entrants muets. Une intégration morte est plus dangereuse qu'une
+    // intégration absente : elle continue de servir des données périmées.
+    if (dernieresEcritures) {
+      for (const f of santeFlux(dernieresEcritures).filter(x => x.etat !== 'ok')) {
+        out.push({
+          id: `flux-${f.cle}`,
+          date: f.derniere || new Date(0).toISOString(),
+          prio: 0,
+          urgence: -1,
+          couleur: 'var(--cancelled)',
+          titre: f.etat === 'vide'
+            ? `${f.libelle} — aucune donnée`
+            : `${f.libelle} — plus rien depuis ${f.jours} jours`,
+          detail: f.note,
+          onOpen: () => setActiveTab('forecast'),
+        })
+      }
+    }
     // Alertes RH : l'écran Pilotage RH les affichait déjà, mais il fallait y
     // aller. Trois producteurs finissaient leur alternance la même semaine de
     // septembre sans que rien ne le dise à l'accueil.
@@ -6177,7 +6183,7 @@ export default function App(){
                   profile={profile}
                 />
           )}
-          {activeTab==='forecast'&&((isManager||isRhDelegue)?<ManagementView deals={deals} objectifs={objectifs} month={month} profile={profile} teamProfiles={teamProfiles} canEditObjectifs={isManager} onSaveObjectif={saveObjectif}/>:<ForecastView deals={deals} objectifs={objectifs} month={month} profile={profile} teamProfiles={teamProfiles} canEditObjectifs={isManager} onSaveObjectif={saveObjectif}/>)}
+          {activeTab==='forecast'&&((isManager||isRhDelegue)?<ManagementView deals={deals} objectifs={objectifs} month={month} profile={profile} teamProfiles={teamProfiles} canEditObjectifs={isManager} onSaveObjectif={saveObjectif} dernieresEcritures={dernieresEcritures}/>:<ForecastView deals={deals} objectifs={objectifs} month={month} profile={profile} teamProfiles={teamProfiles} canEditObjectifs={isManager} onSaveObjectif={saveObjectif}/>)}
           {activeTab==='agenda'&&<AgendaView deals={deals} profile={profile}/>}
           {activeTab==='market'&&<MarketView/>}
           {activeTab==='team'&&(isManager||isRhDelegue)&&<TeamView deals={deals} objectifs={objectifs} teamProfiles={teamProfiles} month={month} profile={profile}/>}
