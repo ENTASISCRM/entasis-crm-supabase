@@ -9,8 +9,7 @@ import {
   sumPu,
   advisorMetrics,
   monthFromDate,
-  alignedMonthForDeal,
-} from './metrics';
+  alignedMonthForDeal, estSimpleRdv } from './metrics';
 
 describe('annualize', () => {
   it('multiplie par 12 le PP mensuel', () => {
@@ -225,5 +224,76 @@ describe('MONTHS constants', () => {
     expect(MONTHS).toHaveLength(12);
     expect(MONTHS[0]).toBe('JANVIER');
     expect(MONTHS[11]).toBe('DÉCEMBRE');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// RDV pris vs dossier réel
+// ─────────────────────────────────────────────────────────────────────────
+describe('estSimpleRdv', () => {
+  const rdv = (o = {}) => ({ lead_id: 'L1', product: 'Autre', pu: 0, pp_m: 0, ...o });
+
+  it('reconnaît un RDV créé par la Lead Room', () => {
+    expect(estSimpleRdv(rdv())).toBe(true);
+  });
+
+  it('cesse d’en être un dès qu’un produit est choisi', () => {
+    expect(estSimpleRdv(rdv({ product: 'PER Individuel' }))).toBe(false);
+  });
+
+  it('cesse d’en être un dès qu’un montant est saisi', () => {
+    expect(estSimpleRdv(rdv({ pu: 10000 }))).toBe(false);
+    expect(estSimpleRdv(rdv({ pp_m: 150 }))).toBe(false);
+  });
+
+  it('ne touche jamais un dossier saisi à la main', () => {
+    expect(estSimpleRdv({ lead_id: null, product: 'Autre', pu: 0, pp_m: 0 })).toBe(false);
+  });
+
+  it('résiste aux valeurs absentes', () => {
+    expect(estSimpleRdv(null)).toBe(false);
+    expect(estSimpleRdv({ lead_id: 'L1' })).toBe(true);
+  });
+});
+
+describe('advisorMetrics : les RDV sortent du pipeline', () => {
+  const M = 'JUILLET';
+  const base = { month: M, advisor_code: 'AA', status: 'Prévu' };
+  // Juillet réel : 7 vrais dossiers en cours, 60 rendez-vous.
+  const juillet = [
+    ...Array.from({ length: 60 }, (_, i) => ({ ...base, id: `r${i}`, lead_id: `L${i}`, product: 'Autre', pu: 0, pp_m: 0 })),
+    ...Array.from({ length: 7 }, (_, i) => ({ ...base, id: `d${i}`, lead_id: null, product: 'PER Individuel', pu: 10000, pp_m: 0 })),
+    { ...base, id: 's1', status: 'Signé', lead_id: null, product: 'Assurance Vie Française', pu: 50000, pp_m: 0 },
+  ];
+
+  it('compte 7 dossiers en pipeline, pas 67', () => {
+    const m = advisorMetrics(juillet, M, 'AA');
+    expect(m.pipelineCount).toBe(7);
+    expect(m.rdvCount).toBe(60);
+  });
+
+  it('garde le total brut intact et expose le total hors RDV', () => {
+    const m = advisorMetrics(juillet, M, 'AA');
+    expect(m.total).toBe(68);
+    expect(m.totalHorsRdv).toBe(8);
+  });
+
+  it('calcule le taux de signature sur les dossiers réels', () => {
+    // 1 signé sur 8 dossiers réels = 13 %. Sur 68 lignes brutes : 1 %.
+    expect(advisorMetrics(juillet, M, 'AA').signRate).toBe(13);
+  });
+
+  it('un RDV qualifié rejoint le pipeline', () => {
+    const qualifie = juillet.map(d => (d.id === 'r0' ? { ...d, product: 'SCPI', pu: 20000 } : d));
+    const m = advisorMetrics(qualifie, M, 'AA');
+    expect(m.pipelineCount).toBe(8);
+    expect(m.rdvCount).toBe(59);
+    expect(m.puPipeline).toBe(90000);
+  });
+
+  it('les RDV ne pèsent rien en volume, ils sont à zéro', () => {
+    const m = advisorMetrics(juillet, M, 'AA');
+    expect(m.puPipeline).toBe(70000);
+    expect(m.ppPipeline).toBe(0);
   });
 });

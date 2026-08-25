@@ -16,6 +16,26 @@ export const annualize = (ppm) => Number(ppm || 0) * 12;
 // True si le deal est encore dans le pipeline (pas signé ni annulé).
 export const isPipeline = (status) => status === 'En cours' || status === 'Prévu';
 
+// ─── RDV pris vs dossier réel ────────────────────────────────────────────
+// Quand un lead prend rendez-vous, la Lead Room crée une ligne dans `deals`.
+// Ce n'est pas un dossier : date_expected porte une HEURE (09:00, 13:15), les
+// montants sont à zéro et le produit reste « Autre ». C'est une entrée
+// d'agenda qui a la forme d'un dossier.
+//
+// Mesuré le 24/08/2026 : sur juillet, le pipeline annonçait 67 dossiers — il
+// y en avait 7. Les 60 autres étaient des rendez-vous passés. Le compteur,
+// l'alerte de vieillissement et le taux de signature s'en trouvaient faussés.
+//
+// Un rendez-vous cesse d'en être un dès que quelqu'un le qualifie : un
+// produit choisi ou un montant saisi suffit. On ne le cache jamais, on le
+// compte à part.
+export const estSimpleRdv = (deal) =>
+  !!deal
+  && deal.lead_id != null
+  && (deal.product === 'Autre' || !deal.product)
+  && !Number(deal.pu || 0)
+  && !Number(deal.pp_m || 0);
+
 // Match advisor (titulaire ou co-conseil).
 export const dealMatchesAdvisor = (deal, code) =>
   deal.advisor_code === code || deal.co_advisor_code === code;
@@ -92,7 +112,11 @@ export function sumPu(deals, advisorCode) {
 export function advisorMetrics(deals, month, code) {
   const scoped = deals.filter(d => dealDuMois(d, month) && dealMatchesAdvisor(d, code));
   const signed = scoped.filter(d => d.status === 'Signé');
-  const pipeline = scoped.filter(d => isPipeline(d.status));
+  // Les rendez-vous non qualifiés sortent du pipeline : ils le gonflaient
+  // d'un facteur 10 certains mois. Ils restent comptés dans rdvCount.
+  const enCours = scoped.filter(d => isPipeline(d.status));
+  const rdv = enCours.filter(estSimpleRdv);
+  const pipeline = enCours.filter(d => !estSimpleRdv(d));
 
   const ppS = sumAnnualPp(signed, code);
   const puS = sumPu(signed, code);
@@ -105,11 +129,17 @@ export function advisorMetrics(deals, month, code) {
   // Comptage 0.5 si co-conseil pour ne pas double compter au global.
   const signedCount = signed.reduce((s, d) => s + (d.co_advisor_code ? 0.5 : 1), 0);
   const pipelineCount = pipeline.reduce((s, d) => s + (d.co_advisor_code ? 0.5 : 1), 0);
+  const rdvCount = rdv.reduce((s, d) => s + (d.co_advisor_code ? 0.5 : 1), 0);
+  // Dénominateur du taux de signature : les dossiers réels. Un rendez-vous
+  // qui n'a jamais été qualifié n'est pas une occasion manquée de signer.
+  const dossiersReels = scoped.filter(d => !estSimpleRdv(d));
 
   return {
     total: scoped.length,
+    totalHorsRdv: dossiersReels.length,
     signedCount,
     pipelineCount,
+    rdvCount,
     ppSigned: ppS,
     puSigned: puS,
     ppPipeline: ppP,
@@ -119,11 +149,13 @@ export function advisorMetrics(deals, month, code) {
     ppMutuelleSigned: ppMutS,
     ppMutuellePipeline: ppMutP,
     ppMutuelleProjected: ppMutS + ppMutP,
-    signRate: scoped.length > 0
-      ? Math.round((signedCount / scoped.length) * 100)
+    signRate: dossiersReels.length > 0
+      ? Math.round((signedCount / dossiersReels.length) * 100)
       : 0,
     avgPp: signedCount > 0 ? ppS / signedCount : 0,
-    hotDeals: scoped.filter(d => d.priority === 'Urgente' || d.priority === 'Haute'),
+    // Les priorités remontées au conseiller : des dossiers, pas des RDV non
+    // qualifiés, qui portent la priorité par défaut de la Lead Room.
+    hotDeals: dossiersReels.filter(d => d.priority === 'Urgente' || d.priority === 'Haute'),
   };
 }
 

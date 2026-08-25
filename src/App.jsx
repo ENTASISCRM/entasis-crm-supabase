@@ -68,8 +68,7 @@ import {
   monthFromDate,
   alignedMonthForDeal,
   anneeDuDeal,
-  dealDuMois,
-} from './lib/metrics'
+  dealDuMois, estSimpleRdv } from './lib/metrics'
 import {
   MONTHS,
   STATUS_OPTIONS,
@@ -234,8 +233,12 @@ function EditorialPendingBanner({count,nextDeadline,onOpen}){
 }
 
 function StalePipelineAlert({deals,onEdit}){
+  // Les RDV pris via la Lead Room sont exclus : ils composaient l'essentiel
+  // des « dossiers sans mouvement », ce qui rendait l'alerte illisible — on
+  // n'agit pas sur 156 lignes. Ce sont des rendez-vous passés, pas des
+  // dossiers qui dorment.
   const stale=deals
-    .filter(d=>isPipeline(d.status))
+    .filter(d=>isPipeline(d.status)&&!estSimpleRdv(d))
     .map(d=>({...d,_age:dealAge(d)}))
     .filter(d=>d._age>30)
     .sort((a,b)=>b._age-a._age)
@@ -773,7 +776,9 @@ function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,mont
     return deals.filter(d=>dealDuMois(d,month)&&dealMatchesAdvisor(d,code)&&(d.priority==='Urgente'||d.priority==='Haute')&&isPipeline(d.status)).length
   },[deals,month,profile])
 
-  const pipelineCount=useMemo(()=>deals.filter(d=>dealDuMois(d,month)&&isPipeline(d.status)).length,[deals,month])
+  const pipelineCount=useMemo(()=>deals.filter(d=>dealDuMois(d,month)&&isPipeline(d.status)&&!estSimpleRdv(d)).length,[deals,month])
+  // Compté à part, jamais masqué : un conseiller doit voir ses RDV à venir.
+  const rdvCount=useMemo(()=>deals.filter(d=>dealDuMois(d,month)&&isPipeline(d.status)&&estSimpleRdv(d)).length,[deals,month])
 
   // B1 — la sidebar liste des DOMAINES (source unique lib/navigation.js,
   // partagée avec la barre de sous-onglets, la palette ⌘K et le routing).
@@ -2074,7 +2079,7 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab}){
       <div className="advisor-hero">
         <div className="advisor-hero-eyebrow">Tableau de bord · {month}</div>
         <div className="advisor-hero-name">{profile?.full_name||code||'Mon mois'}</div>
-        <div className="advisor-hero-month">{m.signedCount} dossier{m.signedCount!==1?'s':''} signés · {m.pipelineCount} en pipeline · taux de signature {m.signRate}%</div>
+        <div className="advisor-hero-month">{m.signedCount} dossier{m.signedCount!==1?'s':''} signés · {m.pipelineCount} en pipeline{m.rdvCount>0?` · ${m.rdvCount} RDV à qualifier`:''} · taux de signature {m.totalHorsRdv===0?'—':`${m.signRate} %`}</div>
         <div className="advisor-hero-kpis">
           <div className="advisor-hero-kpi"><div className="advisor-hero-kpi-label">PP signée</div><div className="advisor-hero-kpi-value gold">{euro(m.ppSigned)}</div></div>
           <div className="advisor-hero-kpi"><div className="advisor-hero-kpi-label">PP projetée</div><div className="advisor-hero-kpi-value">{euro(m.ppProjected)}</div></div>
@@ -2086,7 +2091,7 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab}){
       </div>
       <div className="kpi-grid mb-24">
         <KpiCard label="PP signée annualisée" value={euro(m.ppSigned)} hint="Réalisé du mois" accent="gold" progressValue={ppPct} delta={prevMonth?dPpSigned:null}/>
-        <KpiCard label="PP en pipeline" value={euro(m.ppPipeline)} hint={`${m.pipelineCount} dossier${m.pipelineCount!==1?'s':''} en cours / prévus`} accent="amber" delta={prevMonth?dPpPipeline:null}/>
+        <KpiCard label="PP en pipeline" value={euro(m.ppPipeline)} hint={`${m.pipelineCount} dossier${m.pipelineCount!==1?'s':''} en cours / prévus${m.rdvCount>0?` · ${m.rdvCount} RDV à qualifier`:''}`} accent="amber" delta={prevMonth?dPpPipeline:null}/>
         <KpiCard label="PU signée" value={euro(m.puSigned)} hint="Versements uniques signés" accent="green" delta={prevMonth?dPuSigned:null}/>
         <KpiCard label="PU en pipeline" value={euro(m.puPipeline)} hint="À signer ce mois" accent="blue"/>
       </div>
@@ -2246,7 +2251,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit}){
               <div className="team-bar-wrap"><div className="team-bar-track"><div className="team-bar-fill" style={{width:`${pct(row.ppProjected,topPp)}%`}}/></div><span className="team-amount">{euro(row.ppProjected)}</span></div>
               <div className="team-bar-wrap"><div className="team-bar-track"><div className="team-bar-fill" style={{width:`${pct(row.puProjected,topPu)}%`}}/></div><span className="team-amount">{euro(row.puProjected)}</span></div>
               <div className="team-amount" style={{textAlign:'center'}}>{row.total}</div>
-              <div><span className={`badge ${row.signRate>=60?'badge-signed':row.signRate>=30?'badge-progress':'badge-cancelled'}`}>{row.signRate}%</span></div>
+              <div>{row.totalHorsRdv===0?<span className="badge badge-forecast" title="Aucun dossier ce mois — uniquement des RDV">—</span>:<span className={`badge ${row.signRate>=60?'badge-signed':row.signRate>=30?'badge-progress':'badge-cancelled'}`}>{row.signRate}%</span>}</div>
             </div>
           ))}
           {!advisorRows.length&&<div className="table-empty-state"><div className="empty-icon"><Icon.EmptyPeople/></div><div className="empty-title">Aucun conseiller configuré</div><div className="empty-sub">Renseigne les profils dans <span className="code">public.profiles</span></div></div>}
@@ -3878,7 +3883,7 @@ function TeamView({deals,objectifs,teamProfiles,month,profile}){
                 {miniKpi('Dossiers',<>{row.total} <span style={{fontSize:11,color:'var(--t3)',fontWeight:400}}>({row.signedCount}✓)</span></>)}
               </div>
               <div style={{display:'flex',gap:14,alignItems:'center'}}>
-                <div style={{textAlign:'right'}}><div style={{fontSize:10,color:'var(--t3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:2}}>Taux</div><span className={`badge ${row.signRate>=60?'badge-signed':row.signRate>=30?'badge-progress':'badge-cancelled'}`} style={{fontSize:11,padding:'2px 8px'}}>{row.signRate}%</span></div>
+                <div style={{textAlign:'right'}}><div style={{fontSize:10,color:'var(--t3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:2}}>Taux</div>{row.totalHorsRdv===0?<span className="badge badge-forecast" style={{fontSize:11,padding:'2px 8px'}} title="Aucun dossier ce mois — uniquement des RDV">—</span>:<span className={`badge ${row.signRate>=60?'badge-signed':row.signRate>=30?'badge-progress':'badge-cancelled'}`} style={{fontSize:11,padding:'2px 8px'}}>{row.signRate}%</span>}</div>
                 <div style={{textAlign:'right'}}><div style={{fontSize:10,color:'var(--t3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:2}}>Ticket</div><div style={{fontSize:13,fontWeight:600,color:'var(--t1)',fontVariantNumeric:'tabular-nums'}}>{row.signedCount>0?euro(row.avgPp):'—'}</div></div>
                 <div style={{textAlign:'right'}}><div style={{fontSize:10,color:'var(--t3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:2}}>PP obj.</div><div style={{fontSize:13,fontWeight:600,color:'var(--t1)',fontVariantNumeric:'tabular-nums'}}>{ppProjPct}%</div></div>
               </div>
