@@ -1,11 +1,12 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // SANTÉ DES FLUX ENTRANTS
 //
-// Le 4 mai 2026 à 13h37, la Lead Room a tenté de synchroniser dans le CRM et
-// reçu « Invalid API key ». Elle a réessayé une vingtaine de fois en vingt
-// minutes, puis s'est tue. Trois flux se sont arrêtés ce jour-là — la synchro
-// des leads, le miroir leads_room, et les appels Aircall — et personne ne
-// s'en est aperçu pendant près de quatre mois.
+// Le 28 avril 2026 à 20h53, la Lead Room a commencé à recevoir « Invalid API
+// key » en poussant vers le CRM. Elle a réessayé 229 fois en six jours, puis
+// s'est tue le 4 mai à 13h37. Trois tables se sont figées ce jour-là — le
+// miroir leads_room, les appels Aircall et ce journal de synchro — et
+// personne ne s'en est aperçu pendant près de quatre mois. (Les leads eux
+// continuent d'arriver : ils empruntent un autre chemin que cette synchro.)
 //
 // Pire : l'email quotidien de la Lead Room a continué de partir, en lisant
 // une table figée. Il annonçait des rendez-vous de mai comme « actions du
