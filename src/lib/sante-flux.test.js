@@ -31,12 +31,11 @@ describe('santeFlux', () => {
     expect(par(santeFlux({ calls: null }, LE_24_AOUT)).calls.etat).toBe('vide')
   })
 
-  it('applique un seuil propre à chaque flux', () => {
-    // Les programmes immo tolèrent 60 jours, les leads 14.
-    const dates = { leads: '2026-08-04T12:00:00Z', programmes: '2026-08-04T12:00:00Z' }
+  it('applique le seuil de chaque flux', () => {
+    const dates = { leads: '2026-08-04T12:00:00Z', calls: '2026-08-20T12:00:00Z' }
     const f = par(santeFlux(dates, LE_24_AOUT))
     expect(f.leads.etat).toBe('decroche')      // 20 j > 14
-    expect(f.programmes.etat).toBe('ok')       // 20 j < 60
+    expect(f.calls.etat).toBe('ok')            //  4 j < 14
   })
 
   it('remonte les flux décrochés en premier, le plus ancien devant', () => {
@@ -49,7 +48,7 @@ describe('santeFlux', () => {
     expect(f.at(-1).cle).toBe('leads')
   })
 
-  it('couvre les cinq flux même sans données', () => {
+  it('couvre tous les flux même sans données', () => {
     expect(santeFlux({}, LE_24_AOUT)).toHaveLength(FLUX.length)
   })
 })
@@ -59,7 +58,6 @@ describe('resumeSante', () => {
     expect(resumeSante(santeFlux({
       leads: '2026-08-23T12:00:00Z', leads_room: '2026-08-23T12:00:00Z',
       calls: '2026-08-23T12:00:00Z', sync: '2026-08-23T12:00:00Z',
-      programmes: '2026-08-23T12:00:00Z',
     }, LE_24_AOUT))).toBeNull()
   })
 
@@ -67,7 +65,6 @@ describe('resumeSante', () => {
     const r = resumeSante(santeFlux({
       leads: '2026-08-23T12:00:00Z', leads_room: '2026-08-23T12:00:00Z',
       calls: '2026-05-04T12:00:00Z', sync: '2026-08-23T12:00:00Z',
-      programmes: '2026-08-23T12:00:00Z',
     }, LE_24_AOUT))
     expect(r.nombre).toBe(1)
     expect(r.texte).toContain('Appels (Aircall)')
@@ -80,10 +77,9 @@ describe('resumeSante', () => {
       leads_room: '2026-05-04T13:37:00Z',
       calls: '2026-05-04T13:37:00Z',
       sync: '2026-05-04T13:37:00Z',
-      programmes: '2026-03-21T12:00:00Z',
     }, LE_24_AOUT))
-    expect(r.nombre).toBe(4)   // les trois du 4 mai, plus les programmes de mars
-    expect(r.pire.cle).toBe('programmes')
-    expect(r.texte).toContain('4 flux')
+    expect(r.nombre).toBe(3)   // les trois flux tombés le 4 mai
+    expect(r.pire.cle).toBe('leads_room')
+    expect(r.texte).toContain('3 flux')
   })
 })

@@ -9,6 +9,7 @@ import ClientEquipementCard from './ClientEquipementCard.jsx'
 import ClientContratsCard from './ClientContratsCard.jsx'
 import ClientEspaceCard from './ClientEspaceCard.jsx'
 import ClientTimeline from './ClientTimeline.jsx'
+import { partenaireDe, etapeDe } from '../../config/partenairesImmo'
 
 // Copie une valeur dans le presse papiers avec retour visuel
 function copier(valeur, label) {
@@ -27,14 +28,13 @@ const STATUS_CLASS = {
   'Annulé': 'badge badge-cancelled',
 }
 
+// Etapes d un dossier confie a un partenaire immobilier (Althera, François 1er).
 const PIPELINE_STATUS_CLASS = {
-  'prospect': 'badge badge-progress',
-  'presente': 'badge badge-progress',
-  'reservation': 'badge badge-forecast',
-  'financement': 'badge badge-forecast',
+  'transmis': 'badge badge-forecast',
+  'etude': 'badge badge-progress',
+  'reserve': 'badge badge-progress',
   'acte': 'badge badge-signed',
-  'livraison': 'badge badge-signed',
-  'honoraires': 'badge badge-signed'
+  'sans_suite': 'badge badge-normal',
 }
 
 // Rouge charte pour le manque (voir styles.css, semantique "manque").
@@ -103,7 +103,7 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
         const [clientRes, dealsRes, dossiersRes] = await Promise.all([
           supabase.from('clients').select('*').eq('id', clientId).single(),
           supabase.from('deals').select('*').eq('client_id', clientId).order('created_at', { ascending: false }),
-          supabase.from('dossiers_immo').select('*, programme:programmes(nom, ville)').eq('client_id', clientId).order('created_at', { ascending: false }),
+          supabase.from('dossiers_immo').select('*').eq('client_id', clientId).order('created_at', { ascending: false }),
         ])
 
         if (clientRes.error) throw clientRes.error
@@ -712,50 +712,57 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
         <ClientEspaceCard clientId={client.id} client={client} supabase={supabase} profile={profile} />
       )}
 
-      {/* Section Dossiers immobilier */}
+      {/* Section Dossiers immobilier — Entasis ne vend pas de lots : le dossier
+          est confie a un referent partenaire, on suit ici ce qui lui a ete
+          transmis et ou cela en est. */}
       {tab === 'immobilier' && (clientDossiers.length > 0 ? (
         <div className="card" style={{ marginBottom: '32px' }}>
           <div className="card-header">
-            <h3>Dossiers immobilier ({clientDossiers.length})</h3>
+            <h3>Dossiers confiés à un partenaire ({clientDossiers.length})</h3>
           </div>
           <div className="card-body">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {clientDossiers.map(dossier => (
-                <div key={dossier.id} style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '16px',
-                  backgroundColor: 'var(--bg)',
-                  borderRadius: 'var(--rad)',
-                  border: '1px solid var(--bd)'
-                }}>
-                  <div>
-                    <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
-                      {dossier.programme?.nom || 'Programme non spécifié'}
+              {clientDossiers.map(dossier => {
+                const partenaire = partenaireDe(dossier.partenaire)
+                const etape = etapeDe(dossier.statut_pipeline)
+                return (
+                  <div key={dossier.id} style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '16px',
+                    padding: '16px',
+                    backgroundColor: 'var(--bg)',
+                    borderRadius: 'var(--rad)',
+                    border: '1px solid var(--bd)'
+                  }}>
+                    <div>
+                      <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
+                        {partenaire ? `${partenaire.societe} · ${partenaire.referent}` : 'Partenaire non précisé'}
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--t2)' }}>
+                        {dossier.dispositif_retenu || 'Dispositif à définir'}
+                        {dossier.budget_total ? ` | Budget ${euro(dossier.budget_total)}` : ''}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--t3)' }}>
+                        {dossier.transmis_le
+                          ? `Transmis le ${new Date(dossier.transmis_le).toLocaleDateString('fr-FR')}`
+                          : 'Pas encore transmis au référent'}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--t2)' }}>
-                      {dossier.programme?.ville} | Prix: {euro(dossier.prix_lot)}
-                    </div>
-                    <div style={{ fontSize: '11px', color: 'var(--t3)' }}>
-                      Honoraires: {euro(dossier.honoraires_prevus)}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <span className={PIPELINE_STATUS_CLASS[dossier.statut_pipeline] || 'badge'}>
-                      {dossier.statut_pipeline}
+                      {etape.label}
                     </span>
-                    <button className="btn btn-secondary btn-sm">Voir</button>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         </div>
       ) : (
         <div className="table-empty-state">
           <div className="empty-title">Aucun dossier immobilier</div>
-          <div className="empty-sub">Les dossiers créés dans le module Immobilier Neuf pour ce client apparaîtront ici.</div>
+          <div className="empty-sub">Les dossiers transmis à Althera Patrimoine ou à François 1er depuis l onglet Immobilier apparaîtront ici.</div>
         </div>
       ))}
 

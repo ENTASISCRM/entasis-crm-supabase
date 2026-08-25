@@ -20,8 +20,9 @@
 const MS_JOUR = 24 * 60 * 60 * 1000
 
 // Les flux alimentés par une machine, pas par un conseiller. Le délai est
-// propre à chacun : les leads arrivent en continu, l'immobilier se
-// resynchronise plus rarement.
+// propre à chacun. Le catalogue de programmes immobiliers a quitté cette
+// liste le 25/08/2026 : nous ne tenons plus de catalogue, les lots sont
+// choisis par nos deux référents partenaires sur leurs propres extranets.
 export const FLUX = [
   { cle: 'leads', libelle: 'Leads (campagnes)', table: 'leads', seuilJours: 14,
     note: 'Nouveaux leads issus des campagnes d’acquisition.' },
@@ -31,8 +32,6 @@ export const FLUX = [
     note: 'Appels remontés par Aircall, avec transcription Modjo.' },
   { cle: 'sync', libelle: 'Journal de synchro', table: 'lead_sync_logs', seuilJours: 14,
     note: 'Trace des échanges entre la Lead Room et le CRM.' },
-  { cle: 'programmes', libelle: 'Programmes immobiliers', table: 'programmes', seuilJours: 60,
-    note: 'Catalogue des programmes neufs, resynchronisé périodiquement.' },
 ]
 
 export const joursDepuis = (date, maintenant = new Date()) => {

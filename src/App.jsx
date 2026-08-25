@@ -36,7 +36,7 @@ import { exporterCsv, suffixeDate, nombreFr } from './lib/export-csv'
 // bundle principal pour alleger le JS au login. jspdf/html2canvas (OutilsCGP) et
 // chart.js (ManagementView) ne se telechargent que quand l onglet s ouvre.
 const OutilsCGP = lazy(() => import('./components/OutilsCGP'))
-// Conteneur immobilier : les 4 anciens onglets immo en sous-vues (fusion nav)
+// Immobilier : transmission des dossiers aux deux referents partenaires
 const ImmobilierNeuf = lazy(() => import('./components/ImmobilierNeuf'))
 const EditorialHub = lazy(() => import('./components/EditorialHub'))
 const PilotageRH = lazy(() => import('./components/PilotageRH'))
@@ -971,7 +971,7 @@ async function genererFicheParrainage(profile){
 // portent déjà l'identité visuelle de chaque écran.
 // Ecrans ou les actions commerciales de la barre du haut ont un sens
 const ECRANS_COMMERCIAUX = ['dashboard','pipeline','dossiers','clients','multi-equipement','leads','agenda','forecast']
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers','multi-equipement':'Multi-équipement',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers',team:'Équipe',leads:'Leads Live','ucs-structures':'UCS Produits Structurés',allocations:'Allocations types',immobilier:'Immobilier Neuf',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH','recrutement':'Recrutement',conformite:'Conformité',editorial:'Agent éditorial',cockpit:'Cockpit ratios'}
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers','multi-equipement':'Multi-équipement',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers',team:'Équipe',leads:'Leads Live','ucs-structures':'UCS Produits Structurés',allocations:'Allocations types',immobilier:'Immobilier · partenaires',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH','recrutement':'Recrutement',conformite:'Conformité',editorial:'Agent éditorial',cockpit:'Cockpit ratios'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile,onHelp,notifications,notifScope}){
   return (
@@ -5904,7 +5904,7 @@ export default function App(){
           {activeTab==='team'&&(isManager||isRhDelegue)&&<TeamView deals={deals} objectifs={objectifs} teamProfiles={teamProfiles} month={month} profile={profile}/>}
           {activeTab==='ucs-structures'&&<UcsStructures profile={profile} month={month}/>}
           {activeTab==='allocations'&&<AllocationsTypes/>}
-          {activeTab==='immobilier'&&<ImmobilierNeuf profile={profile} teamProfiles={teamProfiles}/>}
+          {activeTab==='immobilier'&&<ImmobilierNeuf profile={profile}/>}
           {activeTab==='editorial'&&isManager&&<EditorialHub onPendingChange={(n)=>setEditorialPending(p=>({...p,count:n}))}/>}
           {activeTab==='remuneration'&&<Remuneration profile={profile} deals={deals} month={month}/>}
           {activeTab==='outils'&&<OutilsCGP profile={profile}/>}
