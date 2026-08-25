@@ -2,17 +2,19 @@
 // Bloc "Mission du mois" pour le dashboard conseiller — engage en mode
 // course au mois.
 //
-// Affiche :
-//   • Compteur €/jour ouvré restant pour atteindre l'objectif
-//   • Top 3 leads "chauds" Lead Room (tenus >7j sans signature)
-//   • Prochains RDV de la semaine (depuis le Lead Room)
+// Affiche le compteur €/jour ouvré restant pour atteindre l'objectif du mois.
 //
 // Demandé par Louis 28/05/2026 (#2 dans la liste des 7 améliorations).
+//
+// La carte « Tes leads chauds Lead Room » vivait ici. Retirée le 25/08/2026
+// sur demande de Louis : elle triait par ancienneté DÉCROISSANTE et gardait
+// les trois premiers, donc elle présentait les leads les plus vieux comme
+// les plus chauds — le contraire de son propre sous-titre. Avec le miroir
+// leads_room figé depuis le 4 mai, elle affichait un RDV du 7 mai en
+// « J+109 » comme action du jour. Le conseiller ne peut rien faire d'un
+// lead mort ; le manager, lui, a l'alerte de santé des flux.
 
-import { useEffect, useMemo, useState } from 'react'
-import { leadroomAdmin } from '../lib/leadroom-api'
-
-const LEADROOM_API = import.meta.env.VITE_LEADROOM_URL || 'https://entasis-leadroom.vercel.app'
+import { useMemo } from 'react'
 
 const fmtEur = (v) => Number(v || 0).toLocaleString('fr-FR', {
   style: 'currency', currency: 'EUR', maximumFractionDigits: 0,
@@ -33,34 +35,7 @@ function jourOuvresRestants() {
   return count
 }
 
-export default function MissionDuMois({ profile, ppTarget, ppSigned, ppProjected, month }) {
-  // Charge les leads chauds + prochains RDV depuis Lead Room
-  const [leadRoomData, setLeadRoomData] = useState({ loading: true, hot: [], upcoming: [] })
-
-  useEffect(() => {
-    if (!profile?.email) {
-      setLeadRoomData({ loading: false, hot: [], upcoming: [] })
-      return
-    }
-    let cancelled = false
-    Promise.all([
-      // Tenus à suivre (>7j sans rappel, ce conseiller)
-      leadroomAdmin(`joined-leads-detail?advisorEmail=${encodeURIComponent(profile.email)}`)
-        .then(r => r.ok ? r.json() : { leads: [] })
-        .catch(() => ({ leads: [] })),
-      // RDV à venir cette semaine — pas d'endpoint dédié mais on peut filtrer depuis joined-leads-detail
-      // Pour la v1, on se contente des "hot" leads. Les prochains RDV viendront plus tard.
-    ]).then(([hotData]) => {
-      if (cancelled) return
-      const hot = (hotData.leads || [])
-        .filter(l => !l.has_callback_future)
-        .sort((a, b) => (b.days_since_rdv || 0) - (a.days_since_rdv || 0))
-        .slice(0, 3)
-      setLeadRoomData({ loading: false, hot, upcoming: [] })
-    })
-    return () => { cancelled = true }
-  }, [profile?.email])
-
+export default function MissionDuMois({ ppTarget, ppSigned, ppProjected, month }) {
   // Calculs mission
   const mission = useMemo(() => {
     const target = Number(ppTarget || 0)
@@ -73,7 +48,7 @@ export default function MissionDuMois({ profile, ppTarget, ppSigned, ppProjected
   }, [ppTarget, ppSigned, ppProjected])
 
   // Rien à afficher si pas d'objectif
-  if (!mission && leadRoomData.hot.length === 0) return null
+  if (!mission) return null
 
   return (
     <div style={{ marginBottom: 24 }}>
@@ -149,61 +124,6 @@ export default function MissionDuMois({ profile, ppTarget, ppSigned, ppProjected
         </div>
       )}
 
-      {/* ─── Top 3 leads chauds Lead Room ────────────────────────── */}
-      {leadRoomData.hot.length > 0 && (
-        <div className="card mb-24" style={{ borderTop: '3px solid #EF4444' }}>
-          <div className="panel-head">
-            <div>
-              <div className="section-kicker" style={{ color: '#EF4444' }}>🔥 Tes leads chauds Lead Room</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t1)' }}>
-                Top 3 RDV tenus à suivre — chaque jour sans rappel = lead qui refroidit
-              </div>
-            </div>
-          </div>
-          <div style={{ padding: '0 0 6px 0' }}>
-            {leadRoomData.hot.map((l, i) => (
-              <div key={l.id} style={{
-                display: 'flex', alignItems: 'center', gap: 16, padding: '12px 20px',
-                borderBottom: i < leadRoomData.hot.length - 1 ? '1px solid var(--bd)' : 'none',
-              }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: '50%',
-                  background: l.days_since_rdv > 14 ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)',
-                  color: l.days_since_rdv > 14 ? '#EF4444' : '#B45309',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 700, fontSize: 13,
-                }}>
-                  J+{l.days_since_rdv}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, color: 'var(--t1)', fontSize: 14 }}>
-                    {l.name}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 2 }}>
-                    RDV {l.rdv_date ? new Date(l.rdv_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : '?'}
-                    {l.campaign_slug ? ` · ${l.campaign_slug}` : ''}
-                    {l.email ? ` · ${l.email}` : ''}
-                  </div>
-                  {l.notes_excerpt && (
-                    <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--t2)', marginTop: 4 }}>
-                      "{l.notes_excerpt.slice(0, 80)}{l.notes_excerpt.length > 80 ? '…' : ''}"
-                    </div>
-                  )}
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <a href={`${LEADROOM_API}/leadroom`} target="_blank" rel="noreferrer"
-                     style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 600, textDecoration: 'none' }}>
-                    Ouvrir Lead Room →
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={{ padding: '10px 20px', borderTop: '1px solid var(--bd)', background: 'var(--bg)', fontSize: 11, color: 'var(--t3)', textAlign: 'center' }}>
-            💡 Ouvre le lead dans la Lead Room pour programmer un rappel ou marquer le contrat.
-          </div>
-        </div>
-      )}
     </div>
   )
 }

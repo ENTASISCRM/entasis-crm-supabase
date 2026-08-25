@@ -2067,11 +2067,9 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab}){
   return (
     <div>
       <ChecklistAccueil etapes={etapesAccueil} scope={profile?.advisor_code || profile?.id || 'anon'}/>
-      {/* Bloc Mission du mois (top of dashboard) — engagement émotionnel
-          + leads chauds Lead Room. Affichage conditionnel : si pas
-          d'objectif et pas de leads chauds, ne s'affiche pas. */}
+      {/* Bloc Mission du mois (haut du tableau de bord) : combien signer par
+          jour ouvré pour tenir l'objectif. Ne s'affiche pas sans objectif. */}
       <MissionDuMois
-        profile={profile}
         ppTarget={ppTarget}
         ppSigned={m.ppSigned}
         ppProjected={m.ppProjected}
