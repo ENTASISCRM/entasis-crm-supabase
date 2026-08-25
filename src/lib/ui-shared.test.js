@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
+  jourDe,
+  heureDe,
+  avecHeureConservee,
   MONTHS,
   euro,
   pct,
@@ -147,3 +150,55 @@ describe('nombreFr — robustesse (revue Série D)', () => {
     expect(nombreFr(1234)).toBe('1234');
   });
 });
+
+describe('dates de rendez-vous Lead Room', () => {
+  // date_expected est un instant UTC : le RDV de 12h30 a Paris est stocke
+  // 10:30:00+00:00, et c'est 12h30 que le client a recu dans son mail. Ces
+  // tests verrouillent l'heure de Paris, jamais l'heure UTC brute.
+  const RDV_SEPTEMBRE = '2026-09-16T10:30:00+00:00'   // 12h30 a Paris (ete)
+  const RDV_JANVIER = '2026-01-14T09:00:00+00:00'     // 10h00 a Paris (hiver)
+
+  it('affiche le jour tel qu on le vit a Paris', () => {
+    expect(jourDe(RDV_SEPTEMBRE)).toBe('2026-09-16')
+    expect(jourDe('2026-09-16')).toBe('2026-09-16')
+    expect(jourDe(null)).toBe('')
+  })
+
+  it('bascule le jour au bon moment : 00h30 a Paris, pas 22h30 la veille', () => {
+    expect(jourDe('2026-09-15T22:30:00+00:00')).toBe('2026-09-16')
+  })
+
+  it('donne l heure de Paris, celle que le client a recue', () => {
+    expect(heureDe(RDV_SEPTEMBRE)).toBe('12h30')
+    expect(heureDe(RDV_JANVIER)).toBe('10h00')
+    expect(heureDe('2026-09-16')).toBeNull()
+    expect(heureDe(undefined)).toBeNull()
+  })
+
+  it('deplace le jour sans decaler l heure du rendez-vous', () => {
+    const deplace = avecHeureConservee('2026-09-20', RDV_SEPTEMBRE)
+    expect(heureDe(deplace)).toBe('12h30')
+    expect(jourDe(deplace)).toBe('2026-09-20')
+  })
+
+  it('tient le passage ete vers hiver : 12h30 reste 12h30 en decembre', () => {
+    const enHiver = avecHeureConservee('2026-12-20', RDV_SEPTEMBRE)
+    expect(heureDe(enHiver)).toBe('12h30')
+    expect(jourDe(enHiver)).toBe('2026-12-20')
+  })
+
+  it('tient le passage hiver vers ete : 10h00 reste 10h00 en juillet', () => {
+    const enEte = avecHeureConservee('2026-07-02', RDV_JANVIER)
+    expect(heureDe(enEte)).toBe('10h00')
+    expect(jourDe(enEte)).toBe('2026-07-02')
+  })
+
+  it('reste une date simple quand il n y avait pas d heure', () => {
+    expect(avecHeureConservee('2026-09-20', '2026-09-16')).toBe('2026-09-20')
+    expect(avecHeureConservee('2026-09-20', '')).toBe('2026-09-20')
+  })
+
+  it('vide le champ si le conseiller efface la date', () => {
+    expect(avecHeureConservee('', RDV_SEPTEMBRE)).toBe('')
+  })
+})

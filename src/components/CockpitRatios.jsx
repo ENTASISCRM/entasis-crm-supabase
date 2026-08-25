@@ -293,10 +293,10 @@ export default function CockpitRatios({ profile }) {
           loadCockpit(4),
           listTeam().catch(() => []),
         ])
-        const { mois, moisCourant, lignes } = computeCockpit({
+        const { mois, moisCourant, lignes, cabinet } = computeCockpit({
           ...raw, team, isManager, advisorCode: profile?.advisor_code,
         })
-        if (vivant) setState({ loading: false, err: null, mois, moisCourant, lignes })
+        if (vivant) setState({ loading: false, err: null, mois, moisCourant, lignes, cabinet })
       } catch (e) {
         if (vivant) setState({ loading: false, err: messageErreur(e), mois: [], lignes: [] })
       }
@@ -305,11 +305,13 @@ export default function CockpitRatios({ profile }) {
   }, [isManager, profile?.advisor_code])
 
   const labels = useMemo(() => state.mois.map(moisCourt), [state.mois])
+  // Les totaux viennent de computeCockpit, comptes une fois par dossier. Les
+  // sommer depuis les lignes comptait double chaque dossier en co conseil.
   const cabinet = useMemo(() => ({
-    collecte: state.lignes.reduce((s, l) => s + l.collecteMois, 0),
+    collecte: state.cabinet?.collecte ?? 0,
     conseillers: state.lignes.length,
-    deals: state.lignes.reduce((s, l) => s + l.nbDealsMois, 0),
-  }), [state.lignes])
+    deals: state.cabinet?.nbDeals ?? 0,
+  }), [state.cabinet, state.lignes])
 
   return (
     <div className="ckr">

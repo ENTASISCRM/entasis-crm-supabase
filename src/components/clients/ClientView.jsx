@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { toast } from 'react-hot-toast'
 import { Skeleton, SkeletonCards, SkeletonTable } from '../ui/Skeleton'
 import SubTabs from '../ui/SubTabs'
-import { statusLabel } from '../../lib/ui-shared'
+import { statusLabel, jourDe, heureDe } from '../../lib/ui-shared'
+import { estSimpleRdv } from '../../lib/metrics'
 import { euro, annualize } from '../../lib/format'
 import ClientModal from './ClientModal.jsx'
 import ClientEquipementCard from './ClientEquipementCard.jsx'
@@ -157,13 +158,33 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
       ) || 'En cours'
     : 'Aucun deal'
 
-  // Derniere activite : anciennete en jours de la derniere action chargee
-  // (history est trie du plus recent au plus ancien). Au dela de 90 jours,
-  // ou sans aucune activite, le chip passe en ambre : signal de relance.
-  const lastActivityDays = history.length > 0
-    ? Math.max(0, Math.floor((Date.now() - new Date(history[0].created_at).getTime()) / 86400000))
-    : null
-  const activiteEnRetard = lastActivityDays === null || lastActivityDays >= 90
+  // Derniere activite. Elle se lisait uniquement dans la table `activities`,
+  // qui n a jamais recu une seule ligne : `lastActivityDays` valait donc null
+  // pour TOUS les clients, y compris ceux vus la veille, et les 379 fiches
+  // affichaient « a relancer ». Un signal vrai a tous les coups est un signal
+  // mort. On le recalcule sur ce qui est reellement alimente : la derniere
+  // ecriture sur un dossier du client, plus les actions consignees quand il y
+  // en aura.
+  const dernierMouvement = useMemo(() => {
+    const dates = [
+      ...clientDeals.map(d => d.updated_at || d.created_at),
+      ...history.map(h => h.created_at),
+    ].filter(Boolean).map(d => new Date(d).getTime()).filter(t => Number.isFinite(t))
+    return dates.length > 0 ? Math.max(...dates) : null
+  }, [clientDeals, history])
+
+  const lastActivityDays = dernierMouvement === null
+    ? null
+    : Math.max(0, Math.floor((Date.now() - dernierMouvement) / 86400000))
+  // Trois etats, pas deux. Sans le moindre mouvement on ne SAIT pas : ce n est
+  // ni un retard avere, ni un suivi actif. Annoncer « Suivi actif » en vert
+  // sur une fiche vide serait le meme mensonge que l ancien « A relancer » sur
+  // les 379 fiches, dans l autre sens.
+  const etatSuivi = lastActivityDays === null
+    ? { cle: 'inconnu', libelle: 'Pas encore de trace', fond: 'rgba(0,0,0,0.05)', encre: 'var(--t3)' }
+    : lastActivityDays >= 90
+      ? { cle: 'retard', libelle: 'À relancer', fond: 'rgba(217, 119, 6, 0.14)', encre: '#B45309' }
+      : { cle: 'actif', libelle: 'Suivi actif', fond: 'rgba(22, 163, 74, 0.12)', encre: '#15803D' }
 
   // Recharger les deals du client après sauvegarde
   const reloadClientDeals = async () => {
@@ -405,10 +426,10 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
               fontWeight: '600',
               padding: '3px 8px',
               borderRadius: '10px',
-              backgroundColor: activiteEnRetard ? 'rgba(217, 119, 6, 0.14)' : 'rgba(22, 163, 74, 0.12)',
-              color: activiteEnRetard ? '#B45309' : '#15803D'
+              backgroundColor: etatSuivi.fond,
+              color: etatSuivi.encre
             }}>
-              {activiteEnRetard ? 'À relancer' : 'Suivi actif'}
+              {etatSuivi.libelle}
             </span>
           </div>
         </div>
@@ -648,7 +669,9 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                           <div>
-                            <strong>Date prévue:</strong> {deal.date_expected || '—'}
+                            <strong>{estSimpleRdv(deal) ? 'Rendez-vous :' : 'Date prévue :'}</strong>{' '}
+                            {jourDe(deal.date_expected) || '—'}
+                            {heureDe(deal.date_expected) ? ` à ${heureDe(deal.date_expected)}` : ''}
                           </div>
                           <div>
                             <strong>Date signée:</strong> {deal.date_signed || '—'}

@@ -11,6 +11,7 @@
 // hors reseau) pour garder le composant leger.
 
 import { supabase } from '../lib/supabase'
+import { dealMatchesAdvisor, sumAnnualPp, sumPu } from '../lib/metrics'
 
 // Les n derniers mois calendaires (courant inclus), du plus ancien au plus
 // recent, au format YYYY-MM. Sert de colonnes a la serie de collecte.
@@ -29,7 +30,7 @@ export function derniersMois(n = 4) {
 export async function listDealsSignes(moisDebut) {
   const { data, error } = await supabase
     .from('deals')
-    .select('advisor_code, date_signed, pp_m, pu')
+    .select('advisor_code, co_advisor_code, date_signed, pp_m, pu, product')
     .eq('status', 'Signé')
     .not('date_signed', 'is', null)
     .gte('date_signed', `${moisDebut}-01`)
@@ -89,7 +90,19 @@ export function computeCockpit({ mois, deals, clients, equip, missions, team = [
   // dans une source. Conseiller : lui seul (donnees deja restreintes par RLS).
   const codes = new Set()
   if (isManager) {
-    for (const d of deals) if (d.advisor_code) codes.add(d.advisor_code)
+    // Les DEUX colonnes : sans le co conseiller, sa moitie ne retombe sur
+    // personne quand il n a pas encore de dossier a lui (nouvel arrivant mis
+    // en binome, ou code mal orthographie). Le total cabinet perdait alors
+    // cette moitie.
+    // Les DEUX colonnes : sans le co conseiller, sa moitie ne retombe sur
+    // personne quand il n a pas encore de dossier a lui (nouvel arrivant mis
+    // en binome, ou code mal orthographie).
+    // Le trim et le filtre sur le vide ne sont pas cosmetiques : 159 dossiers
+    // portent co_advisor_code = '' (chaine vide, pas NULL). Sans ce filtre,
+    // ces 159 lignes se regroupaient sous un code vide et fabriquaient un
+    // conseiller fantome a 440 639 euros sur juillet.
+    const ajouterCode = (v) => { const c = String(v || '').trim(); if (c) codes.add(c) }
+    for (const d of deals) { ajouterCode(d.advisor_code); ajouterCode(d.co_advisor_code) }
     for (const c of clients) if (c.advisor_code) codes.add(c.advisor_code)
     for (const e of equip) if (e.advisor_code) codes.add(e.advisor_code)
     for (const m of missions) if (m.advisor_code) codes.add(m.advisor_code)
@@ -102,13 +115,22 @@ export function computeCockpit({ mois, deals, clients, equip, missions, team = [
     // Collecte mois par mois sur la fenetre (serie du sparkline).
     const serie = mois.map(() => 0)
     let nbDealsMois = 0
-    for (const d of deals) {
-      if (d.advisor_code !== code) continue
-      const mk = (d.date_signed || '').slice(0, 7)
-      const i = idxMois.get(mk)
-      if (i == null) continue
-      serie[i] += Number(d.pu || 0) + Number(d.pp_m || 0) * 12
-      if (mk === moisCourant) nbDealsMois += 1
+    // Regle 50/50 du co conseil et exclusion Mutuelle / Prevoyance TNS : les
+    // deux etaient reecrites ici a la main, et differemment du reste. Un
+    // conseiller en binome voyait sa collecte amputee de tout ce qu il avait
+    // signe a deux (8 600 euros affiches contre 218 000 au classement de la
+    // direction, meme homme, meme mois), et la mutuelle entrait ici sans
+    // entrer la bas. On passe par les helpers de lib/metrics, seule
+    // definition de reference.
+    // L argent se partage, pas le travail : la collecte suit le 50/50 (c est
+    // un chiffre de remuneration), le NOMBRE de dossiers reste entier,
+    // « 2,5 dossiers signes » ne veut rien dire pour celui qui les a signes.
+    const siens = deals.filter((d) => dealMatchesAdvisor(d, code))
+    for (const mk of idxMois.keys()) {
+      const duMois = siens.filter((d) => (d.date_signed || '').slice(0, 7) === mk)
+      if (duMois.length === 0) continue
+      serie[idxMois.get(mk)] = sumAnnualPp(duMois, code) + sumPu(duMois, code)
+      if (mk === moisCourant) nbDealsMois = duMois.length
     }
     const collecteMois = serie[serie.length - 1]
     // Moyenne des mois precedents : la reference personnelle du conseiller,
@@ -158,7 +180,18 @@ export function computeCockpit({ mois, deals, clients, equip, missions, team = [
   )
   // Tri alphabetique, jamais par performance : aucun classement entre pairs.
   actives.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
-  return { mois, moisCourant, lignes: actives }
+
+  // Totaux cabinet comptes UNE FOIS par dossier. Les sommer depuis les lignes
+  // comptait deux fois chaque dossier en co conseil : sur juillet, 79
+  // « dossiers signes » annonces pour 52 reels, a cote d un montant juste, sur
+  // le meme ecran de direction.
+  const duMoisCourant = deals.filter((d) => (d.date_signed || '').slice(0, 7) === moisCourant)
+  const cabinet = {
+    nbDeals: duMoisCourant.length,
+    collecte: sumAnnualPp(duMoisCourant) + sumPu(duMoisCourant),
+  }
+
+  return { mois, moisCourant, lignes: actives, cabinet }
 }
 
 // ─── Completude des fiches clients (constructeur 3) ──────────────────────────

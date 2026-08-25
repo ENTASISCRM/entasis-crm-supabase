@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { logger } from '../lib/logger'
+import { isPpFinancier } from '../lib/metrics'
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler } from 'chart.js'
 import { Line, Bar } from 'react-chartjs-2'
 
@@ -35,11 +36,28 @@ function getWeekKey(date) {
   return `${year}-W${String(week).padStart(2, '0')}`
 }
 
-// Date de signature effective d'un deal
+// Date de signature d'un deal. Uniquement date_signed : `updated_at` n'est
+// pas une date de signature, c'est la date de la dernière écriture sur la
+// ligne. 30 dossiers signés sans date portaient tous le même updated_at, celui
+// d'une migration lancée le 24/07/2026 : la semaine 2026-W30 affichait
+// 43 signatures pour 13 réelles, et ~218 000 € apparaissaient sur une semaine
+// où personne n'avait rien signé. Un dossier sans date sort des semaines et
+// remonte dans « à compléter » plutôt que d'être daté au hasard.
 function getSignedDate(deal) {
-  if (deal.date_signed) return new Date(deal.date_signed)
-  if (deal.status === 'Signé') return new Date(deal.updated_at)
-  return null
+  if (!deal.date_signed) return null
+  // date_signed est un TEXT 'YYYY-MM-DD'. new Date() dessus donne minuit UTC,
+  // alors que le decoupage en semaines travaille en heure locale : depuis un
+  // fuseau negatif, chaque signature du lundi basculait dans la semaine
+  // precedente. Le suffixe T00:00:00 force la lecture en local.
+  const d = new Date(`${String(deal.date_signed).slice(0, 10)}T00:00:00`)
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
+// Dossiers signés mais sans date de signature : invisibles dans toutes les
+// vues hebdomadaires tant que la date n'est pas saisie. On les compte pour
+// pouvoir le dire, au lieu de les diluer dans une semaine au hasard.
+export function signesSansDate(deals) {
+  return (deals || []).filter(d => d.status === 'Signé' && !getSignedDate(d))
 }
 
 // Deals signés dans une plage de dates
@@ -52,9 +70,12 @@ function getSignedDealsInRange(deals, startDate, endDate) {
   })
 }
 
-// PP attribuée à un conseiller (règle 50/50)
+// PP attribuée à un conseiller (règle 50/50). La PP est la PP FINANCIÈRE :
+// Mutuelle Santé et Prévoyance TNS en sortent depuis le 08/06/2026, comme
+// dans la vue direction et dans ManagementView. Sans cette exclusion, la somme
+// des semaines de juin dépassait la PP du mois sans que rien ne l'explique.
 function getPpForAdvisor(deal, advisorCode) {
-  const pp = (deal.pp_m || 0) * 12
+  const pp = isPpFinancier(deal) ? (deal.pp_m || 0) * 12 : 0
   const pu = deal.pu || 0
   if (deal.co_advisor_code) return { pp: pp * 0.5, pu: pu * 0.5 }
   return { pp, pu }
@@ -64,15 +85,15 @@ function getPpForAdvisor(deal, advisorCode) {
 function getWeeklyHistory(deals) {
   if (!deals || deals.length === 0) return []
 
-  const signedDeals = deals.filter(d => d.status === 'Signé')
+  // Même règle que getSignedDate : sans date de signature, le dossier n'entre
+  // dans aucune semaine.
+  const signedDeals = deals.filter(d => d.status === 'Signé' && getSignedDate(d))
   if (signedDeals.length === 0) return []
 
   // Grouper par semaine
   const weekMap = {}
   signedDeals.forEach(deal => {
-    const signedDate = deal.date_signed
-      ? new Date(deal.date_signed)
-      : new Date(deal.updated_at)
+    const signedDate = getSignedDate(deal)
 
     const weekKey = getWeekKey(signedDate)
     const weekNum = getISOWeek(signedDate)
@@ -92,10 +113,11 @@ function getWeeklyHistory(deals) {
       }
     }
 
-    // Règle 50/50 non applicable ici
-    // (on veut le total cabinet réel)
+    // Total cabinet : chaque dossier compte une fois, en entier (la règle
+    // 50/50 sert à répartir entre conseillers, pas à sommer le cabinet).
+    // Même exclusion Mutuelle / Prévoyance que partout ailleurs.
     weekMap[weekKey].signatures += 1
-    weekMap[weekKey].pp += (deal.pp_m || 0) * 12
+    weekMap[weekKey].pp += isPpFinancier(deal) ? (deal.pp_m || 0) * 12 : 0
     weekMap[weekKey].pu += deal.pu || 0
   })
 
@@ -357,10 +379,8 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
 
     const weeks = new Set()
     deals.filter(d => d.status === 'Signé').forEach(deal => {
-      const date = deal.date_signed
-        ? new Date(deal.date_signed)
-        : new Date(deal.updated_at)
-      weeks.add(getWeekKey(date))
+      const date = getSignedDate(deal)
+      if (date) weeks.add(getWeekKey(date))
     })
 
     // Toujours inclure la semaine courante
@@ -517,6 +537,10 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
       arrondi: Math.round(moyenne),
     }
   }, [weeklyHistory, currentWeekKey])
+
+  // Dossiers signés sans date de signature : ils n'apparaissent dans aucune
+  // semaine, donc dans aucun objectif. Le dire plutôt que de les perdre.
+  const sansDate = useMemo(() => signesSansDate(deals), [deals])
 
   // Statistiques produit pour tous les deals signés
   const productStats = useMemo(() => {
@@ -802,6 +826,14 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
           <div className="section-kicker">Semaine {selectedBounds.weekNumber} · {selectedBounds.year}</div>
           <div className="section-title">Revue hebdomadaire</div>
           <div className="section-sub">Du {mondayStr} au {fridayStr} {selectedWeekKey === currentWeekKey ? 'en cours' : ''}</div>
+          {sansDate.length > 0 && (
+            <div className="section-sub" style={{ color: 'var(--progress)', marginTop: 4 }}
+              title={sansDate.map(d => d.client || d.clients?.nom).filter(Boolean).slice(0, 12).join(', ')}>
+              {sansDate.length} dossier{sansDate.length > 1 ? 's' : ''} signé{sansDate.length > 1 ? 's' : ''} sans
+              date de signature, donc absent{sansDate.length > 1 ? 's' : ''} de toutes les semaines. À compléter
+              depuis la fiche client pour qu{"'"}ils comptent.
+            </div>
+          )}
         </div>
         <div style={{display: 'flex', gap: '12px', alignItems: 'center'}}>
           <select

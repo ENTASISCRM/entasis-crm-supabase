@@ -8,7 +8,6 @@ import { santeFlux, resumeSante } from './lib/sante-flux'
 import { chargerSanteFlux } from './services/santeFlux'
 import { insererDeal, majDeal, retirerDeal, completerDeal } from './lib/deals-realtime'
 import { recordLogin } from './lib/record-login'
-import * as leadsService from './services/leads'
 import * as dealsService from './services/deals'
 import * as clientsService from './services/clients'
 import * as profilesService from './services/profiles'
@@ -75,9 +74,8 @@ import {
   PRIORITY_OPTIONS,
   PRODUCTS,
   COMPANIES,
-  SOURCES,
   STATUS_CLASS,
-  statusLabel,
+  statusLabel, sourceLabel, sourcesPour,
   PRIORITY_CLASS,
   euro,
   pct,
@@ -87,7 +85,8 @@ import {
   getClientName,
   emptyDeal,
   normalizeDeal,
-  STATUTS_PRO, messageErreur, estProduitHonoraires, LIBELLE_MONTANT_HONORAIRES } from './lib/ui-shared'
+  STATUTS_PRO, messageErreur, estProduitHonoraires, LIBELLE_MONTANT_HONORAIRES,
+  jourDe, heureDe, avecHeureConservee } from './lib/ui-shared'
 
 const EMPTY_OBJECTIFS = MONTHS.reduce((a,m)=>{a[m]={pp_target:0,pu_target:0};return a},{})
 const LEAD_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
@@ -777,8 +776,6 @@ function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,mont
   },[deals,month,profile])
 
   const pipelineCount=useMemo(()=>deals.filter(d=>dealDuMois(d,month)&&isPipeline(d.status)&&!estSimpleRdv(d)).length,[deals,month])
-  // Compté à part, jamais masqué : un conseiller doit voir ses RDV à venir.
-  const rdvCount=useMemo(()=>deals.filter(d=>dealDuMois(d,month)&&isPipeline(d.status)&&estSimpleRdv(d)).length,[deals,month])
 
   // B1 — la sidebar liste des DOMAINES (source unique lib/navigation.js,
   // partagée avec la barre de sous-onglets, la palette ⌘K et le routing).
@@ -1064,284 +1061,6 @@ function TimerBadge({remaining}){
 /* ─────────────────────────────────────────────────────────────────────────────
    LEAD CARD
 ───────────────────────────────────────────────────────────────────────────── */
-function LeadCard({lead,profile,onTake,onRelease,onCreateRDV,onConvertDeal}){
-  const remaining=useLeadTimer(lead)
-  const isMyLead=lead.taken_by===profile?.id
-  const isTaken=lead.status==='contacted'
-  const isBooked=lead.status==='booked'
-  const isAvailable=lead.status==='available'||lead.status==='released'
-  const isDead=lead.status==='dead'
-  const campagneColor={'SUCCESSION':'#7C3AED','LEADS':'#0EA5E9','REUNION':'#10B981'}
-  const cc=campagneColor[lead.campagne]||'#6B7280'
-
-  return (
-    <div style={{
-      background:isMyLead?'rgba(201,169,97,0.04)':isBooked?'rgba(16,185,129,0.04)':'white',
-      border:`1.5px solid ${isMyLead?'var(--gold-line)':isBooked?'rgba(16,185,129,0.3)':'var(--bd)'}`,
-      borderRadius:'var(--rad-lg)',padding:'11px 13px',
-      opacity:isTaken&&!isMyLead?0.5:1,transition:'all .2s',
-    }}>
-      {/* Ligne 1 — campagne + statut + timer */}
-      <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:5,flexWrap:'wrap'}}>
-        <span style={{fontSize:9.5,fontWeight:700,letterSpacing:'0.06em',padding:'1px 6px',borderRadius:3,background:cc+'18',color:cc,border:`1px solid ${cc}30`}}>{lead.campagne}</span>
-        {isMyLead&&remaining!==null&&<TimerBadge remaining={remaining}/>}
-        {isBooked&&<span style={{fontSize:9.5,fontWeight:700,color:'#10B981',background:'rgba(16,185,129,0.1)',padding:'1px 6px',borderRadius:3,border:'1px solid rgba(16,185,129,0.2)'}}>✓ RDV</span>}
-        {isTaken&&!isMyLead&&!isBooked&&<span style={{fontSize:9.5,color:'var(--t3)',padding:'1px 5px',borderRadius:3,background:'var(--bg)',border:'1px solid var(--bd)'}}>En appel</span>}
-        <span style={{marginLeft:'auto',fontSize:10,color:'var(--t3)'}}>
-          {lead.created_at?new Date(lead.created_at).toLocaleString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'—'}
-        </span>
-      </div>
-
-      {/* Ligne 2 — nom */}
-      <div style={{fontSize:13.5,fontWeight:700,color:'var(--t1)',marginBottom:7,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{lead.nom}</div>
-
-      {/* Ligne 3 — contact */}
-      <div style={{display:'flex',flexDirection:'column',gap:4,marginBottom:8}}>
-        {lead.telephone&&(
-          <a href={`tel:${lead.telephone}`} style={{display:'inline-flex',alignItems:'center',gap:5,fontSize:12,fontWeight:600,color:'var(--t1)',textDecoration:'none'}}>
-            <Icon.Phone/> {lead.telephone}
-          </a>
-        )}
-        {lead.email&&(
-          <span style={{display:'inline-flex',alignItems:'center',gap:5,fontSize:11,color:'var(--t3)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-            <Icon.Mail/> {lead.email}
-          </span>
-        )}
-      </div>
-
-      {/* Ligne 4 — profil financier inline */}
-      {(lead.patrimoine_net||lead.tmi||lead.actifs)&&(
-        <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:8}}>
-          {lead.patrimoine_net&&<span style={{fontSize:10.5,color:'#7C3AED',background:'rgba(124,58,237,0.06)',border:'1px solid rgba(124,58,237,0.15)',borderRadius:3,padding:'2px 6px',fontWeight:500}}>💰 {lead.patrimoine_net}</span>}
-          {lead.tmi&&<span style={{fontSize:10.5,color:'#0EA5E9',background:'rgba(14,165,233,0.06)',border:'1px solid rgba(14,165,233,0.15)',borderRadius:3,padding:'2px 6px',fontWeight:500}}>TMI {lead.tmi}</span>}
-          {lead.actifs&&<span style={{fontSize:10.5,color:'var(--t3)',background:'var(--bg)',border:'1px solid var(--bd)',borderRadius:3,padding:'2px 6px'}}>🏠 {lead.actifs.length>22?lead.actifs.slice(0,22)+'…':lead.actifs}</span>}
-        </div>
-      )}
-
-      {/* Actions */}
-      <div style={{display:'flex',gap:6}}>
-        {isAvailable&&(
-          <button onClick={()=>onTake(lead)}
-            style={{flex:1,padding:'7px 10px',background:'var(--gold)',color:'white',border:'none',borderRadius:'var(--rad)',fontSize:12,fontWeight:700,cursor:'pointer'}}
-            onMouseEnter={e=>e.currentTarget.style.opacity='.85'}
-            onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
-            ⚡ Je prends ce lead
-          </button>
-        )}
-        {isMyLead&&!isBooked&&(
-          <>
-            <button onClick={()=>onCreateRDV(lead)}
-              style={{flex:1,padding:'7px 10px',background:'#10B981',color:'white',border:'none',borderRadius:'var(--rad)',fontSize:12,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:4}}>
-              <Icon.CalPlus/> RDV
-            </button>
-            <button onClick={()=>onRelease(lead)}
-              style={{padding:'7px 10px',background:'transparent',color:'var(--t3)',border:'1px solid var(--bd)',borderRadius:'var(--rad)',fontSize:11,cursor:'pointer'}}>
-              ↩
-            </button>
-          </>
-        )}
-        {isBooked&&isMyLead&&(
-          <button onClick={()=>onConvertDeal(lead)}
-            style={{flex:1,padding:'7px 10px',background:'var(--gold)',color:'white',border:'none',borderRadius:'var(--rad)',fontSize:12,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:4}}>
-            <Icon.Plus/> Créer dossier
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   LEAD RDV MODAL — création Google Calendar depuis un lead
-───────────────────────────────────────────────────────────────────────────── */
-function LeadRDVModal({open,lead,onClose,onBooked}){
-  const [date,setDate]=useState('')
-  const [time,setTime]=useState('10:00')
-  const [duration,setDuration]=useState('60')
-  const [email,setEmail]=useState('')
-  const [notes,setNotes]=useState('')
-
-  useEffect(()=>{
-    if(open&&lead){
-      setDate(new Date().toISOString().slice(0,10))
-      setTime('10:00');setDuration('60')
-      setEmail(lead.email_confirmed||lead.email||'')
-      setNotes('')
-    }
-  },[open,lead])
-
-  if(!open||!lead)return null
-
-  function toGCalTs(d){return d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'').slice(0,15)+'Z'}
-
-  async function handleCreate(){
-    if(!date||!time)return
-    const start=new Date(`${date}T${time}:00`)
-    const end=new Date(start.getTime()+Number(duration)*60000)
-    const description=[
-      `📞 Lead ${lead.campagne} — ${lead.nom}`,
-      lead.telephone?`📱 Tél : ${lead.telephone}`:'',
-      email?`📧 Email : ${email}`:'',
-      lead.patrimoine_net?`💰 Patrimoine : ${lead.patrimoine_net}`:'',
-      lead.tmi?`📊 TMI : ${lead.tmi}`:'',
-      lead.actifs?`🏠 Actifs : ${lead.actifs}`:'',
-      notes?`\n📝 ${notes}`:'',
-      `\n🔗 Entasis CRM · Lead ID : ${lead.id}`,
-    ].filter(Boolean).join('\n')
-
-    const params=new URLSearchParams({
-      action:'TEMPLATE',
-      text:`RDV ${lead.nom} — Lead ${lead.campagne}`,
-      dates:`${toGCalTs(start)}/${toGCalTs(end)}`,
-      details:description,
-    })
-    window.open(`https://calendar.google.com/calendar/r/eventedit?${params}`,'_blank')
-
-    // Marquer comme booké
-    await leadsService.markBooked(lead.id, { email: email || lead.email })
-
-    onBooked(lead.id)
-    onClose()
-  }
-
-  return (
-    <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
-      <div className="modal-box" style={{maxWidth:520}}>
-        <div className="modal-head">
-          <div>
-            <div className="modal-title">Créer un RDV Google Calendar</div>
-            <div className="modal-subtitle">{lead.nom} · Campagne {lead.campagne}</div>
-          </div>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Fermer"><Icon.Close/></button>
-        </div>
-        <div className="modal-body">
-          <div className="form-group">
-            <label className="form-label">Email client (confirme ou corrige)</label>
-            <input className="form-input" value={email} onChange={e=>setEmail(e.target.value)} placeholder="client@exemple.fr" type="email"/>
-            <div className="form-hint">L'email du formulaire Facebook peut différer de l'email réel</div>
-          </div>
-          <div className="form-row form-row-2">
-            <div className="form-group">
-              <label className="form-label">Date du RDV</label>
-              <input className="form-input" type="date" value={date} onChange={e=>setDate(e.target.value)}/>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Heure</label>
-              <input className="form-input" type="time" value={time} onChange={e=>setTime(e.target.value)}/>
-            </div>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Durée</label>
-            <select className="form-select" value={duration} onChange={e=>setDuration(e.target.value)}>
-              {['30','45','60','90','120'].map(d=><option key={d} value={d}>{d} min</option>)}
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Notes (optionnel)</label>
-            <textarea className="form-textarea" rows={3} value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Contexte, objectifs, points à préparer…"/>
-          </div>
-        </div>
-        <div className="modal-foot">
-          <button className="btn btn-outline" onClick={onClose}>Annuler</button>
-          <button className="btn btn-gold" onClick={handleCreate} disabled={!date||!time}>
-            <Icon.CalPlus/> Ouvrir dans Google Agenda
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   LEAD ROOM — onglet complet
-───────────────────────────────────────────────────────────────────────────── */
-/* ─────────────────────────────────────────────────────────────────────────────
-   LEAD ROW — vue liste compacte
-───────────────────────────────────────────────────────────────────────────── */
-function LeadRow({lead,profile,onTake,onRelease,onCreateRDV,onConvertDeal,onReset,onKill}){
-  const remaining=useLeadTimer(lead)
-  const isMyLead=lead.taken_by===profile?.id
-  const isBooked=lead.status==='booked'
-  const isTaken=lead.status==='contacted'
-  const isAvailable=lead.status==='available'||lead.status==='released'
-  const isDead=lead.status==='dead'
-  const campagneColor={'SUCCESSION':'#7C3AED','LEADS':'#0EA5E9','REUNION':'#10B981'}
-  const cc=campagneColor[lead.campagne]||'#6B7280'
-
-  return (
-    <div style={{
-      display:'grid',gridTemplateColumns:'100px 150px 128px 170px 100px 70px 220px 100px',
-      alignItems:'center',
-      minHeight:36,
-      borderBottom:'1px solid var(--bd)',
-      background:isMyLead?'rgba(201,169,97,0.05)':isBooked?'rgba(16,185,129,0.04)':'transparent',
-      opacity:isDead?0.35:isTaken&&!isMyLead?0.45:1,textDecoration:isDead?'line-through':'none',
-    }}
-    onMouseEnter={e=>e.currentTarget.style.background='rgba(201,169,97,0.07)'}
-    onMouseLeave={e=>e.currentTarget.style.background=isMyLead?'rgba(201,169,97,0.05)':isBooked?'rgba(16,185,129,0.04)':'transparent'}
-    >
-      <div style={{padding:'0 8px',borderRight:'1px solid var(--bd)',display:'flex',alignItems:'center',height:'100%'}}>
-        <span style={{fontSize:9,fontWeight:700,padding:'1px 5px',borderRadius:2,background:cc+'15',color:cc,border:`1px solid ${cc}25`,whiteSpace:'nowrap'}}>{lead.campagne}</span>
-      </div>
-      <div style={{padding:'0 10px',borderRight:'1px solid var(--bd)',overflow:'hidden',height:'100%',display:'flex',alignItems:'center'}}>
-        <span style={{fontWeight:600,fontSize:12.5,color:'var(--t1)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{lead.nom}</span>
-      </div>
-      <div style={{padding:'0 10px',borderRight:'1px solid var(--bd)',height:'100%',display:'flex',alignItems:'center'}}>
-        {lead.telephone
-          ?<a href={`tel:${lead.telephone}`} style={{fontSize:12,fontWeight:500,color:'var(--t1)',textDecoration:'none',whiteSpace:'nowrap'}}>{lead.telephone}</a>
-          :<span style={{color:'var(--t3)',fontSize:11}}>—</span>}
-      </div>
-      <div style={{padding:'0 10px',borderRight:'1px solid var(--bd)',overflow:'hidden',height:'100%',display:'flex',alignItems:'center'}}>
-        <span style={{fontSize:11,color:'var(--t3)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{lead.email||'—'}</span>
-      </div>
-      <div style={{padding:'0 8px',borderRight:'1px solid var(--bd)',height:'100%',display:'flex',alignItems:'center'}}>
-        <span style={{fontSize:11,color:'#7C3AED',fontWeight:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{lead.patrimoine_net||'—'}</span>
-      </div>
-      <div style={{padding:'0 8px',borderRight:'1px solid var(--bd)',height:'100%',display:'flex',alignItems:'center'}}>
-        <span style={{fontSize:11,color:'#0EA5E9',fontWeight:500}}>{lead.tmi||'—'}</span>
-      </div>
-      <div style={{padding:'0 8px',display:'flex',alignItems:'center',gap:5,height:'100%'}}>
-        {isAvailable&&(
-          <button onClick={()=>onTake(lead)} style={{padding:'4px 10px',background:'var(--gold)',color:'white',border:'none',borderRadius:4,fontSize:11,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}>
-            ⚡ Je prends
-          </button>
-        )}
-        {isMyLead&&!isBooked&&(
-          <>
-            {remaining!==null&&<TimerBadge remaining={remaining}/>}
-            <button onClick={()=>onCreateRDV(lead)} style={{padding:'4px 8px',background:'#10B981',color:'white',border:'none',borderRadius:4,fontSize:11,fontWeight:600,cursor:'pointer'}}>RDV</button>
-            <button onClick={()=>onRelease(lead)} style={{padding:'4px 6px',background:'transparent',color:'var(--t3)',border:'1px solid var(--bd)',borderRadius:4,fontSize:11,cursor:'pointer'}}>↩</button>
-          </>
-        )}
-        {isBooked&&(
-          <span style={{fontSize:10,fontWeight:700,color:'#10B981',whiteSpace:'nowrap'}}>✓ RDV planifié</span>
-        )}
-        {isBooked&&isMyLead&&(
-          <button onClick={()=>onConvertDeal(lead)} style={{padding:'4px 8px',background:'var(--gold)',color:'white',border:'none',borderRadius:4,fontSize:11,cursor:'pointer'}}>+ Dossier</button>
-        )}
-        {isTaken&&!isMyLead&&!isBooked&&!isDead&&(
-          <span style={{fontSize:10,color:'var(--t3)'}}>En appel…</span>
-        )}
-        {isDead&&(
-          <span style={{fontSize:10,color:'#9CA3AF',fontStyle:'italic'}}>✕ Mort</span>
-        )}
-        {isMyLead&&!isBooked&&!isDead&&(
-          <button onClick={()=>onKill(lead)} title="Marquer non-intéressé" style={{padding:'3px 6px',background:'transparent',color:'#9CA3AF',border:'1px solid #E5E7EB',borderRadius:4,fontSize:10,cursor:'pointer'}}>💀</button>
-        )}
-        {(profile?.role==='manager'||(isMyLead))&&!isAvailable&&(
-          <button onClick={()=>onReset(lead)} title="Annuler / remettre disponible" style={{padding:'3px 6px',background:'transparent',color:'#EF4444',border:'1px solid #FCA5A5',borderRadius:4,fontSize:10,cursor:'pointer',marginLeft:'auto'}}>✕</button>
-        )}
-      </div>
-      <div style={{padding:'0 8px',height:'100%',display:'flex',alignItems:'center',borderLeft:'1px solid var(--bd)'}}>
-        <span style={{fontSize:10.5,color:'var(--t3)',whiteSpace:'nowrap'}}>
-          {lead.created_at?new Date(lead.created_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—'}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-// Embed de la nouvelle Lead Room (entasis-leadroom.vercel.app)
 // Remplace l'ancienne LeadRoom interne par un splash + iframe vers la
 // Lead Room temps réel. L'ancienne fonction LeadRoom() est conservée
 // plus bas pour rollback éventuel.
@@ -1462,274 +1181,6 @@ function PilotageRhEmbed(){
   )
 }
 
-function LeadRoom({leads,profile,onLeadsChange,onConvertDeal,onRefresh}){
-  const [rdvLead,setRdvLead]=useState(null)
-  const [rdvOpen,setRdvOpen]=useState(false)
-  const [filter,setFilter]=useState('all')
-  const [search,setSearch]=useState('')
-  const [campagneF,setCampagneF]=useState('all')
-  const [sort,setSort]=useState('newest') // newest | oldest | campagne
-  const [viewMode,setViewMode]=useState('list') // cards | list
-  const [page,setPage]=useState(1)
-  const PAGE_SIZE=viewMode==='cards'?18:50
-
-  // Reset page quand filtre change
-  useEffect(()=>setPage(1),[filter,search,campagneF,sort,viewMode])
-
-  // Auto-release après 30 min
-  useEffect(()=>{
-    const iv=setInterval(async()=>{
-      const now=Date.now()
-      const toRelease=leads.filter(l=>{
-        if(l.status!=='contacted'||!l.taken_at)return false
-        return(now-new Date(l.taken_at).getTime())>LEAD_TIMEOUT_MS
-      })
-      if (toRelease.length) await leadsService.autoReleaseStale(toRelease.map(l=>l.id))
-    },15000)
-    return()=>clearInterval(iv)
-  },[leads])
-
-  async function takeLead(lead){
-    // Maj optimiste : on bascule le lead chez nous immediatement (sinon il ne
-    // change qu au retour Realtime, ce qui pousse au double-clic en course aux
-    // leads). Rollback si un autre conseiller l a pris avant nous.
-    const snapshot = lead
-    onLeadsChange(prev=>prev.map(l=>l.id===lead.id?{...l,status:'contacted',taken_by:profile.id,taken_at:new Date().toISOString()}:l))
-    const ok = await leadsService.take(lead.id, profile.id)
-    if (!ok) {
-      onLeadsChange(prev=>prev.map(l=>l.id===lead.id?snapshot:l))
-      toast.error("Ce lead vient d'être pris par un autre conseiller.")
-    }
-  }
-
-  async function releaseLead(lead){
-    if(!(await confirmDialog({title:'Libérer ce lead ?',message:"Un autre conseiller pourra le prendre.",confirmLabel:'Libérer'})))return
-    onLeadsChange(prev=>prev.map(l=>l.id===lead.id?{...l,status:'released',taken_by:null,taken_at:null}:l))
-    await leadsService.release(lead.id)
-  }
-  async function resetLead(lead){
-    if(!(await confirmDialog({title:`Remettre "${lead.nom}" en disponible ?`,confirmLabel:'Remettre'})))return
-    await leadsService.reset(lead.id)
-  }
-  async function killLead(lead){
-    if(!(await confirmDialog({title:`Marquer "${lead.nom}" comme non-intéressé ?`,confirmLabel:'Marquer',danger:true})))return
-    await leadsService.markDead(lead.id, profile.id)
-  }
-
-  function handleBooked(leadId){
-    onLeadsChange(prev=>prev.map(l=>l.id===leadId?{...l,status:'booked',booked_at:new Date().toISOString()}:l))
-  }
-
-  const available=leads.filter(l=>l.status==='available'||l.status==='released')
-  const dead=leads.filter(l=>l.status==='dead')
-  const mine=leads.filter(l=>l.taken_by===profile?.id&&l.status==='contacted')
-  const myBooked=leads.filter(l=>l.taken_by===profile?.id&&l.status==='booked')
-  const otherContacted=leads.filter(l=>l.status==='contacted'&&l.taken_by!==profile?.id)
-  const booked=leads.filter(l=>l.status==='booked')
-  const campagnes=[...new Set(leads.map(l=>l.campagne))].sort()
-
-  // Pipeline de filtrage + tri
-  const filtered=useMemo(()=>{
-    let list=
-      filter==='mine'      ?[...mine,...myBooked]:
-      filter==='available' ?available:
-      [...available,...mine,...otherContacted,...booked,...dead]
-
-    // filtre campagne
-    if(campagneF!=='all')list=list.filter(l=>l.campagne===campagneF)
-
-    // recherche
-    if(search.trim()){
-      const q=search.toLowerCase()
-      list=list.filter(l=>`${l.nom||''} ${l.telephone||''} ${l.email||''} ${l.patrimoine_net||''} ${l.tmi||''}`.toLowerCase().includes(q))
-    }
-
-    // tri
-    if(sort==='newest')list=[...list].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))
-    else if(sort==='oldest')list=[...list].sort((a,b)=>new Date(a.created_at)-new Date(b.created_at))
-    else if(sort==='campagne')list=[...list].sort((a,b)=>(a.campagne||'').localeCompare(b.campagne||''))
-
-    return list
-  },[leads,filter,campagneF,search,sort,mine,myBooked,available,otherContacted,booked])
-
-  const totalPages=Math.ceil(filtered.length/PAGE_SIZE)
-  const paginated=filtered.slice(0,(page)*PAGE_SIZE)
-  const hasMore=page*PAGE_SIZE<filtered.length
-
-  const cardProps={onTake:takeLead,onRelease:releaseLead,onCreateRDV:l=>{setRdvLead(l);setRdvOpen(true)},onConvertDeal,onReset:resetLead,onKill:killLead,profile}
-
-  return (
-    <div>
-      {/* Stats */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12,marginBottom:20}}>
-        {[
-          {label:'Disponibles',value:available.length,color:'var(--gold)',bg:'rgba(201,169,97,0.06)',bd:'var(--gold-line)'},
-          {label:'En appel',value:leads.filter(l=>l.status==='contacted').length,color:'var(--progress)',bg:'var(--progress-bg)',bd:'var(--progress-bd)'},
-          {label:'RDV planifiés',value:booked.length,color:'#10B981',bg:'rgba(16,185,129,0.06)',bd:'rgba(16,185,129,0.2)'},
-          {label:'Total leads',value:leads.length,color:'var(--t2)',bg:'var(--bg)',bd:'var(--bd)'},
-          {label:'Non-intéressés',value:leads.filter(l=>l.status==='dead').length,color:'#9CA3AF',bg:'var(--bg)',bd:'var(--bd)'},
-        ].map(s=>(
-          <div key={s.label} style={{background:s.bg,border:`0.5px solid ${s.bd}`,borderRadius:'var(--rad-lg)',padding:'18px 20px',cursor:'pointer',boxShadow:'var(--sh-sm)',transition:'box-shadow var(--tr), transform var(--tr)'}} onMouseEnter={e=>{e.currentTarget.style.boxShadow='var(--sh)';e.currentTarget.style.transform='translateY(-2px)'}} onMouseLeave={e=>{e.currentTarget.style.boxShadow='var(--sh-sm)';e.currentTarget.style.transform='translateY(0)'}} onClick={()=>{if(s.label==='Disponibles')setFilter('available');else if(s.label==='Total leads')setFilter('all')}}>
-            <div style={{fontSize:11,color:'var(--t3)',marginBottom:8,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.14em'}}>{s.label}</div>
-            <div style={{fontSize:26,fontWeight:700,color:s.color,fontFamily:'var(--font-sans)',letterSpacing:'-0.02em',fontVariantNumeric:'tabular-nums'}}>{s.value}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Barre de contrôle complète */}
-      <div style={{display:'flex',gap:8,marginBottom:14,alignItems:'center',flexWrap:'wrap'}}>
-        {/* Filtre statut */}
-        <div style={{display:'flex',gap:0,border:'1px solid var(--bd)',borderRadius:'var(--rad)',overflow:'hidden',flexShrink:0}}>
-          {[
-            {key:'all',label:'Tous'},
-            {key:'available',label:`Dispo (${available.length})`},
-            {key:'mine',label:`Mes leads (${mine.length+myBooked.length})`},
-          ].map(f=>(
-            <button key={f.key} onClick={()=>setFilter(f.key)} style={{padding:'7px 12px',fontSize:12,fontWeight:filter===f.key?600:400,background:filter===f.key?'var(--gold)':'white',color:filter===f.key?'white':'var(--t2)',border:'none',cursor:'pointer',whiteSpace:'nowrap'}}>
-              {f.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Filtre campagne */}
-        {campagnes.length>1&&(
-          <select className="filter-select" value={campagneF} onChange={e=>setCampagneF(e.target.value)} style={{height:34,fontSize:12}}>
-            <option value="all">Toutes campagnes</option>
-            {campagnes.map(c=><option key={c} value={c}>{c} · {leads.filter(l=>l.campagne===c).length}</option>)}
-          </select>
-        )}
-
-        {/* Recherche */}
-        <div style={{position:'relative',flex:1,minWidth:160,maxWidth:320}}>
-          <input
-            className="search-input"
-            value={search}
-            onChange={e=>setSearch(e.target.value)}
-            placeholder="Nom, téléphone, email…"
-            style={{width:'100%',paddingLeft:32,height:34,fontSize:12}}
-          />
-          <span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',display:'flex',color:'var(--t3)',pointerEvents:'none'}}><Icon.Search/></span>
-          {search&&<button onClick={()=>setSearch('')} style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'var(--t3)',fontSize:13,padding:0,lineHeight:1}}>×</button>}
-        </div>
-
-        {/* Tri */}
-        <select className="filter-select" value={sort} onChange={e=>setSort(e.target.value)} style={{height:34,fontSize:12}}>
-          <option value="newest">Plus récents</option>
-          <option value="oldest">Plus anciens</option>
-          <option value="campagne">Par campagne</option>
-        </select>
-
-        {/* Vue cards / liste */}
-        <div style={{display:'flex',gap:0,border:'1px solid var(--bd)',borderRadius:'var(--rad)',overflow:'hidden',flexShrink:0}}>
-          <button onClick={()=>setViewMode('cards')} title="Vue cartes" style={{padding:'7px 10px',background:viewMode==='cards'?'var(--gold)':'white',color:viewMode==='cards'?'white':'var(--t2)',border:'none',cursor:'pointer',fontSize:14}}>⊞</button>
-          <button onClick={()=>setViewMode('list')} title="Vue liste" style={{padding:'7px 10px',background:viewMode==='list'?'var(--gold)':'white',color:viewMode==='list'?'white':'var(--t2)',border:'none',cursor:'pointer',fontSize:14}}>≡</button>
-        </div>
-
-        <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
-          <button onClick={onRefresh} title="Rafraîchir les leads" style={{display:'flex',alignItems:'center',gap:4,padding:'5px 10px',background:'white',border:'1px solid var(--bd)',borderRadius:'var(--rad)',fontSize:11.5,color:'var(--t2)',cursor:'pointer'}}>
-            <Icon.Refresh/> Actualiser
-          </button>
-          <div style={{fontSize:11.5,color:'var(--t3)',display:'flex',alignItems:'center',gap:5}}>
-            <span style={{width:7,height:7,borderRadius:'50%',background:'#10B981',display:'inline-block'}}/>
-            Temps réel
-          </div>
-        </div>
-      </div>
-
-      {/* Résultat recherche */}
-      {(search||campagneF!=='all')&&(
-        <div style={{fontSize:12,color:'var(--t3)',marginBottom:10,paddingLeft:2}}>
-          {filtered.length} résultat{filtered.length!==1?'s':''} sur {leads.length} leads
-          {search&&<> · "<strong style={{color:'var(--t1)'}}>{search}</strong>"</>}
-          {campagneF!=='all'&&<> · Campagne <strong style={{color:'var(--t1)'}}>{campagneF}</strong></>}
-          <button onClick={()=>{setSearch('');setCampagneF('all')}} style={{marginLeft:8,background:'none',border:'none',color:'var(--gold)',cursor:'pointer',fontSize:12,padding:0,textDecoration:'underline'}}>Effacer</button>
-        </div>
-      )}
-
-      {/* Alerte leads dispo */}
-      {available.length>0&&filter!=='available'&&!search&&(
-        <div style={{background:'rgba(201,169,97,0.08)',border:'1.5px solid var(--gold-line)',borderRadius:'var(--rad-lg)',padding:'12px 16px',marginBottom:14,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-          <div style={{display:'flex',alignItems:'center',gap:10}}>
-            <span style={{fontSize:20}}>⚡</span>
-            <div>
-              <div style={{fontSize:13,fontWeight:700,color:'var(--gold)'}}>{available.length} lead{available.length>1?'s':''} disponible{available.length>1?'s':''}</div>
-              <div style={{fontSize:11.5,color:'var(--t3)'}}>Premier arrivé, premier servi</div>
-            </div>
-          </div>
-          <button onClick={()=>setFilter('available')} className="btn btn-gold btn-sm">Voir les leads</button>
-        </div>
-      )}
-
-      {/* Contenu */}
-      {paginated.length>0?(
-        <>
-          {viewMode==='list'?(
-            <div style={{background:'white',border:'1px solid var(--bd)',borderRadius:'var(--rad-lg)',overflow:'visible'}}>
-              <div style={{display:'grid',gridTemplateColumns:'100px 150px 128px 170px 100px 70px 220px 100px',background:'var(--bg)',borderBottom:'2px solid var(--bd)'}}>
-                {['Campagne','Nom','Téléphone','Email','Patrimoine','TMI','Action','Reçu le'].map(h=>(
-                  <div key={h} style={{padding:'6px 8px',fontSize:10,fontWeight:700,color:'var(--t3)',textTransform:'uppercase',letterSpacing:'0.05em',borderRight:'1px solid var(--bd)'}}>{h}</div>
-                ))}
-              </div>
-              {paginated.map(lead=>(
-                <LeadRow key={lead.id} lead={lead} {...cardProps}/>
-              ))}
-            </div>
-          ):(
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))',gap:10}}>
-              {paginated.map(lead=>(
-                <LeadCard key={lead.id} lead={lead} {...cardProps}/>
-              ))}
-            </div>
-          )}
-
-          {/* Pagination / Voir plus */}
-          {hasMore&&(
-            <div style={{textAlign:'center',marginTop:20,display:'flex',alignItems:'center',justifyContent:'center',gap:12}}>
-              <span style={{fontSize:12.5,color:'var(--t3)'}}>
-                {paginated.length} / {filtered.length} leads affichés
-              </span>
-              <button
-                onClick={()=>setPage(p=>p+1)}
-                style={{padding:'8px 20px',background:'white',border:'1px solid var(--bd)',borderRadius:'var(--rad)',fontSize:13,fontWeight:500,cursor:'pointer',color:'var(--t1)'}}
-                onMouseEnter={e=>e.currentTarget.style.borderColor='var(--gold)'}
-                onMouseLeave={e=>e.currentTarget.style.borderColor='var(--bd)'}
-              >
-                Voir {Math.min(PAGE_SIZE,filtered.length-paginated.length)} de plus
-              </button>
-              {filtered.length>PAGE_SIZE&&(
-                <button
-                  onClick={()=>setPage(Math.ceil(filtered.length/PAGE_SIZE))}
-                  style={{padding:'8px 16px',background:'transparent',border:'none',fontSize:12,cursor:'pointer',color:'var(--t3)',textDecoration:'underline'}}
-                >
-                  Tout afficher ({filtered.length})
-                </button>
-              )}
-            </div>
-          )}
-        </>
-      ):(
-        <div className="table-empty-state">
-          <div className="empty-icon">{search?<Icon.EmptySearch/>:<Icon.EmptySpark/>}</div>
-          <div className="empty-title">
-            {search?`Aucun résultat pour "${search}"`:filter==='mine'?'Aucun lead en cours':filter==='available'?'Aucun lead disponible':'Aucun lead reçu'}
-          </div>
-          <div className="empty-sub">
-            {search?<button onClick={()=>setSearch('')} style={{background:'none',border:'none',color:'var(--gold)',cursor:'pointer',fontSize:13,padding:0,textDecoration:'underline'}}>Effacer la recherche</button>:'Les leads Facebook apparaîtront ici automatiquement via Zapier.'}
-          </div>
-        </div>
-      )}
-
-      <LeadRDVModal open={rdvOpen} lead={rdvLead}
-        onClose={()=>{setRdvOpen(false);setRdvLead(null)}}
-        onBooked={handleBooked}
-      />
-    </div>
-  )
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   PREMIUM AREA CHART
-───────────────────────────────────────────────────────────────────────────── */
 function AreaChart({actual,projected,target,title,subtitle}){
   const W=400,H=160,PL=4,PR=4,PT=10,PB=28
   const safeProjected=Math.max(projected,actual)
@@ -2252,7 +1703,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit}){
             <tbody>
               {hotDeals.map(deal=>(
                 <tr key={deal.id}>
-                  <td><div className="cell-primary">{getClientName(deal)}</div><div className="cell-sub">{deal.source||'—'}</div></td>
+                  <td><div className="cell-primary">{getClientName(deal)}</div><div className="cell-sub">{sourceLabel(deal.source)||'—'}</div></td>
                   <td>{deal.product}</td>
                   <td className="cell-mono"><strong>{euro(annualize(deal.pp_m))}</strong></td>
                   <td className="cell-mono">{euro(deal.pu)}</td>
@@ -2401,6 +1852,11 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
   // badge « prévu le » des cartes (date_expected stockée en texte).
   const perimeCutoff=new Date(Date.now()-14*24*60*60*1000).toISOString().slice(0,10)
   const isPerime=d=>(d.status==='Prévu'||d.status==='En cours')&&d.date_expected&&String(d.date_expected).slice(0,10)<perimeCutoff
+  // Un rendez vous se solde des le lendemain : on sait tout de suite s il a eu
+  // lieu. Attendre 14 jours comme pour un dossier n a pas de sens, et c est en
+  // partie pourquoi 196 rendez vous cales n ont jamais ete soldes.
+  const hier=new Date(Date.now()-24*60*60*1000).toISOString().slice(0,10)
+  const rdvPasse=d=>estSimpleRdv(d)&&d.status==='Prévu'&&d.date_expected&&String(d.date_expected).slice(0,10)<=hier
   // Périmètre commun (conseiller + filtre manager + recherche) SANS le filtre
   // mois : le mode périmés croise les mois, la vue normale le rajoute.
   const scoped=useMemo(()=>{
@@ -2412,8 +1868,9 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
     if(search)list=list.filter(d=>`${getClientName(d)} ${d.product} ${d.advisor_code} ${d.client_email||''} ${d.client_phone||''}`.toLowerCase().includes(search.toLowerCase()))
     return list
   },[deals,profile,isManager,search,advisorF])
-  const staleCount=useMemo(()=>scoped.filter(isPerime).length,[scoped,perimeCutoff])
-  const visible=useMemo(()=>staleOnly?scoped.filter(isPerime):scoped.filter(d=>dealDuMois(d,month)),[scoped,month,staleOnly,perimeCutoff])
+  const aSolder=d=>isPerime(d)||rdvPasse(d)
+  const staleCount=useMemo(()=>scoped.filter(aSolder).length,[scoped,perimeCutoff,hier])
+  const visible=useMemo(()=>staleOnly?scoped.filter(aSolder):scoped.filter(d=>dealDuMois(d,month)),[scoped,month,staleOnly,perimeCutoff,hier])
   const byStatus=useMemo(()=>{
     const m={}
     PIPELINE_COLS.forEach(c=>m[c.id]=[])
@@ -2581,7 +2038,7 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
                           background:overdue?'var(--cancelled-bg)':'var(--bg)',
                           border:`1px solid ${overdue?'var(--cancelled-bd)':'var(--bd)'}`,
                           color:overdue?'var(--cancelled)':'var(--t3)'}}>
-                          <Icon.Clock/> {overdue?'prévu le '+dt+' ⚠':'prévu le '+dt}
+                          <Icon.Clock/> {(estSimpleRdv(deal)&&deal.status==='Prévu'?'RDV le ':'prévu le ')+dt+(heureDe(deal.date_expected)?' à '+heureDe(deal.date_expected):'')+(overdue?' ⚠':'')}
                         </div>
                       )
                     })()}
@@ -2590,7 +2047,26 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
                         aujourd'hui + 30 jours, Abandonner passe le dossier en
                         Annulé après confirmation. stopPropagation pour ne pas
                         ouvrir la modale. */}
-                    {staleOnly&&isPerime(deal)&&onQuickPatch&&(
+                    {/* Solder un RDV : ces deux boutons n existaient que dans le
+                        filtre « perimes », si bien qu aucun des 199 rendez vous
+                        cales par la Lead Room n a jamais franchi l etape
+                        suivante. Ils apparaissent sur la carte des le
+                        lendemain du rendez vous (voir rdvPasse). */}
+                    {rdvPasse(deal)&&onQuickPatch&&(
+                      <div style={{display:'flex',gap:6,marginBottom:6}} onClick={e=>e.stopPropagation()}>
+                        <button className="btn btn-outline btn-sm" style={{fontSize:11,padding:'3px 8px',flex:1}}
+                          title="Le rendez vous a eu lieu : le dossier passe en cours, a qualifier"
+                          onClick={()=>onQuickPatch(deal,{status:'En cours'},'RDV tenu, dossier à qualifier',{undoable:true})}>
+                          RDV tenu
+                        </button>
+                        <button className="btn btn-danger btn-sm" style={{fontSize:11,padding:'3px 8px',flex:1}}
+                          title="Le client n est pas venu"
+                          onClick={async()=>{if(await confirmDialog({title:`${getClientName(deal)} ne s'est pas présenté ?`,message:'Le brouillon passera en Annulé. Le lead reste dans la Lead Room.',confirmLabel:'No-show',danger:true}))onQuickPatch(deal,{status:'Annulé'},'No-show enregistré')}}>
+                          No-show
+                        </button>
+                      </div>
+                    )}
+                    {staleOnly&&isPerime(deal)&&!rdvPasse(deal)&&onQuickPatch&&(
                       <div style={{display:'flex',gap:6,marginBottom:6}} onClick={e=>e.stopPropagation()}>
                         <button className="btn btn-outline btn-sm" style={{fontSize:11,padding:'3px 8px',flex:1}}
                           onClick={()=>onQuickPatch(deal,{date_expected:new Date(Date.now()+30*24*60*60*1000).toISOString().slice(0,10)},'Échéance reprogrammée à +30 jours')}>
@@ -2735,7 +2211,7 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
       getClientName(d), d.product||'', d.company||'', statusLabel(d.status)||d.status||'', d.priority||'',
       nombreFr(d.pp_m), nombreFr(annualize(d.pp_m)), nombreFr(d.pu),
       d.advisor_code||'', d.co_advisor_code||'', d.month||'',
-      d.date_expected||'', d.date_signed||'', d.source||'', d.client_email||'', d.client_phone||'',
+      jourDe(d.date_expected), d.date_signed||'', sourceLabel(d.source)||'', d.client_email||'', d.client_phone||'',
     ])
     exporterCsv(`dossiers-${suffixeDate()}`,colonnes,lignes)
     toast.success(`${filtered.length} dossier${filtered.length>1?'s':''} exporté${filtered.length>1?'s':''}`)
@@ -4093,6 +3569,12 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
   // Signé (les données client de signature deviennent alors requises).
   const anySigned = showMultiProducts ? products.some(p=>p.status==='Signé') : deal.status==='Signé'
   const expressMode = isNew && !fullForm && !anySigned
+  // Brouillon cree par la Lead Room quand un lead a pris rendez vous : la
+  // date portee est une heure de RDV, pas une date de signature prevue. Le
+  // libelle du champ suit, sinon le conseiller croit devoir la remplacer.
+  // (Declare ici, au meme niveau que deal, et non plus haut : le JSX qui s en
+  // sert est dans ce composant, cf incident page blanche du 26/07.)
+  const estRdvCale = estSimpleRdv(deal) && deal.status === 'Prévu'
 
   // B3 — fermeture protégée : confirmation si la saisie a été modifiée.
   async function requestClose(){
@@ -4753,9 +4235,17 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                 )}
             </>)}
             <div className="form-row form-row-2">
+              {/* Un brouillon venu de la Lead Room porte une date de RDV
+                  complete (2026-09-16T10:30:00+00:00). Passee telle quelle a
+                  un input type=date, elle s affichait VIDE et surlignee en
+                  rouge « obligatoire » alors qu elle existait : 167 dossiers
+                  dans ce cas, et le conseiller qui remplissait le champ
+                  ecrasait l heure du rendez vous. On tronque a l affichage, on
+                  garde l heure a la saisie, et le libelle dit ce que la date
+                  represente vraiment tant que le dossier est un RDV cale. */}
               <div className="form-group">
                 <label className="form-label">
-                  Date de signature prévue
+                  {estRdvCale ? 'Date du rendez-vous' : 'Date de signature prévue'}
                   {(deal.status === 'En cours' || deal.status === 'Prévu') && (
                     <span style={{ color: '#EF4444', marginLeft: 4, fontWeight: 700 }} title="Obligatoire pour ce statut">*</span>
                   )}
@@ -4763,12 +4253,19 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                 <input
                   className="form-input"
                   type="date"
-                  value={deal.date_expected || ''}
-                  onChange={e => { set('date_expected', e.target.value); const m = monthFromDate(e.target.value); if (m && deal.status !== 'Signé') set('month', m) }}
-                  style={(deal.status === 'En cours' || deal.status === 'Prévu') && !deal.date_expected
+                  value={jourDe(deal.date_expected)}
+                  onChange={e => {
+                    set('date_expected', avecHeureConservee(e.target.value, deal.date_expected))
+                    const m = monthFromDate(e.target.value)
+                    if (m && deal.status !== 'Signé') set('month', m)
+                  }}
+                  style={(deal.status === 'En cours' || deal.status === 'Prévu') && !jourDe(deal.date_expected)
                     ? { background: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.30)' }
                     : undefined}
                 />
+                {heureDe(deal.date_expected) && (
+                  <div className="form-hint">Rendez-vous à {heureDe(deal.date_expected)}, l’heure est conservée.</div>
+                )}
               </div>
               <div className="form-group">
                 <label className="form-label">
@@ -4853,7 +4350,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                   </select>
                 </div>
               </div>
-              <div className="form-group mt-16"><label className="form-label">Source</label><select className="form-select" value={deal.source||''} onChange={e=>set('source',e.target.value)}>{SOURCES.map(s=><option key={s}>{s}</option>)}</select></div>
+              <div className="form-group mt-16"><label className="form-label">Source</label><select className="form-select" value={deal.source||''} onChange={e=>set('source',e.target.value)}>{sourcesPour(deal.source).map(s=><option key={s} value={s} disabled={s==='lead_room'}>{sourceLabel(s)}</option>)}</select></div>
             </FormSection>
             )}
             {/* D3 — prochaine action : la discipline des CRM de vente, aucun
@@ -4918,30 +4415,6 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
 ───────────────────────────────────────────────────────────────────────────── */
 // À intégrer dans App.jsx
 
-const PROSPECT_STATUS = ['a_contacter','invite','connecte','message_envoye','en_discussion','rdv_propose','rdv_pris','converti','non_interesse']
-const PROSPECT_STATUS_LABEL = {
-  a_contacter:    'À contacter',
-  invite:         'Invitation envoyée',
-  connecte:       'Connecté',
-  message_envoye: 'Message envoyé',
-  en_discussion:  'En discussion',
-  rdv_propose:    'RDV proposé',
-  rdv_pris:       'RDV pris ✓',
-  converti:       'Converti 🎉',
-  non_interesse:  'Non intéressé',
-}
-const PROSPECT_STATUS_COLOR = {
-  a_contacter:    {bg:'var(--bg)',bd:'var(--bd)',color:'var(--t3)'},
-  invite:         {bg:'rgba(14,165,233,0.07)',bd:'rgba(14,165,233,0.2)',color:'#0EA5E9'},
-  connecte:       {bg:'rgba(124,58,237,0.07)',bd:'rgba(124,58,237,0.2)',color:'#7C3AED'},
-  message_envoye: {bg:'rgba(201,169,97,0.08)',bd:'var(--gold-line)',color:'var(--gold)'},
-  en_discussion:  {bg:'var(--progress-bg)',bd:'var(--progress-bd)',color:'var(--progress)'},
-  rdv_propose:    {bg:'rgba(249,115,22,0.07)',bd:'rgba(249,115,22,0.2)',color:'#F97316'},
-  rdv_pris:       {bg:'rgba(16,185,129,0.07)',bd:'rgba(16,185,129,0.2)',color:'#10B981'},
-  converti:       {bg:'var(--signed-bg)',bd:'var(--signed-bd)',color:'var(--signed)'},
-  non_interesse:  {bg:'var(--cancelled-bg)',bd:'var(--cancelled-bd)',color:'var(--cancelled)'},
-}
-const NICHES = ['Pharmaciens','Chirurgiens-dentistes','Vétérinaires','Architectes','Dirigeants PME']
 
 export default function App(){
   const [session,setSession]=useState(null)
@@ -4981,7 +4454,6 @@ export default function App(){
   const [teamProfiles,setTeamProfiles]=useState([])
   const [deals,setDeals]=useState([])
   const [mobileMenuOpen,setMobileMenuOpen]=useState(false)
-  const [leads,setLeads]=useState([])
   const [objectifs,setObjectifs]=useState(EMPTY_OBJECTIFS)
   const [loading,setLoading]=useState(true)
   const [month,setMonth]=useState(currentMonth())
@@ -5168,27 +4640,8 @@ export default function App(){
   // Le polling est un filet de sécurité au cas où la WebSocket Realtime se
   // déconnecte silencieusement. 60s au lieu de 5s : 12x moins de requêtes
   // serveur sans dégrader la réactivité (Realtime gère le temps réel).
-  const fetchLeads=()=>leadsService.listAll().then(data=>setLeads(data)).catch(e=>logger.warn('[Leads] fetch failed', e))
-
   useEffect(()=>{
     if(!session?.user)return
-    fetchLeads()
-    const poll=setInterval(fetchLeads,60_000)
-    const leadsChannel=supabase.channel('leads-room')
-      // Le payload INSERT porte la ligne complete : on l applique localement au
-      // lieu de recharger toute la table (le pont Lead Room ecrit en rafale, un
-      // select('*') par lead chez chaque conseiller connecte ne tient pas).
-      // Le poll 60s reste le filet de securite si un event se perd.
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'leads'},payload=>{
-        setLeads(prev=>prev.some(l=>l.id===payload.new.id)?prev:[payload.new,...prev])
-      })
-      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'leads'},payload=>{
-        setLeads(prev=>prev.map(l=>l.id===payload.new.id?payload.new:l))
-      })
-      .on('postgres_changes',{event:'DELETE',schema:'public',table:'leads'},payload=>{
-        setLeads(prev=>prev.filter(l=>l.id!==payload.old.id))
-      })
-      .subscribe()
 
     // Channel deals, propagation live des changements (signature, modif statut,
     // création) entre tous les conseillers connectés sans refresh.
@@ -5219,7 +4672,7 @@ export default function App(){
       })
       .subscribe()
 
-    return()=>{clearInterval(poll);supabase.removeChannel(leadsChannel);supabase.removeChannel(dealsChannel)}
+    return()=>{supabase.removeChannel(dealsChannel)}
   },[session?.user?.id])
 
   // ── Auth ───────────────────────────────────────────────────────────────────
@@ -5297,12 +4750,11 @@ export default function App(){
     try {
       // 5 chargements parallèles via les services. Promise.allSettled :
       // un échec sur une table n'empêche pas les autres de se mettre à jour.
-      const [profRes, teamRes, dealsRes, objRes, leadsRes] = await Promise.allSettled([
+      const [profRes, teamRes, dealsRes, objRes] = await Promise.allSettled([
         profilesService.getById(userId),
         profilesService.listTeam(),
         dealsService.listAll(),
         objectifsService.listAll(),
-        leadsService.listAll(),
       ])
 
       // Si le composant a unmount pendant l'await, on n'applique aucun setState.
@@ -5331,7 +4783,6 @@ export default function App(){
         objRes.value.forEach(row => { map[row.month] = row })
         setObjectifs(map)
       }
-      if (leadsRes.status === 'fulfilled') setLeads(leadsRes.value)
 
       logger.debug('[App] Profile fetch:', prof ? `${prof.full_name} (${prof.role})` : 'null')
 
@@ -5426,7 +4877,15 @@ export default function App(){
         ...d,
         month: alignedMonthForDeal(d) || d.month,
         client_id: clientId || null,
-        advisor_code: profile?.role === 'manager' ? d.advisor_code : (profile?.advisor_code || d.advisor_code),
+        // Le titulaire d un dossier DEJA EXISTANT ne change pas parce que
+        // quelqu un d autre l enregistre. Depuis que le co conseiller peut
+        // ecrire (25/08), cette ligne lui faisait prendre le dossier a chaque
+        // clic sur Enregistrer : il disparaissait alors du CRM du titulaire.
+        // On ne force le code que sur un dossier neuf. Un trigger en base
+        // (trg_proteger_titulaire_deal) tient la meme regle cote serveur.
+        advisor_code: profile?.role === 'manager'
+          ? d.advisor_code
+          : (d.created_at ? d.advisor_code : (profile?.advisor_code || d.advisor_code)),
         created_by: user.id
       }))
 
@@ -5450,7 +4909,13 @@ export default function App(){
           const t9 = (s) => { const x = String(s || '').replace(/\D/g, ''); return x.length >= 9 ? x.slice(-9) : '' };
           const em = (first.client_email || '').trim().toLowerCase();
           const tel = t9(first.client_phone);
-          reusableDraft = deals.find(d => d.status === 'Prévu' && d.lead_id && (
+          // Le brouillon reste reutilisable apres un clic sur « RDV tenu » :
+          // il passe alors en 'En cours' mais reste un brouillon (aucun
+          // produit, aucun montant). Exiger 'Prévu' faisait recreer un
+          // dossier a cote, en laissant le lead_id sur le fantome.
+          const estBrouillonLead = d => d.lead_id
+            && (d.status === 'Prévu' || (d.status === 'En cours' && estSimpleRdv(d)))
+          reusableDraft = deals.find(d => estBrouillonLead(d) && (
             (first.client_id && d.client_id === first.client_id)
             || (em && (d.client_email || '').trim().toLowerCase() === em)
             || (tel && t9(d.client_phone) === tel)
@@ -5502,7 +4967,15 @@ export default function App(){
             // on applique les infos du dossier saisi (produit, statut, montants,
             // dates). Le brouillon Prévu devient le dossier signe.
             draftConsumed = true
-            const { id, created_at, lead_id, ...fields } = deal
+            // `source` sort de fields au meme titre que lead_id : c est le
+            // brouillon qui sait d ou vient le client, pas le formulaire, dont
+            // le champ vaut « Teleprospection » par defaut. Sans ca, toute
+            // signature venue de la Lead Room etait rangee en direct et le
+            // cout par signature et par campagne s en trouvait fausse.
+            const { id, created_at, lead_id, source, ...fields } = deal
+            if (source && source !== 'Téléprospection' && source !== reusableDraft.source) {
+              fields.source = source   // le conseiller a explicitement corrige
+            }
             await dealsService.update(reusableDraft.id, fields)
           } else {
             await dealsService.create(deal)
@@ -5596,24 +5069,6 @@ export default function App(){
   }
 
   // Conversion lead → pré-remplissage modal dossier
-  function convertLeadToDeal(lead){
-    const deal=emptyDeal(profile?.advisor_code)
-    deal.client=lead.nom||''
-    deal.client_email=lead.email_confirmed||lead.email||''
-    deal.client_phone=lead.telephone||''
-    deal.source='Leads Facebook'
-    deal.notes=[
-      `Lead ${lead.campagne} reçu le ${lead.created_at?new Date(lead.created_at).toLocaleDateString('fr-FR'):''}`,
-      lead.tmi?`TMI : ${lead.tmi}`:'',
-      lead.patrimoine_net?`Patrimoine net : ${lead.patrimoine_net}`:'',
-      lead.actifs?`Actifs : ${lead.actifs}`:'',
-    ].filter(Boolean).join('\n')
-    setEditingDeal(deal)
-    setModalOpen(true)
-    setActiveTab('clients')
-    setClientsVue('dossiers')
-  }
-
   function startCreate(){setEditingDeal(emptyDeal(profile?.advisor_code));setModalOpen(true)}
   function startEdit(deal){setEditingDeal({...deal});setModalOpen(true)}
 

@@ -35,7 +35,23 @@ export const estProduitHonoraires = (produit) => PRODUITS_HONORAIRES.includes(pr
 // profession liberale sans prevoyance = opportunite).
 export const STATUTS_PRO = ['Salarié','TNS','Chef d\'entreprise','Retraité','Profession libérale','Autre'];
 export const COMPANIES = ['SwissLife','Abeille Assurances','Generali','Cardif (BNP Paribas)','Spirica','Autre'];
+// « lead_room » est la valeur ecrite par la Lead Room elle meme sur les
+// brouillons de RDV. Elle ne figurait pas dans cette liste : le select
+// s affichait vide sur 210 dossiers, et la moindre sauvegarde la remplacait
+// par « Teleprospection ». On la garde telle quelle en base (la Lead Room
+// ecrit dedans) et on lui donne un libelle lisible, comme pour STATUS_LABEL.
 export const SOURCES = ['Téléprospection','Leads Facebook','Parrainage Client','Réseau Personnel','Site Web Entasis','LinkedIn','Autre'];
+export const SOURCE_LABEL = { lead_room: 'Lead Room' };
+export const sourceLabel = (s) => SOURCE_LABEL[s] || s;
+
+// Options du select de source pour un dossier donné. « Lead Room » n'est pas
+// un choix : c'est le pont qui l'écrit quand un lead prend rendez-vous. On
+// l'ajoute donc seulement pour un dossier qui la porte déjà, pour qu'il
+// s'affiche au lieu d'un champ vide, sans permettre de la choisir ailleurs
+// (un dossier réseau personnel rangé en Lead Room fausserait le coût par
+// signature et par campagne).
+export const sourcesPour = (source) =>
+  (source && !SOURCES.includes(source)) ? [source, ...SOURCES] : SOURCES;
 
 export const STATUS_CLASS = {
   'Signé': 'badge badge-signed',
@@ -147,3 +163,67 @@ export function messageErreur(e) {
   }
   return brut || 'Une erreur est survenue.'
 }
+
+// ─── Dates de rendez-vous venues de la Lead Room ──────────────────────────
+// La Lead Room écrit une date complète dans `date_expected`
+// (2026-09-16T10:30:00+00:00) : c'est une heure de rendez-vous, pas un jour de
+// signature. Un `<input type="date">` n'accepte que YYYY-MM-DD et affiche un
+// champ VIDE si on lui passe autre chose — 167 dossiers apparaissaient donc
+// sans date, surlignés « obligatoire », alors que la date existait.
+//
+// Piège : cet instant est en UTC. Le RDV de 12h30 à Paris est stocké
+// 10:30:00+00:00, et c'est bien 12h30 que le client a reçu dans son mail de
+// confirmation. Découper la chaîne afficherait donc 10h30 au conseiller, deux
+// heures avant l'heure dite. Tout passe par Europe/Paris, jamais par un
+// slice.
+
+const PARIS = 'Europe/Paris';
+const aInstant = (v) => /T\d{2}:\d{2}/.test(String(v || ''));
+
+// Le jour tel qu'on le vit à Paris, au format attendu par un input date.
+export const jourDe = (valeur) => {
+  const brut = String(valeur || '');
+  if (!brut) return '';
+  if (!aInstant(brut)) return brut.slice(0, 10);
+  const d = new Date(brut);
+  if (Number.isNaN(d.getTime())) return brut.slice(0, 10);
+  // 'fr-CA' rend YYYY-MM-DD, le seul format qu'accepte un input date.
+  return d.toLocaleDateString('fr-CA', { timeZone: PARIS });
+};
+
+// L'heure de rendez-vous à Paris (HH'h'MM), ou null si la valeur n'en porte pas.
+export const heureDe = (valeur) => {
+  const brut = String(valeur || '');
+  if (!aInstant(brut)) return null;
+  const d = new Date(brut);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleTimeString('fr-FR', {
+    hour: '2-digit', minute: '2-digit', timeZone: PARIS,
+  }).replace(':', 'h');
+};
+
+// Décalage de Paris à cette date, en minutes (60 en hiver, 120 en été).
+// Recomposer un instant sans lui casse l'heure au passage été/hiver : un RDV
+// de septembre déplacé en décembre glisserait d'une heure.
+function decalageParis(instant) {
+  const local = new Date(instant.toLocaleString('en-US', { timeZone: PARIS }));
+  const utc = new Date(instant.toLocaleString('en-US', { timeZone: 'UTC' }));
+  return Math.round((local.getTime() - utc.getTime()) / 60000);
+}
+
+// Nouveau jour choisi par le conseiller, en gardant l'HEURE DE PARIS d'origine.
+// Déplacer un rendez-vous ne doit ni l'effacer ni le décaler.
+export const avecHeureConservee = (nouveauJour, valeurOrigine) => {
+  if (!nouveauJour) return '';
+  if (!aInstant(valeurOrigine)) return nouveauJour;
+  const origine = new Date(String(valeurOrigine));
+  if (Number.isNaN(origine.getTime())) return nouveauJour;
+
+  const [hh, mm] = (heureDe(valeurOrigine) || '00h00').split('h').map(Number);
+  const [a, mo, j] = nouveauJour.split('-').map(Number);
+  // On vise l'heure de Paris : on part de l'instant UTC naïf, puis on retire
+  // le décalage réellement en vigueur ce jour-là.
+  const naif = Date.UTC(a, mo - 1, j, hh, mm, 0);
+  const decalage = decalageParis(new Date(naif));
+  return new Date(naif - decalage * 60000).toISOString();
+};
