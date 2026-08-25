@@ -6,6 +6,7 @@
 // gestion gcal_token. Cette couche centralise.
 
 import { supabase } from '../lib/supabase'
+import { verifierEcriture, MOTIF_DROITS } from '../lib/ecriture-verifiee'
 
 /**
  * Charge un seul profil par user id.
@@ -43,8 +44,10 @@ export async function listTeam() {
  * Met à jour un profil (ex: role, advisor_code, full_name).
  */
 export async function update(userId, patch) {
-  const { error } = await supabase.from('profiles').update(patch).eq('id', userId)
-  if (error) throw error
+  // Les policies de profiles refusent l escalade de role et la modification
+  // d autrui : sans .select(), un refus passait pour un enregistrement.
+  const reponse = await supabase.from('profiles').update(patch).eq('id', userId).select('id')
+  verifierEcriture(reponse, 'Enregistrement du profil', MOTIF_DROITS)
 }
 
 /**
@@ -79,9 +82,10 @@ export async function setGcalToken(userId, token) {
  * Reset le token Google Calendar (expiré ou révoqué).
  */
 export async function clearGcalToken(userId) {
-  const { error } = await supabase
+  const reponse = await supabase
     .from('profiles')
     .update({ gcal_token: null, gcal_token_updated_at: null })
     .eq('id', userId)
-  if (error) throw error
+    .select('id')
+  verifierEcriture(reponse, 'Déconnexion de Google Agenda', MOTIF_DROITS)
 }

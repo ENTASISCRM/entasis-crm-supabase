@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { supabase } from '../lib/supabase'
+import { verifierEcriture, MOTIF_DROITS } from '../lib/ecriture-verifiee'
 
 const TABLE = 'conseiller_contrats'
 
@@ -105,11 +106,12 @@ export async function setActif(id, actif) {
  * Réservé manager (RLS). À utiliser avec parcimonie — préférer setActif(false).
  */
 export async function remove(id) {
-  const { error } = await supabase
+  const reponse = await supabase
     .from(TABLE)
     .delete()
     .eq('id', id)
-  if (error) throw error
+    .select('id')
+  verifierEcriture(reponse, 'Suppression du contrat', MOTIF_DROITS)
   return true
 }
 

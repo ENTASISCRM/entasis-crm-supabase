@@ -14,6 +14,7 @@
 // du conseiller connecté. 1,5 % reste la valeur par défaut (rétrocompat).
 
 import { supabase } from '../lib/supabase'
+import { verifierEcriture, MOTIF_DISPARU } from '../lib/ecriture-verifiee'
 
 // Taux par défaut historique (Mandataire / non-rentabilisé)
 export const COMMISSION_CONSEILLER_PCT = 1.5
@@ -75,8 +76,8 @@ export async function listAll() {
  * Met à jour une UCS (édition admin).
  */
 export async function update(id, patch) {
-  const { error } = await supabase.from('ucs_structures').update(patch).eq('id', id)
-  if (error) throw error
+  const reponse = await supabase.from('ucs_structures').update(patch).eq('id', id).select('id')
+  verifierEcriture(reponse, 'Enregistrement de l UCS', MOTIF_DISPARU)
 }
 
 /**

@@ -2128,7 +2128,14 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit}){
   // Mutuelle/Prevoyance et Total dispo via mini tabs (demande Louis
   // 2026-06-08, vue Direction).
   const [annualMetric,setAnnualMetric]=useState('pp')
-  const monthDeals=deals.filter(d=>dealDuMois(d,month))
+  // Un RDV cale par la Lead Room est une entree d'agenda qui a la forme d'un
+  // dossier : produit « Autre », montants a zero. La sidebar les comptait deja
+  // a part, pas cette vue : juillet affichait 67 dossiers en pipeline pour 7
+  // reels, juin 78 pour 2. On separe ici une bonne fois, et on annonce les
+  // RDV comme des RDV.
+  const monthAll=deals.filter(d=>dealDuMois(d,month))
+  const monthRdv=monthAll.filter(estSimpleRdv)
+  const monthDeals=monthAll.filter(d=>!estSimpleRdv(d))
   const signed=monthDeals.filter(d=>d.status==='Signé'),pipeline=monthDeals.filter(d=>isPipeline(d.status))
   // Total cabinet, on compte chaque deal une seule fois (pas de 50/50 ici)
   // car on veut le CA total du cabinet, pas par conseiller. Separation PP
@@ -2152,7 +2159,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit}){
   const ppTarget=Number(targets.pp_target||0),puTarget=Number(targets.pu_target||0)
   const activeAdvisors=teamProfiles.filter(p=>p.is_active&&p.advisor_code)
   const prevIdx=MONTHS.indexOf(month)-1,prevMonth=prevIdx>=0?MONTHS[prevIdx]:null
-  const prevDeals=prevMonth?deals.filter(d=>dealDuMois(d,prevMonth)):[]
+  const prevDeals=prevMonth?deals.filter(d=>dealDuMois(d,prevMonth)&&!estSimpleRdv(d)):[]
   const prevSigned=prevDeals.filter(d=>d.status==='Signé'),prevPipeline=prevDeals.filter(d=>isPipeline(d.status))
   // Même filtre financier/mutuelle pour le mois precedent (delta coherent).
   const prevSignedFin = prevSigned.filter(d => !isMut(d))
@@ -2178,7 +2185,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit}){
 
   return (
     <div>
-      <div className="section-header"><div><div className="section-kicker">Vue direction · {month}</div><div className="section-title">Tableau de bord cabinet</div><div className="section-sub">{monthDeals.length} dossiers · {signed.length} signés · {pipeline.length} en pipeline{prevMonth&&<span style={{color:'var(--t3)'}}> · vs {prevMonth}</span>}</div></div></div>
+      <div className="section-header"><div><div className="section-kicker">Vue direction · {month}</div><div className="section-title">Tableau de bord cabinet</div><div className="section-sub">{monthDeals.length} dossiers · {signed.length} signés · {pipeline.length} en pipeline{monthRdv.length>0&&<span title="Rendez vous cales depuis la Lead Room, pas encore qualifies"> · {monthRdv.length} RDV calés</span>}{prevMonth&&<span style={{color:'var(--t3)'}}> · vs {prevMonth}</span>}</div></div></div>
       <div className="kpi-grid mb-24">
         <KpiCard label="PP financière signée" value={euro(ppS)} hint="PER, AV, SCPI, PS, PE" accent="gold" progressValue={pct(ppS,ppTarget)} delta={prevMonth?dPpS:null}/>
         <KpiCard label="PP financière prévisionnelle" value={euro(ppS+ppP)} hint="Atterrissage projeté" accent="amber" delta={prevMonth?dPpProj:null}/>
@@ -2230,7 +2237,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit}){
               <div className="team-amount" title="PP Mutuelle Sante + Prevoyance TNS">{euro(row.ppMutuelleSigned||0)}</div>
               <div className="team-bar-wrap"><div className="team-bar-track"><div className="team-bar-fill" style={{width:`${pct(row.ppProjected,topPp)}%`}}/></div><span className="team-amount">{euro(row.ppProjected)}</span></div>
               <div className="team-bar-wrap"><div className="team-bar-track"><div className="team-bar-fill" style={{width:`${pct(row.puProjected,topPu)}%`}}/></div><span className="team-amount">{euro(row.puProjected)}</span></div>
-              <div className="team-amount" style={{textAlign:'center'}}>{row.total}</div>
+              <div className="team-amount" style={{textAlign:'center'}} title={row.rdvCount>0?`${row.rdvCount} RDV cale(s) en plus, non comptes ici`:undefined}>{row.totalHorsRdv}</div>
               <div>{row.totalHorsRdv===0?<span className="badge badge-forecast" title="Aucun dossier ce mois — uniquement des RDV">—</span>:<span className={`badge ${row.signRate>=60?'badge-signed':row.signRate>=30?'badge-progress':'badge-cancelled'}`}>{row.signRate}%</span>}</div>
             </div>
           ))}
@@ -3860,7 +3867,7 @@ function TeamView({deals,objectifs,teamProfiles,month,profile}){
                 {miniKpi(<>PP signée{hasCoDeals&&<span title="50% sur co-conseil" style={{marginLeft:3,opacity:0.6}}>⚡</span>}</>,euro(row.ppSigned),'var(--gold)')}
                 {miniKpi('PP pipeline',euro(row.ppPipeline))}
                 {miniKpi('PU signée',euro(row.puSigned),'var(--signed)')}
-                {miniKpi('Dossiers',<>{row.total} <span style={{fontSize:11,color:'var(--t3)',fontWeight:400}}>({row.signedCount}✓)</span></>)}
+                {miniKpi('Dossiers',<>{row.totalHorsRdv} <span style={{fontSize:11,color:'var(--t3)',fontWeight:400}}>({row.signedCount}✓)</span></>)}
               </div>
               <div style={{display:'flex',gap:14,alignItems:'center'}}>
                 <div style={{textAlign:'right'}}><div style={{fontSize:10,color:'var(--t3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:2}}>Taux</div>{row.totalHorsRdv===0?<span className="badge badge-forecast" style={{fontSize:11,padding:'2px 8px'}} title="Aucun dossier ce mois — uniquement des RDV">—</span>:<span className={`badge ${row.signRate>=60?'badge-signed':row.signRate>=30?'badge-progress':'badge-cancelled'}`} style={{fontSize:11,padding:'2px 8px'}}>{row.signRate}%</span>}</div>
@@ -4659,10 +4666,6 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                 d une fiche mono produit. A la creation, chaque carte produit
                 porte ses propres frais (voir plus haut). */}
             {!(showMultiProducts || isClientLocked) && (<>
-                dossier, donc pour chacun de ses produits. Ils vivaient dans la
-                branche reservee a la reouverture : a la creation le curseur
-                restait invisible et bloque a 1 %, si bien qu un dossier negocie
-                a 2,5 % partait commissionne a 1 % sauf a rouvrir la fiche. */}
                 {/* L'ordre de placement n'a pas de sens en assurance emprunteur : il
                     annule la commission sur l'assiette PU, donc ici la totalité des
                     frais de dossier. On masque la case, sauf si un dossier l'a déjà

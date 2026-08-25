@@ -9,6 +9,7 @@
 //   - Actions prioritaires (upfront <3%, contact froid 60j+, upfront manquant)
 
 import { supabase } from '../lib/supabase'
+import { verifierEcriture, MOTIF_DISPARU } from '../lib/ecriture-verifiee'
 
 // Seuils métier
 export const UPFRONT_THRESHOLD = 3.0           // % minimum sous lequel on alerte
@@ -78,8 +79,8 @@ export async function upsert(structureur) {
  * Met à jour un structureur.
  */
 export async function update(id, patch) {
-  const { error } = await supabase.from('structureurs').update(patch).eq('id', id)
-  if (error) throw error
+  const reponse = await supabase.from('structureurs').update(patch).eq('id', id).select('id')
+  verifierEcriture(reponse, 'Enregistrement du structureur', MOTIF_DISPARU)
 }
 
 /**

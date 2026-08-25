@@ -43,6 +43,8 @@ import {
   annualize,
   dealMatchesAdvisor,
   dealDuMois,
+  estSimpleRdv,
+  sumAnnualPp, sumAnnualPpMutuelle, sumPu,
   isPipeline, entonnoirLeads } from '../lib/metrics'
 import { supabase } from '../lib/supabase'
 import * as profilesService from '../services/profiles'
@@ -197,18 +199,29 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
   // sommant les rows). Sinon on perd la part 50/50 des co-conseillers qui
   // sont des managers exclus de la liste (ex: Louis co-conseiller d'Alexis
   // → la moitié du deal disparaissait du total cabinet).
+  // Deux regles etaient reecrites ici a la main, et pas comme ailleurs :
+  //   - les RDV cales par la Lead Room comptaient comme des dossiers en
+  //     pipeline (juin : 78 annonces pour 2 reels)
+  //   - la PP incluait Mutuelle et Prevoyance TNS, que la vue direction en
+  //     exclut depuis le 08/06 (juin : 110 100 € ici contre 101 436 € la bas)
+  // Le mail mensuel recopiait ces deux chiffres. On passe par les helpers de
+  // lib/metrics, seule definition de reference, et on porte la Mutuelle a
+  // part pour que rien ne disparaisse.
   const cabinet = useMemo(() => {
-    const ofMonth = (deals || []).filter(d => dealDuMois(d, month))
+    const ofMonth = (deals || []).filter(d => dealDuMois(d, month) && !estSimpleRdv(d))
+    const rdv = (deals || []).filter(d => dealDuMois(d, month) && estSimpleRdv(d) && isPipeline(d.status))
     const signed = ofMonth.filter(d => d.status === 'Signé')
     const pipeline = ofMonth.filter(d => isPipeline(d.status))
-    const ppSigned = signed.reduce((s, d) => s + annualize(d.pp_m), 0)
-    const puSigned = signed.reduce((s, d) => s + Number(d.pu || 0), 0)
-    const ppProj = ppSigned + pipeline.reduce((s, d) => s + annualize(d.pp_m), 0)
-    const puProj = puSigned + pipeline.reduce((s, d) => s + Number(d.pu || 0), 0)
+    const ppSigned = sumAnnualPp(signed)
+    const puSigned = sumPu(signed)
+    const ppMutSigned = sumAnnualPpMutuelle(signed)
     return {
-      ppSigned, puSigned, ppProj, puProj,
+      ppSigned, puSigned, ppMutSigned,
+      ppProj: ppSigned + sumAnnualPp(pipeline),
+      puProj: puSigned + sumPu(pipeline),
       totalSigned: signed.length,
       totalPipeline: pipeline.length,
+      totalRdv: rdv.length,
     }
   }, [deals, month])
 
@@ -241,9 +254,10 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
   function copierSyntheseMois() {
     const lignesTxt = [
       `Synthèse cabinet Entasis · ${month}`,
-      `PP signée : ${fmtEur(cabinet.ppSigned)}${targets.pp_target > 0 ? ` / objectif ${fmtEur(targets.pp_target)} (${pctNum(cabinet.ppSigned, targets.pp_target)} %)` : ''}`,
+      `PP financière signée : ${fmtEur(cabinet.ppSigned)}${targets.pp_target > 0 ? ` / objectif ${fmtEur(targets.pp_target)} (${pctNum(cabinet.ppSigned, targets.pp_target)} %)` : ''}`,
       `PU signée : ${fmtEur(cabinet.puSigned)}${targets.pu_target > 0 ? ` / objectif ${fmtEur(targets.pu_target)} (${pctNum(cabinet.puSigned, targets.pu_target)} %)` : ''}`,
-      `Dossiers signés : ${cabinet.totalSigned} (${cabinet.totalPipeline} en pipeline)`,
+      ...(cabinet.ppMutSigned > 0 ? [`PP Mutuelle/Prévoyance : ${fmtEur(cabinet.ppMutSigned)}`] : []),
+      `Dossiers signés : ${cabinet.totalSigned} (${cabinet.totalPipeline} en pipeline${cabinet.totalRdv > 0 ? `, ${cabinet.totalRdv} RDV calés` : ''})`,
       `Conseillers actifs : ${activeAdvisors.length}, dont ${rows.filter(r => r.m.signedCount > 0).length} ont signé ce mois`,
     ]
     if (topPerformeurs.length > 0) {
@@ -420,8 +434,14 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
         <KpiCard
           label="Dossiers signés"
           value={cabinet.totalSigned.toFixed(0)}
-          hint={`${cabinet.totalPipeline} en pipeline`}
+          hint={`${cabinet.totalPipeline} en pipeline${cabinet.totalRdv > 0 ? ` · ${cabinet.totalRdv} RDV calés` : ''}`}
           accent="green"
+        />
+        <KpiCard
+          label="PP Mutuelle/Prévoyance"
+          value={fmtEur(cabinet.ppMutSigned)}
+          hint="Mutuelle Santé + Prévoyance TNS, hors PP financière"
+          accent="gold"
         />
         <KpiCard
           label="Conseillers actifs"

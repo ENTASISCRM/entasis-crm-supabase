@@ -7,6 +7,7 @@
 // pattern que countSafe() de dossiersImmo.js.
 
 import { supabase } from '../lib/supabase'
+import { verifierEcriture, MOTIF_DROITS } from '../lib/ecriture-verifiee'
 
 /**
  * Liste tous les dossiers de conformité, les plus récemment modifiés d'abord.
@@ -58,9 +59,10 @@ export async function update(id, patch) {
  * Supprime un dossier de conformité.
  */
 export async function remove(id) {
-  const { error } = await supabase
+  const reponse = await supabase
     .from('conformite_dossiers')
     .delete()
     .eq('id', id)
-  if (error) throw error
+    .select('id')
+  verifierEcriture(reponse, 'Suppression du dossier de conformité', MOTIF_DROITS)
 }

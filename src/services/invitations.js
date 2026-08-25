@@ -8,6 +8,7 @@
 //   4. Après signup → markUsed() pour invalider le token
 
 import { supabase } from '../lib/supabase'
+import { verifierEcriture, MOTIF_DROITS } from '../lib/ecriture-verifiee'
 
 /**
  * Valide un token d'invitation (non utilisé, non expiré).
@@ -61,11 +62,12 @@ export async function create({ email, role, advisorCode, createdBy, typeContrat 
  * Permet de qualifier rétroactivement un conseiller depuis le panel admin.
  */
 export async function setTypeContrat(invitationId, typeContrat) {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('invitations')
     .update({ type_contrat: typeContrat || null })
     .eq('id', invitationId)
-  if (error) throw error
+    .select('id')
+  verifierEcriture({ data, error }, 'Enregistrement du type de contrat', MOTIF_DROITS)
 }
 
 /**
@@ -84,9 +86,10 @@ export async function markUsed(token) {
  * Révoque (supprime) une invitation.
  */
 export async function remove(invitationId) {
-  const { error } = await supabase
+  const reponse = await supabase
     .from('invitations')
     .delete()
     .eq('id', invitationId)
-  if (error) throw error
+    .select('id')
+  verifierEcriture(reponse, 'Suppression de l invitation', MOTIF_DROITS)
 }

@@ -19,6 +19,12 @@
 //   - email_confirmed (string : email final récupéré sur le lead)
 
 import { supabase } from '../lib/supabase'
+import { verifierEcriture } from '../lib/ecriture-verifiee'
+
+// Un lead qui echappe a une ecriture a change de main : c est la seule cause
+// possible, la policy leads_update_v2 n autorise que le proprietaire, la
+// direction, ou un lead libre.
+const MOTIF_LEAD = 'Ce lead vient de changer de main, rechargez la liste.'
 
 /**
  * Charge tous les leads, ordre antichronologique sur created_at.
@@ -43,8 +49,8 @@ export async function markBooked(leadId, { email } = {}) {
     booked_at: new Date().toISOString(),
   }
   if (email) payload.email_confirmed = email
-  const { error } = await supabase.from('leads').update(payload).eq('id', leadId)
-  if (error) throw error
+  const reponse = await supabase.from('leads').update(payload).eq('id', leadId).select('id')
+  verifierEcriture(reponse, 'Enregistrement du rendez vous', MOTIF_LEAD)
 }
 
 /**
@@ -54,7 +60,12 @@ export async function markBooked(leadId, { email } = {}) {
  * @returns true si pris avec succès, false si déjà pris par un autre
  */
 export async function take(leadId, advisorProfileId) {
-  const { error } = await supabase
+  // Le garde fou vit dans le `.in('status', ...)` : si un collegue a pris le
+  // lead trois secondes plus tot, la ligne ne correspond plus et l update
+  // touche zero ligne. Sans `.select()`, PostgREST renvoyait 204 sans erreur
+  // et `!error` valait true : les deux conseillers voyaient le lead basculer
+  // chez eux et appelaient le meme client.
+  const { data, error } = await supabase
     .from('leads')
     .update({
       status: 'contacted',
@@ -63,18 +74,21 @@ export async function take(leadId, advisorProfileId) {
     })
     .eq('id', leadId)
     .in('status', ['available', 'released'])
-  return !error
+    .select('id')
+  if (error) throw error
+  return (data || []).length > 0
 }
 
 /**
  * Libération manuelle du lead (le conseiller renonce, un autre peut le prendre).
  */
 export async function release(leadId) {
-  const { error } = await supabase
+  const reponse = await supabase
     .from('leads')
     .update({ status: 'released', taken_by: null, taken_at: null })
     .eq('id', leadId)
-  if (error) throw error
+    .select('id')
+  verifierEcriture(reponse, 'Libération du lead', MOTIF_LEAD)
 }
 
 /**
@@ -82,7 +96,7 @@ export async function release(leadId) {
  * le contexte de prise et le booking éventuel.
  */
 export async function reset(leadId) {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('leads')
     .update({
       status: 'available',
@@ -91,7 +105,8 @@ export async function reset(leadId) {
       booked_at: null,
     })
     .eq('id', leadId)
-  if (error) throw error
+    .select('id')
+  verifierEcriture({ data, error }, 'Réinitialisation du lead', MOTIF_LEAD)
 }
 
 /**
@@ -99,11 +114,12 @@ export async function reset(leadId) {
  * On conserve taken_by pour audit (qui l'a fermé).
  */
 export async function markDead(leadId, advisorProfileId) {
-  const { error } = await supabase
+  const reponse = await supabase
     .from('leads')
     .update({ status: 'dead', taken_by: advisorProfileId })
     .eq('id', leadId)
-  if (error) throw error
+    .select('id')
+  verifierEcriture(reponse, 'Classement du lead en non intéressé', MOTIF_LEAD)
 }
 
 /**
@@ -112,9 +128,15 @@ export async function markDead(leadId, advisorProfileId) {
  */
 export async function autoReleaseStale(leadIds) {
   if (!leadIds?.length) return
-  const { error } = await supabase
+  // Liberation automatique : une ligne qui resiste (prise entre temps par
+  // quelqu un d autre) n est pas une anomalie, on ne bloque donc pas le lot.
+  // On renvoie ce qui a reellement ete libere pour que l appelant puisse le
+  // dire, plutot que d annoncer un menage qui n a pas eu lieu.
+  const { data, error } = await supabase
     .from('leads')
     .update({ status: 'released', taken_by: null, taken_at: null })
     .in('id', leadIds)
+    .select('id')
   if (error) throw error
+  return (data || []).map((l) => l.id)
 }

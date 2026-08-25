@@ -6,6 +6,7 @@
 // (utilisé partout) pour éviter de répéter la liste de colonnes.
 
 import { supabase } from '../lib/supabase'
+import { verifierEcriture, MOTIF_PROPRIETE } from '../lib/ecriture-verifiee'
 
 // Colonnes du client à charger en join sur tous les SELECT de deals.
 // Centralisé ici pour éviter le drift entre call-sites.
@@ -78,8 +79,11 @@ function stripClientUiOnly(obj) {
 }
 
 export async function update(dealId, patch) {
-  const { error } = await supabase.from('deals').update(stripClientUiOnly(patch)).eq('id', dealId)
-  if (error) throw error
+  // .select('id') obligatoire : sans lui, une ligne refusee par la RLS
+  // (dossier d un autre conseiller) repond 204 sans erreur et l ecran
+  // affiche « Dossier mis a jour » alors que rien n a bouge.
+  const reponse = await supabase.from('deals').update(stripClientUiOnly(patch)).eq('id', dealId).select('id')
+  verifierEcriture(reponse, 'Enregistrement du dossier', MOTIF_PROPRIETE)
 }
 
 /**
@@ -96,6 +100,6 @@ export async function create(deal) {
  * Supprime définitivement un deal.
  */
 export async function remove(dealId) {
-  const { error } = await supabase.from('deals').delete().eq('id', dealId)
-  if (error) throw error
+  const reponse = await supabase.from('deals').delete().eq('id', dealId).select('id')
+  verifierEcriture(reponse, 'Suppression du dossier', `${MOTIF_PROPRIETE} Seul son titulaire ou la direction peut le supprimer.`)
 }

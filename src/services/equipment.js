@@ -4,6 +4,7 @@
 // automatiquement le périmètre (manager voit tout, conseiller voit ses clients).
 
 import { supabase } from '../lib/supabase'
+import { verifierEcriture, MOTIF_DROITS } from '../lib/ecriture-verifiee'
 
 // Équipement par client (deals signés + équipements déclarés fusionnés).
 export async function listEquipment() {
@@ -45,8 +46,8 @@ export async function patchClient(clientId, patch = {}) {
   const clean = {}
   for (const k of allowed) if (k in patch) clean[k] = patch[k]
   if (Object.keys(clean).length === 0) return
-  const { error } = await supabase.from('clients').update(clean).eq('id', clientId)
-  if (error) throw error
+  const reponse = await supabase.from('clients').update(clean).eq('id', clientId).select('id')
+  verifierEcriture(reponse, 'Enregistrement du plan d équipement', MOTIF_DROITS)
 }
 
 // Retire une déclaration (revient à « non renseigné »).
@@ -104,18 +105,19 @@ export async function updateClientInfo(clientId, patch = {}) {
   if (patch.statut_pro) clean.statut_pro = patch.statut_pro
   if (patch.profession) clean.profession = patch.profession
   if (Object.keys(clean).length === 0) return
-  const { error } = await supabase.from('clients').update(clean).eq('id', clientId)
-  if (error) throw error
+  const reponse = await supabase.from('clients').update(clean).eq('id', clientId).select('id')
+  verifierEcriture(reponse, 'Enregistrement de la fiche client', MOTIF_DROITS)
 }
 
 // Mise en veille relationnelle d un client (#8, do not disturb daté) : tant que
 // pause_jusqu_au est dans le futur, le client sort des missions à proposer.
 export async function setClientPause(clientId, { pause_jusqu_au, pause_motif }) {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('clients')
     .update({ pause_jusqu_au: pause_jusqu_au || null, pause_motif: pause_motif || null })
     .eq('id', clientId)
-  if (error) throw error
+    .select('id')
+  verifierEcriture({ data, error }, 'Mise en veille du client', MOTIF_DROITS)
 }
 
 // Pauses actives (échéance non dépassée), fusionnées dans les lignes du module.

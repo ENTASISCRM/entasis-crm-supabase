@@ -7,6 +7,7 @@
 // (numéro, statut de vie) et la timeline (événements + valorisations).
 
 import { supabase } from '../lib/supabase'
+import { verifierEcriture, MOTIF_DROITS } from '../lib/ecriture-verifiee'
 
 // Contrats d'un client, avec leur timeline et leurs valorisations.
 // 1 requête contrats puis 2 requêtes en parallèle sur les ids (les volumes
@@ -58,8 +59,8 @@ export async function updateContrat(contratId, patch = {}) {
   const clean = {}
   for (const k of allowed) if (k in patch) clean[k] = patch[k]
   if (Object.keys(clean).length === 0) return
-  const { error } = await supabase.from('contrats').update(clean).eq('id', contratId)
-  if (error) throw error
+  const reponse = await supabase.from('contrats').update(clean).eq('id', contratId).select('id')
+  verifierEcriture(reponse, 'Enregistrement du contrat', MOTIF_DROITS)
 }
 
 // Ajoute un événement à la timeline (append-only : pas de delete côté UI).

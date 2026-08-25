@@ -4,6 +4,7 @@
 // voit ses demandes, la direction voit tout et décide.
 
 import { supabase } from '../lib/supabase'
+import { verifierEcriture, MOTIF_DROITS } from '../lib/ecriture-verifiee'
 
 export async function listConges() {
   const { data, error } = await supabase
@@ -49,19 +50,19 @@ export async function createCongeDirection({ demandeur_id, demandeur_nom, adviso
 
 // Décision de la direction : valide ou refuse (motif conseillé sur un refus).
 export async function decideConge(id, statut, decision_par, decision_motif) {
-  const { error } = await supabase.from('rh_conges').update({
+  const { data, error } = await supabase.from('rh_conges').update({
     statut,
     decision_par: decision_par || null,
     decision_le: new Date().toISOString(),
     decision_motif: decision_motif || null,
-  }).eq('id', id)
-  if (error) throw error
+  }).eq('id', id).select('id')
+  verifierEcriture({ data, error }, 'Décision sur la demande', MOTIF_DROITS)
 }
 
 // La direction propose d autres dates plutôt que de refuser. La demande passe
 // en « contre_proposee » et attend la réponse du demandeur.
 export async function contreProposer(id, { date_debut, date_fin, demi_journee, message }, par) {
-  const { error } = await supabase.from('rh_conges').update({
+  const { data, error } = await supabase.from('rh_conges').update({
     statut: 'contre_proposee',
     contre_date_debut: date_debut,
     contre_date_fin: demi_journee ? date_debut : date_fin,
@@ -69,8 +70,8 @@ export async function contreProposer(id, { date_debut, date_fin, demi_journee, m
     contre_message: message || null,
     decision_par: par || null,
     decision_le: new Date().toISOString(),
-  }).eq('id', id)
-  if (error) throw error
+  }).eq('id', id).select('id')
+  verifierEcriture({ data, error }, 'Envoi de la contre proposition', MOTIF_DROITS)
 }
 
 // Réponse du demandeur à une contre-proposition. S il accepte, les dates
@@ -91,12 +92,12 @@ export async function repondreContreProposition(id, accepte) {
       demi_journee: !!data.contre_demi_journee,
     }
     : { statut: 'annule' }
-  const { error } = await supabase.from('rh_conges').update(patch).eq('id', id)
-  if (error) throw error
+  const reponse = await supabase.from('rh_conges').update(patch).eq('id', id).select('id')
+  verifierEcriture(reponse, 'Réponse à la contre proposition', MOTIF_DROITS)
 }
 
 // Le demandeur annule sa propre demande encore en attente.
 export async function cancelConge(id) {
-  const { error } = await supabase.from('rh_conges').update({ statut: 'annule' }).eq('id', id)
-  if (error) throw error
+  const reponse = await supabase.from('rh_conges').update({ statut: 'annule' }).eq('id', id).select('id')
+  verifierEcriture(reponse, 'Annulation de la demande', MOTIF_DROITS)
 }
