@@ -104,6 +104,34 @@ export function sumPu(deals, advisorCode) {
   }, 0);
 }
 
+// ─── Entonnoir des leads ─────────────────────────────────────────────────
+// Ce que rapporte réellement l'acquisition. Mesuré le 24/08/2026 : 216 RDV
+// issus de la Lead Room, 6 contrats signés — 2,8 %. En face, 249 dossiers
+// saisis à la main ont donné 194 signatures. Le cabinet ne voyait ce chiffre
+// nulle part.
+//
+// Volontairement CUMULATIF, pas mensuel : la colonne month d'un dossier signé
+// est alignée sur date_signed, donc un RDV pris en juillet et signé en août
+// change de mois. Un entonnoir mensuel afficherait des RDV sans signatures
+// d'un côté et des signatures sans RDV de l'autre. Sur l'ensemble, le compte
+// est juste.
+export function entonnoirLeads(deals) {
+  const issus = (deals || []).filter((d) => d && d.lead_id != null);
+  const qualifies = issus.filter((d) => !estSimpleRdv(d));
+  const signes = issus.filter((d) => d.status === 'Signé');
+  const pct = (n, total) => (total > 0 ? Math.round((n / total) * 1000) / 10 : 0);
+  return {
+    rdvPris: issus.length,
+    qualifies: qualifies.length,
+    signes: signes.length,
+    tauxQualification: pct(qualifies.length, issus.length),
+    tauxSignature: pct(signes.length, issus.length),
+    // Point de comparaison : ce que donne le reste, réseau et parrainage.
+    horsLeads: (deals || []).filter((d) => d && d.lead_id == null).length,
+    horsLeadsSignes: (deals || []).filter((d) => d && d.lead_id == null && d.status === 'Signé').length,
+  };
+}
+
 // Métriques agrégées d'un advisor sur un mois donné.
 // Pour un deal signé, c'est le mois où il a été signé (date_signed)
 // qui compte, pas le mois où le deal a été créé. Le code attend que la

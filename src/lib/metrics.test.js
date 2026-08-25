@@ -9,7 +9,7 @@ import {
   sumPu,
   advisorMetrics,
   monthFromDate,
-  alignedMonthForDeal, estSimpleRdv } from './metrics';
+  alignedMonthForDeal, estSimpleRdv, entonnoirLeads } from './metrics';
 
 describe('annualize', () => {
   it('multiplie par 12 le PP mensuel', () => {
@@ -295,5 +295,42 @@ describe('advisorMetrics : les RDV sortent du pipeline', () => {
     const m = advisorMetrics(juillet, M, 'AA');
     expect(m.puPipeline).toBe(70000);
     expect(m.ppPipeline).toBe(0);
+  });
+});
+
+describe('entonnoirLeads', () => {
+  const rdv = (o = {}) => ({ lead_id: 'L', product: 'Autre', pu: 0, pp_m: 0, status: 'Prévu', ...o });
+  const manuel = (o = {}) => ({ lead_id: null, product: 'PER Individuel', pu: 10000, status: 'Signé', ...o });
+
+  it('compte les trois étages', () => {
+    const e = entonnoirLeads([
+      rdv(), rdv(), rdv(),
+      rdv({ product: 'PER Individuel', pu: 5000 }),
+      rdv({ product: 'PER Individuel', pu: 5000, status: 'Signé' }),
+    ]);
+    expect(e.rdvPris).toBe(5);
+    expect(e.qualifies).toBe(2);
+    expect(e.signes).toBe(1);
+  });
+
+  it('donne des taux à une décimale', () => {
+    const e = entonnoirLeads(Array.from({ length: 216 }, (_, i) => rdv(i < 6 ? { product: 'PER Individuel', pu: 1, status: 'Signé' } : {})));
+    expect(e.tauxSignature).toBe(2.8);
+  });
+
+  it('sépare ce qui vient des leads du reste', () => {
+    const e = entonnoirLeads([rdv(), manuel(), manuel(), manuel({ status: 'Prévu' })]);
+    expect(e.rdvPris).toBe(1);
+    expect(e.horsLeads).toBe(3);
+    expect(e.horsLeadsSignes).toBe(2);
+  });
+
+  it('ne divise pas par zéro', () => {
+    expect(entonnoirLeads([]).tauxSignature).toBe(0);
+    expect(entonnoirLeads(null).rdvPris).toBe(0);
+  });
+
+  it('ignore les lignes nulles', () => {
+    expect(entonnoirLeads([null, rdv(), undefined]).rdvPris).toBe(1);
   });
 });

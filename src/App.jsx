@@ -68,7 +68,7 @@ import {
   monthFromDate,
   alignedMonthForDeal,
   anneeDuDeal,
-  dealDuMois, estSimpleRdv } from './lib/metrics'
+  dealDuMois, estSimpleRdv, entonnoirLeads } from './lib/metrics'
 import {
   MONTHS,
   STATUS_OPTIONS,
@@ -2923,10 +2923,36 @@ function ForecastView({deals,objectifs,month,profile,teamProfiles,canEditObjecti
   async function submitObj(e){e.preventDefault();if(!canEditObjectifs)return;await onSaveObjectif({month,pp_target:Number(formObj.pp_target||0),pu_target:Number(formObj.pu_target||0)})}
   const visibleProfiles=useMemo(()=>{const base=(teamProfiles||[]).filter(p=>p?.is_active&&p?.advisor_code);if(isManager)return base;return base.filter(p=>p.advisor_code===profile?.advisor_code)},[teamProfiles,profile,isManager])
   const targets=objectifs[month]||{pp_target:0,pu_target:0}
+  // Ce que rapporte l'acquisition, cumulé sur tout l'historique. Le CRM
+  // portait ce chiffre sans jamais le montrer.
+  const entonnoir=useMemo(()=>entonnoirLeads(deals),[deals])
 
   return (
     <div>
       <div className="section-header"><div><div className="section-kicker">Atterrissage commercial</div><div className="section-title">{isManager?'Prévisionnels équipe':'Mon prévisionnel'}</div><div className="section-sub">Dossiers signés, en cours et prévus uniquement · {month}</div></div></div>
+      {isManager&&entonnoir.rdvPris>0&&(
+        <div className="card mb-24">
+          <div className="panel-head" style={{flexWrap:'wrap',gap:12}}>
+            <div>
+              <div className="section-kicker" style={{marginBottom:2}}>Acquisition · depuis le début</div>
+              <div style={{fontSize:14,fontWeight:600,color:'var(--t1)'}}>Ce que rapportent les leads</div>
+            </div>
+            <div className="text-xs text-muted">Cumulé, tous mois confondus</div>
+          </div>
+          <div className="panel-body">
+            <div className="kpi-grid">
+              <KpiCard label="RDV pris via les leads" value={entonnoir.rdvPris} hint="Rendez-vous créés par la Lead Room" accent="blue"/>
+              <KpiCard label="Qualifiés en dossier" value={entonnoir.qualifies} hint={`${entonnoir.tauxQualification} % des RDV ont reçu un produit ou un montant`} accent="amber"/>
+              <KpiCard label="Contrats signés" value={entonnoir.signes} hint={`${entonnoir.tauxSignature} % des RDV aboutissent`} accent={entonnoir.tauxSignature>=10?'green':'red'}/>
+            </div>
+            <div className="form-hint" style={{marginTop:14}}>
+              À comparer au reste : <strong>{entonnoir.horsLeadsSignes} contrats signés</strong> sur {entonnoir.horsLeads} dossiers
+              saisis à la main{entonnoir.horsLeads>0?` (${Math.round(entonnoir.horsLeadsSignes/entonnoir.horsLeads*100)} %)`:''} —
+              réseau, parrainage, apporteurs.
+            </div>
+          </div>
+        </div>
+      )}
       <div className="card mb-24">
         <div className="panel-head" style={{flexWrap:'wrap',gap:12}}>
           <div><div className="section-kicker" style={{marginBottom:2}}>Objectif global · {month}</div><div style={{fontSize:14,fontWeight:600,color:'var(--t1)'}}>Objectifs du cabinet — consolidé équipe</div></div>
