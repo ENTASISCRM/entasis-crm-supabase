@@ -212,7 +212,10 @@ export default function OpportunitesDuJour({ profile, embedded }) {
                             {it.detail && <span className="det"> · {it.detail}</span>}
                           </span>
                         )}
-                        {!sec.fiches && it.telephone && <span className="tel">{it.telephone}</span>}
+                        {!sec.fiches && it.telephone && (
+                          <a className="tel" href={`tel:${String(it.telephone).replace(/\s/g, '')}`}
+                             onClick={(e) => e.stopPropagation()} title="Appeler">{it.telephone}</a>
+                        )}
                       </li>
                     ))}
                   </ul>

@@ -401,7 +401,7 @@ function SectionDetail({ comm, month }) {
   }
 
   return (
-    <div className="card" style={{ overflow: 'hidden' }}>
+    <div className="card">
       <div className="panel-head">
         <div>
           <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--t1)' }}>Détail des dossiers du mois</div>

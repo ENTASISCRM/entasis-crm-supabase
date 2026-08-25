@@ -13,7 +13,6 @@ import * as dealsService from './services/deals'
 import * as clientsService from './services/clients'
 import * as profilesService from './services/profiles'
 import * as invitationsService from './services/invitations'
-import * as prospectsService from './services/prospects'
 import * as objectifsService from './services/objectifs'
 import * as conseillerContratsService from './services/conseillerContrats'
 import * as dossiersImmoService from './services/dossiersImmo'
@@ -39,7 +38,6 @@ import { exporterCsv, suffixeDate, nombreFr } from './lib/export-csv'
 const OutilsCGP = lazy(() => import('./components/OutilsCGP'))
 // Conteneur immobilier : les 4 anciens onglets immo en sous-vues (fusion nav)
 const ImmobilierNeuf = lazy(() => import('./components/ImmobilierNeuf'))
-const LinkedInPro = lazy(() => import('./components/LinkedInPro'))
 const EditorialHub = lazy(() => import('./components/EditorialHub'))
 const PilotageRH = lazy(() => import('./components/PilotageRH'))
 const Recrutement = lazy(() => import('./components/Recrutement'))
@@ -761,7 +759,7 @@ function AuthScreen() {
 /* ─────────────────────────────────────────────────────────────────────────────
    SIDEBAR
 ───────────────────────────────────────────────────────────────────────────── */
-function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,month,prospectsNew,dossiersImmoCount,editorialCount,mobileOpen,onCloseMobile}){
+function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,month,dossiersImmoCount,editorialCount,mobileOpen,onCloseMobile}){
   // Acces RH delegue : drapeau profiles.rh_delegue (miroir de public.is_rh()
   // en base). Recalcule ici, la Sidebar est un composant separe du App.
   const isRhDelegue = profile?.rh_delegue === true
@@ -971,7 +969,9 @@ async function genererFicheParrainage(profile){
 ───────────────────────────────────────────────────────────────────────────── */
 // Titres sans emoji (design-system.md règle 4) : les icônes SVG de la sidebar
 // portent déjà l'identité visuelle de chaque écran.
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers',team:'Équipe',leads:'Leads Live','ucs-structures':'UCS Produits Structurés',allocations:'Allocations types',immobilier:'Immobilier Neuf',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH','recrutement':'Recrutement',conformite:'Conformité',editorial:'Agent éditorial',cockpit:'Cockpit ratios'}
+// Ecrans ou les actions commerciales de la barre du haut ont un sens
+const ECRANS_COMMERCIAUX = ['dashboard','pipeline','dossiers','clients','multi-equipement','leads','agenda','forecast']
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers','multi-equipement':'Multi-équipement',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers',team:'Équipe',leads:'Leads Live','ucs-structures':'UCS Produits Structurés',allocations:'Allocations types',immobilier:'Immobilier Neuf',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH','recrutement':'Recrutement',conformite:'Conformité',editorial:'Agent éditorial',cockpit:'Cockpit ratios'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile,onHelp,notifications,notifScope}){
   return (
@@ -1013,11 +1013,11 @@ function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profi
         <button className="btn btn-ghost btn-sm btn-icon" onClick={onHelp} title="Raccourcis clavier (?)" aria-label="Raccourcis clavier">?</button>
         {/* Fiche de recommandation (idee 3) : outil papier remis en fin de RDV,
             genere un PDF pre rempli au nom du conseiller. Toujours accessible. */}
-        <button className="btn btn-ghost btn-sm" title="Fiche de recommandation a remettre au client" onClick={async()=>{
+        {ECRANS_COMMERCIAUX.includes(activeTab)&&<button className="btn btn-ghost btn-sm" title="Fiche de recommandation a remettre au client" onClick={async()=>{
           try{ await genererFicheParrainage(profile) }
           catch(e){ toast.error('Impossible de générer la fiche') }
-        }}>Fiche parrainage</button>
-        {activeTab!=='leads'&&activeTab!=='prospection'&&<button className="btn btn-gold" onClick={onNewDeal}><Icon.Plus/> Nouveau dossier</button>}
+        }}>Fiche parrainage</button>}
+        {ECRANS_COMMERCIAUX.includes(activeTab)&&activeTab!=='leads'&&<button className="btn btn-gold" onClick={onNewDeal}><Icon.Plus/> Nouveau dossier</button>}
       </div>
     </div>
   )
@@ -1206,13 +1206,13 @@ function LeadRDVModal({open,lead,onClose,onBooked}){
 
   return (
     <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
-      <div className="modal-panel" style={{maxWidth:520}}>
+      <div className="modal-box" style={{maxWidth:520}}>
         <div className="modal-head">
           <div>
             <div className="modal-title">Créer un RDV Google Calendar</div>
             <div className="modal-subtitle">{lead.nom} · Campagne {lead.campagne}</div>
           </div>
-          <button className="modal-close" onClick={onClose}><Icon.Close/></button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Fermer"><Icon.Close/></button>
         </div>
         <div className="modal-body">
           <div className="form-group">
@@ -2993,8 +2993,8 @@ function RelanceModal({open,onClose,deals,defaultDate}){
   }
   return (
     <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
-      <div className="modal-panel" style={{maxWidth:520}}>
-        <div className="modal-head"><div className="modal-title">Planifier une relance</div><button className="modal-close" onClick={onClose}><Icon.Close/></button></div>
+      <div className="modal-box" style={{maxWidth:520}}>
+        <div className="modal-head"><div className="modal-title">Planifier une relance</div><button type="button" className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Fermer"><Icon.Close/></button></div>
         <div className="modal-body">
           <div className="form-group"><label className="form-label">Lier à un dossier (optionnel)</label><select className="form-select" value={dealId} onChange={e=>setDealId(e.target.value)}><option value="">— Aucun dossier lié —</option>{activePipeline.map(d=><option key={d.id} value={d.id}>{d.client} · {d.product} · {d.advisor_code}</option>)}</select></div>
           <div className="form-group"><label className="form-label">Titre</label><input className="form-input" value={title} onChange={e=>setTitle(e.target.value)} placeholder="Ex. Relance signature PER — Dupont"/></div>
@@ -4415,24 +4415,24 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                 >
                   <div className="form-row form-row-2">
                     <div className="form-group">
-                      <label className="form-label">Statut {deal.status==='Signé' ? '*' : ''}</label>
+                      <label className="form-label">Statut {anySigned ? '*' : ''}</label>
                       <select className="form-select" value={deal.client_statut_pro||''} onChange={e=>set('client_statut_pro',e.target.value)}>
                         <option value="">— à préciser —</option>
                         {STATUTS_PRO.map(s=><option key={s} value={s}>{s}</option>)}
                       </select>
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Profession {deal.status==='Signé' ? '*' : ''}</label>
+                      <label className="form-label">Profession {anySigned ? '*' : ''}</label>
                       <input className="form-input" value={deal.client_profession||''} onChange={e=>set('client_profession',e.target.value)} placeholder="Ex. avocat, mandataire immobilier…" />
                     </div>
                   </div>
                   <div className="form-row form-row-2 mt-16">
                     <div className="form-group">
-                      <label className="form-label">Revenus annuels (€) {deal.status==='Signé' ? '*' : ''}</label>
+                      <label className="form-label">Revenus annuels (€) {anySigned ? '*' : ''}</label>
                       <input className="form-input" type="number" min="0" value={deal.client_revenus??''} onChange={e=>set('client_revenus',e.target.value)} placeholder="Ex. 80000" />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Patrimoine estimé (€) {deal.status==='Signé' ? '*' : ''}</label>
+                      <label className="form-label">Patrimoine estimé (€) {anySigned ? '*' : ''}</label>
                       <input className="form-input" type="number" min="0" value={deal.client_patrimoine??''} onChange={e=>set('client_patrimoine',e.target.value)} placeholder="Ex. 300000" />
                     </div>
                   </div>
@@ -4594,6 +4594,22 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                   <div className="form-group"><label className="form-label">{LIBELLE_MONTANT_HONORAIRES[deal.product]?.champ ?? 'PU (€)'}</label><input className="form-input" type="number" min="0" value={deal.pu === 0 ? '' : deal.pu} onChange={e=>set('pu', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()}/>{estProduitHonoraires(deal.product) && <div className="form-hint">{LIBELLE_MONTANT_HONORAIRES[deal.product]?.aide} C&apos;est la seule base de rémunération du dossier.</div>}</div>
                   <div className="form-group"><label className="form-label">Statut</label><select className="form-select" value={deal.status} onChange={e=>set('status',e.target.value)}>{STATUS_OPTIONS.map(s=><option key={s} value={s}>{statusLabel(s)}</option>)}</select></div>
                 </div>
+              </div>
+            )}
+            {/* Mode express : l'attribution du dossier reste visible même si
+                la section Équipe & suivi est masquée — un manager qui crée
+                pour quelqu'un d'autre doit voir qu'il faut la changer. */}
+            {expressMode && (
+              <div className="form-hint" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                <span>Dossier attribué à <strong>{(teamProfiles||[]).find(t=>t.advisor_code===deal.advisor_code)?.full_name || deal.advisor_code || '—'}</strong></span>
+                <button type="button" className="btn btn-ghost btn-sm" style={{height:22,padding:'0 8px',fontSize:11}} onClick={()=>setFullForm(true)}>changer</button>
+              </div>
+            )}
+            {/* Ordre de placement et frais d entree : ils valent pour TOUT le
+                dossier, donc pour chacun de ses produits. Ils vivaient dans la
+                branche reservee a la reouverture : a la creation le curseur
+                restait invisible et bloque a 1 %, si bien qu un dossier negocie
+                a 2,5 % partait commissionne a 1 % sauf a rouvrir la fiche. */}
                 {/* L'ordre de placement n'a pas de sens en assurance emprunteur : il
                     annule la commission sur l'assiette PU, donc ici la totalité des
                     frais de dossier. On masque la case, sauf si un dossier l'a déjà
@@ -4679,17 +4695,6 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                     </div>
                   </div>
                 )}
-              </div>
-            )}
-            {/* Mode express : l'attribution du dossier reste visible même si
-                la section Équipe & suivi est masquée — un manager qui crée
-                pour quelqu'un d'autre doit voir qu'il faut la changer. */}
-            {expressMode && (
-              <div className="form-hint" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-                <span>Dossier attribué à <strong>{(teamProfiles||[]).find(t=>t.advisor_code===deal.advisor_code)?.full_name || deal.advisor_code || '—'}</strong></span>
-                <button type="button" className="btn btn-ghost btn-sm" style={{height:22,padding:'0 8px',fontSize:11}} onClick={()=>setFullForm(true)}>changer</button>
-              </div>
-            )}
             <div className="form-row form-row-2">
               <div className="form-group">
                 <label className="form-label">
@@ -4854,7 +4859,6 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
 /* ─────────────────────────────────────────────────────────────────────────────
    APP ROOT
 ───────────────────────────────────────────────────────────────────────────── */
-// ProspectionView — Onglet Prospection LinkedIn / Clay
 // À intégrer dans App.jsx
 
 const PROSPECT_STATUS = ['a_contacter','invite','connecte','message_envoye','en_discussion','rdv_propose','rdv_pris','converti','non_interesse']
@@ -4881,319 +4885,6 @@ const PROSPECT_STATUS_COLOR = {
   non_interesse:  {bg:'var(--cancelled-bg)',bd:'var(--cancelled-bd)',color:'var(--cancelled)'},
 }
 const NICHES = ['Pharmaciens','Chirurgiens-dentistes','Vétérinaires','Architectes','Dirigeants PME']
-
-function ProspectModal({open,prospect,profile,teamProfiles,onClose,onSave}){
-  const [p,setP]=useState(prospect)
-  useEffect(()=>setP(prospect),[prospect])
-  if(!open||!p)return null
-  const set=(k,v)=>setP(prev=>({...prev,[k]:v}))
-  const isManager=profile?.role==='manager'
-  const sc=PROSPECT_STATUS_COLOR[p.status]||PROSPECT_STATUS_COLOR.a_contacter
-
-  async function handleSave(){
-    await onSave(p)
-    onClose()
-  }
-
-  async function handleCopyAndAdvance(){
-    if(p.message_linkedin){
-      try{await navigator.clipboard.writeText(p.message_linkedin)}catch(e){}
-    }
-    if(p.status==='a_contacter'||p.status==='invite'||p.status==='connecte'){
-      const next='message_envoye'
-      const updated={...p,status:next,last_action_at:new Date().toISOString()}
-      setP(updated)
-      await onSave(updated)
-    }
-    onClose()
-  }
-
-  return(
-    <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
-      <div className="modal-panel" style={{maxWidth:600}}>
-        <div className="modal-head">
-          <div>
-            <div className="modal-title">{p.nom||'Prospect'}</div>
-            <div className="modal-subtitle">{p.poste||''}{p.entreprise?` · ${p.entreprise}`:''}</div>
-          </div>
-          <button className="modal-close" onClick={onClose}>✕</button>
-        </div>
-        <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:16}}>
-          {/* Statut */}
-          <div className="form-group">
-            <label className="form-label">Statut pipeline</label>
-            <select className="form-select" value={p.status||'a_contacter'} onChange={e=>set('status',e.target.value)}>
-              {PROSPECT_STATUS.map(s=><option key={s} value={s}>{PROSPECT_STATUS_LABEL[s]}</option>)}
-            </select>
-          </div>
-
-          {/* Message LinkedIn */}
-          {p.message_linkedin&&(
-            <div className="form-group">
-              <label className="form-label">Message LinkedIn généré par IA</label>
-              <div style={{
-                background:'rgba(201,169,97,0.05)',border:'1px solid var(--gold-line)',
-                borderRadius:'var(--rad)',padding:'12px 14px',fontSize:13,
-                color:'var(--t2)',lineHeight:1.6,whiteSpace:'pre-wrap',
-              }}>
-                {p.message_linkedin}
-              </div>
-              <button
-                onClick={handleCopyAndAdvance}
-                style={{
-                  marginTop:8,display:'flex',alignItems:'center',gap:6,
-                  padding:'8px 14px',background:'var(--gold)',color:'white',
-                  border:'none',borderRadius:'var(--rad)',fontSize:12,fontWeight:600,cursor:'pointer',
-                }}
-              >
-                📋 Copier le message
-                {(p.status==='a_contacter'||p.status==='invite'||p.status==='connecte')&&
-                  <span style={{opacity:.8,fontWeight:400}}> · passe en "Message envoyé"</span>}
-              </button>
-            </div>
-          )}
-
-          {/* Contact */}
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
-            <div className="form-group">
-              <label className="form-label">Email</label>
-              <input className="form-input" value={p.email||''} onChange={e=>set('email',e.target.value)} placeholder="—"/>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Téléphone</label>
-              <input className="form-input" value={p.telephone||''} onChange={e=>set('telephone',e.target.value)} placeholder="—"/>
-            </div>
-          </div>
-
-          {/* RDV */}
-          {(p.status==='rdv_propose'||p.status==='rdv_pris')&&(
-            <div className="form-group">
-              <label className="form-label">Date RDV</label>
-              <input className="form-input" type="datetime-local" value={p.rdv_at?p.rdv_at.slice(0,16):''} onChange={e=>set('rdv_at',e.target.value?new Date(e.target.value).toISOString():null)}/>
-            </div>
-          )}
-
-          {/* Assignation manager */}
-          {isManager&&(
-            <div className="form-group">
-              <label className="form-label">Conseiller assigné</label>
-              <select className="form-select" value={p.advisor_code||''} onChange={e=>set('advisor_code',e.target.value)}>
-                <option value="">— Non assigné —</option>
-                {(teamProfiles||[]).filter(t=>t.is_active&&t.advisor_code).map(t=>(
-                  <option key={t.advisor_code} value={t.advisor_code}>{t.full_name||t.advisor_code}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Notes */}
-          <div className="form-group">
-            <label className="form-label">Notes</label>
-            <textarea className="form-textarea" rows={3} value={p.notes||''} onChange={e=>set('notes',e.target.value)} placeholder="Contexte, objections, points à préparer…"/>
-          </div>
-
-          {/* LinkedIn */}
-          {p.linkedin_url&&(
-            <a href={p.linkedin_url} target="_blank" rel="noopener noreferrer"
-              style={{display:'inline-flex',alignItems:'center',gap:6,fontSize:12,color:'#0EA5E9',textDecoration:'none'}}>
-              🔗 Voir profil LinkedIn
-            </a>
-          )}
-        </div>
-        <div className="modal-foot">
-          <button className="btn btn-outline" onClick={onClose}>Fermer</button>
-          <button className="btn btn-gold" onClick={handleSave}>Enregistrer</button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function ProspectionView({prospects,profile,teamProfiles,onRefresh,onProspectsChange}){
-  const [search,setSearch]=useState('')
-  const [nicheF,setNicheF]=useState('all')
-  const [advisorF,setAdvisorF]=useState('all')
-  const [modalOpen,setModalOpen]=useState(false)
-  const [selected,setSelected]=useState(null)
-  const isManager=profile?.role==='manager'
-
-  // Filtrage
-  const filtered=useMemo(()=>{
-    let list=prospects
-    if(!isManager&&profile?.advisor_code)list=list.filter(p=>p.advisor_code===profile.advisor_code)
-    if(nicheF!=='all')list=list.filter(p=>p.niche===nicheF)
-    if(advisorF!=='all')list=list.filter(p=>p.advisor_code===advisorF)
-    if(search.trim()){
-      const q=search.toLowerCase()
-      list=list.filter(p=>`${p.nom||''} ${p.entreprise||''} ${p.poste||''} ${p.niche||''}`.toLowerCase().includes(q))
-    }
-    return list
-  },[prospects,isManager,profile,nicheF,advisorF,search])
-
-  // KPIs
-  const kpis=useMemo(()=>({
-    total:filtered.length,
-    messagesSent:filtered.filter(p=>['message_envoye','en_discussion','rdv_propose','rdv_pris','converti'].includes(p.status)).length,
-    inDiscussion:filtered.filter(p=>p.status==='en_discussion').length,
-    rdvPris:filtered.filter(p=>p.status==='rdv_pris').length,
-    convertis:filtered.filter(p=>p.status==='converti').length,
-  }),[filtered])
-
-  const tauxReponse=kpis.messagesSent>0?Math.round((kpis.inDiscussion+kpis.rdvPris+kpis.convertis)/kpis.messagesSent*100):0
-
-  // Par colonne kanban
-  const byStatus=useMemo(()=>{
-    const map={}
-    PROSPECT_STATUS.forEach(s=>map[s]=[])
-    filtered.forEach(p=>{if(map[p.status])map[p.status].push(p)})
-    return map
-  },[filtered])
-
-  // Colonnes kanban à afficher (on regroupe les premières)
-  const kanbanCols=[
-    {id:'a_contacter',   label:'À contacter'},
-    {id:'message_envoye',label:'Message envoyé'},
-    {id:'en_discussion', label:'En discussion'},
-    {id:'rdv_pris',      label:'RDV pris ✓'},
-    {id:'converti',      label:'Convertis 🎉'},
-  ]
-
-  async function handleSave(updatedProspect){
-    try {
-      await prospectsService.update(updatedProspect)
-    } catch (e) {
-      toast.error(messageErreur(e))
-      return
-    }
-    onProspectsChange(prev=>prev.map(p=>p.id===updatedProspect.id?updatedProspect:p))
-  }
-
-  function openModal(prospect){
-    setSelected(prospect)
-    setModalOpen(true)
-  }
-
-  const niches=[...new Set(prospects.map(p=>p.niche).filter(Boolean))].sort()
-  const advisors=isManager?[...new Set(prospects.map(p=>p.advisor_code).filter(Boolean))].sort():[]
-
-  return(
-    <div>
-      {/* Header + KPIs */}
-      <div className="section-header">
-        <div>
-          <div className="section-kicker">Prospection LinkedIn · Clay</div>
-          <div className="section-title">Pipeline de prospection</div>
-          <div className="section-sub">{filtered.length} prospect{filtered.length!==1?'s':''} · Taux réponse {tauxReponse}%</div>
-        </div>
-        <button className="btn btn-ghost btn-sm" onClick={onRefresh}>↻ Actualiser</button>
-      </div>
-
-      {/* KPIs */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12,marginBottom:20}}>
-        {[
-          {label:'Total prospects',value:kpis.total,color:'var(--t1)',bg:'var(--bg)',bd:'var(--bd)'},
-          {label:'Messages envoyés',value:kpis.messagesSent,color:'var(--gold)',bg:'rgba(201,169,97,0.06)',bd:'var(--gold-line)'},
-          {label:'Taux réponse',value:`${tauxReponse}%`,color:'var(--progress)',bg:'var(--progress-bg)',bd:'var(--progress-bd)'},
-          {label:'RDV pris',value:kpis.rdvPris,color:'#10B981',bg:'rgba(16,185,129,0.07)',bd:'rgba(16,185,129,0.2)'},
-          {label:'Convertis',value:kpis.convertis,color:'var(--signed)',bg:'var(--signed-bg)',bd:'var(--signed-bd)'},
-        ].map(s=>(
-          <div key={s.label} style={{background:s.bg,border:`0.5px solid ${s.bd}`,borderRadius:'var(--rad-lg)',padding:'18px 20px',boxShadow:'var(--sh-sm)',transition:'box-shadow var(--tr), transform var(--tr)'}} onMouseEnter={e=>{e.currentTarget.style.boxShadow='var(--sh)';e.currentTarget.style.transform='translateY(-2px)'}} onMouseLeave={e=>{e.currentTarget.style.boxShadow='var(--sh-sm)';e.currentTarget.style.transform='translateY(0)'}}>
-            <div style={{fontSize:11,color:'var(--t3)',marginBottom:8,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.14em'}}>{s.label}</div>
-            <div style={{fontSize:24,fontWeight:700,color:s.color,fontFamily:'var(--font-sans)',letterSpacing:'-0.02em',fontVariantNumeric:'tabular-nums'}}>{s.value}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Filtres */}
-      <div style={{display:'flex',gap:8,marginBottom:16,alignItems:'center',flexWrap:'wrap'}}>
-        <div style={{position:'relative',flex:1,minWidth:160,maxWidth:280}}>
-          <input className="search-input" value={search} onChange={e=>setSearch(e.target.value)}
-            placeholder="Nom, entreprise, poste…"
-            style={{width:'100%',paddingLeft:32,height:34,fontSize:12}}/>
-          <span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',display:'flex',color:'var(--t3)',pointerEvents:'none'}}><Icon.Search/></span>
-          {search&&<button onClick={()=>setSearch('')} style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'var(--t3)',fontSize:13,padding:0}}>×</button>}
-        </div>
-        {niches.length>1&&(
-          <select className="filter-select" value={nicheF} onChange={e=>setNicheF(e.target.value)} style={{height:34,fontSize:12}}>
-            <option value="all">Toutes niches</option>
-            {niches.map(n=><option key={n} value={n}>{n} · {prospects.filter(p=>p.niche===n).length}</option>)}
-          </select>
-        )}
-        {isManager&&advisors.length>1&&(
-          <select className="filter-select" value={advisorF} onChange={e=>setAdvisorF(e.target.value)} style={{height:34,fontSize:12}}>
-            <option value="all">Tous conseillers</option>
-            {advisors.map(a=><option key={a} value={a}>{a}</option>)}
-          </select>
-        )}
-      </div>
-
-      {/* Kanban */}
-      <div style={{display:'grid',gridTemplateColumns:`repeat(${kanbanCols.length},1fr)`,gap:10,overflowX:'auto'}}>
-          {kanbanCols.map(col=>{
-            const items=byStatus[col.id]||[]
-            const sc=PROSPECT_STATUS_COLOR[col.id]||PROSPECT_STATUS_COLOR.a_contacter
-            return(
-              <div key={col.id} style={{
-                background:'var(--bg)',border:'1px solid var(--bd)',borderRadius:'var(--rad-lg)',
-                minHeight:200,display:'flex',flexDirection:'column',
-              }}>
-                {/* Tête colonne */}
-                <div style={{
-                  padding:'10px 12px',borderBottom:'2px solid var(--bd)',
-                  display:'flex',alignItems:'center',justifyContent:'space-between',
-                  background:sc.bg,borderRadius:'var(--rad-lg) var(--rad-lg) 0 0',
-                }}>
-                  <span style={{fontSize:11.5,fontWeight:700,color:sc.color}}>{col.label}</span>
-                  <span style={{fontSize:11,fontWeight:600,background:sc.bd,color:sc.color,padding:'1px 7px',borderRadius:10,border:`1px solid ${sc.bd}`}}>{items.length}</span>
-                </div>
-                {/* Cards */}
-                <div style={{padding:8,display:'flex',flexDirection:'column',gap:6,flex:1}}>
-                  {items.map(p=>(
-                    <div key={p.id}
-                      onClick={()=>openModal(p)}
-                      style={{
-                        background:'white',border:'1px solid var(--bd)',borderRadius:'var(--rad)',
-                        padding:'9px 11px',cursor:'pointer',transition:'box-shadow .15s',
-                      }}
-                      onMouseEnter={e=>e.currentTarget.style.boxShadow='var(--sh-xs)'}
-                      onMouseLeave={e=>e.currentTarget.style.boxShadow='none'}
-                    >
-                      <div style={{fontWeight:600,fontSize:12.5,color:'var(--t1)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:3}}>{p.nom}</div>
-                      <div style={{fontSize:11,color:'var(--t3)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.poste||p.entreprise||'—'}</div>
-                      {p.niche&&<div style={{marginTop:5,display:'inline-block',fontSize:9.5,fontWeight:600,padding:'1px 5px',borderRadius:3,background:'rgba(201,169,97,0.1)',color:'var(--gold)',border:'1px solid var(--gold-line)'}}>{p.niche}</div>}
-                      {p.advisor_code&&isManager&&<div style={{marginTop:3,fontSize:10,color:'var(--t3)'}}>{p.advisor_code}</div>}
-                      {p.message_linkedin&&col.id==='a_contacter'&&(
-                        <div style={{marginTop:5,fontSize:10,color:'var(--gold)',display:'flex',alignItems:'center',gap:3}}>
-                          <span>📋</span> Message prêt
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  {!items.length&&<div style={{fontSize:11.5,color:'var(--t3)',fontStyle:'italic',padding:'10px 4px',textAlign:'center'}}>Aucun prospect</div>}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      {filtered.length===0&&(
-        <div className="table-empty-state" style={{marginTop:20}}>
-          <div className="empty-icon"><Icon.EmptyMail/></div>
-          <div className="empty-title">Aucun prospect</div>
-          <div className="empty-sub">Les prospects Clay arriveront ici via Zapier.</div>
-        </div>
-      )}
-
-      <ProspectModal
-        open={modalOpen}
-        prospect={selected}
-        profile={profile}
-        teamProfiles={teamProfiles}
-        onClose={()=>{setModalOpen(false);setSelected(null)}}
-        onSave={handleSave}
-      />
-    </div>
-  )
-}
 
 export default function App(){
   const [session,setSession]=useState(null)
@@ -5245,8 +4936,6 @@ export default function App(){
   // Sous-vue de l onglet Clients : annuaire (fiches) ou dossiers du mois
   // (l ancien onglet Dossiers, absorbe ici — meme donnees, un chemin de moins).
   const [clientsVue,setClientsVue]=useState('annuaire')
-  const [prospects,setProspects]=useState([])
-  const [prospectsNew,setProspectsNew]=useState(0)
   const [dossiersImmoCount,setDossiersImmoCount]=useState(0)
   const [editorialPending,setEditorialPending]=useState({count:0,nextDeadline:null})
   const [reloadCallback,setReloadCallback]=useState(null) // Callback après sauvegarde deal
@@ -5326,7 +5015,7 @@ export default function App(){
         if(el){e.preventDefault();el.focus()}
         return
       }
-      if(e.key==='n'&&activeTab!=='leads'&&activeTab!=='prospection'){
+      if(e.key==='n'&&activeTab!=='leads'){
         e.preventDefault()
         setEditingDeal(emptyDeal(profile?.advisor_code))
         setModalOpen(true)
@@ -5417,11 +5106,6 @@ export default function App(){
     if (!session || !profile) return
     if (!visibleTabsRef.current.has(activeTab)) setActiveTab('dashboard')
   }, [session, profile, activeTab, contractType])
-
-  const fetchProspects=()=>prospectsService.listAll().then(({ list, aContacter })=>{
-    setProspects(list)
-    setProspectsNew(aContacter)
-  }).catch(e=>logger.warn('[Prospects] fetch failed', e))
 
   // ── Leads — fetch + Realtime + polling de secours 60s ─────────────────────
   // Le polling est un filet de sécurité au cas où la WebSocket Realtime se
@@ -6069,7 +5753,6 @@ export default function App(){
         onSignOut={signOut}
         deals={deals}
         month={month}
-        prospectsNew={prospectsNew}
         dossiersImmoCount={dossiersImmoCount}
         editorialCount={editorialPending.count}
         mobileOpen={mobileMenuOpen}
@@ -6167,9 +5850,7 @@ export default function App(){
           {activeTab==='team'&&(isManager||isRhDelegue)&&<TeamView deals={deals} objectifs={objectifs} teamProfiles={teamProfiles} month={month} profile={profile}/>}
           {activeTab==='ucs-structures'&&<UcsStructures profile={profile} month={month}/>}
           {activeTab==='allocations'&&<AllocationsTypes/>}
-          {activeTab==='prospection'&&<ProspectionView prospects={prospects} profile={profile} teamProfiles={teamProfiles} onRefresh={fetchProspects} onProspectsChange={setProspects}/>}
           {activeTab==='immobilier'&&<ImmobilierNeuf profile={profile} teamProfiles={teamProfiles}/>}
-          {activeTab==='linkedin-pro'&&<LinkedInPro profile={profile}/>}
           {activeTab==='editorial'&&isManager&&<EditorialHub onPendingChange={(n)=>setEditorialPending(p=>({...p,count:n}))}/>}
           {activeTab==='remuneration'&&<Remuneration profile={profile} deals={deals} month={month}/>}
           {activeTab==='outils'&&<OutilsCGP profile={profile}/>}
