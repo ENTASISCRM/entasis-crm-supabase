@@ -67,7 +67,7 @@ import {
   monthFromDate,
   alignedMonthForDeal,
   anneeDuDeal,
-  dealDuMois, estSimpleRdv, entonnoirLeads } from './lib/metrics'
+  dealDuMois, estSimpleRdv, entonnoirLeads, compterPipeline } from './lib/metrics'
 import {
   MONTHS,
   STATUS_OPTIONS,
@@ -769,13 +769,13 @@ function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,mont
   }
   const isManager=profile?.role==='manager'
 
-  const hotCount=useMemo(()=>{
-    const code=profile?.advisor_code
-    if(!code)return 0
-    return deals.filter(d=>dealDuMois(d,month)&&dealMatchesAdvisor(d,code)&&(d.priority==='Urgente'||d.priority==='Haute')&&isPipeline(d.status)).length
-  },[deals,month,profile])
+  // Badge « Pipeline » : ses propres dossiers en cours pour un conseiller,
+  // ceux du cabinet pour un manager. Comptait auparavant les seuls dossiers
+  // marqués Urgente/Haute, un champ que personne ne renseigne : le badge d'un
+  // conseiller ne s'allumait jamais.
+  const monPipelineCount=useMemo(()=>compterPipeline(deals,month,profile?.advisor_code||null),[deals,month,profile])
 
-  const pipelineCount=useMemo(()=>deals.filter(d=>dealDuMois(d,month)&&isPipeline(d.status)&&!estSimpleRdv(d)).length,[deals,month])
+  const pipelineCount=useMemo(()=>compterPipeline(deals,month),[deals,month])
 
   // B1 — la sidebar liste des DOMAINES (source unique lib/navigation.js,
   // partagée avec la barre de sous-onglets, la palette ⌘K et le routing).
@@ -790,7 +790,7 @@ function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,mont
 
   // Compteurs affichés en badge, agrégés au niveau du domaine.
   const badgeValues = {
-    pipeline: isManager ? pipelineCount : hotCount,
+    pipeline: isManager ? pipelineCount : monPipelineCount,
     immobilier: dossiersImmoCount || 0,
     editorial: editorialCount || 0,
   }
@@ -5246,11 +5246,9 @@ export default function App(){
   })()
 
   const subBadges = {
-    pipeline: isManager
-      ? deals.filter(d => dealDuMois(d, month) && isPipeline(d.status)).length
-      : (profile?.advisor_code
-        ? deals.filter(d => dealDuMois(d, month) && dealMatchesAdvisor(d, profile.advisor_code) && (d.priority === 'Urgente' || d.priority === 'Haute') && isPipeline(d.status)).length
-        : 0),
+    // Même comptage que le badge de la sidebar : une seule implémentation,
+    // sinon les deux divergent (c'était le cas — cf. compterPipeline).
+    pipeline: compterPipeline(deals, month, isManager ? null : (profile?.advisor_code || null)),
     immobilier: dossiersImmoCount || 0,
     editorial: editorialPending.count || 0,
   }

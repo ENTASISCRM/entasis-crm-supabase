@@ -205,6 +205,34 @@ export function advisorMetrics(deals, month, code) {
   };
 }
 
+/**
+ * Compte les dossiers en cours d'un mois, pour le badge « Pipeline » de la
+ * navigation.
+ *
+ * Ce comptage existait en double, écrit à la main dans deux composants, et les
+ * deux copies avaient divergé :
+ *   • côté conseiller, on ne comptait que les dossiers marqués « Urgente » ou
+ *     « Haute » — un champ que personne ne renseigne (2 sur 465 en cinq mois),
+ *     donc un badge éteint en permanence ;
+ *   • côté manager, on oubliait d'exclure les RDV non qualifiés, alors qu'ils
+ *     sont écartés partout ailleurs depuis le correctif « un RDV n'est pas un
+ *     dossier » — le badge gonflait donc de plusieurs centaines.
+ *
+ * Une seule implémentation, testée, pour les deux.
+ *
+ * @param {Array}  deals
+ * @param {string} monthStr    mois affiché
+ * @param {string} advisorCode code conseiller, ou null pour tout le cabinet
+ */
+export function compterPipeline(deals, monthStr, advisorCode = null) {
+  return (Array.isArray(deals) ? deals : []).filter((d) =>
+    dealDuMois(d, monthStr)
+    && isPipeline(d.status)
+    && !estSimpleRdv(d)
+    && (advisorCode ? dealMatchesAdvisor(d, advisorCode) : true),
+  ).length;
+}
+
 // Convertit une date ISO (YYYY-MM-DD) en mois français pour la colonne month.
 // Renvoie null si la date est invalide.
 export function monthFromDate(dateStr) {

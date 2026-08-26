@@ -9,7 +9,7 @@ import {
   sumPu,
   advisorMetrics,
   monthFromDate,
-  alignedMonthForDeal, estSimpleRdv, entonnoirLeads } from './metrics';
+  alignedMonthForDeal, estSimpleRdv, entonnoirLeads, compterPipeline } from './metrics';
 
 describe('annualize', () => {
   it('multiplie par 12 le PP mensuel', () => {
@@ -360,5 +360,51 @@ describe('entonnoirLeads', () => {
 
   it('ignore les lignes nulles', () => {
     expect(entonnoirLeads([null, rdv(), undefined]).rdvPris).toBe(1);
+  });
+});
+
+describe('compterPipeline', () => {
+  const base = (o) => ({ month: 'MAI', status: 'En cours', product: 'PER Individuel', pu: 1000, ...o });
+
+  it('compte les dossiers en cours du mois, tout le cabinet sans code', () => {
+    const deals = [
+      base({ id: 'a', advisor_code: 'LH' }),
+      base({ id: 'b', advisor_code: 'NANS' }),
+      base({ id: 'c', advisor_code: 'LH', status: 'Signé' }),
+    ];
+    expect(compterPipeline(deals, 'MAI')).toBe(2);
+  });
+
+  it('se limite à un conseiller quand un code est donné', () => {
+    const deals = [
+      base({ id: 'a', advisor_code: 'LH' }),
+      base({ id: 'b', advisor_code: 'NANS' }),
+    ];
+    expect(compterPipeline(deals, 'MAI', 'LH')).toBe(1);
+  });
+
+  it('exclut les RDV non qualifiés, des deux côtés', () => {
+    // Un placeholder Lead Room : rattaché à un lead, sans produit ni montant.
+    const rdv = { id: 'r', month: 'MAI', status: 'Prévu', advisor_code: 'LH', lead_id: 42, product: 'Autre', pu: 0, pp_m: 0 };
+    const deals = [base({ id: 'a', advisor_code: 'LH' }), rdv];
+    expect(compterPipeline(deals, 'MAI')).toBe(1);
+    expect(compterPipeline(deals, 'MAI', 'LH')).toBe(1);
+  });
+
+  it('ignore les autres mois', () => {
+    expect(compterPipeline([base({ id: 'a', advisor_code: 'LH', month: 'AVRIL' })], 'MAI')).toBe(0);
+  });
+
+  it('ne dépend plus de la priorité — le champ que personne ne renseigne', () => {
+    const deals = [
+      base({ id: 'a', advisor_code: 'LH', priority: 'Normale' }),
+      base({ id: 'b', advisor_code: 'LH', priority: 'Haute' }),
+    ];
+    expect(compterPipeline(deals, 'MAI', 'LH')).toBe(2);
+  });
+
+  it('encaisse une entrée absente', () => {
+    expect(compterPipeline(undefined, 'MAI')).toBe(0);
+    expect(compterPipeline(null, 'MAI', 'LH')).toBe(0);
   });
 });
