@@ -187,7 +187,7 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
       (c.deals || []).length, (c.dossiers_immo || []).length,
       statusLabel(c.globalStatus) || c.globalStatus || '', nombreFr(c.caTotal),
     ])
-    exporterCsv(`clients-${suffixeDate()}`, colonnes, lignes)
+    exporterCsv(`clients-${suffixeDate()}`, colonnes, lignes, 'clients')
     toast.success(`${sortedClients.length} client${sortedClients.length > 1 ? 's' : ''} exporté${sortedClients.length > 1 ? 's' : ''}`)
   }
 

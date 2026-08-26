@@ -10,7 +10,13 @@
    - nombres au format français (virgule décimale) laissés aux appelants
    - toute valeur commençant par = + - @ est préfixée d'une apostrophe :
      protection contre l'injection de formule dans le tableur.
+
+   Depuis l'audit du 25/08/2026 (SEC-07), chaque export est journalisé : le
+   fichier était jusqu'ici produit entièrement dans le navigateur, donc sortir
+   l'annuaire complet des clients ne laissait aucune trace serveur.
 ──────────────────────────────────────────────────────────────────────────── */
+
+import { journaliserExport } from './acces-log'
 
 function cellule(valeur) {
   if (valeur == null) return ''
@@ -26,7 +32,14 @@ function cellule(valeur) {
  * @param {string[]} colonnes  en-têtes affichés
  * @param {Array<Array>} lignes valeurs, même ordre que `colonnes`
  */
-export function exporterCsv(nomFichier, colonnes, lignes) {
+export function exporterCsv(nomFichier, colonnes, lignes, ressource) {
+  // SEC-07 : trace l'export AVANT de le produire. Volontairement sans await —
+  // le fichier ne doit jamais attendre le journal, ni échouer avec lui.
+  // `ressource` absente : l'appelant n'a pas été migré, on déduit du nom de
+  // fichier ('clients-2026-08' -> 'clients') plutôt que de perdre la trace.
+  journaliserExport(ressource || String(nomFichier).split('-')[0], lignes?.length ?? 0,
+                    { fichier: nomFichier, colonnes: colonnes?.length ?? 0 })
+
   const contenu = [colonnes, ...lignes]
     .map(l => l.map(cellule).join(';'))
     .join('\r\n')

@@ -2213,7 +2213,7 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
       d.advisor_code||'', d.co_advisor_code||'', d.month||'',
       jourDe(d.date_expected), d.date_signed||'', sourceLabel(d.source)||'', d.client_email||'', d.client_phone||'',
     ])
-    exporterCsv(`dossiers-${suffixeDate()}`,colonnes,lignes)
+    exporterCsv(`dossiers-${suffixeDate()}`,colonnes,lignes,'dossiers')
     toast.success(`${filtered.length} dossier${filtered.length>1?'s':''} exporté${filtered.length>1?'s':''}`)
   }
 
