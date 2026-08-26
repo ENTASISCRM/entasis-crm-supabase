@@ -41,3 +41,8 @@ data/*.xls
 # script npm). Sa valeur commitee n'etait donc jamais servie, mais elle
 # salissait l'arbre de travail a chaque build local.
 public/version.json
+
+# Rapports d'audit sécurité : décrivent des constats non encore corrigés
+# (SEC-02, SEC-07). Gardés hors du dépôt tant qu'ils sont exploitables.
+AUDIT.md
+AUDIT-correctifs.sql

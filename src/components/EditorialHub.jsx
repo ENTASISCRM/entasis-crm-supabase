@@ -8,6 +8,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import toast from 'react-hot-toast'
 import { SkeletonCards } from './ui/Skeleton'
 import { supabase } from '../lib/supabase'
@@ -151,7 +152,16 @@ function PackageDetail({ pkg, onBack, onModerated }) {
   const fm = pkg.article_frontmatter || {}
   const theme = THEME_META[pkg.theme] || { label: pkg.theme, color: 'var(--t3)' }
   const statut = STATUT_META[pkg.statut] || { label: pkg.statut, color: 'var(--t3)' }
-  const articleHtml = useMemo(() => marked.parse(pkg.article_md || '', { async: false }), [pkg.article_md])
+  // SEC-04 (audit 25/08/2026) : marked N'ASSAINIT PAS — son option `sanitize` a
+  // été retirée en v5, le dépôt est en v18. Tout HTML présent dans article_md
+  // était rendu tel quel, <script> et <img onerror> compris. L'écriture est
+  // réservée aux gérants, ce qui limitait la portée sans la supprimer : un
+  // contenu généré par modèle de langage qui atterrirait ici transformerait une
+  // injection de prompt en XSS stocké.
+  const articleHtml = useMemo(
+    () => DOMPurify.sanitize(marked.parse(pkg.article_md || '', { async: false })),
+    [pkg.article_md],
+  )
   const tweets = Array.isArray(pkg.thread_x) ? pkg.thread_x : []
   const sources = Array.isArray(pkg.sources) ? pkg.sources : []
   // Formats 360° — absents sur les packages antérieurs à la migration : tolérer.

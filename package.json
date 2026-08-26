@@ -18,6 +18,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@supabase/supabase-js": "^2.56.0",
     "chart.js": "^4.5.1",
+    "dompurify": "^3.4.14",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "jszip": "^3.10.1",
