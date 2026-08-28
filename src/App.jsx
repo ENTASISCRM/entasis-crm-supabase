@@ -70,6 +70,7 @@ import {
   alignedMonthForDeal,
   anneeDuDeal,
   dealDuMois, estSimpleRdv, entonnoirLeads, compterPipeline } from './lib/metrics'
+import { construireMaJournee, dateReport } from './lib/ma-journee'
 import {
   MONTHS,
   STATUS_OPTIONS,
@@ -1426,7 +1427,7 @@ function KpiCard({label,value,hint,accent,progressValue,delta}){
 /* ─────────────────────────────────────────────────────────────────────────────
    ADVISOR DASHBOARD
 ───────────────────────────────────────────────────────────────────────────── */
-function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab}){
+function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab,onQuickPatch}){
   const code=profile?.advisor_code||''
   const m=advisorMetrics(deals,month,code)
 
@@ -1595,7 +1596,7 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab}){
         <KpiCard label="Cabinet · PU signée" value={euroCab(cabinet.puCab)} hint={hintCab('Versements uniques équipe')} accent="blue"/>
       </div>
       {/* D3 : ce qui doit être fait aujourd'hui passe AVANT le reste. */}
-      <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit}/>
+      <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch}/>
       <div style={{marginTop:28}}>
         <Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded/></Suspense>
       </div>
@@ -1613,7 +1614,7 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab}){
 /* ─────────────────────────────────────────────────────────────────────────────
    MANAGER DASHBOARD
 ───────────────────────────────────────────────────────────────────────────── */
-function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit}){
+function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onQuickPatch}){
   // Switch metric pour la vue annuelle, PP financiere par défaut, PU,
   // Mutuelle/Prevoyance et Total dispo via mini tabs (demande Louis
   // 2026-06-08, vue Direction).
@@ -1684,7 +1685,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit}){
         <KpiCard label="PP Mutuelle/Prévoyance" value={euro(ppMutS)} hint="Mutuelle Santé + Prévoyance TNS" accent="gold" delta={prevMonth?dPpMutS:null}/>
       </div>
       <div style={{marginBottom:24}}><Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded/></Suspense></div>
-      <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit}/>
+      <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch}/>
       <div className="grid-2 gap-16 mb-24">
         <AreaChart title="PP cabinet annualisée" subtitle="Réalisé + pipeline → objectif" actual={ppS} projected={ppS+ppP} target={ppTarget}/>
         <AreaChart title="PU cabinet" subtitle="Versements uniques consolidés" actual={puS} projected={puS+puP} target={puTarget}/>
@@ -1778,46 +1779,79 @@ function jourLocal(d=new Date()){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
 
-function ActionsDuJour({deals,profile,onEdit}){
+// A1 (plan d'amélioration) — LA FILE DU MATIN. « Mes actions du jour »
+// devient « Ma journée » : les RDV du jour en tête (ils étaient en base et
+// n'apparaissaient nulle part en synthèse), puis les relances en retard,
+// puis celles du jour. Chaque relance se traite sans ouvrir le dossier :
+// Fait, à demain, à la semaine — trois gestes, tous annulables (undo du
+// quickPatch). L'ordonnancement vit dans lib/ma-journee.js, testé à part.
+function ActionsDuJour({deals,profile,onEdit,onQuickPatch}){
   const today=jourLocal()
   const code=profile?.advisor_code
-  const items=useMemo(()=>{
-    if(!code)return [] // sans code conseiller, on n'afficherait pas « mes » actions
-    return (deals||[])
-      // Tout sauf les dossiers abandonnés : une action de suivi peut aussi
-      // porter sur un dossier déjà signé (envoi de pièces, prise de RDV).
-      .filter(d=>d.status!=='Annulé')
-      .filter(d=>dealMatchesAdvisor(d,code))
-      .filter(d=>d.next_action_date&&String(d.next_action_date).slice(0,10)<=today)
-      .sort((a,b)=>String(a.next_action_date).localeCompare(String(b.next_action_date)))
-  },[deals,code,today])
+  const file=useMemo(()=>construireMaJournee(deals,{advisorCode:code,today}),[deals,code,today])
 
-  if(!items.length)return null
-  const enRetard=items.filter(d=>String(d.next_action_date).slice(0,10)<today).length
+  if(!file.total)return null
+  const {rdv,retard,jour}=file
+
+  // Les trois gestes : écriture optimiste + annulation via quickPatchDeal.
+  const fait=(d)=>onQuickPatch?.(d,{next_action:null,next_action_date:null},`Action terminée · ${getClientName(d)}`,{undoable:true})
+  const reporter=(d,choix)=>onQuickPatch?.(d,{next_action_date:dateReport(choix,today)},choix==='demain'?'Reporté à demain':'Reporté d’une semaine',{undoable:true})
+  const Geste=({label,title,onClick})=>(
+    <button className="btn btn-ghost btn-sm" title={title} style={{padding:'2px 8px',fontSize:11,flexShrink:0}}
+      onClick={(e)=>{e.stopPropagation();onClick()}}>{label}</button>
+  )
+
+  const LigneRelance=({d})=>(
+    <div className="priority-item" style={{cursor:'pointer'}} onClick={()=>onEdit?.(d)} title="Ouvrir le dossier">
+      <div className={`priority-item-dot ${String(d.next_action_date).slice(0,10)<today?'urgent':'high'}`}/>
+      <div style={{flex:1,minWidth:0}}>
+        <div className="priority-item-client truncate">{getClientName(d)}</div>
+        <div className="priority-item-detail">{d.next_action||'Action à mener'} · {d.product}</div>
+      </div>
+      <NextActionChip deal={d}/>
+      <div style={{display:'inline-flex',gap:2,marginLeft:6}}>
+        <Geste label="Fait" title="Marquer l'action comme faite" onClick={()=>fait(d)}/>
+        <Geste label="→ demain" title="Reporter à demain" onClick={()=>reporter(d,'demain')}/>
+        <Geste label="→ +7 j" title="Reporter d'une semaine" onClick={()=>reporter(d,'semaine')}/>
+      </div>
+    </div>
+  )
 
   return (
     <div style={{marginTop:28}}>
       <div className="section-header">
         <div>
-          <div className="section-kicker">À faire</div>
-          <div className="section-title">Mes actions du jour</div>
+          <div className="section-kicker">À faire aujourd'hui</div>
+          <div className="section-title">Ma journée</div>
           <div className="section-sub">
-            {items.length} action{items.length>1?'s':''} à mener
-            {enRetard>0?` · ${enRetard} en retard`:''}
+            {file.total} à traiter
+            {rdv.length>0?` · ${rdv.length} RDV`:''}
+            {retard.length>0?` · ${retard.length} en retard`:''}
           </div>
         </div>
       </div>
       <div className="priorities-list">
-        {items.map(d=>(
+        {rdv.map(d=>(
           <div key={d.id} className="priority-item" style={{cursor:'pointer'}} onClick={()=>onEdit?.(d)} title="Ouvrir le dossier">
-            <div className={`priority-item-dot ${String(d.next_action_date).slice(0,10)<today?'urgent':'high'}`}/>
+            {/* L'heure affichée est l'heure de Paris (heureDe) : le RDV de
+                12h30 stocké 10:30 UTC dit bien 12h30 au conseiller. */}
+            <span className="tnum" style={{minWidth:52,fontWeight:750,color:'var(--gold-dk, #A6843F)',fontSize:13}}>
+              {d.heureRdv||'RDV'}
+            </span>
             <div style={{flex:1,minWidth:0}}>
               <div className="priority-item-client truncate">{getClientName(d)}</div>
-              <div className="priority-item-detail">{d.next_action||'Action à mener'} · {d.product}</div>
+              <div className="priority-item-detail">Rendez-vous · {d.product}{d.source==='lead_room'?' · Lead Room':''}</div>
             </div>
-            <NextActionChip deal={d}/>
+            {d.client_phone&&(
+              <a href={`tel:${String(d.client_phone).replace(/\s/g,'')}`} onClick={(e)=>e.stopPropagation()}
+                 className="tnum" style={{fontSize:12,fontWeight:650,color:'var(--gold-dk, #A6843F)',whiteSpace:'nowrap'}} title="Appeler">
+                {d.client_phone}
+              </a>
+            )}
           </div>
         ))}
+        {retard.map(d=><LigneRelance key={d.id} d={d}/>)}
+        {jour.map(d=><LigneRelance key={d.id} d={d}/>)}
       </div>
     </div>
   )
@@ -5348,7 +5382,7 @@ export default function App(){
 
           <Suspense fallback={<SkeletonPage/>}>
           {activeTab==='dashboard'&&isManager&&<EditorialPendingBanner count={editorialPending.count} nextDeadline={editorialPending.nextDeadline} onOpen={()=>setActiveTab('editorial')}/>}
-          {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles} profile={profile} onEdit={startEdit}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile} onEdit={startEdit} onGoTab={setActiveTab}/>)}
+          {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles} profile={profile} onEdit={startEdit} onQuickPatch={quickPatchDeal}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile} onEdit={startEdit} onGoTab={setActiveTab} onQuickPatch={quickPatchDeal}/>)}
           {activeTab==='leads'&&<LeadRoomEmbed/>}
           {activeTab==='smart-rh'&&canSmartRh&&<SmartRH profile={profile} rhDelegue={isRhDelegue}/>}
           {activeTab==='pilotage-rh'&&(isManager||isRhDelegue)&&<PilotageRH profile={profile}/>}
