@@ -23,6 +23,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { SkeletonCards } from './ui/Skeleton'
+import { correspond } from '../lib/recherche'
 import {
   listEquipment, listFamilies, upsertDeclare, removeDeclare,
   listDeclaresForClient, listSignedDealsForClient, getSettings, saveSettings,
@@ -1064,7 +1065,9 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
       if (seg === 'rapatrier' && (r.ailleurs?.length || 0) === 0) return false
       if (seg === 'rdv' && !rdvProche(r)) return false
       if (seg === 'signaux' && !signalDue(r)) return false
-      if (ql && !(`${r.nom} ${r.profession} ${r.advisor_code}`.toLowerCase().includes(ql))) return false
+      // correspond() : accents ignorés, ordre des mots libre — « aurelie »
+      // trouve Aurélie, « vacher herve » trouve Hervé Vacher (voir lib/recherche).
+      if (ql && !correspond(`${r.nom} ${r.profession} ${r.advisor_code}`, ql)) return false
       return true
     })
     if (seg === 'explorer') return l.sort((a, b) => offCount(b) - offCount(a))
@@ -1248,7 +1251,7 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
     if (!sel) return
     const q2 = window.prompt('Rattacher au même foyer que quel client ? (nom ou prénom)', '')
     if (!q2 || !q2.trim()) return
-    const target = rows.find((r) => r.client_id !== sel.client_id && r.nom.toLowerCase().includes(q2.trim().toLowerCase()))
+    const target = rows.find((r) => r.client_id !== sel.client_id && correspond(r.nom, q2))
     if (!target) { toast.error('Client introuvable dans votre portefeuille'); return }
     const fid = target.foyerId || sel.foyerId || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : null)
     if (!fid) { toast.error('Impossible de générer le foyer'); return }
