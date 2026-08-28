@@ -30,6 +30,8 @@ import NotificationsBell from './components/ui/NotificationsBell'
 import ChecklistAccueil from './components/ui/ChecklistAccueil'
 import * as congesService from './services/conges'
 import { usePersistedState } from './hooks/usePersistedState'
+import { noterRecent } from './lib/recents'
+import { correspond } from './lib/recherche'
 import { exporterCsv, suffixeDate, nombreFr } from './lib/export-csv'
 // Onglets lourds charges a la demande (code-splitting via React.lazy) : sortis du
 // bundle principal pour alleger le JS au login. jspdf/html2canvas (OutilsCGP) et
@@ -1864,8 +1866,12 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
     if(!isManager&&profile?.advisor_code)list=list.filter(d=>dealMatchesAdvisor(d,profile.advisor_code))
     if(isManager&&advisorF!=='Tous')list=list.filter(d=>dealMatchesAdvisor(d,advisorF))
     // La recherche couvre aussi téléphone et email : retrouver un dossier en
-    // tapant les derniers chiffres du numéro qui appelle.
-    if(search)list=list.filter(d=>`${getClientName(d)} ${d.product} ${d.advisor_code} ${d.client_email||''} ${d.client_phone||''}`.toLowerCase().includes(search.toLowerCase()))
+    // tapant les derniers chiffres du numéro qui appelle. `correspond`
+    // (lib/recherche.js) au lieu d'un `includes` brut : accents ignorés,
+    // ordre des mots libre — « aurelie » trouve « Aurélie ».
+    // Le numéro figure aussi en chiffres collés : un numéro tapé d'une traite
+    // trouve un dossier saisi avec des espaces.
+    if(search)list=list.filter(d=>correspond(`${getClientName(d)} ${d.product} ${d.advisor_code} ${d.client_email||''} ${d.client_phone||''} ${String(d.client_phone||'').replace(/\D/g,'')}`,search))
     return list
   },[deals,profile,isManager,search,advisorF])
   const aSolder=d=>isPerime(d)||rdvPasse(d)
@@ -2118,7 +2124,7 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
   const [expandedGroups,setExpandedGroups]=useState(new Set())
   // La recherche couvre aussi téléphone et email : retrouver un dossier en
   // tapant les derniers chiffres du numéro qui appelle.
-  const filtered=useMemo(()=>deals.filter(d=>allMonths||dealDuMois(d,month)).filter(d=>statusF==='Tous'||d.status===statusF).filter(d=>productF==='Tous'||d.product===productF).filter(d=>priorityF==='Tous'||d.priority===priorityF).filter(d=>`${getClientName(d)} ${d.product} ${d.company} ${d.advisor_code} ${d.co_advisor_code||''} ${d.client_email||''} ${d.client_phone||''}`.toLowerCase().includes(search.toLowerCase())),[deals,month,allMonths,search,statusF,productF,priorityF])
+  const filtered=useMemo(()=>deals.filter(d=>allMonths||dealDuMois(d,month)).filter(d=>statusF==='Tous'||d.status===statusF).filter(d=>productF==='Tous'||d.product===productF).filter(d=>priorityF==='Tous'||d.priority===priorityF).filter(d=>correspond(`${getClientName(d)} ${d.product} ${d.company} ${d.advisor_code} ${d.co_advisor_code||''} ${d.client_email||''} ${d.client_phone||''} ${String(d.client_phone||'').replace(/\D/g,'')}`,search)),[deals,month,allMonths,search,statusF,productF,priorityF])
 
   // Fonction helper pour générer clé de regroupement
   const groupKey = (deal) => {
@@ -4521,7 +4527,9 @@ export default function App(){
   // la modale Nouveau dossier. Garde systematique si un champ a le focus.
   useEffect(()=>{
     function onKey(e){
-      if(!session)return
+      // Le mode design-preview n'a pas de session mais doit montrer la
+      // palette et les raccourcis : c'est précisément ce qu'on y évalue.
+      if(!session&&import.meta.env.VITE_DESIGN_PREVIEW!=='true')return
       const tag=(e.target?.tagName||'').toLowerCase()
       const typing=tag==='input'||tag==='textarea'||tag==='select'||e.target?.isContentEditable
       if((e.ctrlKey||e.metaKey)&&!e.altKey&&e.key.toLowerCase()==='k'){
@@ -5070,7 +5078,17 @@ export default function App(){
 
   // Conversion lead → pré-remplissage modal dossier
   function startCreate(){setEditingDeal(emptyDeal(profile?.advisor_code));setModalOpen(true)}
-  function startEdit(deal){setEditingDeal({...deal});setModalOpen(true)}
+  function startEdit(deal){
+    setEditingDeal({...deal})
+    setModalOpen(true)
+    // La palette ⌘K s'ouvre sur les dernières fiches consultées : un dossier
+    // ouvert en édition en fait partie. Jamais bloquant (localStorage).
+    noterRecent(profile?.advisor_code || profile?.id, {
+      type: 'deal', id: deal.id,
+      label: `${getClientName(deal)} · ${deal.product || '—'}`,
+      sub: `${statusLabel(deal.status) || deal.status || ''} · ${deal.month || ''}`,
+    })
+  }
 
   // Multi-équipement V2 : « Créer le deal » depuis le panneau d'un client.
   // Recharge la fiche complète (email, téléphone) puis ouvre la modale deal
@@ -5377,9 +5395,11 @@ export default function App(){
         onClose={()=>setPaletteOpen(false)}
         deals={deals}
         pages={palettePages}
+        profile={effectiveProfile}
         onOpenDeal={(d)=>{setPaletteOpen(false);startEdit(d)}}
         onOpenClient={(id)=>{setPaletteOpen(false);setSelectedClientId(id);setActiveTab('clients')}}
         onGoTab={(t)=>{setPaletteOpen(false);setActiveTab(t)}}
+        onNewDeal={()=>{setPaletteOpen(false);setEditingDeal(emptyDeal(profile?.advisor_code));setModalOpen(true)}}
       />
       <DealModal
         open={modalOpen}

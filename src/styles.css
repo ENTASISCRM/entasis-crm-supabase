@@ -2258,3 +2258,21 @@ table,
   color: var(--t3);
   border-color: var(--bd);
 }
+
+/* Dans une ligne de tableau, l'origine est un marqueur, pas un titre : elle
+   s'efface d'un cran pour ne pas concurrencer le nom du client. */
+.data-table .badge-origine { font-size: 11px; padding: 2px 7px; }
+
+/* ─── Surlignage des correspondances de recherche ─────────────────────────
+   La recherche ignore désormais les accents et l'ordre des mots (voir
+   lib/recherche.js). Sans marquer ce qui correspond, le résultat devient
+   juste mais inexplicable : on tape « aurelie » et « Aurélie buiret »
+   remonte sans qu'on voie le lien. Le fond doré de la charte, pas le jaune
+   par défaut du navigateur. */
+mark.surlignage {
+  background: var(--gold-subtle);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+  box-shadow: inset 0 -1px 0 var(--gold-line);
+}

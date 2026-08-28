@@ -1395,7 +1395,7 @@ function MatriceV2({ rows, matCols, famMap, isManager, profile, onCreateDeal, re
         ))}
         <span className="sp" />
         <button className={`seg${foyerMode ? ' on' : ''}`} onClick={() => setFoyerMode((v) => !v)} title="Regrouper les clients par foyer">Par foyer</button>
-        <input className="search" placeholder="Rechercher…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <input className="search" data-global-search placeholder="Rechercher…" value={q} onChange={(e) => setQ(e.target.value)} />
         {isManager && (
           <select className="mini" value={cons} onChange={(e) => setCons(e.target.value)}>
             <option value="all">Tous conseillers</option>

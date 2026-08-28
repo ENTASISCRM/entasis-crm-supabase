@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react'
 import { toast } from 'react-hot-toast'
 import { Skeleton, SkeletonCards, SkeletonTable } from '../ui/Skeleton'
 import SubTabs from '../ui/SubTabs'
-import { statusLabel, jourDe, heureDe } from '../../lib/ui-shared'
+import { statusLabel, jourDe, heureDe, nomClient } from '../../lib/ui-shared'
+import { noterRecent } from '../../lib/recents'
 import { estSimpleRdv } from '../../lib/metrics'
 import { euro, annualize } from '../../lib/format'
 import ClientModal from './ClientModal.jsx'
@@ -110,6 +111,14 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
 
         if (clientRes.error) throw clientRes.error
         setClient(clientRes.data)
+        // Fiche consultée → tête de liste de la palette ⌘K (« Reprendre »).
+        // Noté ici, au chargement, pour couvrir TOUS les chemins d'ouverture :
+        // annuaire, palette, aperçu latéral, lien direct.
+        noterRecent(profile?.advisor_code || profile?.id, {
+          type: 'client', id: clientId,
+          label: nomClient(clientRes.data),
+          sub: clientRes.data?.advisor_code ? `Fiche client · ${clientRes.data.advisor_code}` : 'Fiche client',
+        })
 
         if (dealsRes.error) throw dealsRes.error
         const dealsData = dealsRes.data || []

@@ -325,6 +325,7 @@ function FiltersBar({ search, setSearch, filterCompagnie, setFilterCompagnie, so
       flexWrap: 'wrap',
     }}>
       <input
+        data-global-search
         value={search}
         onChange={e => setSearch(e.target.value)}
         placeholder="Rechercher un structureur…"

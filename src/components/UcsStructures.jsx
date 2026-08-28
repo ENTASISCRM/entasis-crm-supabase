@@ -454,6 +454,7 @@ function FilterBar({ filters, setFilters, allCompagnies, toggleEtat, toggleCompa
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: 200, maxWidth: 360 }}>
           <input
+            data-global-search
             value={filters.search}
             onChange={e => setFilters(f => ({ ...f, search: e.target.value }))}
             placeholder="Rechercher (nom UCS, ISIN, compagnie)…"

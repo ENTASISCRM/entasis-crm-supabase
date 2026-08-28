@@ -116,6 +116,7 @@ export default function Recrutement() {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <input
             type="text"
+            data-global-search
             placeholder="Rechercher (nom, email, poste)…"
             value={search}
             onChange={e => setSearch(e.target.value)}

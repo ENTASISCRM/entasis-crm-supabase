@@ -675,7 +675,7 @@ export default function PilotageRH({ profile }) {
 
       {/* Toolbar filtres */}
       <div className="table-toolbar mb-16" style={{ marginBottom: 16 }}>
-        <input className="search-input" placeholder="Rechercher un conseiller…"
+        <input className="search-input" data-global-search placeholder="Rechercher un conseiller…"
                value={search} onChange={e => setSearch(e.target.value)} />
         <select className="filter-select" value={filterType} onChange={e => setFilterType(e.target.value)}>
           <option value="all">Tous les types</option>

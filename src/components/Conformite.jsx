@@ -658,6 +658,7 @@ function ModaleCreation({ profile, onClose, onCreated }) {
               <>
                 <input
                   className="form-input"
+                  data-global-search
                   placeholder="Rechercher un client (nom, email, téléphone)…"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}

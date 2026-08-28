@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { toast } from 'react-hot-toast'
-import { statusLabel } from '../../lib/ui-shared'
+import { statusLabel, nomClient, texteRechercheClient } from '../../lib/ui-shared'
+import { chercher, segmenter } from '../../lib/recherche'
+import { origineClient } from '../../lib/origine-client'
 import ClientModal from './ClientModal.jsx'
 import ClientPeek from './ClientPeek.jsx'
 import { Skeleton, SkeletonTable } from '../ui/Skeleton'
@@ -42,9 +44,11 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
   // Charger tous les clients avec leurs deals
   useEffect(() => {
     async function loadClients() {
-      // Vérifier que la session est active avant de charger
+      // Vérifier que la session est active avant de charger. Sans session on
+      // sort de l'état de chargement au lieu de laisser le squelette pour
+      // toujours — l'écran vide est un état honnête, le squelette éternel non.
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
+      if (!session) { setLoading(false); return }
 
       setLoading(true)
       try {
@@ -56,7 +60,9 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
         // transporte que ce qu'il affiche (payload réduit à volume égal).
         const [clientsRes, dealsRes, dossiersRes] = await Promise.all([
           supabase.from('clients').select('id, nom, prenom, email, telephone, advisor_code, co_advisor_code, created_at').order('created_at', { ascending: false }),
-          supabase.from('deals').select('id, client_id, product, status, pp_m, pu, advisor_code, co_advisor_code').not('client_id', 'is', null),
+          // `lead_id` sert à l'origine affichée en badge : c'est lui qui dit
+          // si le client vient d'une campagne ou du réseau du conseiller.
+          supabase.from('deals').select('id, client_id, lead_id, product, status, pp_m, pu, advisor_code, co_advisor_code').not('client_id', 'is', null),
           supabase.from('dossiers_immo').select('id, client_id, statut_pipeline').not('client_id', 'is', null),
         ])
         if (clientsRes.error) throw clientsRes.error
@@ -121,16 +127,14 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
       )
     }
 
-    // Recherche textuelle (valeur debouncée)
+    // Recherche textuelle (valeur debouncée). `chercher` remplace cinq
+    // `includes` par champ : il ignore les accents, se moque de l'ordre des
+    // mots et rend la liste ORDONNÉE PAR PERTINENCE. Voir lib/recherche.js —
+    // « aurelie » ne trouvait aucune des 48 fiches accentuées, et « vacher
+    // hervé » aucune des fiches à deux champs, puisque ni `nom` ni `prenom`
+    // ne contenait la phrase entière.
     if (debouncedSearch) {
-      const searchLower = debouncedSearch.toLowerCase()
-      filtered = filtered.filter(c =>
-        (c.nom || '').toLowerCase().includes(searchLower) ||
-        (c.prenom || '').toLowerCase().includes(searchLower) ||
-        (c.email || '').toLowerCase().includes(searchLower) ||
-        (c.telephone || '').toLowerCase().includes(searchLower) ||
-        (c.advisor_code || '').toLowerCase().includes(searchLower)
-      )
+      filtered = chercher(filtered, debouncedSearch, texteRechercheClient)
     }
 
     return filtered
@@ -143,7 +147,11 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
       ...client,
       globalStatus: getGlobalStatus(client.deals),
       caTotal: getClientCA(client.deals),
-      hasImmo: (client.dossiers_immo || []).length > 0
+      hasImmo: (client.dossiers_immo || []).length > 0,
+      // D'où vient ce client : dérivé des dossiers déjà chargés, sans requête
+      // supplémentaire. La campagne n'est pas nommée ici (elle vit dans le
+      // miroir Lead Room) — la fiche client s'en charge.
+      origine: origineClient(client, client.deals),
     }))
     if (statusFilter === 'Tous') return enriched
     const cible = statusFilter === 'Sans deal' ? 'Aucun deal' : statusFilter
@@ -180,10 +188,11 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
   // D7 — export CSV de l'annuaire tel qu'affiché (mêmes filtres, même tri).
   function exporterClients() {
     if (!sortedClients.length) { toast('Aucun client à exporter'); return }
-    const colonnes = ['Nom', 'Prénom', 'Email', 'Téléphone', 'Conseiller', 'Co-conseiller', 'Produits', 'Dossiers immobilier', 'Statut global', 'CA total']
+    const colonnes = ['Nom', 'Prénom', 'Email', 'Téléphone', 'Conseiller', 'Co-conseiller', 'Origine', 'Produits', 'Dossiers immobilier', 'Statut global', 'CA total']
     const lignes = sortedClients.map(c => [
       c.nom || '', c.prenom || '', c.email || '', c.telephone || '',
       c.advisor_code || '', c.co_advisor_code || '',
+      c.origine?.libelle || '',
       (c.deals || []).length, (c.dossiers_immo || []).length,
       statusLabel(c.globalStatus) || c.globalStatus || '', nombreFr(c.caTotal),
     ])
@@ -247,9 +256,13 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
         flexWrap: 'wrap'
       }}>
         <div style={{ flex: 1, minWidth: '300px' }}>
+          {/* data-global-search : cible du raccourci « / ». L'annuaire est
+              l'écran où l'on cherche le plus, et c'était le seul des trois
+              grands écrans à ne pas répondre à la touche. */}
           <input
             className="form-input"
-            placeholder="Rechercher un client (nom, email, téléphone...)"
+            data-global-search
+            placeholder="Rechercher un client — nom, email, téléphone, code conseiller"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -344,15 +357,24 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
                     title="Aperçu rapide — « Voir » ouvre la fiche complète"
                   >
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <div style={{ minWidth: 0 }}>
                           <div className="cell-primary">
-                            {client.prenom} {client.nom}
+                            <Surligne texte={nomClient(client)} requete={debouncedSearch} />
                           </div>
                           <div className="cell-sub">
-                            {client.email || client.telephone || '—'}
+                            <Surligne texte={client.email || client.telephone || '—'} requete={debouncedSearch} />
                           </div>
                         </div>
+                        {/* D'où vient ce client, à la même place que les autres
+                            marqueurs de ligne. « Apport direct » n'est pas
+                            affiché : c'est le cas majoritaire, un badge sur
+                            presque chaque ligne ne distingue plus rien. */}
+                        {client.origine?.cle !== 'direct' && client.origine?.cle !== 'inconnu' && (
+                          <span className="badge-origine" data-ton={client.origine.ton} title={client.origine.detail}>
+                            {client.origine.libelle}
+                          </span>
+                        )}
                         {client.hasImmo && (
                           <span
                             className="badge"
@@ -441,6 +463,18 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
       />
     </div>
   )
+}
+
+// Montre POURQUOI une ligne remonte : la partie du texte qui correspond à la
+// recherche est mise en évidence. Sans ça, une recherche tolérante aux accents
+// et à l'ordre des mots donne des résultats justes mais inexplicables — on ne
+// voit plus le lien entre ce qu'on a tapé et ce qui s'affiche.
+function Surligne({ texte, requete }) {
+  const segments = useMemo(() => segmenter(texte, requete), [texte, requete])
+  if (segments.length === 1 && !segments[0].marque) return segments[0].texte
+  return segments.map((s, i) => (
+    s.marque ? <mark key={i} className="surlignage">{s.texte}</mark> : <span key={i}>{s.texte}</span>
+  ))
 }
 
 // Helper pour les classes de statut

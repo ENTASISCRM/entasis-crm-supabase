@@ -94,6 +94,22 @@ export function getClientName(deal) {
   return deal?.clients?.nom || deal?.client || 'Client';
 }
 
+// Nom affichable d'une ligne `clients`. La saisie est hétérogène : 330 fiches
+// sur 379 ont `prenom` vide et tout le nom dans `nom` (« Aurélie buiret »),
+// 49 seulement ont les deux champs séparés. Un `{prenom} {nom}` littéral
+// produisait donc une espace en tête sur 330 lignes de l'annuaire.
+export const nomClient = (c) =>
+  [c?.prenom, c?.nom].map(v => String(v || '').trim()).filter(Boolean).join(' ') || '—';
+
+// Tout ce par quoi on peut chercher un client, en une chaîne. Le téléphone y
+// figure deux fois : tel que saisi (« 06 12 34 56 78 ») et en chiffres collés,
+// pour qu'un numéro tapé d'une traite trouve une fiche saisie avec des espaces.
+export const texteRechercheClient = (c) => [
+  c?.prenom, c?.nom, c?.email, c?.telephone,
+  String(c?.telephone || '').replace(/\D/g, ''),
+  c?.advisor_code, c?.co_advisor_code,
+].filter(Boolean).join(' ');
+
 export function emptyDeal(code = '') {
   return {
     id: uid(),
