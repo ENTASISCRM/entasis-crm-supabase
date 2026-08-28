@@ -11,6 +11,7 @@ import ClientContratsCard from './ClientContratsCard.jsx'
 import ClientEspaceCard from './ClientEspaceCard.jsx'
 import ClientTimeline from './ClientTimeline.jsx'
 import { partenaireDe, etapeDe } from '../../config/partenairesImmo'
+import { origineClient } from '../../lib/origine-client'
 
 // Copie une valeur dans le presse papiers avec retour visuel
 function copier(valeur, label) {
@@ -230,6 +231,13 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
     ? '#2C6B4E'
     : (completude.remplis <= 2 ? ROUGE_MANQUE : '#B45309')
 
+  // Origine derivee des dossiers deja charges : aucune requete de plus.
+  // La table des campagnes reste vide ici — deals.lead_id pointe vers le
+  // miroir leads_room, fige depuis le 4 mai, et 190 des 216 leads n'y sont
+  // plus. Le libelle affiche alors « Lead » sans nommer de campagne, plutot
+  // que d'en inventer une.
+  const origine = origineClient(client, clientDeals)
+
   return (
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
       {/* Bandeau "Fiche incomplete" : impossible a rater, en haut de la fiche.
@@ -303,6 +311,14 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
                 Co-conseiller: {client.co_advisor_code}
               </span>
             )}
+
+            {/* D'ou vient ce client, en un coup d'oeil (demande du 26/08/2026).
+                Derive des dossiers : aucune saisie requise, donc affiche sur
+                les 379 clients des le premier jour. */}
+            <span className="badge-origine" data-ton={origine.ton} title={origine.detail}>
+              {origine.libelle}
+            </span>
+
             <span className={STATUS_CLASS[globalStatus] || 'badge'}>
               {statusLabel(globalStatus)}
             </span>

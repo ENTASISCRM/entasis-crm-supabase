@@ -2219,3 +2219,42 @@ table,
 }
 .immo2-fiche:hover:not(:disabled) svg { color: var(--gold-dk); }
 .immo2-fiche:disabled { opacity: .5; cursor: default; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   BADGE ORIGINE — d'où vient un client, en un coup d'œil (26/08/2026).
+
+   Trois tons, parce que trois lectures différentes :
+     campagne — le cabinet a payé pour l'acquérir (bleu, factuel)
+     chaud    — le conseiller l'a amené : réseau, recommandation (or maison)
+     neutre   — on ne sait pas, et on ne prétend pas savoir (gris)
+
+   Uniquement des tokens : le badge suit la charte et le thème sombre sans
+   retouche.
+   ───────────────────────────────────────────────────────────────────────── */
+.badge-origine {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  padding: 3px 9px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  cursor: help;
+}
+.badge-origine[data-ton="campagne"] {
+  background: var(--forecast-bg);
+  color: var(--forecast);
+  border-color: var(--forecast-bd);
+}
+.badge-origine[data-ton="chaud"] {
+  background: var(--gold-subtle);
+  color: var(--gold-dk);
+  border-color: var(--gold-line);
+}
+.badge-origine[data-ton="neutre"] {
+  background: var(--bg);
+  color: var(--t3);
+  border-color: var(--bd);
+}
