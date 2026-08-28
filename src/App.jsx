@@ -1272,11 +1272,19 @@ function AreaChart({actual,projected,target,title,subtitle}){
 /* ─────────────────────────────────────────────────────────────────────────────
    ANNUAL BAR CHART — 12 mois
 ───────────────────────────────────────────────────────────────────────────── */
-function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle,metric='pp'}){
+function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle,metric='pp',targetMensuel=null}){
   // metric, pp pour la PP financière (PER, AV, SCPI, PS, PE), pu pour les
   // versements uniques, mutuelle pour la PP Mutuelle Santé + Prévoyance TNS
   // (assurance personnes), total pour la consolidation PP+PU+Mutuelle.
   // Décision Louis 2026-06-08, séparation PP patrimoine vs assurance.
+  //
+  // targetMensuel : palier personnel du conseiller. Quand il est fourni, la
+  // ligne pointillée le trace LUI et `objectifs` (cabinet) n'est pas consulté.
+  // Même règle que le bloc Mission (28/07) : un conseiller ne voit jamais
+  // l'objectif cabinet — ni comme échelle absurde sur son graphe, ni comme
+  // information sur l'ambition chiffrée du cabinet (rappel Louis 27/08).
+  // null (managers) = comportement historique, objectifs mensuels cabinet.
+  const persoTarget=targetMensuel!=null?Number(targetMensuel)||0:null
   const data=MONTHS.map(m=>{
     const scope=advisorCode?deals.filter(d=>dealDuMois(d,m)&&dealMatchesAdvisor(d,advisorCode)):deals.filter(d=>dealDuMois(d,m))
     const signed=scope.filter(d=>d.status==='Signé')
@@ -1284,7 +1292,7 @@ function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle,me
     let signedVal,pipelineVal,target
     if(metric==='pu'){
       signedVal=sumPu(signed);pipelineVal=sumPu(pipeline)
-      target=Number(objectifs?.[m]?.pu_target||0)
+      target=persoTarget!=null?persoTarget:Number(objectifs?.[m]?.pu_target||0)
     }else if(metric==='mutuelle'){
       signedVal=sumAnnualPpMutuelle(signed);pipelineVal=sumAnnualPpMutuelle(pipeline)
       // Pas d'objectif dédié mutuelle pour l'instant, on l'omet (target=0).
@@ -1292,17 +1300,19 @@ function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle,me
     }else if(metric==='total'){
       signedVal=sumAnnualPp(signed)+sumPu(signed)+sumAnnualPpMutuelle(signed)
       pipelineVal=sumAnnualPp(pipeline)+sumPu(pipeline)+sumAnnualPpMutuelle(pipeline)
-      target=Number(objectifs?.[m]?.pp_target||0)+Number(objectifs?.[m]?.pu_target||0)
+      target=persoTarget!=null?persoTarget:Number(objectifs?.[m]?.pp_target||0)+Number(objectifs?.[m]?.pu_target||0)
     }else{
       signedVal=sumAnnualPp(signed);pipelineVal=sumAnnualPp(pipeline)
-      target=Number(objectifs?.[m]?.pp_target||0)
+      target=persoTarget!=null?persoTarget:Number(objectifs?.[m]?.pp_target||0)
     }
     return {month:m,ppSigned:signedVal,ppPipeline:pipelineVal,ppTotal:signedVal+pipelineVal,target}
   })
   const metricLabel=metric==='pu'?'PU':metric==='mutuelle'?'Mutuelle/Prév':metric==='total'?'Total':'PP'
 
   const maxVal=Math.max(...data.map(d=>Math.max(d.ppTotal,d.target)),1)*1.12
-  const W=680,H=180,PB=36,PT=12,PL=4,PR=4
+  // Échelle lisible : « 12 k€ » plutôt qu'un quadrillage muet.
+  const kEuro=v=>v>=10000?`${Math.round(v/1000)} k€`:v>=1000?`${(v/1000).toLocaleString('fr-FR',{maximumFractionDigits:1})} k€`:`${Math.round(v)} €`
+  const W=680,H=180,PB=36,PT=12,PL=4,PR=40
   const chartW=W-PL-PR
   const barGroupW=chartW/12
   const barW=Math.max(6,barGroupW*0.52)
@@ -1310,13 +1320,16 @@ function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle,me
   const toH=v=>(H-PT-PB)*Math.min(1,v/maxVal)
   const curIdx=MONTHS.indexOf(currentMonth)
 
+  // Abréviations : slice(0,3) rendait juin et juillet identiques (« JUI JUI »
+  // sur l'axe, relevé sur capture du 27/08).
+  const ABR={JANVIER:'JAN',FÉVRIER:'FÉV',MARS:'MARS',AVRIL:'AVR',MAI:'MAI',JUIN:'JUIN',JUILLET:'JUIL',AOÛT:'AOÛT',SEPTEMBRE:'SEP',OCTOBRE:'OCT',NOVEMBRE:'NOV',DÉCEMBRE:'DÉC'}
   const targetPts=data.map((d,i)=>({x:PL+i*barGroupW+barGroupW/2,y:d.target>0?toY(d.target):null}))
   const targetPath=targetPts.reduce((path,pt)=>{
     if(pt.y===null)return path
     return path+(path===''?`M${pt.x},${pt.y}`:`L${pt.x},${pt.y}`)
   },'')
 
-  const gridVals=[0.25,0.5,0.75,1].map(t=>({y:PT+(H-PT-PB)*(1-t)}))
+  const gridVals=[0.25,0.5,0.75,1].map(t=>({y:PT+(H-PT-PB)*(1-t),v:maxVal*t}))
 
   return (
     <div className="chart-card">
@@ -1336,7 +1349,15 @@ function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle,me
             <linearGradient id="bar-signed" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--gold)"/><stop offset="100%" stopColor="#9A7B3A"/></linearGradient>
             <linearGradient id="bar-pipeline" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="rgba(201,169,97,0.35)"/><stop offset="100%" stopColor="rgba(201,169,97,0.15)"/></linearGradient>
           </defs>
-          {gridVals.map((g,i)=><line key={i} x1={PL} y1={g.y} x2={W-PR} y2={g.y} stroke="var(--bd)" strokeWidth="0.5"/>)}
+          {gridVals.map((g,i)=>(
+            <g key={i}>
+              <line x1={PL} y1={g.y} x2={W-PR} y2={g.y} stroke="var(--bd)" strokeWidth="0.5"/>
+              {/* Échelle seulement quand il y a quelque chose à mesurer : sur
+                  un graphe vide, maxVal retombe à son plancher et afficher
+                  « 1 € » sur chaque ligne n'aiderait personne. */}
+              {maxVal>2&&<text x={W-PR+5} y={g.y+3} fontSize="8.5" fill="var(--t3)" fontFamily="var(--font-sans)" style={{fontVariantNumeric:'tabular-nums'}}>{kEuro(g.v)}</text>}
+            </g>
+          ))}
           <line x1={PL} y1={H-PB} x2={W-PR} y2={H-PB} stroke="var(--bd)" strokeWidth="1"/>
           {targetPath&&<path d={targetPath} fill="none" stroke="var(--gold)" strokeWidth="1.5" strokeDasharray="4 3" opacity="0.6"/>}
           {data.map((d,i)=>{
@@ -1346,10 +1367,20 @@ function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle,me
             const sy=H-PB-sh,ph=hh-sh,py=sy-ph
             return (
               <g key={d.month}>
+                {/* Infobulle native : le détail du mois au survol, sans lib. */}
+                <title>{`${d.month} — signée ${euro(d.ppSigned)}${d.ppPipeline>0?` · pipeline ${euro(d.ppPipeline)}`:''}${d.target>0?` · objectif ${euro(d.target)}`:''}`}</title>
+                {/* Zone de survol invisible sur toute la colonne, pour que
+                    l'infobulle réponde aussi sur un mois à zéro. */}
+                <rect x={PL+i*barGroupW} y={PT} width={barGroupW} height={H-PT-PB} fill="transparent"/>
                 {ph>0.5&&<rect x={bx} y={py} width={barW} height={ph} fill="url(#bar-pipeline)" rx="2" ry="2"/>}
                 {sh>0.5&&<rect x={bx} y={sy} width={barW} height={sh} fill={isCurrent?"url(#bar-signed)":"rgba(201,169,97,0.75)"} rx="2" ry="2"/>}
                 {isCurrent&&hh>0.5&&<rect x={bx-1} y={Math.min(py,sy)-1} width={barW+2} height={hh+2} fill="none" stroke="var(--gold)" strokeWidth="1.5" rx="3" opacity="0.5"/>}
-                <text x={cx} y={H-8} textAnchor="middle" fontSize="9.5" fill={isCurrent?'var(--gold)':'var(--t3)'} fontWeight={isCurrent?'600':'400'} fontFamily="var(--font-sans)">{d.month.slice(0,3)}</text>
+                {/* La valeur du mois courant, posée au-dessus de sa barre :
+                    le chiffre qu'on vient chercher, sans avoir à survoler. */}
+                {isCurrent&&d.ppSigned>0&&(
+                  <text x={cx} y={Math.min(py,sy)-5} textAnchor="middle" fontSize="9" fontWeight="700" fill="var(--gold-dk,#A6843F)" fontFamily="var(--font-sans)" style={{fontVariantNumeric:'tabular-nums'}}>{kEuro(d.ppSigned)}</text>
+                )}
+                <text x={cx} y={H-8} textAnchor="middle" fontSize="9.5" fill={isCurrent?'var(--gold)':'var(--t3)'} fontWeight={isCurrent?'600':'400'} fontFamily="var(--font-sans)">{ABR[d.month]||d.month.slice(0,3)}</text>
               </g>
             )
           })}
@@ -1357,7 +1388,10 @@ function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle,me
         <div className="chart-legend">
           <div className="chart-legend-item"><div className="legend-dot" style={{background:'var(--gold)'}}/>{metricLabel} signée : {euro(data.reduce((s,d)=>s+d.ppSigned,0))}</div>
           <div className="chart-legend-item"><div className="legend-dot" style={{background:'rgba(201,169,97,0.35)',border:'1px solid var(--gold)'}}/>{metricLabel} pipeline : {euro(data.reduce((s,d)=>s+d.ppPipeline,0))}</div>
-          <div className="chart-legend-item"><div className="legend-dot" style={{background:'var(--gold)',opacity:0.4}}/>Ligne objectif cabinet</div>
+          {/* La légende dit ce que la ligne trace vraiment : le palier du
+              conseiller sur son graphe, l'objectif cabinet chez le manager.
+              Pas de ligne du tout → pas de légende fantôme. */}
+          {data.some(d=>d.target>0)&&<div className="chart-legend-item"><div className="legend-dot" style={{background:'var(--gold)',opacity:0.4}}/>{persoTarget!=null?'Mon objectif mensuel':'Ligne objectif cabinet'}</div>}
           <div className="chart-legend-item" style={{marginLeft:'auto'}}><div className="legend-dot" style={{background:'var(--gold)',outline:'1.5px solid var(--gold)',outlineOffset:1}}/>Mois en cours : <strong style={{color:'var(--t1)'}}>{currentMonth}</strong></div>
         </div>
       </div>
@@ -1567,7 +1601,10 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab}){
       </div>
       <div style={{marginTop:28}}>
         <div className="section-header"><div><div className="section-kicker">Vue annuelle</div><div className="section-title">Saisonnalité — 12 mois</div><div className="section-sub">PP annualisée signée + pipeline par mois · mois courant mis en valeur</div></div></div>
-        <AnnualChart deals={deals} objectifs={objectifs} currentMonth={month} advisorCode={code} title="PP annualisée — mon année" subtitle={`Conseiller ${code} · barres : signée (plein) + pipeline (transparent)`}/>
+        {/* targetMensuel : le palier PERSONNEL trace la ligne — jamais
+            l'objectif cabinet sur le graphe d'un conseiller (Louis 27/08).
+            Contrat pas encore chargé → 0 → aucune ligne, aucune légende. */}
+        <AnnualChart deals={deals} objectifs={objectifs} currentMonth={month} advisorCode={code} targetMensuel={ppTarget} title="PP annualisée — mon année" subtitle={`Conseiller ${code} · barres : signée (plein) + pipeline (transparent)`}/>
       </div>
     </div>
   )
