@@ -1820,7 +1820,7 @@ a { color: inherit; text-decoration: none; }
    neutre, image entiere visible, jamais deformee ni rognee. */
 .annu-avatar-logo {
   background: var(--card); border: 1px solid var(--bd-soft);
-  padding: 3px; box-shadow: none;
+  padding: 1px; box-shadow: none;
 }
 .annu-avatar-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
 
