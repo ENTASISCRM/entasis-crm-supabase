@@ -21,8 +21,8 @@ export const CATEGORIES_ANNUAIRE = [
   },
   {
     cle: 'juridique',
-    label: 'Notaire & juridique',
-    accroche: 'Pour verrouiller le volet juridique avant de lancer le dossier.',
+    label: 'Notaire & avocats',
+    accroche: 'Pour verrouiller le volet juridique et fiscal avant de lancer le dossier.',
   },
   {
     cle: 'assurance',
@@ -36,8 +36,8 @@ export const CATEGORIES_ANNUAIRE = [
   },
   {
     cle: 'expertise',
-    label: 'Conseil & expertise',
-    accroche: 'Fiscalité et comptabilité, pour les dossiers qui sortent du cadre.',
+    label: 'Expertise comptable',
+    accroche: 'Bilans et sociétés, pour les dossiers qui touchent à l’entreprise du client.',
   },
 ]
 
@@ -62,7 +62,7 @@ export const CONTACTS_ANNUAIRE = [
     referentImmo: true,
   },
 
-  // ── Notaire & juridique ─────────────────────────────────────────────────
+  // ── Notaire & avocats ───────────────────────────────────────────────────
   {
     categorie: 'juridique',
     societe: 'Notaire partenaire',
@@ -70,6 +70,14 @@ export const CONTACTS_ANNUAIRE = [
     role: 'Actes, donations, successions, démembrement, SCI',
     telephones: ['+33 7 89 48 19 69'],
     emails: ['cedric.deplano@06001.notaires.fr'],
+  },
+  {
+    categorie: 'juridique',
+    societe: 'Harlay Avocat',
+    nom: 'Anouchka Belgrand',
+    role: 'Avocate fiscaliste',
+    telephones: ['06 11 49 17 64'],
+    emails: [],
   },
 
   // ── Assureurs & santé ───────────────────────────────────────────────────
@@ -173,15 +181,7 @@ export const CONTACTS_ANNUAIRE = [
     emails: [],
   },
 
-  // ── Conseil & expertise ─────────────────────────────────────────────────
-  {
-    categorie: 'expertise',
-    societe: 'Harlay Avocat',
-    nom: 'Anouchka Belgrand',
-    role: 'Avocate fiscalité',
-    telephones: ['06 11 49 17 64'],
-    emails: [],
-  },
+  // ── Expertise comptable ─────────────────────────────────────────────────
   {
     categorie: 'expertise',
     societe: 'Adezio',
