@@ -192,6 +192,18 @@ export const CONTACTS_ANNUAIRE = [
   },
 ]
 
+
+// Logo de la maison. Le fichier vit dans public/logos/ et son nom se deduit
+// du nom de la societe : « SwissLife » cherche /logos/swisslife.png. Quand le
+// fichier n existe pas, la ligne retombe sur le monogramme, sans rien casser.
+// Volontairement local : aucun service de logos exterieur n est appele, le
+// CRM n a pas a signaler a un tiers avec qui le cabinet travaille.
+export const cleLogo = (societe) => String(societe || '')
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+
+export const LOGO_EXTENSIONS = ['svg', 'png', 'jpg', 'webp']
+
 // Initiales pour l avatar : deux lettres du nom de la personne ou du service.
 export const initialesContact = (nom) => {
   const mots = String(nom || '').trim().split(/\s+/).filter(Boolean)

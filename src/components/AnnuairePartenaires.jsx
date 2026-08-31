@@ -12,6 +12,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CATEGORIES_ANNUAIRE, CONTACTS_ANNUAIRE, initialesContact } from '../config/annuairePartenaires'
+import { logoDe } from '../lib/logos-partenaires'
 import { correspond } from '../lib/recherche'
 
 const telHref = (t) => `tel:${String(t).replace(/[^+\d]/g, '')}`
@@ -161,7 +162,7 @@ function RangContact({ contact: c }) {
 
   return (
     <article className="annu-rang">
-      <span className="annu-avatar" aria-hidden="true">{initialesContact(c.nom)}</span>
+      <Embleme societe={c.societe} nom={c.nom} />
 
       <span className="annu-rang-id">
         <span className="annu-rang-nom">{c.nom}</span>
@@ -190,6 +191,21 @@ function RangContact({ contact: c }) {
       </span>
     </article>
   )
+}
+
+// Le logo de la maison quand le cabinet l a fourni, le monogramme de la
+// personne sinon. Purement decoratif : le nom et la societe sont deja ecrits
+// juste a cote, un lecteur d ecran n a rien a gagner a l entendre deux fois.
+function Embleme({ societe, nom }) {
+  const logo = logoDe(societe)
+  if (logo) {
+    return (
+      <span className="annu-avatar annu-avatar-logo" aria-hidden="true">
+        <img src={logo} alt="" loading="lazy" />
+      </span>
+    )
+  }
+  return <span className="annu-avatar" aria-hidden="true">{initialesContact(nom)}</span>
 }
 
 function Coordonnee({ valeur, href, icone, titre, libelleCopie, copie, onCopier, externe, large }) {

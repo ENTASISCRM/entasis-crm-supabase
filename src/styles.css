@@ -1815,6 +1815,15 @@ a { color: inherit; text-decoration: none; }
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
 
+
+/* Le logo remplace le monogramme quand la maison en a fourni un : cadre
+   neutre, image entiere visible, jamais deformee ni rognee. */
+.annu-avatar-logo {
+  background: var(--card); border: 1px solid var(--bd-soft);
+  padding: 3px; box-shadow: none;
+}
+.annu-avatar-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
 /* Teintes d avatar par metier : discretes, mais les initiales restent du
    texte que l oeil lit, chacune tient donc AA sur son propre fond. */
 .annu-teinte-immobilier .annu-avatar { color: #7A5F1B; background: var(--gold-subtle); border: 1px solid var(--gold-line); }
