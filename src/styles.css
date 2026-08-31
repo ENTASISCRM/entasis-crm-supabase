@@ -1653,6 +1653,153 @@ a { color: inherit; text-decoration: none; }
   .immo2-notaire-contacts { align-items: flex-start; }
 }
 /* ─────────────────────────────────────────────────────────────────────
+   ANNUAIRE DES PARTENAIRES — le carnet du cabinet (2026-08-31)
+   Reprend le bandeau immo2-hero ; le reste est propre a l annuaire.
+   ───────────────────────────────────────────────────────────────────── */
+.annu { display: flex; flex-direction: column; gap: 26px; }
+
+/* Recherche + puces de filtre */
+.annu-controls { display: flex; flex-direction: column; gap: 12px; }
+.annu-search {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 14px; height: 46px; cursor: text;
+  background: var(--card); border: 1px solid var(--bd);
+  border-radius: var(--rad-lg); box-shadow: var(--sh-xs);
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+.annu-search:focus-within { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,169,97,0.16); }
+.annu-search svg { color: var(--t3); flex: 0 0 auto; }
+.annu-search-input {
+  flex: 1; border: none; outline: none; background: transparent;
+  font-family: inherit; font-size: 14px; color: var(--t1);
+}
+.annu-search-input::placeholder { color: var(--t3); }
+.annu-search-clear {
+  border: none; background: var(--bg-subtle); color: var(--t2);
+  width: 22px; height: 22px; border-radius: 11px; cursor: pointer;
+  font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center;
+}
+.annu-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.annu-chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 32px; padding: 0 13px; border-radius: 16px; cursor: pointer;
+  font-family: inherit; font-size: 12.5px; font-weight: 600; letter-spacing: -0.005em;
+  color: var(--t2); background: var(--card); border: 1px solid var(--bd);
+  transition: background .16s ease, color .16s ease, border-color .16s ease;
+}
+.annu-chip em { font-style: normal; font-size: 11px; font-weight: 700; color: var(--t3); }
+.annu-chip:hover { border-color: var(--bd-strong); color: var(--t1); }
+.annu-chip.on { background: var(--navy); border-color: var(--navy); color: var(--t-inv); }
+.annu-chip.on em { color: rgba(255,255,255,0.65); }
+
+/* Sections par metier */
+.annu-section { display: flex; flex-direction: column; gap: 14px; }
+.annu-section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
+.annu-section-titre {
+  margin: 0; font-family: var(--font-sans); font-size: 17px; font-weight: 700;
+  letter-spacing: -0.015em; color: var(--t1);
+}
+.annu-section-accroche { margin: 3px 0 0; font-size: 12.5px; color: var(--t3); }
+.annu-section-n {
+  flex: 0 0 auto; min-width: 24px; height: 24px; padding: 0 8px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11.5px; font-weight: 700; color: var(--t2);
+  background: var(--bg-subtle); border: 1px solid var(--bd-soft);
+}
+
+/* Grille de cartes */
+.annu-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 14px; }
+.annu-carte {
+  position: relative; display: flex; flex-direction: column; gap: 10px;
+  padding: 16px 18px 14px;
+  background: var(--paper-grad); border: 1px solid var(--bd);
+  border-radius: var(--rad-xl); box-shadow: var(--sh-xs);
+  transition: transform .22s cubic-bezier(.2,.8,.2,1), box-shadow .22s ease, border-color .18s ease;
+}
+.annu-carte:hover { transform: translateY(-2px); box-shadow: var(--sh-sm); border-color: var(--bd-strong); }
+
+.annu-carte-haut { display: flex; align-items: center; gap: 12px; }
+.annu-avatar {
+  flex: 0 0 auto; width: 40px; height: 40px; border-radius: var(--rad-md);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; letter-spacing: .03em;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.85);
+}
+.annu-id { flex: 1; min-width: 0; }
+.annu-societe {
+  display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--t3); margin-bottom: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.annu-nom {
+  margin: 0; font-size: 15px; font-weight: 650; letter-spacing: -0.012em; color: var(--t1);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.annu-role { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--t2); }
+.annu-astuce {
+  margin: 0; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11.5px; font-weight: 550; color: #8A6D1F;
+  background: var(--gold-subtle); border: 1px solid var(--gold-line);
+  padding: 4px 9px; border-radius: var(--rad-sm); align-self: flex-start;
+}
+
+/* Les trois gestes : appeler, copier, ecrire */
+.annu-actions { display: flex; flex-direction: column; gap: 6px; margin-top: auto; }
+.annu-telzone { display: flex; align-items: center; gap: 6px; }
+.annu-tel {
+  flex: 1; display: inline-flex; align-items: center; gap: 8px;
+  height: 32px; padding: 0 11px; border-radius: var(--rad);
+  font-size: 12.5px; font-weight: 600; text-decoration: none;
+  color: var(--t1); background: var(--bg-subtle); border: 1px solid var(--bd-soft);
+  transition: background .15s ease, border-color .15s ease;
+}
+.annu-tel:hover { background: var(--card); border-color: var(--bd-strong); }
+.annu-tel svg { color: var(--t3); }
+.annu-tel-num { font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+.annu-copie {
+  flex: 0 0 auto; width: 32px; height: 32px; border-radius: var(--rad);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  color: var(--t3); background: var(--card); border: 1px solid var(--bd-soft);
+  transition: color .15s ease, border-color .15s ease;
+}
+.annu-copie:hover { color: var(--t1); border-color: var(--bd-strong); }
+.annu-mail {
+  display: inline-flex; align-items: center; gap: 8px; min-width: 0;
+  font-size: 12px; color: var(--t2); text-decoration: none; padding: 2px 1px;
+  transition: color .15s ease;
+}
+.annu-mail:hover { color: var(--apple-blue); }
+.annu-mail svg { flex: 0 0 auto; color: var(--t3); }
+.annu-mail:hover svg { color: var(--apple-blue); }
+.annu-mail-adr { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.annu-renvoi {
+  display: inline-flex; align-items: center; gap: 7px; align-self: flex-start;
+  margin-top: 2px; padding: 0; border: none; background: none; cursor: pointer;
+  font-family: inherit; font-size: 12px; font-weight: 650; color: var(--gold-dk);
+  transition: gap .15s ease;
+}
+.annu-renvoi:hover { gap: 10px; }
+
+/* Teintes d avatar par metier : discretes, jamais criardes */
+.annu-teinte-immobilier .annu-avatar { color: var(--gold-dk); background: var(--gold-subtle); border: 1px solid var(--gold-line); }
+.annu-teinte-juridique .annu-avatar { color: #21406B; background: rgba(10,22,40,0.05); border: 1px solid rgba(10,22,40,0.12); }
+.annu-teinte-assurance .annu-avatar { color: #3E6B46; background: rgba(74,122,82,0.09); border: 1px solid rgba(74,122,82,0.2); }
+.annu-teinte-investissement .annu-avatar { color: #2C4A73; background: rgba(44,74,115,0.08); border: 1px solid rgba(44,74,115,0.18); }
+.annu-teinte-expertise .annu-avatar { color: #5D3A66; background: rgba(93,58,102,0.08); border: 1px solid rgba(93,58,102,0.18); }
+
+/* Etat vide + note de mise a jour */
+.annu-vide { text-align: center; padding: 44px 20px; }
+.annu-vide-t { margin: 0 0 6px; font-size: 15px; font-weight: 650; color: var(--t1); }
+.annu-vide-s { margin: 0; font-size: 13px; color: var(--t3); }
+.annu-maj { margin: 4px 0 0; font-size: 12px; color: var(--t3); text-align: center; }
+
+@media (max-width: 720px) {
+  .annu-grille { grid-template-columns: 1fr; }
+  .annu-section-head { align-items: flex-start; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────
    UCS Produits Structurés (Louis 2026-05-25)
    Layout 2 colonnes 60/40 sur desktop, empilé sur mobile (<900px).
    ───────────────────────────────────────────────────────────────────── */

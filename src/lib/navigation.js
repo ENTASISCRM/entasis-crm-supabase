@@ -47,8 +47,11 @@ export function buildNavDomains({ isManager, isRhDelegue, canSmartRh }) {
       ],
     },
     {
-      key: 'immobilier', label: 'Immobilier', icon: 'Building',
-      views: [{ tab: 'immobilier', label: 'Immobilier', badgeKey: 'immobilier' }],
+      key: 'partenaires', label: 'Partenaires', icon: 'Building',
+      views: [
+        { tab: 'partenaires', label: 'Annuaire' },
+        { tab: 'immobilier', label: 'Immobilier · dossiers', badgeKey: 'immobilier' },
+      ],
     },
     {
       key: 'marches', label: 'Marchés & Produits', icon: 'Market',
