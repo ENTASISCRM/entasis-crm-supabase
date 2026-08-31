@@ -14,6 +14,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { logger } from '../lib/logger'
+import { correspond } from '../lib/recherche'
 import * as structureursService from '../services/structureurs'
 import { SkeletonCards } from './ui/Skeleton'
 import { messageErreur } from '../lib/ui-shared'
@@ -80,7 +81,7 @@ export default function Structureurs({ profile }) {
     return enriched
       .filter(s => {
         if (filterCompagnie !== 'all' && !(s.compagnies_travaillees || []).includes(filterCompagnie)) return false
-        if (q && !s.nom.toLowerCase().includes(q)) return false
+        if (q && !correspond(s.nom, q)) return false
         return true
       })
       .sort((a, b) => {

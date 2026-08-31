@@ -14,6 +14,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { confirmDialog } from './ui/confirm'
+import { correspond } from '../lib/recherche'
 import SubTabs from './ui/SubTabs'
 import { SkeletonRows, SkeletonText } from './ui/Skeleton'
 import * as service from '../services/conseillerContrats'
@@ -248,9 +249,9 @@ export default function PilotageRH({ profile }) {
       if (filterActif === 'actifs' && !c.actif) return false
       if (filterActif === 'inactifs' && c.actif) return false
       if (search) {
-        const s = search.toLowerCase()
-        if (!(c.full_name || '').toLowerCase().includes(s) &&
-            !(c.matricule || '').toLowerCase().includes(s)) return false
+        // Accents et ordre des mots ignorés (lib/recherche) : « herve » doit
+        // trouver Hervé, « dupont marie » doit trouver Marie Dupont.
+        if (!correspond(`${c.full_name || ''} ${c.matricule || ''}`, search)) return false
       }
       return true
     })
