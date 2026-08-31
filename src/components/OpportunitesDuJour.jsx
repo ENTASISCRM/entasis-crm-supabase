@@ -15,9 +15,12 @@
 // le badge « à signer ». Une fiche incomplète est une tâche, pas un incendie :
 // 28 lignes rouges ne hiérarchisent plus rien.
 //
-// La section fiches à compléter liste les clients dont la fiche est incomplète
-// au sens du verrou de signature. Clic = copie du nom pour retrouver la
-// fiche ; les autres sections copient le téléphone.
+// CLIC = OUVRIR LA FICHE. La première version copiait le téléphone ou le nom
+// dans le presse papier : le conseiller devait ensuite rouvrir l'annuaire et
+// rechercher lui même la fiche qu'on venait de lui montrer (constat phase 0,
+// « liste de travail à moitié branchée »). Quand l'hôte fournit
+// onOuvrirClient, la ligne ouvre la fiche ; le téléphone reste copiable via
+// son propre bouton. Sans handler (usage isolé), on retombe sur la copie.
 //
 // Périmètre de données : la RLS applique le périmètre (manager voit tout et
 // dispose d'un filtre conseiller, conseiller voit ses clients). Aucune
@@ -30,7 +33,7 @@ import { SkeletonCards } from './ui/Skeleton'
 import { chargerDonnees, construireSections } from '../services/opportunites'
 import { messageErreur } from '../lib/ui-shared'
 
-export default function OpportunitesDuJour({ profile, embedded }) {
+export default function OpportunitesDuJour({ profile, embedded, onOuvrirClient }) {
   const isManager = profile?.role === 'manager'
   const [donnees, setDonnees] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -218,11 +221,16 @@ export default function OpportunitesDuJour({ profile, embedded }) {
                   {(tout ? secActive.items : secActive.items.slice(0, APERCU)).map((it) => (
                     <li
                       key={it.id}
-                      className={secActive.fiches || it.telephone ? 'click' : ''}
-                      title={secActive.fiches
-                        ? 'Cliquer pour copier le nom et retrouver la fiche'
-                        : (it.telephone ? 'Cliquer pour copier le téléphone' : undefined)}
-                      onClick={() => (secActive.fiches ? copierNom(it) : copierTelephone(it))}
+                      className={onOuvrirClient && it.clientId ? 'click' : (secActive.fiches || it.telephone ? 'click' : '')}
+                      title={onOuvrirClient && it.clientId
+                        ? 'Ouvrir la fiche client'
+                        : secActive.fiches
+                          ? 'Cliquer pour copier le nom et retrouver la fiche'
+                          : (it.telephone ? 'Cliquer pour copier le téléphone' : undefined)}
+                      onClick={() => {
+                        if (onOuvrirClient && it.clientId) { onOuvrirClient(it.clientId); return }
+                        if (secActive.fiches) copierNom(it); else copierTelephone(it)
+                      }}
                     >
                       <span className="nm">{it.nom}</span>
                       {secActive.fiches && it.dealActif && <span className="asigner">à signer</span>}
@@ -242,8 +250,17 @@ export default function OpportunitesDuJour({ profile, embedded }) {
                         </span>
                       )}
                       {!secActive.fiches && it.telephone && (
-                        <a className="tel" href={`tel:${String(it.telephone).replace(/\s/g, '')}`}
-                           onClick={(e) => e.stopPropagation()} title="Appeler">{it.telephone}</a>
+                        <span className="telzone" onClick={(e) => e.stopPropagation()}>
+                          <a className="tel" href={`tel:${String(it.telephone).replace(/\s/g, '')}`}
+                             title="Appeler">{it.telephone}</a>
+                          {/* La copie du numéro reste à un clic : c'était le
+                              geste historique de la ligne, il garde sa place
+                              maintenant que la ligne ouvre la fiche. */}
+                          <button className="telcopy" title="Copier le téléphone"
+                                  onClick={() => copierTelephone(it)} aria-label={`Copier le téléphone de ${it.nom}`}>
+                            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.2" stroke="currentColor"/><path d="M8.5 3.5v-1a1 1 0 0 0-1-1h-5a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h1" stroke="currentColor"/></svg>
+                          </button>
+                        </span>
                       )}
                     </li>
                   ))}
@@ -319,7 +336,10 @@ const styles = `
 .opj .why.chips{ display:flex; gap:4px; flex-wrap:wrap; white-space:normal }
 .opj .chip{ font-size:10px; font-weight:650; color:#7a6a4f; background:#F7F4EC; border:1px solid #EBE5D6; border-radius:5px; padding:1px 6px; line-height:1.5 }
 .opj .chip.bonus{ color:var(--silver); background:#F6F6F4; border-color:var(--line); font-style:italic }
-.opj .tel{ font-size:12px; font-weight:650; color:var(--gold-dk,#A6843F); font-variant-numeric:tabular-nums; white-space:nowrap; margin-left:auto }
+.opj .telzone{ display:inline-flex; align-items:center; gap:6px; margin-left:auto }
+.opj .tel{ font-size:12px; font-weight:650; color:var(--gold-dk,#A6843F); font-variant-numeric:tabular-nums; white-space:nowrap }
+.opj .telcopy{ display:inline-flex; align-items:center; border:none; background:none; padding:2px; color:var(--silver); cursor:pointer; border-radius:5px }
+.opj .telcopy:hover{ color:var(--gold-dk,#A6843F); background:#FBF4E4 }
 
 .opj .plus{ display:block; width:100%; border:none; border-top:1px solid #F4F2ED; background:#FCFBF8; padding:8px; font-size:11.5px; font-weight:700; color:var(--gold-dk,#A6843F); cursor:pointer; font-family:inherit }
 .opj .plus:hover{ background:#FBF4E4 }
