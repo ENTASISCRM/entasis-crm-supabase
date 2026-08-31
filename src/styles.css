@@ -1390,6 +1390,31 @@ a { color: inherit; text-decoration: none; }
 
 .immo2-partner-actions { display: flex; gap: 10px; margin-top: auto; }
 
+/* ─── Le notaire du cabinet : un bandeau, pas une carte de vente ─── */
+.immo2-notaire {
+  display: flex; align-items: center; gap: 18px;
+  padding: 18px 22px;
+  background: var(--paper-grad);
+  border: 1px solid var(--bd);
+  border-left: 3px solid var(--navy);
+  border-radius: var(--rad-xl);
+  box-shadow: var(--sh-xs);
+}
+.immo2-notaire-mono {
+  width: 46px; height: 46px;
+  color: #21406B; background: rgba(10,22,40,0.045); border-color: rgba(10,22,40,0.12);
+}
+.immo2-notaire-id { flex: 1; min-width: 0; }
+.immo2-notaire-nom {
+  display: block; font-size: 16.5px; font-weight: 700; color: var(--t1);
+  letter-spacing: -0.015em; margin: 1px 0 3px;
+}
+.immo2-notaire-accroche { font-size: 12.5px; line-height: 1.55; color: var(--t2); margin: 0; }
+.immo2-notaire-contacts {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 7px;
+}
+.immo2-notaire-contacts .immo2-btn { font-variant-numeric: tabular-nums; }
+
 /* ─── Boutons ─── */
 .immo2-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -1624,6 +1649,8 @@ a { color: inherit; text-decoration: none; }
   .immo2-hero-title { font-size: 23px; }
   .immo2-stats { grid-template-columns: repeat(2, 1fr); }
   .immo2-suivi-head { align-items: flex-start; flex-direction: column; }
+  .immo2-notaire { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .immo2-notaire-contacts { align-items: flex-start; }
 }
 /* ─────────────────────────────────────────────────────────────────────
    UCS Produits Structurés (Louis 2026-05-25)
@@ -2275,4 +2302,20 @@ mark.surlignage {
   border-radius: 3px;
   padding: 0 1px;
   box-shadow: inset 0 -1px 0 var(--gold-line);
+}
+
+/* ─── KPI cliquable : le chiffre mène à sa liste de travail ───────────────
+   La carte porteuse d'un onOpen s'annonce : curseur, chevron discret qui se
+   révèle au survol, liseré doré. Les cartes en lecture seule (agrégats
+   cabinet) gardent leur comportement d'origine. */
+.kpi-card-click { cursor: pointer; position: relative; }
+.kpi-card-click:hover { border-color: var(--gold-line); }
+.kpi-card-click:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.kpi-card-click .kpi-open {
+  position: absolute; top: 10px; right: 12px;
+  font-size: 16px; line-height: 1; color: var(--t3);
+  opacity: 0; transition: opacity 0.15s, transform 0.15s;
+}
+.kpi-card-click:hover .kpi-open, .kpi-card-click:focus-visible .kpi-open {
+  opacity: 1; transform: translateX(2px); color: var(--gold-dk);
 }

@@ -29,6 +29,7 @@ import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { logger } from '../lib/logger'
 import { confirmDialog } from './ui/confirm'
+import { correspond } from '../lib/recherche'
 import SubTabs from './ui/SubTabs'
 import { SkeletonCards } from './ui/Skeleton'
 import * as ucsService from '../services/ucsStructures'
@@ -210,8 +211,9 @@ export default function UcsStructures({ profile, month }) {
       if (u.sri != null && u.sri > filters.sriMax) return false
       if (ticketMin > 0 && Number(u.minimum_requis) < ticketMin) return false
       if (q) {
-        const hay = `${u.nom_ucs} ${u.code_isin} ${u.compagnie}`.toLowerCase()
-        if (!hay.includes(q)) return false
+        // Tolérant aux accents et à l'ordre des mots (lib/recherche) : un nom
+        // d'UCS se cherche comme un nom de client, un ISIN reste un jeton.
+        if (!correspond(`${u.nom_ucs} ${u.code_isin} ${u.compagnie}`, q)) return false
       }
       return true
     })

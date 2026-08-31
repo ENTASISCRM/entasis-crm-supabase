@@ -19,7 +19,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { PARTENAIRES_IMMO, partenaireDe, ETAPES_IMMO, etapeDe } from '../config/partenairesImmo'
+import { PARTENAIRES_IMMO, NOTAIRE_PARTENAIRE, partenaireDe, ETAPES_IMMO, etapeDe } from '../config/partenairesImmo'
 import {
   listDossiers, creerDossier, majDossier, supprimerDossier, marquerTransmis,
   chercherClients,
@@ -243,6 +243,28 @@ export default function ImmobilierNeuf({ profile }) {
           </article>
         ))}
       </div>
+
+      {/* ── Le notaire du cabinet ───────────────────────────────────────── */}
+      {/* Un bandeau, pas une troisieme carte : on ne lui transmet pas de
+          dossier depuis ici, on l appelle. */}
+      <aside className="immo2-notaire">
+        <div className="immo2-mono immo2-notaire-mono" aria-hidden="true"><IcoSceau /></div>
+        <div className="immo2-notaire-id">
+          <span className="immo2-referent-label">{NOTAIRE_PARTENAIRE.role}</span>
+          <span className="immo2-notaire-nom">{NOTAIRE_PARTENAIRE.nom}</span>
+          <p className="immo2-notaire-accroche">{NOTAIRE_PARTENAIRE.accroche}</p>
+        </div>
+        <div className="immo2-notaire-contacts">
+          <a className="immo2-btn immo2-btn-ghost" href={`tel:${NOTAIRE_PARTENAIRE.telephone.replace(/\s/g, '')}`}>
+            <IcoTel /> {NOTAIRE_PARTENAIRE.telephone}
+          </a>
+          {NOTAIRE_PARTENAIRE.email && (
+            <a className="immo2-contact" href={`mailto:${NOTAIRE_PARTENAIRE.email}`}>
+              <IcoMail /> {NOTAIRE_PARTENAIRE.email}
+            </a>
+          )}
+        </div>
+      </aside>
 
       {/* ── Suivi ───────────────────────────────────────────────────────── */}
       <section className="immo2-suivi">
@@ -643,6 +665,15 @@ const IcoPdf = () => (
     <path d="M12 18v-6" /><path d="m9 15 3 3 3-3" />
   </svg>
 )
+// Plume et trait : le sceau de l etude, sans tomber dans le cliche du marteau.
+const IcoSceau = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20.2 3.8c-2.3-2.3-6.1-.6-9.4 2.7-2.6 2.6-4.3 5.6-4.9 8.2l3.4 3.4c2.6-.6 5.6-2.3 8.2-4.9 3.3-3.3 5-7.1 2.7-9.4z" />
+    <path d="M9.3 14.7 4 20" />
+    <path d="M14.5 9.5 12 12" />
+  </svg>
+)
+
 const IcoKeys = () => (
   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 10.5 12 3l9 7.5" /><path d="M5 9.8V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.8" /><path d="M9.5 21v-6h5v6" />

@@ -1400,13 +1400,27 @@ function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle,me
   )
 }
 
-function KpiCard({label,value,hint,accent,progressValue,delta}){
+function KpiCard({label,value,hint,accent,progressValue,delta,onOpen,openLabel}){
   const accentClass=accent?`kpi-card-${accent}`:''
   const fill=progressValue!=null?Math.min(100,progressValue):null
   const hasDelta=delta!=null&&delta.raw!==0
   const deltaUp=delta?.raw>0
+  // onOpen : un chiffre qui donne envie d'agir doit mener à la liste des
+  // dossiers qui le composent. L'état des lieux (phase 0) a montré que tous
+  // les KPI de l'accueil étaient des impasses : le conseiller lisait « PP en
+  // pipeline » et repartait chercher le pipeline à la main. Sans onOpen, la
+  // carte reste une simple lecture (les agrégats cabinet, par exemple).
+  const cliquable=typeof onOpen==='function'
   return (
-    <div className={`kpi-card ${accentClass}`}>
+    <div
+      className={`kpi-card ${accentClass}${cliquable?' kpi-card-click':''}`}
+      {...(cliquable?{
+        role:'button',tabIndex:0,title:openLabel||'Ouvrir la liste',
+        onClick:onOpen,
+        onKeyDown:(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onOpen()}},
+      }:{})}
+    >
+      {cliquable&&<span className="kpi-open" aria-hidden="true">›</span>}
       <div className="kpi-label">{label}</div>
       <div className="kpi-value">{value}</div>
       {hasDelta&&(
@@ -1427,7 +1441,7 @@ function KpiCard({label,value,hint,accent,progressValue,delta}){
 /* ─────────────────────────────────────────────────────────────────────────────
    ADVISOR DASHBOARD
 ───────────────────────────────────────────────────────────────────────────── */
-function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab,onQuickPatch}){
+function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab,onQuickPatch,onGoView,onOpenClient}){
   const code=profile?.advisor_code||''
   const m=advisorMetrics(deals,month,code)
 
@@ -1576,11 +1590,14 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab,onQuickP
           {landing!=null&&<div className="advisor-hero-kpi"><div className="advisor-hero-kpi-label">{landing>=0?'Avance sur objectif':'Reste à faire'}</div><div className="advisor-hero-kpi-value" style={{color:landing>=0?'#86EFAC':'#FCA5A5'}}>{landing>=0?'+':''}{euro(Math.abs(landing))}</div></div>}
         </div>
       </div>
+      {/* Chaque KPI mène à la liste qui le compose : le signé vers Dossiers
+          du mois, le pipeline vers le kanban. Les agrégats cabinet plus bas
+          restent en lecture (pas de liste individuelle derrière). */}
       <div className="kpi-grid mb-24">
-        <KpiCard label="PP signée annualisée" value={euro(m.ppSigned)} hint="Réalisé du mois" accent="gold" progressValue={ppPct} delta={prevMonth?dPpSigned:null}/>
-        <KpiCard label="PP en pipeline" value={euro(m.ppPipeline)} hint={`${m.pipelineCount} dossier${m.pipelineCount!==1?'s':''} en cours / prévus${m.rdvCount>0?` · ${m.rdvCount} RDV à qualifier`:''}`} accent="amber" delta={prevMonth?dPpPipeline:null}/>
-        <KpiCard label="PU signée" value={euro(m.puSigned)} hint="Versements uniques signés" accent="green" delta={prevMonth?dPuSigned:null}/>
-        <KpiCard label="PU en pipeline" value={euro(m.puPipeline)} hint="À signer ce mois" accent="blue"/>
+        <KpiCard label="PP signée annualisée" value={euro(m.ppSigned)} hint="Réalisé du mois" accent="gold" progressValue={ppPct} delta={prevMonth?dPpSigned:null} onOpen={()=>onGoView?.('clients','dossiers')} openLabel="Voir les dossiers du mois"/>
+        <KpiCard label="PP en pipeline" value={euro(m.ppPipeline)} hint={`${m.pipelineCount} dossier${m.pipelineCount!==1?'s':''} en cours / prévus${m.rdvCount>0?` · ${m.rdvCount} RDV à qualifier`:''}`} accent="amber" delta={prevMonth?dPpPipeline:null} onOpen={()=>onGoView?.('pipeline')} openLabel="Ouvrir le pipeline"/>
+        <KpiCard label="PU signée" value={euro(m.puSigned)} hint="Versements uniques signés" accent="green" delta={prevMonth?dPuSigned:null} onOpen={()=>onGoView?.('clients','dossiers')} openLabel="Voir les dossiers du mois"/>
+        <KpiCard label="PU en pipeline" value={euro(m.puPipeline)} hint="À signer ce mois" accent="blue" onOpen={()=>onGoView?.('pipeline')} openLabel="Ouvrir le pipeline"/>
       </div>
 
       {/* Stats cabinet — émulation transparente, pas de chiffres individuels */}
@@ -1598,7 +1615,7 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab,onQuickP
       {/* D3 : ce qui doit être fait aujourd'hui passe AVANT le reste. */}
       <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch}/>
       <div style={{marginTop:28}}>
-        <Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded/></Suspense>
+        <Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded onOuvrirClient={onOpenClient}/></Suspense>
       </div>
       <div style={{marginTop:28}}>
         <div className="section-header"><div><div className="section-kicker">Vue annuelle</div><div className="section-title">Saisonnalité — 12 mois</div><div className="section-sub">PP annualisée signée + pipeline par mois · mois courant mis en valeur</div></div></div>
@@ -1614,7 +1631,7 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab,onQuickP
 /* ─────────────────────────────────────────────────────────────────────────────
    MANAGER DASHBOARD
 ───────────────────────────────────────────────────────────────────────────── */
-function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onQuickPatch}){
+function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onQuickPatch,onGoView,onOpenClient}){
   // Switch metric pour la vue annuelle, PP financiere par défaut, PU,
   // Mutuelle/Prevoyance et Total dispo via mini tabs (demande Louis
   // 2026-06-08, vue Direction).
@@ -1678,13 +1695,13 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onQ
     <div>
       <div className="section-header"><div><div className="section-kicker">Vue direction · {month}</div><div className="section-title">Tableau de bord cabinet</div><div className="section-sub">{monthDeals.length} dossiers · {signed.length} signés · {pipeline.length} en pipeline{monthRdv.length>0&&<span title="Rendez vous cales depuis la Lead Room, pas encore qualifies"> · {monthRdv.length} RDV calés</span>}{prevMonth&&<span style={{color:'var(--t3)'}}> · vs {prevMonth}</span>}</div></div></div>
       <div className="kpi-grid mb-24">
-        <KpiCard label="PP financière signée" value={euro(ppS)} hint="PER, AV, SCPI, PS, PE" accent="gold" progressValue={pct(ppS,ppTarget)} delta={prevMonth?dPpS:null}/>
-        <KpiCard label="PP financière prévisionnelle" value={euro(ppS+ppP)} hint="Atterrissage projeté" accent="amber" delta={prevMonth?dPpProj:null}/>
-        <KpiCard label="PU signée" value={euro(puS)} hint="Versements uniques" accent="green" progressValue={pct(puS,puTarget)} delta={prevMonth?dPuS:null}/>
-        <KpiCard label="PU prévisionnelle" value={euro(puS+puP)} hint="Atterrissage projeté" accent="blue"/>
-        <KpiCard label="PP Mutuelle/Prévoyance" value={euro(ppMutS)} hint="Mutuelle Santé + Prévoyance TNS" accent="gold" delta={prevMonth?dPpMutS:null}/>
+        <KpiCard label="PP financière signée" value={euro(ppS)} hint="PER, AV, SCPI, PS, PE" accent="gold" progressValue={pct(ppS,ppTarget)} delta={prevMonth?dPpS:null} onOpen={()=>onGoView?.('clients','dossiers')} openLabel="Voir les dossiers du mois"/>
+        <KpiCard label="PP financière prévisionnelle" value={euro(ppS+ppP)} hint="Atterrissage projeté" accent="amber" delta={prevMonth?dPpProj:null} onOpen={()=>onGoView?.('pipeline')} openLabel="Ouvrir le pipeline"/>
+        <KpiCard label="PU signée" value={euro(puS)} hint="Versements uniques" accent="green" progressValue={pct(puS,puTarget)} delta={prevMonth?dPuS:null} onOpen={()=>onGoView?.('clients','dossiers')} openLabel="Voir les dossiers du mois"/>
+        <KpiCard label="PU prévisionnelle" value={euro(puS+puP)} hint="Atterrissage projeté" accent="blue" onOpen={()=>onGoView?.('pipeline')} openLabel="Ouvrir le pipeline"/>
+        <KpiCard label="PP Mutuelle/Prévoyance" value={euro(ppMutS)} hint="Mutuelle Santé + Prévoyance TNS" accent="gold" delta={prevMonth?dPpMutS:null} onOpen={()=>onGoView?.('clients','dossiers')} openLabel="Voir les dossiers du mois"/>
       </div>
-      <div style={{marginBottom:24}}><Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded/></Suspense></div>
+      <div style={{marginBottom:24}}><Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded onOuvrirClient={onOpenClient}/></Suspense></div>
       <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch}/>
       <div className="grid-2 gap-16 mb-24">
         <AreaChart title="PP cabinet annualisée" subtitle="Réalisé + pipeline → objectif" actual={ppS} projected={ppS+ppP} target={ppTarget}/>
@@ -5382,7 +5399,10 @@ export default function App(){
 
           <Suspense fallback={<SkeletonPage/>}>
           {activeTab==='dashboard'&&isManager&&<EditorialPendingBanner count={editorialPending.count} nextDeadline={editorialPending.nextDeadline} onOpen={()=>setActiveTab('editorial')}/>}
-          {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles} profile={profile} onEdit={startEdit} onQuickPatch={quickPatchDeal}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile} onEdit={startEdit} onGoTab={setActiveTab} onQuickPatch={quickPatchDeal}/>)}
+          {/* onGoView : les KPI de l'accueil mènent à la liste qui les
+              compose ; onOpenClient : les listes de travail ouvrent la
+              fiche ; onQuickPatch : les gestes de Ma journée (phase 0). */}
+          {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles} profile={profile} onEdit={startEdit} onQuickPatch={quickPatchDeal} onGoView={(tab,sub)=>{if(sub)setClientsVue(sub);setActiveTab(tab)}} onOpenClient={(id)=>{setSelectedClientId(id);setClientsVue('annuaire');setActiveTab('clients')}}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile} onEdit={startEdit} onGoTab={setActiveTab} onQuickPatch={quickPatchDeal} onGoView={(tab,sub)=>{if(sub)setClientsVue(sub);setActiveTab(tab)}} onOpenClient={(id)=>{setSelectedClientId(id);setClientsVue('annuaire');setActiveTab('clients')}}/>)}
           {activeTab==='leads'&&<LeadRoomEmbed/>}
           {activeTab==='smart-rh'&&canSmartRh&&<SmartRH profile={profile} rhDelegue={isRhDelegue}/>}
           {activeTab==='pilotage-rh'&&(isManager||isRhDelegue)&&<PilotageRH profile={profile}/>}
