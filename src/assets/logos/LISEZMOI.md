@@ -20,7 +20,7 @@ il reste net sur tous les ecrans.
 | SwissLife | `swisslife.svg` |
 | April | `april.svg` |
 | Generali | `generali.svg` |
-| Asselio | `asselio.svg` |
+| Asselio | `asselio.svg` (logo Abeille Assurances, la marque de la maison) |
 | Irbis | `irbis.svg` |
 | I Kapital | `i-kapital.svg` |
 | Wemo Reim | `wemo-reim.svg` |
