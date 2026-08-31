@@ -41,6 +41,18 @@ export const PARTENAIRES_IMMO = [
 
 export const partenaireDe = (cle) => PARTENAIRES_IMMO.find((p) => p.cle === cle) || null
 
+// Le notaire du cabinet. Ce n est pas un partenaire commercial : pas de
+// dispositifs, pas de dossiers transmis, pas de pipeline. On l appelle pour
+// verrouiller le volet juridique d un dossier (acte, donation, succession,
+// demembrement, SCI). L email n apparait que s il est renseigne.
+export const NOTAIRE_PARTENAIRE = {
+  role: 'Notaire partenaire',
+  nom: 'Cédric Deplano',
+  telephone: '+33 7 89 48 19 69',
+  email: null,
+  accroche: 'Actes, donations, successions, démembrement, SCI. Un point juridique avant de lancer le dossier évite de le refaire après.',
+}
+
 // Etapes du dossier une fois transmis. Volontairement courtes : c est le
 // partenaire qui travaille, nous suivons seulement l avancement.
 export const ETAPES_IMMO = [
