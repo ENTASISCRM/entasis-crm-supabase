@@ -1440,7 +1440,7 @@ function KpiCard({label,value,hint,accent,progressValue,delta,onOpen,openLabel})
 /* ─────────────────────────────────────────────────────────────────────────────
    ADVISOR DASHBOARD
 ───────────────────────────────────────────────────────────────────────────── */
-function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab,onGoView}){
+function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab,onGoView,onOpenClient}){
   const code=profile?.advisor_code||''
   const m=advisorMetrics(deals,month,code)
 
@@ -1614,7 +1614,7 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab,onGoView
       {/* D3 : ce qui doit être fait aujourd'hui passe AVANT le reste. */}
       <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit}/>
       <div style={{marginTop:28}}>
-        <Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded/></Suspense>
+        <Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded onOuvrirClient={onOpenClient}/></Suspense>
       </div>
       <div style={{marginTop:28}}>
         <div className="section-header"><div><div className="section-kicker">Vue annuelle</div><div className="section-title">Saisonnalité — 12 mois</div><div className="section-sub">PP annualisée signée + pipeline par mois · mois courant mis en valeur</div></div></div>
@@ -1630,7 +1630,7 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab,onGoView
 /* ─────────────────────────────────────────────────────────────────────────────
    MANAGER DASHBOARD
 ───────────────────────────────────────────────────────────────────────────── */
-function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onGoView}){
+function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onGoView,onOpenClient}){
   // Switch metric pour la vue annuelle, PP financiere par défaut, PU,
   // Mutuelle/Prevoyance et Total dispo via mini tabs (demande Louis
   // 2026-06-08, vue Direction).
@@ -1700,7 +1700,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onG
         <KpiCard label="PU prévisionnelle" value={euro(puS+puP)} hint="Atterrissage projeté" accent="blue" onOpen={()=>onGoView?.('pipeline')} openLabel="Ouvrir le pipeline"/>
         <KpiCard label="PP Mutuelle/Prévoyance" value={euro(ppMutS)} hint="Mutuelle Santé + Prévoyance TNS" accent="gold" delta={prevMonth?dPpMutS:null} onOpen={()=>onGoView?.('clients','dossiers')} openLabel="Voir les dossiers du mois"/>
       </div>
-      <div style={{marginBottom:24}}><Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded/></Suspense></div>
+      <div style={{marginBottom:24}}><Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded onOuvrirClient={onOpenClient}/></Suspense></div>
       <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit}/>
       <div className="grid-2 gap-16 mb-24">
         <AreaChart title="PP cabinet annualisée" subtitle="Réalisé + pipeline → objectif" actual={ppS} projected={ppS+ppP} target={ppTarget}/>
@@ -5366,8 +5366,9 @@ export default function App(){
           <Suspense fallback={<SkeletonPage/>}>
           {activeTab==='dashboard'&&isManager&&<EditorialPendingBanner count={editorialPending.count} nextDeadline={editorialPending.nextDeadline} onOpen={()=>setActiveTab('editorial')}/>}
           {/* onGoView : les KPI de l'accueil mènent à la liste qui les
-              compose (phase 0 : tous étaient des impasses). */}
-          {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles} profile={profile} onEdit={startEdit} onGoView={(tab,sub)=>{if(sub)setClientsVue(sub);setActiveTab(tab)}}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile} onEdit={startEdit} onGoTab={setActiveTab} onGoView={(tab,sub)=>{if(sub)setClientsVue(sub);setActiveTab(tab)}}/>)}
+              compose ; onOpenClient : les listes de travail ouvrent la
+              fiche au lieu de copier un nom à re-chercher (phase 0). */}
+          {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles} profile={profile} onEdit={startEdit} onGoView={(tab,sub)=>{if(sub)setClientsVue(sub);setActiveTab(tab)}} onOpenClient={(id)=>{setSelectedClientId(id);setClientsVue('annuaire');setActiveTab('clients')}}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile} onEdit={startEdit} onGoTab={setActiveTab} onGoView={(tab,sub)=>{if(sub)setClientsVue(sub);setActiveTab(tab)}} onOpenClient={(id)=>{setSelectedClientId(id);setClientsVue('annuaire');setActiveTab('clients')}}/>)}
           {activeTab==='leads'&&<LeadRoomEmbed/>}
           {activeTab==='smart-rh'&&canSmartRh&&<SmartRH profile={profile} rhDelegue={isRhDelegue}/>}
           {activeTab==='pilotage-rh'&&(isManager||isRhDelegue)&&<PilotageRH profile={profile}/>}
