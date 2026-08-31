@@ -49,7 +49,7 @@ export const NOTAIRE_PARTENAIRE = {
   role: 'Notaire partenaire',
   nom: 'Cédric Deplano',
   telephone: '+33 7 89 48 19 69',
-  email: null,
+  email: 'cedric.deplano@06001.notaires.fr',
   accroche: 'Actes, donations, successions, démembrement, SCI. Un point juridique avant de lancer le dossier évite de le refaire après.',
 }
 
