@@ -17,6 +17,12 @@ import { correspond } from '../lib/recherche'
 
 const telHref = (t) => `tel:${String(t).replace(/[^+\d]/g, '')}`
 
+// Ecrire ouvre la fenetre de redaction Gmail dans un onglet, jamais mailto :
+// le cabinet est sur Google Workspace, un mailto ouvrirait l application Mail
+// du poste, que personne n utilise. Meme mecanique que la transmission de
+// dossier immobilier (lib/mail-immo.js).
+const gmailHref = (e) => `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(e)}`
+
 export default function AnnuairePartenaires({ onOuvrirImmobilier }) {
   const [requete, setRequete] = useState('')
   const [filtre, setFiltre] = useState('tous')
@@ -78,7 +84,10 @@ export default function AnnuairePartenaires({ onOuvrirImmobilier }) {
             <button className="annu-search-clear" onClick={() => setRequete('')} aria-label="Effacer la recherche">×</button>
           )}
         </div>
-        <div className="annu-chips" role="tablist" aria-label="Filtrer par métier">
+        {/* Des filtres, pas des onglets : ils n ouvrent aucun panneau, ils
+            restreignent la meme liste. aria-pressed dit l etat sans mentir
+            sur la nature du controle. */}
+        <div className="annu-chips" role="group" aria-label="Filtrer par métier">
           <ChipFiltre actif={filtre === 'tous'} onClick={() => setFiltre('tous')} label="Tous" n={compteurs.tous} />
           {CATEGORIES_ANNUAIRE.map((cat) => (
             <ChipFiltre key={cat.cle} actif={filtre === cat.cle} onClick={() => setFiltre(filtre === cat.cle ? 'tous' : cat.cle)}
@@ -86,6 +95,13 @@ export default function AnnuairePartenaires({ onOuvrirImmobilier }) {
           ))}
         </div>
       </div>
+
+      {/* Ce que l ecran montre deja, dit a voix haute pour qui ne le voit pas. */}
+      <p className="annu-sr" role="status" aria-live="polite">
+        {visibles.length === 0
+          ? 'Aucun contact ne correspond'
+          : `${visibles.length} contact${visibles.length > 1 ? 's' : ''} affiché${visibles.length > 1 ? 's' : ''}`}
+      </p>
 
       {/* ── Sections par métier ─────────────────────────────────────────── */}
       {visibles.length === 0 ? (
@@ -126,8 +142,9 @@ export default function AnnuairePartenaires({ onOuvrirImmobilier }) {
 
 function ChipFiltre({ actif, onClick, label, n }) {
   return (
-    <button role="tab" aria-selected={actif} className={`annu-chip${actif ? ' on' : ''}`} onClick={onClick}>
-      {label} <em>{n}</em>
+    <button type="button" aria-pressed={actif} className={`annu-chip${actif ? ' on' : ''}`} onClick={onClick}>
+      {label} <em aria-hidden="true">{n}</em>
+      <span className="annu-sr">{` ${n} contact${n > 1 ? 's' : ''}`}</span>
     </button>
   )
 }
@@ -157,24 +174,25 @@ function CarteContact({ contact: c, onOuvrirImmobilier }) {
       {c.role && <p className="annu-role">{c.role}</p>}
       {c.astuce && <p className="annu-astuce"><IcoInfo /> {c.astuce}</p>}
 
+      {/* Telephone et email obeissent a la meme regle : un clic pour agir,
+          un bouton pour copier. Copier sert autant que joindre, on colle
+          l adresse dans un dossier, un message, un formulaire. */}
       <div className="annu-actions">
         {c.telephones.map((t) => (
-          <span key={t} className="annu-telzone">
-            <a className="annu-tel" href={telHref(t)} title={`Appeler ${c.nom}`}>
-              <IcoTel /> <span className="annu-tel-num">{t}</span>
-            </a>
-            <button className="annu-copie" onClick={() => copier(t)}
-              title="Copier le numéro" aria-label={`Copier le numéro ${t}`}>
-              {copie === t ? <IcoOk /> : <IcoCopie />}
-            </button>
-          </span>
+          <LigneContact key={t} valeur={t} href={telHref(t)} icone={<IcoTel />}
+            titre={`Appeler ${c.nom}`} libelleCopie="Copier le numéro"
+            copie={copie === t} onCopier={() => copier(t)} />
         ))}
         {c.emails.map((e) => (
-          <a key={e} className="annu-mail" href={`mailto:${e}`} title={`Écrire à ${c.nom}`}>
-            <IcoMail /> <span className="annu-mail-adr">{e}</span>
-          </a>
+          <LigneContact key={e} valeur={e} href={gmailHref(e)} icone={<IcoMail />} externe
+            titre={`Écrire à ${c.nom} dans Gmail`} libelleCopie="Copier l adresse"
+            copie={copie === e} onCopier={() => copier(e)} />
         ))}
       </div>
+
+      <span className="annu-sr" role="status" aria-live="polite">
+        {copie ? `${copie} copié dans le presse papier` : ''}
+      </span>
 
       {c.referentImmo && onOuvrirImmobilier && (
         <button className="annu-renvoi" onClick={onOuvrirImmobilier}
@@ -183,6 +201,23 @@ function CarteContact({ contact: c, onOuvrirImmobilier }) {
         </button>
       )}
     </article>
+  )
+}
+
+// Une coordonnee : le lien qui agit, le bouton qui copie. Un email est plus
+// long qu un numero, il est tronque a l affichage mais copie en entier.
+function LigneContact({ valeur, href, icone, titre, libelleCopie, copie, onCopier, externe }) {
+  return (
+    <span className="annu-ligne">
+      <a className="annu-lien" href={href} title={titre}
+        {...(externe ? { target: '_blank', rel: 'noreferrer' } : {})}>
+        {icone} <span className="annu-lien-val">{valeur}</span>
+      </a>
+      <button className="annu-copie" onClick={onCopier}
+        title={libelleCopie} aria-label={`${libelleCopie} ${valeur}`}>
+        {copie ? <IcoOk /> : <IcoCopie />}
+      </button>
+    </span>
   )
 }
 
