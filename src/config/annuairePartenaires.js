@@ -124,6 +124,8 @@ export const CONTACTS_ANNUAIRE = [
   },
 
   // ── Solutions d investissement ──────────────────────────────────────────
+  // Asselio se presente sous la marque Abeille Assurances : c est ce logo
+  // qui habille ses lignes (confirme par Louis le 31/08/2026).
   {
     categorie: 'investissement',
     societe: 'Asselio',
@@ -182,9 +184,12 @@ export const CONTACTS_ANNUAIRE = [
   },
 
   // ── Expertise comptable ─────────────────────────────────────────────────
+  // La societe de Hugo Busuttil s appelle ASIO (l annuaire Asselio la
+  // designait encore par son ancien nom Adezio). A ne pas confondre avec
+  // Asselio, qui est une autre maison.
   {
     categorie: 'expertise',
-    societe: 'Adezio',
+    societe: 'ASIO',
     nom: 'Hugo Busuttil',
     role: 'Expert comptable',
     telephones: ['06 08 83 82 97'],

@@ -1661,6 +1661,19 @@ a { color: inherit; text-decoration: none; }
    ───────────────────────────────────────────────────────────────────── */
 .annu { display: flex; flex-direction: column; gap: 18px; }
 
+/* Un en-tete court mais signe : le filet dore et le navy disent Entasis en
+   60 pixels, la ou l ancien bandeau en prenait 218. */
+.annu-titre { display: flex; flex-direction: column; gap: 5px; padding: 2px 0 0; }
+.annu-titre h1 {
+  margin: 0; font-family: var(--font-sans); font-size: 22px; font-weight: 700;
+  letter-spacing: -0.028em; color: var(--navy);
+}
+.annu-titre-filet {
+  width: 46px; height: 2px; border-radius: 1px;
+  background: linear-gradient(90deg, var(--gold-dk), var(--gold-lt));
+}
+.annu-titre p { margin: 2px 0 0; font-size: 13px; color: var(--t2); max-width: 620px; }
+
 /* Barre de tete collante : chercher et filtrer restent accessibles meme
    arrive en bas de la liste. */
 .annu-barre {
@@ -1714,9 +1727,20 @@ a { color: inherit; text-decoration: none; }
 .annu-groupe { display: flex; flex-direction: column; gap: 8px; }
 .annu-groupe-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .annu-groupe-titre {
-  margin: 0; font-family: var(--font-sans); font-size: 14px; font-weight: 700;
-  letter-spacing: -0.01em; color: var(--t1);
+  margin: 0; display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-sans); font-size: 14.5px; font-weight: 700;
+  letter-spacing: -0.015em; color: var(--navy);
 }
+/* Une pastille reprend la teinte du metier : l oeil retrouve sa section sans
+   lire le titre. */
+.annu-groupe-titre::before {
+  content: ''; width: 7px; height: 7px; border-radius: 2px; flex: 0 0 auto;
+  background: var(--gold);
+}
+.annu-teinte-juridique .annu-groupe-titre::before { background: #21406B; }
+.annu-teinte-assurance .annu-groupe-titre::before { background: #4A7A52; }
+.annu-teinte-investissement .annu-groupe-titre::before { background: #2C4A73; }
+.annu-teinte-expertise .annu-groupe-titre::before { background: #5D3A66; }
 .annu-groupe-n {
   min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px;
   display: inline-flex; align-items: center; justify-content: center;
@@ -1728,19 +1752,30 @@ a { color: inherit; text-decoration: none; }
 /* La liste : des lignes separees par un filet, pas des cartes. */
 .annu-liste {
   background: var(--card); border: 1px solid var(--bd);
-  border-radius: var(--rad-lg); box-shadow: var(--sh-xs); overflow: hidden;
+  border-radius: var(--rad-xl); box-shadow: var(--sh-sm); overflow: hidden;
 }
 .annu-rang {
-  display: grid; grid-template-columns: 30px minmax(150px, 1fr) auto;
-  align-items: center; gap: 12px;
-  padding: 8px 14px; border-top: 1px solid var(--bd-soft);
-  transition: background .14s ease;
+  position: relative;
+  display: grid;
+  grid-template-columns: 32px minmax(140px, 1fr) 178px 296px;
+  align-items: center; gap: 13px;
+  padding: 10px 16px; border-top: 1px solid var(--bd-soft);
+  transition: background .16s ease;
 }
 .annu-rang:first-child { border-top: none; }
 .annu-rang:hover { background: var(--bg-subtle); }
+/* Un filet dore se glisse a gauche de la ligne visee : discret, mais la page
+   cesse d etre inerte. */
+.annu-rang::before {
+  content: ''; position: absolute; left: 0; top: 6px; bottom: 6px; width: 2px;
+  border-radius: 0 2px 2px 0; background: var(--gold);
+  opacity: 0; transition: opacity .16s ease;
+}
+.annu-rang:hover::before, .annu-rang:focus-within::before { opacity: 1; }
+.annu-rang:hover .annu-rang-nom { color: var(--navy); }
 
 .annu-avatar {
-  width: 30px; height: 30px; border-radius: 9px;
+  width: 32px; height: 32px; border-radius: 9px;
   display: flex; align-items: center; justify-content: center;
   font-size: 11px; font-weight: 700; letter-spacing: .02em;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
@@ -1758,47 +1793,52 @@ a { color: inherit; text-decoration: none; }
 .annu-rang-role { color: var(--t2); }
 
 /* Coordonnees : chacune un lien qui agit et un bouton qui copie. */
-.annu-rang-coord { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-.annu-coord { display: inline-flex; align-items: center; gap: 3px; }
+.annu-rang-tels, .annu-rang-mails { display: flex; flex-direction: column; gap: 3px; min-width: 0; align-items: flex-start; }
+.annu-coord { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; }
 .annu-lien {
-  display: inline-flex; align-items: center; gap: 7px; min-width: 0; max-width: 240px;
-  height: 28px; padding: 0 10px; border-radius: var(--rad-sm);
-  font-size: 12px; font-weight: 600; text-decoration: none;
-  color: var(--t1); background: var(--bg-subtle); border: 1px solid var(--bd-soft);
+  display: inline-flex; align-items: center; gap: 7px; min-width: 0; max-width: 100%;
+  height: 28px; padding: 0 9px; border-radius: var(--rad-sm);
+  font-size: 12.5px; font-weight: 550; text-decoration: none;
+  color: var(--t1); background: transparent; border: 1px solid transparent;
   transition: background .15s ease, border-color .15s ease;
 }
-.annu-coord.large .annu-lien { max-width: 265px; }
-.annu-lien:hover { background: var(--card); border-color: var(--bd-strong); }
-.annu-lien svg { flex: 0 0 auto; color: var(--t3); transition: color .15s ease; }
-.annu-lien:hover svg { color: var(--t2); }
+/* Le cadre n apparait qu au moment ou l on vise : quarante rectangles gris
+   permanents transformaient l annuaire en formulaire. */
+.annu-lien:hover { background: var(--card); border-color: var(--bd); box-shadow: var(--sh-xs); }
+.annu-lien svg { flex: 0 0 auto; color: var(--gold-dk); opacity: .85; transition: opacity .15s ease; }
+.annu-lien:hover svg { opacity: 1; }
 .annu-lien-val {
   min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   font-variant-numeric: tabular-nums; letter-spacing: .01em;
 }
 .annu-copie {
-  flex: 0 0 auto; width: 28px; height: 28px; border-radius: var(--rad-sm);
+  flex: 0 0 auto; width: 26px; height: 26px; border-radius: var(--rad-sm);
   display: flex; align-items: center; justify-content: center; cursor: pointer;
   color: var(--t3); background: transparent; border: 1px solid transparent;
-  transition: color .15s ease, border-color .15s ease, background .15s ease;
+  opacity: .3; transition: opacity .15s ease, color .15s ease, background .15s ease;
 }
-.annu-copie:hover { color: var(--t1); background: var(--card); border-color: var(--bd-soft); }
+/* Copier reste en retrait pour ne pas charger la page, mais jamais invisible :
+   un geste qu on ne voit pas est un geste que personne n utilise. */
+.annu-rang:hover .annu-copie, .annu-rang:focus-within .annu-copie { opacity: .8; }
+.annu-copie:hover, .annu-copie:focus-visible { opacity: 1; color: var(--t1); background: var(--bg-subtle); }
 
 .annu-astuce {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 11px; font-weight: 550; color: #8A6D1F;
+  display: inline-flex; align-items: center; gap: 5px; align-self: flex-start;
+  margin-top: 3px; font-size: 11px; font-weight: 550; color: #8A6D1F;
   background: var(--gold-subtle); border: 1px solid var(--gold-line);
-  padding: 3px 8px; border-radius: var(--rad-sm);
+  padding: 2px 7px; border-radius: var(--rad-sm); max-width: 100%;
 }
+.annu-astuce span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .annu-renvoi {
   display: inline-flex; align-items: center; gap: 7px;
   height: 28px; padding: 0 11px; cursor: pointer;
-  border: 1px solid var(--gold-line); border-radius: var(--rad-sm);
-  background: var(--gold-subtle);
+  border: 1px solid transparent; border-radius: var(--rad-sm);
+  background: transparent;
   font-family: inherit; font-size: 12px; font-weight: 650; color: #7A5F1B;
   transition: gap .15s ease, background .15s ease, border-color .15s ease;
 }
-.annu-renvoi:hover { gap: 10px; background: #FBF6E9; border-color: var(--gold); }
+.annu-renvoi:hover { gap: 10px; background: var(--gold-subtle); border-color: var(--gold-line); }
 
 /* Un seul repere de focus, celui de la charte (KpiCard). */
 .annu-chip:focus-visible,
@@ -1820,7 +1860,7 @@ a { color: inherit; text-decoration: none; }
    neutre, image entiere visible, jamais deformee ni rognee. */
 .annu-avatar-logo {
   background: var(--card); border: 1px solid var(--bd-soft);
-  padding: 3px; box-shadow: none;
+  padding: 1px; box-shadow: none;
 }
 .annu-avatar-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
 
@@ -1837,10 +1877,13 @@ a { color: inherit; text-decoration: none; }
 .annu-vide-s { margin: 0; font-size: 13px; color: var(--t2); }
 
 /* Ecrans etroits : la ligne se plie en deux, coordonnees sous l identite. */
+@media (max-width: 1180px) {
+  .annu-rang { grid-template-columns: 32px minmax(0,1fr) 178px; }
+  .annu-rang-mails { grid-column: 2 / -1; }
+}
 @media (max-width: 900px) {
-  .annu-rang { grid-template-columns: 30px minmax(0,1fr); row-gap: 8px; }
-  .annu-rang-coord { grid-column: 2 / -1; justify-content: flex-start; }
-  .annu-lien, .annu-coord.large .annu-lien { max-width: 100%; }
+  .annu-rang { grid-template-columns: 32px minmax(0,1fr); row-gap: 8px; }
+  .annu-rang-tels, .annu-rang-mails { grid-column: 2 / -1; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────

@@ -69,6 +69,17 @@ export default function AnnuairePartenaires({ onOuvrirImmobilier }) {
 
   return (
     <div className="annu">
+      {/* Un en-tete court : l identite du cabinet en une ligne, pas en un
+          bandeau qu on fait defiler dix fois par jour. */}
+      <header className="annu-titre">
+        <h1>Le carnet du cabinet</h1>
+        <span className="annu-titre-filet" aria-hidden="true" />
+        <p>
+          Tous les contacts utiles à un dossier, à jour pour toute l’équipe.
+          Appelez, copiez, écrivez : un clic.
+        </p>
+      </header>
+
       {/* ── Barre de tete : elle colle en haut, on garde la recherche et les
              filtres sous la main meme en bas de liste. ─────────────────── */}
       <div ref={sentinelleRef} className="annu-sentinelle" aria-hidden="true" />
@@ -170,20 +181,27 @@ function RangContact({ contact: c }) {
           <span className="annu-rang-societe">{c.societe}</span>
           {c.role ? <span className="annu-rang-role"> · {c.role}</span> : null}
         </span>
+        {c.astuce && (
+          <span className="annu-astuce" title={c.astuce}><IcoInfo /> <span>{c.astuce}</span></span>
+        )}
       </span>
 
-      <span className="annu-rang-coord">
+      {/* Deux colonnes distinctes : sur toutes les lignes, le telephone et
+          l adresse tombent au meme endroit. */}
+      <span className="annu-rang-tels">
         {c.telephones.map((t) => (
           <Coordonnee key={t} valeur={t} href={telHref(t)} icone={<IcoTel />}
             titre={`Appeler ${c.nom}`} libelleCopie="Copier le numéro"
             copie={copie === t} onCopier={() => copier(t)} />
         ))}
+      </span>
+
+      <span className="annu-rang-mails">
         {c.emails.map((e) => (
-          <Coordonnee key={e} valeur={e} href={gmailHref(e)} icone={<IcoMail />} externe large
+          <Coordonnee key={e} valeur={e} href={gmailHref(e)} icone={<IcoMail />} externe
             titre={`Écrire à ${c.nom} dans Gmail`} libelleCopie="Copier l adresse"
             copie={copie === e} onCopier={() => copier(e)} />
         ))}
-        {c.astuce && <span className="annu-astuce" title={c.astuce}><IcoInfo /> {c.astuce}</span>}
       </span>
 
       <span className="annu-sr" role="status" aria-live="polite">
@@ -208,9 +226,9 @@ function Embleme({ societe, nom }) {
   return <span className="annu-avatar" aria-hidden="true">{initialesContact(nom)}</span>
 }
 
-function Coordonnee({ valeur, href, icone, titre, libelleCopie, copie, onCopier, externe, large }) {
+function Coordonnee({ valeur, href, icone, titre, libelleCopie, copie, onCopier, externe }) {
   return (
-    <span className={`annu-coord${large ? ' large' : ''}`}>
+    <span className="annu-coord">
       <a className="annu-lien" href={href} title={titre}
         {...(externe ? { target: '_blank', rel: 'noreferrer' } : {})}>
         {icone} <span className="annu-lien-val">{valeur}</span>
