@@ -843,6 +843,13 @@ a { color: inherit; text-decoration: none; }
   margin-bottom: 0;
 }
 
+/* Rythme vertical entre les lignes d une meme section : sans lui, le libelle
+   d une ligne colle au champ de la ligne precedente. Le titre est le premier
+   enfant, il garde sa propre marge. */
+.form-section > * + * {
+  margin-top: 14px;
+}
+
 .form-section-title {
   font-size: 11px;
   font-weight: 600;
@@ -2096,14 +2103,19 @@ table,
   border-radius: var(--rad-lg, 12px);
 }
 
-/* B3 — sections de formulaire repliables (modale dossier). */
-.form-section {
+/* B3 — sections de formulaire repliables (modale dossier).
+   Classe propre `form-pliable` : ces regles portaient autrefois le nom
+   generique `.form-section`, deja utilise par les sections plates de la
+   modale client. Leur `overflow: hidden` annulait la taille minimale
+   automatique de ces sections, que le conteneur flex du corps de modale
+   ecrasait alors jusqu a masquer les deux tiers des champs. */
+.form-pliable {
   border: 0.5px solid var(--bd);
   border-radius: var(--rad-lg, 12px);
   background: var(--card);
   overflow: hidden;
 }
-.form-section-toggle {
+.form-pliable-bouton {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -2115,15 +2127,15 @@ table,
   font-family: inherit;
   text-align: left;
 }
-.form-section-toggle:disabled { cursor: default; }
-.form-section.is-open .form-section-toggle { border-bottom: 0.5px solid var(--bd); }
-.form-section-toggle-title {
+.form-pliable-bouton:disabled { cursor: default; }
+.form-pliable.is-open .form-pliable-bouton { border-bottom: 0.5px solid var(--bd); }
+.form-pliable-titre {
   font-size: 13px;
   font-weight: 700;
   color: var(--t1);
   letter-spacing: -0.005em;
 }
-.form-section-toggle-hint {
+.form-pliable-resume {
   flex: 1;
   font-size: 12px;
   color: var(--t3);
@@ -2132,17 +2144,17 @@ table,
   white-space: nowrap;
   text-align: right;
 }
-.form-section-chevron {
+.form-pliable-chevron {
   margin-left: auto;
   color: var(--t3);
   transition: transform var(--tr-fast, 120ms ease);
   flex-shrink: 0;
 }
-.form-section-toggle-hint + .form-section-chevron { margin-left: 0; }
-.form-section.is-open .form-section-chevron { transform: rotate(180deg); }
-.form-section-body { padding: 16px; }
+.form-pliable-resume + .form-pliable-chevron { margin-left: 0; }
+.form-pliable.is-open .form-pliable-chevron { transform: rotate(180deg); }
+.form-pliable-corps { padding: 16px; }
 @media (prefers-reduced-motion: reduce) {
-  .form-section-chevron { transition: none; }
+  .form-pliable-chevron { transition: none; }
 }
 
 /* B4 — aperçu client en panneau latéral (pattern Attio). */

@@ -269,18 +269,21 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
 
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ maxWidth: 800, width: '90%' }}>
-        <div className="modal-header">
+      <div className="modal-box" style={{ width: 'min(100%, 820px)' }}>
+        <div className="modal-head">
           <div>
             <div className="modal-title">
               {client ? 'Modifier le client' : 'Nouveau client'}
             </div>
             {client && <div className="modal-subtitle">{client.nom}</div>}
           </div>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Fermer">✕</button>
         </div>
 
-        <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+        {/* Le defilement est porte par .modal-box : lui imposer ici une
+            hauteur maximale ecrasait les sections au lieu de les faire
+            defiler, et rendait les deux tiers des champs inaccessibles. */}
+        <div className="modal-body">
           {/* Legende des pastilles : rappelle les champs obligatoires encore
               vides. N'apparait que s'il en manque au moins un. */}
           {manquantsObligatoires.length > 0 && (
@@ -577,7 +580,7 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
             <div className="form-group">
               <label className="form-label">Notes libres</label>
               <textarea
-                className="form-input"
+                className="form-textarea"
                 value={form.notes}
                 onChange={e => set('notes', e.target.value)}
                 placeholder="Notes sur le client, ses besoins, historique..."
@@ -587,7 +590,7 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
           </div>
         </div>
 
-        <div className="modal-footer">
+        <div className="modal-foot">
           <button className="btn btn-secondary" onClick={onClose} disabled={loading}>
             Annuler
           </button>

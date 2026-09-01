@@ -22,23 +22,23 @@ export default function FormSection({ title, hint, defaultOpen = true, forceOpen
   const [open, setOpen] = useState(defaultOpen)
   const isOpen = forceOpen || open
   return (
-    <div className={`form-section${isOpen ? ' is-open' : ''}`}>
+    <div className={`form-pliable${isOpen ? ' is-open' : ''}`}>
       <button
         type="button"
-        className="form-section-toggle"
+        className="form-pliable-bouton"
         aria-expanded={isOpen}
         onClick={() => setOpen(!isOpen)}
         disabled={forceOpen}
       >
-        <span className="form-section-toggle-title">{title}</span>
-        {hint && !isOpen ? <span className="form-section-toggle-hint">{hint}</span> : null}
+        <span className="form-pliable-titre">{title}</span>
+        {hint && !isOpen ? <span className="form-pliable-resume">{hint}</span> : null}
         {!forceOpen && (
-          <svg className="form-section-chevron" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+          <svg className="form-pliable-chevron" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
             <path d="M4 5.5l3 3 3-3" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         )}
       </button>
-      {isOpen && <div className="form-section-body">{children}</div>}
+      {isOpen && <div className="form-pliable-corps">{children}</div>}
     </div>
   )
 }

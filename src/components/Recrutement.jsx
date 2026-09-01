@@ -448,7 +448,7 @@ function AddCandidateModal({ onClose, onCreated }) {
           </div>
           <div>
             <label className="form-label">Notes</label>
-            <textarea className="form-input" rows={3} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
+            <textarea className="form-textarea" rows={3} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
             <button type="button" className="btn btn-ghost" onClick={onClose}>Annuler</button>
@@ -672,7 +672,7 @@ function CandidateDetailModal({ candidate: initial, onClose, onUpdated, onDelete
                   {candidate.notes}
                 </div>
               )}
-              <textarea className="form-input" rows={3} value={newNote} onChange={e => setNewNote(e.target.value)}
+              <textarea className="form-textarea" rows={3} value={newNote} onChange={e => setNewNote(e.target.value)}
                 placeholder={candidate.notes ? 'Ajouter / modifier les notes…' : 'Première impression…'} />
               <div style={{ marginTop: 8, textAlign: 'right' }}>
                 <button className="btn btn-sm btn-primary" onClick={saveNote} disabled={!newNote.trim() || saving}>

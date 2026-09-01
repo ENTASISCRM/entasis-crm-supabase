@@ -193,10 +193,10 @@ function ObjectiveModal({show, objective, onSave, onClose, weekNumber, year, sug
   if (!show) return null
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal">
-        <div className="modal-header">
-          <h3>Définir l'objectif pour la semaine {weekNumber} - {year}</h3>
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal-box">
+        <div className="modal-head">
+          <div className="modal-title">Objectif de la semaine {weekNumber} · {year}</div>
           <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
@@ -254,7 +254,7 @@ function ObjectiveModal({show, objective, onSave, onClose, weekNumber, year, sug
             />
           </div>
         </div>
-        <div className="modal-footer">
+        <div className="modal-foot">
           <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
           <button className="btn btn-gold" onClick={() => onSave(tempObjective)}>Sauvegarder</button>
         </div>
