@@ -15,7 +15,7 @@ il reste net sur tous les ecrans.
 | --- | --- |
 | Althera Patrimoine | `althera-patrimoine.svg` |
 | Francois 1er | `francois-1er.svg` |
-| Notaire partenaire | `notaire-partenaire.svg` |
+| Notaire partenaire | `notaire-partenaire.svg` fourni |
 | Harlay Avocat | `harlay-avocat.svg` |
 | SwissLife | `swisslife.svg` |
 | April | `april.svg` |
@@ -26,7 +26,7 @@ il reste net sur tous les ecrans.
 | Wemo Reim | `wemo-reim.svg` |
 | SCPI Log In | `scpi-log-in.svg` |
 | SCPI Reason MNK | `scpi-reason-mnk.svg` |
-| Adezio | `adezio.svg` |
+| ASIO (Hugo Busuttil) | `asio.png` fourni |
 
 ## Preparer un logo telecharge
 
