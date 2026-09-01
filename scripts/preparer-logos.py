@@ -16,6 +16,10 @@ Les fichiers prets sont ecrits dans src/assets/logos/, ou l application
 les recense automatiquement.
 """
 
+# Le python livre avec macOS est en 3.9 : sans cette ligne, l annotation
+# « str | None » plus bas fait echouer le script des son chargement.
+from __future__ import annotations
+
 import sys
 from pathlib import Path
 

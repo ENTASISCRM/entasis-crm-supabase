@@ -124,8 +124,9 @@ export const CONTACTS_ANNUAIRE = [
   },
 
   // ── Solutions d investissement ──────────────────────────────────────────
-  // Asselio se presente sous la marque Abeille Assurances : c est ce logo
-  // qui habille ses lignes (confirme par Louis le 31/08/2026).
+  // Asselio distribue sous la marque Abeille Assurances, mais ce sont ses
+  // lignes a elle : c est le signe Asselio qui les habille, pas celui
+  // d Abeille (arbitre par Louis le 01/09/2026).
   {
     categorie: 'investissement',
     societe: 'Asselio',
