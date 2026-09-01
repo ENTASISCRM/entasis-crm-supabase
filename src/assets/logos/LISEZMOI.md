@@ -11,22 +11,25 @@ minuscules, accents retires, espaces et ponctuation remplaces par des
 tirets. Extension au choix : svg, png, jpg ou webp. Le svg est preferable,
 il reste net sur tous les ecrans.
 
-| Societe dans l annuaire | Fichier attendu |
-| --- | --- |
-| Althera Patrimoine | `althera-patrimoine.svg` |
-| Francois 1er | `francois-1er.svg` |
-| Notaire partenaire | `notaire-partenaire.svg` fourni |
-| Harlay Avocat | `harlay-avocat.svg` |
-| SwissLife | `swisslife.svg` |
-| April | `april.svg` |
-| Generali | `generali.svg` |
-| Asselio | `asselio.svg` (logo Abeille Assurances, la marque de la maison) |
-| Irbis | `irbis.svg` |
-| I Kapital | `i-kapital.svg` |
-| Wemo Reim | `wemo-reim.svg` |
-| SCPI Log In | `scpi-log-in.svg` |
-| SCPI Reason MNK | `scpi-reason-mnk.svg` |
-| ASIO (Hugo Busuttil) | `asio.png` fourni |
+| Societe dans l annuaire | Fichier | Provenance |
+| --- | --- | --- |
+| Althera Patrimoine | `althera-patrimoine.png` | logo secondaire carre du site |
+| April | `april.png` | pack officiel du groupe, symbole seul |
+| ASIO (Hugo Busuttil) | `asio.png` | fourni par la maison, revectorise |
+| Asselio | `asselio.png` | signe de la charte 2025 |
+| Francois 1er | `francois-1er.png` | icone officielle du site |
+| Generali | `generali.png` | lion seul, sans le mot |
+| Harlay Avocat | `harlay-avocat.png` | signe carre du site, aux couleurs de la maison |
+| I Kapital | `i-kapital.png` | monogramme seul de l en tete |
+| Irbis | `irbis.png` | icone officielle du site |
+| Notaire partenaire | `notaire-partenaire.svg` | monogramme de l etude Cedric Deplano |
+| SCPI Log In | `scpi-log-in.png` | signe de Theoreim, societe de gestion |
+| SCPI Reason MNK | `scpi-reason-mnk.png` | signe de MNK Partners |
+| SwissLife | `swisslife.png` | le swoosh seul, sans le mot |
+| Wemo Reim | `wemo-reim.png` | signe carre du site |
+
+Les quatorze maisons de l annuaire ont leur logo. Un nouveau partenaire
+suffit a deposer son fichier ici, sans toucher au code.
 
 ## Preparer un logo telecharge
 
@@ -48,5 +51,11 @@ la source avant de lancer le script, ou renommer la sortie ensuite.
 * Fond transparent de preference, le cadre est deja dessine par le CRM.
 * Demander son kit de marque au partenaire donne le meilleur rendu et
   vaut autorisation d usage.
+* Deux pieges rencontres en preparant les douze derniers. Un logo qui
+  porte le nom de la maison ecrit a cote devient illisible dans 32 pixels :
+  prendre le symbole seul quand il existe, quitte a le decouper. Et un
+  fichier dont le fond fait partie de la marque, le disque bleu nuit
+  d Irbis ou le carre de Wemo Reim, ne doit pas passer par le detourage,
+  qui le viderait de sa couleur : le deposer tel quel.
 * Aucun fichier n est obligatoire. Sans logo, la ligne garde son
   monogramme et reste parfaitement lisible : les deux formats cohabitent.
