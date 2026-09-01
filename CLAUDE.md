@@ -210,3 +210,9 @@ avoir.** Ils ont été transmis par message et par courriel uniquement.
 `docs/plan_amelioration.md` : l'inventaire de l'existant, un comparatif de
 vingt deux CRM et un plan de vingt quatre améliorations priorisées. À lire
 avant de proposer une nouvelle fonctionnalité, la réflexion est déjà faite.
+
+`docs/architecture-detaillee.md` : la description technique complète du CRM,
+écrans, tables, services. Elle vivait à la racine sous le nom `claude.md`,
+qui entrait en collision avec ce fichier ci sur un disque insensible à la
+casse : git signalait en permanence neuf cent soixante huit lignes
+supprimées, et un `git commit -a` les aurait perdues.
