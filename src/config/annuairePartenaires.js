@@ -135,9 +135,14 @@ export const CONTACTS_ANNUAIRE = [
     telephones: ['06 09 45 64 50'],
     emails: ['sebastien.pesce@asseliopartenaires.com', 'contact@asseliopartenaires.com'],
   },
+  // Julien Renversé travaille chez François 1er, pas chez Asselio : il
+  // figurait dans l annuaire Asselio qui a servi de source, d ou la
+  // confusion (corrige par Louis le 01/09/2026). Il reste classe en
+  // solutions d investissement, le Girardin industriel n etant pas un
+  // dossier immobilier.
   {
     categorie: 'investissement',
-    societe: 'Asselio',
+    societe: 'François 1er',
     nom: 'Julien Renversé',
     role: 'Loi Girardin industriel',
     telephones: ['06 46 00 67 75'],
