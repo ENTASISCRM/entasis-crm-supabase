@@ -269,17 +269,36 @@ input:focus {
 
 ### Modales
 
+Quatre classes, dans cet ordre exact. Ce sont les seuls noms definis dans
+`styles.css` : `.modal`, `.modal-backdrop`, `.modal-header`, `.modal-footer`
+et `.modal-close` n'existent pas et laissent la boite sans fond ni cadre.
+
+```html
+<div class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-head">…titre + bouton fermer…</div>
+    <div class="modal-body">…contenu…</div>
+    <div class="modal-foot">…boutons…</div>
+  </div>
+</div>
+```
+
 ```css
-.modal-backdrop {
+.modal-overlay {
   background: rgba(0,0,0,0.35);
   backdrop-filter: blur(20px);
 }
-.modal {
-  background: var(--paper);
+.modal-box {
+  background: var(--card);
   border-radius: var(--rad-3xl);
   box-shadow: var(--sh-lg);
+  max-height: 90vh;
+  overflow-y: auto;   /* le defilement vit ici, jamais sur .modal-body */
 }
 ```
+
+`.modal-body` est un conteneur flex en colonne. Ne jamais lui poser de
+hauteur maximale : ses enfants seraient ecrases au lieu de defiler.
 
 ### Pills / Badges
 
