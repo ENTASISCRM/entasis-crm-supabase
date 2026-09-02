@@ -52,6 +52,7 @@ const ManagementView = lazy(() => import('./components/ManagementView'))
 const UcsStructures = lazy(() => import('./components/UcsStructures'))
 const AllocationsTypes = lazy(() => import('./components/AllocationsTypes'))
 const ClientsView = lazy(() => import('./components/clients/ClientsView'))
+const RattrapageFiches = lazy(() => import('./components/clients/RattrapageFiches'))
 const ClientView = lazy(() => import('./components/clients/ClientView'))
 // Conformite embarque jspdf : lazy pour rester hors du bundle de login.
 const Conformite = lazy(() => import('./components/Conformite'))
@@ -4708,7 +4709,7 @@ export default function App(){
         setActiveTab(tab)
         if (tab === 'clients') {
           if (parts[1] === 'c' && parts[2]) { setSelectedClientId(parts[2]); setClientsVue('annuaire') }
-          else { setSelectedClientId(null); setClientsVue(parts[1] === 'dossiers' ? 'dossiers' : 'annuaire') }
+          else { setSelectedClientId(null); setClientsVue(parts[1] === 'dossiers' ? 'dossiers' : parts[1] === 'rattrapage' ? 'rattrapage' : 'annuaire') }
         }
       }
       // Libéré après le commit du batch : l'effet écrivain (ci-dessous) voit
@@ -4727,6 +4728,7 @@ export default function App(){
     if (activeTab === 'clients') {
       if (selectedClientId) next = '#/clients/c/' + encodeURIComponent(selectedClientId)
       else if (clientsVue === 'dossiers') next = '#/clients/dossiers'
+      else if (clientsVue === 'rattrapage') next = '#/clients/rattrapage'
       else next = '#/clients'
     }
     if (window.location.hash !== next) {
@@ -5424,6 +5426,9 @@ export default function App(){
           {activeTab==='pilotage-rh'&&(isManager||isRhDelegue)&&<PilotageRH profile={profile}/>}
           {activeTab==='recrutement'&&(isManager||isRhDelegue)&&<Recrutement/>}
           {activeTab==='pipeline'&&<PipelineBoard deals={deals} month={month} profile={profile} onEdit={startEdit} onQuickPatch={quickPatchDeal}/>}
+          {/* D6 : rattrapage des fiches sans prenom, direction seulement ; la
+              RLS reste le vrai verrou sur chaque ecriture. */}
+          {activeTab==='clients'&&!selectedClientId&&clientsVue==='rattrapage'&&isManager&&<RattrapageFiches profile={profile}/>}
           {activeTab==='clients'&&!selectedClientId&&clientsVue==='dossiers'&&<DealsTable deals={deals} month={month} profile={profile} onEdit={startEdit} onDelete={deleteDeal} onRefresh={loadAll} onQuickPatch={quickPatchDeal} onSelectClient={(clientId) => {
             setSelectedClientId(clientId)
             setClientsVue('annuaire')
