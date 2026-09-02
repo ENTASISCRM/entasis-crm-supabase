@@ -92,6 +92,25 @@ export const LEADS = [
   { id: 'l3', nom: 'Lead Collègue', telephone: '0611000003', email: null, campagne: 'SCPI', status: 'taken', taken_by: 'u-temoin', taken_at: ilYA(3), booked_at: ilYA(2), email_confirmed: 'false', created_at: ilYA(4), updated_at: ilYA(2) },
 ]
 
+// ── Smart RH : une demande a valider, pour voir la file de decision ────────
+// Le conge payé en attente sert au geste « En sans solde » de la direction.
+export const CONGES = [
+  {
+    id: 'cg1', demandeur_id: 'u-conseiller', demandeur_nom: 'Conseiller Démo', advisor_code: 'DEMO',
+    type: 'Congé payé', date_debut: dateDuMois(MOIS_COURANT, 21), date_fin: dateDuMois(MOIS_COURANT, 25),
+    demi_journee: false, motif: 'Vacances en famille', statut: 'en_attente',
+    decision_par: null, decision_le: null, decision_motif: null, created_at: ilYA(2),
+    contre_date_debut: null, contre_date_fin: null, contre_demi_journee: null, contre_message: null,
+  },
+  {
+    id: 'cg2', demandeur_id: 'u-temoin', demandeur_nom: 'Conseiller Témoin', advisor_code: 'TEMO',
+    type: 'Maladie', date_debut: dateDuMois(MOIS_COURANT, 8), date_fin: dateDuMois(MOIS_COURANT, 9),
+    demi_journee: false, motif: null, statut: 'valide',
+    decision_par: 'Direction Démo', decision_le: ilYA(5), decision_motif: null, created_at: ilYA(6),
+    contre_date_debut: null, contre_date_fin: null, contre_demi_journee: null, contre_message: null,
+  },
+]
+
 // ── Campagnes ciblees : une campagne en cours, une cible pour le conseiller ─
 export const CAMPAGNES = [{
   id: 'cp1', nom: 'Prévoyance TNS', criteres: { statuts: ['TNS'], famillesAbsentes: ['prevoyance'] },
@@ -261,6 +280,7 @@ export async function pageDemo(browser, { role = 'conseiller' } = {}) {
     leads: LEADS,
     campagnes: CAMPAGNES,
     campagne_cibles: CIBLES,
+    rh_conges: CONGES,
   }
   const rpcs = {
     team_directory: equipe,

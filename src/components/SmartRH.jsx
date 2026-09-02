@@ -534,14 +534,30 @@ export default function SmartRH({ profile, rhDelegue = false }) {
       await reload()
     } catch (e) { toast.error(messageErreur(e)) } finally { setSaving(false) }
   }
-  async function decider(c, statut) {
+  async function decider(c, statut, { type } = {}) {
     let dmotif = null
     if (statut === 'refuse') {
       dmotif = window.prompt(`Refuser la demande de ${c.demandeur_nom || 'ce collaborateur'}. Motif (facultatif) :`, '')
       if (dmotif === null) return
     }
+    // Requalifier une demande change ce qui sera payé : on le fait dire.
+    if (type && type !== c.type) {
+      const qui = c.demandeur_nom || 'ce collaborateur'
+      const ok = await confirmDialog({
+        title: `Valider en « ${type} » ?`,
+        message: `La demande de ${qui} était un ${c.type.toLowerCase()}. Validée en ${type.toLowerCase()}, elle n entame plus le solde de congés et ces jours ne sont pas rémunérés. ${qui} verra le changement sur sa demande.`,
+        confirmLabel: `Valider en ${type.toLowerCase()}`,
+      })
+      if (!ok) return
+      dmotif = `Requalifié en ${type.toLowerCase()} à la validation`
+    }
     setSaving(true)
-    try { await decideConge(c.id, statut, profile?.full_name || 'Direction', dmotif); toast.success(statut === 'valide' ? 'Congé validé' : 'Demande refusée'); notifierRH('decision', { ...c, statut, decision_motif: dmotif }); await reload() }
+    try {
+      await decideConge(c.id, statut, profile?.full_name || 'Direction', dmotif, { type })
+      toast.success(statut !== 'valide' ? 'Demande refusée' : (type && type !== c.type ? `Validé en ${type.toLowerCase()}` : 'Congé validé'))
+      notifierRH('decision', { ...c, type: type || c.type, statut, decision_motif: dmotif })
+      await reload()
+    }
     catch (e) { toast.error(messageErreur(e)) } finally { setSaving(false) }
   }
   function ouvrirContre(c) {
@@ -667,7 +683,7 @@ export default function SmartRH({ profile, rhDelegue = false }) {
                 <div className="rmain">
                   <div className="rl1">{c.type} {badge(c.statut)}</div>
                   <div className="rl2">{c.demi_journee ? `${fmt(c.date_debut)} (demi-journée)` : `${fmt(c.date_debut)} au ${fmt(c.date_fin)}`} · {fmtJours(nbJoursAffiche(c))}{c.type === 'Congé payé' ? ' décomptés' : ''}</div>
-                  {c.statut === 'refuse' && c.decision_motif && <div className="rmotif">Motif : {c.decision_motif}</div>}
+                  {c.decision_motif && (c.statut === 'refuse' || c.statut === 'valide') && <div className="rmotif">{c.statut === 'refuse' ? 'Motif : ' : ''}{c.decision_motif}</div>}
                   {c.statut === 'contre_proposee' && (
                     <div className="cpprop">
                       La direction propose plutôt : <b>{c.contre_demi_journee
@@ -766,6 +782,13 @@ export default function SmartRH({ profile, rhDelegue = false }) {
                     </div>
                     <div className="ract">
                       <button className="ok" disabled={saving} onClick={() => decider(c, 'valide')}>Valider</button>
+                      {/* Requalifier plutôt que refuser : utile quand le solde
+                          ne couvre pas la demande. Seul un congé payé entame
+                          le solde, donc seul lui a besoin de cette sortie. */}
+                      {c.type === 'Congé payé' && (
+                        <button className="ss" disabled={saving} title="Valider ces dates, mais en congé sans solde : le solde n est pas entamé et ces jours ne sont pas rémunérés"
+                          onClick={() => decider(c, 'valide', { type: 'Sans solde' })}>En sans solde</button>
+                      )}
                       <button className="cp" disabled={saving} onClick={() => (cpPour === c.id ? setCpPour(null) : ouvrirContre(c))}>Autres dates</button>
                       <button className="ko" disabled={saving} onClick={() => decider(c, 'refuse')}>Refuser</button>
                     </div>
@@ -1005,6 +1028,8 @@ const styles = `
 .srh .row.contre_proposee{ border-left-color:#5B4B8A }
 .srh .stag.contre_proposee{ background:#EDE7F8; color:#5B4B8A }
 .srh .ract .cp{ background:#fff; color:#5B4B8A; border:1px solid #C9BEEB; border-radius:8px; padding:7px 12px; font-size:12px; font-weight:700; cursor:pointer }
+.srh .ract .ss{ background:#fff; color:var(--gold-dk); border:1px solid #E4D5B0; border-radius:8px; padding:7px 12px; font-size:12px; font-weight:700; cursor:pointer }
+.srh .ract .ss:hover{ background:var(--gold-dk); color:#fff }
 .srh .ract .cp:hover{ background:#5B4B8A; color:#fff }
 .srh .cpform{ background:#F6F4FC; border:1px solid #DCD4EE; border-radius:11px; padding:12px 14px; margin:0 0 8px }
 .srh .cptit{ font-size:12px; font-weight:750; color:#5B4B8A; margin-bottom:8px }

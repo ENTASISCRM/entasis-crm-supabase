@@ -48,14 +48,24 @@ export async function createCongeDirection({ demandeur_id, demandeur_nom, adviso
   if (error) throw error
 }
 
-// Décision de la direction : valide ou refuse (motif conseillé sur un refus).
-export async function decideConge(id, statut, decision_par, decision_motif) {
-  const { data, error } = await supabase.from('rh_conges').update({
+/**
+ * Décision de la direction : valide ou refuse (motif conseillé sur un refus).
+ *
+ * `type` requalifie la demande au moment de la décision : un congé payé
+ * demandé par quelqu un qui n a plus de solde se valide en « Sans solde »
+ * plutôt que de creuser le négatif, sans obliger le salarié à reposer sa
+ * demande. Le type décide du décompte (seul « Congé payé » entame le solde),
+ * la RLS n autorise ce chemin qu à la direction.
+ */
+export async function decideConge(id, statut, decision_par, decision_motif, { type } = {}) {
+  const patch = {
     statut,
     decision_par: decision_par || null,
     decision_le: new Date().toISOString(),
     decision_motif: decision_motif || null,
-  }).eq('id', id).select('id')
+  }
+  if (type) patch.type = type
+  const { data, error } = await supabase.from('rh_conges').update(patch).eq('id', id).select('id')
   verifierEcriture({ data, error }, 'Décision sur la demande', MOTIF_DROITS)
 }
 
