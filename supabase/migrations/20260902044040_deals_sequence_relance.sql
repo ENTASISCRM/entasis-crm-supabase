@@ -4,7 +4,8 @@
 -- portent l etape courante. Colonnes nullables, aucune valeur existante
 -- modifiee, aucun changement de RLS (les policies update de deals
 -- couvrent deja ces colonnes).
--- Appliquee en production le 1er septembre 2026.
+-- Appliquee en production le 2 septembre 2026 (04h40 UTC). Le nom du fichier
+-- porte la version enregistree dans supabase_migrations.schema_migrations.
 alter table public.deals
   add column if not exists sequence_key text,
   add column if not exists sequence_etape integer;

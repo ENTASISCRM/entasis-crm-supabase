@@ -4,7 +4,8 @@
 -- propre a la creation : espaces multiples reduits, premiere lettre de chaque
 -- mot en majuscule, particules en minuscule, un mot deja tout en majuscules
 -- (au moins deux lettres) conserve tel quel, accents intacts.
--- Appliquee en production le 1er septembre 2026.
+-- Appliquee en production le 2 septembre 2026 (04h42 UTC). Le nom du fichier
+-- porte la version enregistree dans supabase_migrations.schema_migrations.
 
 create or replace function public.normaliser_nom_complet(texte text)
 returns text

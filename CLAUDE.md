@@ -30,7 +30,7 @@ Trois commandes, dans cet ordre. Aucune ne doit régresser :
 
 ```
 npx eslint src/          # un avertissement préexistant, zéro erreur attendue
-npx vitest run           # 596 tests
+npx vitest run           # 608 tests
 npx vite build
 ```
 
@@ -187,7 +187,14 @@ dans le bandeau et rappelées dans la confirmation avant d'écrire ; trois
 angles morts de la séparation des noms sont fermés (une société comme
 « SCI Les Oliviers » ne reçoit plus de prénom, un nom à particule collée en
 tête garde son nom entier, un libellé qui finit par une particule n'est
-jamais coché d'avance). L'écran a maintenant son test et sa capture.
+jamais coché d'avance). L'écran a maintenant son test et sa capture. La synthèse finale a encore
+donné trois points, traités depuis : un dossier dont la clé de séquence
+est posée sans étape le dit à l'écran au lieu d'afficher trois étapes
+muettes ; **le nom d'un fichier de migration porte désormais la version
+réellement enregistrée en base** (les quatre fichiers du jour étaient
+datés à la main et auraient été rejoués par un `supabase db push`) ; le
+choix de figer la cible de campagne sur le conseiller principal est écrit
+dans la migration.
 
 Ce que l'audit a mis en évidence sans correctif de code :
 
@@ -257,6 +264,19 @@ première connexion ; la Lead Room a ses propres comptes.
 
 **Aucun mot de passe ne figure dans ce dépôt, et il ne doit jamais y en
 avoir.**
+
+### Deux règles retenues de l'audit
+
+* **Une mise à jour de masse dans une migration ne doit pas compter comme
+  un mouvement.** Désactiver `trg_deals_updated_at` le temps de l'UPDATE
+  (`alter table deals disable trigger trg_deals_updated_at`, puis `enable`),
+  sinon tous les dossiers touchés sortent du bloc « sans mouvement » pour
+  vingt et un jours, puis y reviennent le même matin.
+* **Le nom d'un fichier de migration doit porter la version enregistrée
+  dans `supabase_migrations.schema_migrations`**, pas une date choisie à la
+  main. Sinon la migration est rejouée. Vérifier après chaque application :
+  `select version, name from supabase_migrations.schema_migrations order by
+  version desc limit 5`.
 
 ### Une leçon sur les tâches programmées
 

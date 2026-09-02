@@ -9,6 +9,13 @@
 --
 -- RLS : tout le cabinet lit les campagnes ; seule la direction les cree ;
 -- un conseiller ne voit et ne met a jour que ses propres cibles.
+--
+-- Point de design assume, releve par l audit du 2 septembre : la cible porte
+-- le code du conseiller PRINCIPAL fige au lancement. Un co conseiller de la
+-- fiche ne la voit donc pas, et une fiche qui change de main apres le
+-- lancement laisse sa cible a l ancien conseiller. C est voulu : une campagne
+-- est un lot de travail attribue une fois, pas une vue vivante du
+-- portefeuille. Pour reattribuer, la direction cloture et relance.
 -- Appliquee en production le 2 septembre 2026.
 
 create table if not exists public.campagnes (

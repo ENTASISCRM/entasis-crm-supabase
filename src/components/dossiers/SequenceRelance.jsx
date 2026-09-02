@@ -113,6 +113,10 @@ export default function SequenceRelance({ deal, set, today = jourISO() }) {
   // Avec séquence : le gabarit, ses étapes, et la sortie.
   const gabarit = gabaritDe(deal.sequence_key)
   const etapes = etapesDe(deal, today)
+  // Une clé posée sans numéro d'étape valable (sauvegarde partielle, ligne
+  // écrite à la main) : aucune étape n'est en cours, la séquence n'avance
+  // plus. On le dit au lieu d'afficher trois étapes « à venir » muettes.
+  const sansEtapeCourante = etapes.length > 0 && !etapes.some((e) => e.etat === 'en_cours')
   const boutonArreter = (
     <button
       type="button"
@@ -149,7 +153,9 @@ export default function SequenceRelance({ deal, set, today = jourISO() }) {
         {etapes.map((e) => <Etape key={e.numero} etape={e} />)}
       </div>
       <div className="form-hint">
-        L’étape suivante s’arme quand l’action en cours est marquée faite dans « Ma journée ». Aucun email n’est envoyé.
+        {sansEtapeCourante
+          ? 'Aucune étape en cours sur ce dossier : la séquence ne s’armera pas. Arrêtez la séquence puis choisissez la de nouveau pour repartir de l’étape 1.'
+          : 'L’étape suivante s’arme quand l’action en cours est marquée faite dans « Ma journée ». Aucun email n’est envoyé.'}
       </div>
     </div>
   )
