@@ -30,7 +30,7 @@ Trois commandes, dans cet ordre. Aucune ne doit régresser :
 
 ```
 npx eslint src/          # un avertissement préexistant, zéro erreur attendue
-npx vitest run           # 587 tests
+npx vitest run           # 596 tests
 npx vite build
 ```
 
@@ -176,6 +176,18 @@ l'autre) ; l'échappement CSV vit dans un seul module (`src/lib/csv-format.js`)
 partagé par tous les exports ; la suppression de rattrapage d'une campagne
 à moitié écrite est vérifiée ; la liste blanche de la saisie en ligne
 (`nettoyerCompletion`) est dans la lib et testée.
+
+Le premier audit a rendu ses derniers verdicts en fin de journée : vingt
+sept constats confirmés, vingt deux réfutés, la plupart parce que le
+correctif était déjà en ligne. Trois points restaient ouverts sur les
+**fiches à rattraper**, corrigés depuis : une ligne retouchée à la main
+porte désormais la puce « corrigée » et non plus le jugement de
+l'heuristique ; les fiches cochées que la recherche masque sont comptées
+dans le bandeau et rappelées dans la confirmation avant d'écrire ; trois
+angles morts de la séparation des noms sont fermés (une société comme
+« SCI Les Oliviers » ne reçoit plus de prénom, un nom à particule collée en
+tête garde son nom entier, un libellé qui finit par une particule n'est
+jamais coché d'avance). L'écran a maintenant son test et sa capture.
 
 Ce que l'audit a mis en évidence sans correctif de code :
 

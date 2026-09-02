@@ -31,6 +31,30 @@ const APOSTROPHES = /['’]/
 // aucune heuristique ne sait ou est le prenom, la proposition ne doit jamais
 // etre precochee. Sur les 27 fiches « sures » du 2 septembre, 4 auraient recu
 // « Mme » ou « M et Mme » comme prenom.
+// Une personne morale n'a ni prenom ni nom : la separer n a aucun sens, et la
+// regle des majuscules ferait de « SCI » un nom de famille avec « Les Oliviers »
+// comme prenom, en confiance haute donc precoche. Aucune fiche de cette forme
+// en base au 2 septembre, la garde est preventive.
+const FORMES_JURIDIQUES = new Set([
+  'sci', 'sarl', 'sas', 'sasu', 'eurl', 'scp', 'scm', 'selarl', 'selas', 'snc', 'sa', 'sca',
+  'gie', 'scpi', 'sccv', 'holding', 'association', 'indivision', 'succession', 'copropriete',
+])
+export function estPersonneMorale(liste) {
+  return liste.some((m) => FORMES_JURIDIQUES.has(
+    String(m).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z]/g, ''),
+  ))
+}
+
+// Une particule « collee » porte deja le nom (« d'Alembert », « d'Ormesson »),
+// contrairement a une particule nue (« de », « van ») qui annonce le mot
+// suivant. Sans cette distinction, « D'Alembert Jean » donnait un nom complet
+// et aucun prenom.
+function estParticuleCollee(mot) {
+  const m = String(mot ?? '')
+  const [tete, ...reste] = m.toLowerCase().split(APOSTROPHES)
+  return reste.length > 0 && tete === 'd' && reste.join('').length > 0
+}
+
 const CIVILITES = new Set(['m', 'm.', 'mr', 'mr.', 'mme', 'mme.', 'mlle', 'mlle.', 'monsieur', 'madame', 'mademoiselle', 'dr', 'dr.', 'me', 'pr', 'pr.'])
 const CONJONCTIONS = new Set(['et', '&', '/', 'ou'])
 export function contientCiviliteOuCouple(liste) {
@@ -127,6 +151,8 @@ export function normaliserNomComplet(texte) {
  *
  * Heuristiques, dans cet ordre :
  *  1. vide ou un seul mot : pas de prenom, faible ;
+ *  1 bis. une civilite, un couple ou une forme juridique (SCI, SARL...) :
+ *     aucune separation proposee, faible, jamais precoche ;
  *  2. un mot tout en majuscules d au moins deux lettres est le nom, le
  *     reste le prenom, quel que soit l ordre (« MOREL Hyppolite ») : haute ;
  *  3. une particule est detectee : tout ce qui la suit est le nom
@@ -157,6 +183,15 @@ export function separerNomComplet(texte) {
     }
   }
 
+  if (estPersonneMorale(liste)) {
+    return {
+      prenom: '',
+      nom: liste.join(' '),
+      confiance: 'faible',
+      raison: 'Société ou groupement détecté, pas de prénom à extraire',
+    }
+  }
+
   // 2. Les mots tout en majuscules forment le nom, sauf si tout est en
   //    majuscules (aucun indice, on retombe sur l ordre des mots).
   const majuscules = liste.filter(estToutMajuscule)
@@ -172,15 +207,32 @@ export function separerNomComplet(texte) {
   // 3. Une particule annonce le nom : tout ce qui suit lui appartient.
   const indexParticule = liste.findIndex(estParticule)
   if (indexParticule > 0) {
+    // Une particule nue en dernier mot n annonce rien (« Jean de ») : le nom
+    // se reduirait a la particule. Proposition rendue, mais jamais precochee.
+    const nue = !estParticuleCollee(liste[indexParticule])
+    const sansSuite = nue && indexParticule === liste.length - 1
     return {
       prenom: liste.slice(0, indexParticule).join(' '),
       nom: liste.slice(indexParticule).join(' '),
-      confiance: 'haute',
-      raison: `Particule « ${liste[indexParticule]} » détectée`,
+      confiance: sansSuite ? 'faible' : 'haute',
+      raison: sansSuite
+        ? `Se termine par la particule « ${liste[indexParticule]} », nom incomplet`
+        : `Particule « ${liste[indexParticule]} » détectée`,
     }
   }
   if (indexParticule === 0) {
-    // Le libelle commence par la particule : le nom est la chaine de
+    // Une particule collee en tete est deja le nom entier (« D'Alembert
+    // Jean ») : le reste est le prenom, dans un ordre inverse donc probable
+    // et non certain.
+    if (estParticuleCollee(liste[0])) {
+      return {
+        prenom: liste.slice(1).join(' '),
+        nom: liste[0],
+        confiance: 'moyenne',
+        raison: 'Nom à particule collée en tête, prénom ensuite',
+      }
+    }
+    // Le libelle commence par une particule nue : le nom est la chaine de
     // particules plus le mot qui suit, et ce qui reste, s il y a quelque
     // chose, est le prenom (« de La Fontaine Paulin »).
     let fin = 0

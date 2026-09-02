@@ -10,6 +10,11 @@
 //
 // Rien ici ne contourne la RLS : chaque ecriture passe par
 // appliquerSeparations, qui signale une fiche refusee au lieu de la compter.
+//
+// Deux garde fous ajoutes apres l audit du 2 septembre : une ligne retouchee
+// a la main passe en puce « corrigée » (l heuristique ne repond plus d elle),
+// et les fiches cochees que la recherche masque sont comptees avant l ecriture,
+// dans le bandeau et dans la confirmation.
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { useEffect, useMemo, useState } from 'react'
@@ -28,6 +33,9 @@ const CONFIANCE = {
   haute: { label: 'sûre', couleur: '#1B7A3E', fond: 'rgba(52,199,89,0.12)' },
   moyenne: { label: 'probable', couleur: '#8A5300', fond: 'rgba(255,149,0,0.12)' },
   faible: { label: 'à vérifier', couleur: '#B4453B', fond: 'rgba(180,69,59,0.10)' },
+  // Une ligne retouchee a la main ne porte plus le jugement de l heuristique :
+  // c est la personne qui repond de la separation, la puce le dit.
+  corrigee: { label: 'corrigée', couleur: '#1D4E89', fond: 'rgba(0,113,227,0.10)' },
 }
 
 function PuceConfiance({ confiance, raison }) {
@@ -45,6 +53,30 @@ function texteRecherche(l) {
 }
 
 const champInline = { height: 30, fontSize: 13, padding: '0 10px', minWidth: 120 }
+
+/**
+ * Applique une retouche a une ligne et remet la puce de confiance a jour.
+ * Une valeur qui differe de la proposition passe la ligne en « corrigée » :
+ * l heuristique ne repond plus d elle, c est la personne qui l a ecrite. Un
+ * retour a la valeur proposee rend son jugement d origine a la ligne. Les
+ * autres champs (la case a cocher) ne touchent pas a la puce.
+ *
+ * Fonction pure, exportee pour se tester sans navigateur.
+ */
+export function retoucherLigne(ligne, patch) {
+  const suivant = { ...ligne, ...patch }
+  if (!('prenom' in (patch || {})) && !('nom' in (patch || {}))) return suivant
+  const p = suivant.propose || {}
+  if (suivant.prenom === p.prenom && suivant.nom === p.nom) {
+    return { ...suivant, confiance: p.confiance, raison: p.raison }
+  }
+  const origine = [p.prenom, p.nom].filter(Boolean).join(' ')
+  return {
+    ...suivant,
+    confiance: 'corrigee',
+    raison: `Corrigé à la main, proposition d'origine : « ${origine || 'aucune'} »`,
+  }
+}
 
 export default function RattrapageFiches({ profile }) {
   const estManager = profile?.role === 'manager'
@@ -75,6 +107,9 @@ export default function RattrapageFiches({ profile }) {
             confiance: p.confiance,
             raison: p.raison,
             coche: p.confiance === 'haute',
+            // La proposition d origine, pour savoir si la ligne a ete
+            // retouchee et pouvoir revenir a son jugement initial.
+            propose: { prenom: p.prenom, nom: p.nom, confiance: p.confiance, raison: p.raison },
           }
         }))
       })
@@ -92,9 +127,24 @@ export default function RattrapageFiches({ profile }) {
     [lignes, recherche],
   )
   const cochees = useMemo(() => lignes.filter((l) => l.coche), [lignes])
+  // Ce qui partirait sans etre a l ecran : la recherche cache des lignes, les
+  // cases cochees, elles, restent. On ne change pas ce comportement (on perdrait
+  // une selection en tapant dans le champ), on le dit avant d ecrire.
+  const horsFiltre = useMemo(() => {
+    if (!recherche.trim()) return 0
+    const vus = new Set(visibles.map((l) => l.id))
+    return cochees.filter((l) => !vus.has(l.id)).length
+  }, [cochees, visibles, recherche])
 
-  const modifier = (id, patch) => setLignes((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)))
-  const cocherSures = () => setLignes((prev) => prev.map((l) => ({ ...l, coche: l.confiance === 'haute' })))
+  const modifier = (id, patch) => setLignes((prev) => prev.map((l) => (l.id === id ? retoucherLigne(l, patch) : l)))
+  // Cocher n a jamais decoche : une ligne relue puis corrigee a la main reste
+  // cochee. Pour repartir de zero, « Tout décocher ». Avec une recherche en
+  // cours, on ne coche que ce qui est affiche.
+  const cocherSures = () => setLignes((prev) => {
+    const vus = new Set(visibles.map((l) => l.id))
+    const filtre = recherche.trim().length > 0
+    return prev.map((l) => ((l.confiance === 'haute' && (!filtre || vus.has(l.id))) ? { ...l, coche: true } : l))
+  })
   const toutDecocher = () => setLignes((prev) => prev.map((l) => ({ ...l, coche: false })))
 
   async function appliquer() {
@@ -107,7 +157,12 @@ export default function RattrapageFiches({ profile }) {
     const n = cochees.length
     const ok = await confirmDialog({
       title: `Appliquer ${n} séparation${n > 1 ? 's' : ''} ?`,
-      message: 'Le prénom et le nom proposés seront écrits sur chaque fiche cochée. Les fiches non cochées ne bougent pas.',
+      message: [
+        'Le prénom et le nom proposés seront écrits sur chaque fiche cochée. Les fiches non cochées ne bougent pas.',
+        horsFiltre > 0
+          ? `Attention : ${horsFiltre} fiche${horsFiltre > 1 ? 's cochées ne sont' : ' cochée n\'est'} pas affichée${horsFiltre > 1 ? 's' : ''} avec la recherche en cours, ${horsFiltre > 1 ? 'elles partiront' : 'elle partira'} aussi.`
+          : null,
+      ].filter(Boolean).join(' '),
       confirmLabel: 'Appliquer',
     })
     if (!ok) return
@@ -156,7 +211,7 @@ export default function RattrapageFiches({ profile }) {
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button type="button" className="btn btn-outline btn-sm" onClick={cocherSures} disabled={chargement || lignes.length === 0}>
-            Tout cocher les propositions sûres
+            {recherche.trim() ? 'Cocher les propositions sûres affichées' : 'Tout cocher les propositions sûres'}
           </button>
           <button type="button" className="btn btn-ghost btn-sm" onClick={toutDecocher} disabled={chargement || cochees.length === 0}>
             Tout décocher
@@ -164,6 +219,11 @@ export default function RattrapageFiches({ profile }) {
           <button type="button" className="btn btn-primary btn-sm" onClick={appliquer} disabled={chargement || enCours || cochees.length === 0}>
             {enCours ? 'Application…' : `Appliquer la sélection${cochees.length ? ` (${cochees.length})` : ''}`}
           </button>
+          {horsFiltre > 0 && (
+            <span className="form-hint" style={{ alignSelf: 'center', color: 'var(--t2)' }}>
+              dont {horsFiltre} hors de la recherche
+            </span>
+          )}
         </div>
       </div>
 

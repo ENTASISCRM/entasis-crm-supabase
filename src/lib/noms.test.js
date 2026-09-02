@@ -59,6 +59,28 @@ describe('normaliserNomComplet', () => {
 })
 
 describe('separerNomComplet', () => {
+  it('ne propose aucune séparation pour une société ou un groupement', () => {
+    expect(separerNomComplet('SCI Les Oliviers')).toMatchObject({ prenom: '', nom: 'SCI Les Oliviers', confiance: 'faible' })
+    expect(separerNomComplet('SARL Bureau Exemple').confiance).toBe('faible')
+    expect(separerNomComplet('Indivision Exemple').confiance).toBe('faible')
+    expect(separerNomComplet('Camille Exemple').confiance).not.toBe('faible')
+  })
+
+  it('un nom à particule collée en tête garde son nom entier, le reste est le prénom', () => {
+    expect(separerNomComplet("D'Alembert Jean")).toMatchObject({ prenom: 'Jean', nom: "D'Alembert", confiance: 'moyenne' })
+    expect(separerNomComplet("d'Ormesson Jean").nom).toBe("d'Ormesson")
+    // L'ordre habituel reste inchangé : la particule collée annonce le nom.
+    expect(separerNomComplet("Jean d'Ormesson")).toMatchObject({ prenom: 'Jean', nom: "d'Ormesson", confiance: 'haute' })
+  })
+
+  it('un libellé qui se termine par une particule nue n est jamais sûr', () => {
+    const r = separerNomComplet('Jean de')
+    expect(r).toMatchObject({ prenom: 'Jean', nom: 'de', confiance: 'faible' })
+    expect(r.raison).toMatch(/particule/i)
+    // Avec un mot après, la particule redevient un indice fiable.
+    expect(separerNomComplet('Jean de La Fontaine').confiance).toBe('haute')
+  })
+
   it('ne propose jamais une civilité, un couple ou une annotation comme prénom sûr', () => {
     expect(separerNomComplet('Mr et Mme DUPONT')).toMatchObject({ prenom: '', nom: 'DUPONT', confiance: 'faible' })
     expect(separerNomComplet('Mme Exemple')).toMatchObject({ prenom: '', nom: 'Mme Exemple', confiance: 'faible' })
