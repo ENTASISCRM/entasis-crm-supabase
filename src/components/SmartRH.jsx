@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { confirmDialog } from './ui/confirm'
 import { SkeletonCards } from './ui/Skeleton'
-import { listConges, createConge, createCongeDirection, decideConge, cancelConge, contreProposer, repondreContreProposition } from '../services/conges'
+import { listConges, createConge, createCongeDirection, decideConge, changerTypeConge, cancelConge, contreProposer, repondreContreProposition } from '../services/conges'
 import { getOwn as getOwnContrat, list as listContrats } from '../services/conseillerContrats'
 import { notifierRH } from '../lib/rh-notify-api'
 import { supabase } from '../lib/supabase'
@@ -22,6 +22,9 @@ const TYPES = ['Congé payé', 'RTT', 'Sans solde', 'Maladie', 'Autre']
 // Jours de formation des alternants : ni travailles au cabinet, ni conges.
 // Reserve aux contrats ALTERNANT (choix visible seulement pour eux).
 const TYPE_ECOLE = 'École / CFA'
+// Tout ce que la direction peut poser sur une demande, ecole comprise : elle
+// requalifie ce qu elle veut, avant comme apres decision.
+const TYPES_DIRECTION = ['Congé payé', 'RTT', 'Sans solde', 'Maladie', TYPE_ECOLE, 'Autre']
 // Affichage du nombre de jours d une demande : regle du vendredi double pour
 // les conges payes, jours ouvres simples pour tout le reste (ecole, maladie).
 const nbJoursAffiche = (c) => (c.type === 'Congé payé' ? joursDemande(c) : joursDemandeSimples(c))
@@ -534,31 +537,43 @@ export default function SmartRH({ profile, rhDelegue = false }) {
       await reload()
     } catch (e) { toast.error(messageErreur(e)) } finally { setSaving(false) }
   }
-  async function decider(c, statut, { type } = {}) {
+  async function decider(c, statut) {
     let dmotif = null
     if (statut === 'refuse') {
       dmotif = window.prompt(`Refuser la demande de ${c.demandeur_nom || 'ce collaborateur'}. Motif (facultatif) :`, '')
       if (dmotif === null) return
     }
-    // Requalifier une demande change ce qui sera payé : on le fait dire.
-    if (type && type !== c.type) {
-      const qui = c.demandeur_nom || 'ce collaborateur'
+    setSaving(true)
+    try { await decideConge(c.id, statut, profile?.full_name || 'Direction', dmotif); toast.success(statut === 'valide' ? 'Congé validé' : 'Demande refusée'); notifierRH('decision', { ...c, statut, decision_motif: dmotif }); await reload() }
+    catch (e) { toast.error(messageErreur(e)) } finally { setSaving(false) }
+  }
+
+  // La direction requalifie une demande, avant ou apres decision. Sur une
+  // absence deja validee, le solde du salarie bouge aussitot : on confirme.
+  async function changerType(c, type) {
+    if (!type || type === c.type) return
+    const qui = c.demandeur_nom || 'ce collaborateur'
+    const entamait = c.type === 'Congé payé'
+    const entamera = type === 'Congé payé'
+    if (c.statut === 'valide') {
+      const effet = entamait && !entamera
+        ? `Ces jours sortiront du décompte de congés payés de ${qui}, son solde remontera d autant.`
+        : (!entamait && entamera
+          ? `Ces jours entreront dans le décompte de congés payés de ${qui}, son solde baissera d autant.`
+          : 'Le décompte de congés payés ne change pas, seul le libellé de l absence change.')
       const ok = await confirmDialog({
-        title: `Valider en « ${type} » ?`,
-        message: `La demande de ${qui} était un ${c.type.toLowerCase()}. Validée en ${type.toLowerCase()}, elle n entame plus le solde de congés et ces jours ne sont pas rémunérés. ${qui} verra le changement sur sa demande.`,
-        confirmLabel: `Valider en ${type.toLowerCase()}`,
+        title: `Passer cette absence en « ${type} » ?`,
+        message: `L absence de ${qui} est validée et enregistrée comme ${c.type.toLowerCase()}. ${effet}`,
+        confirmLabel: `Passer en ${type.toLowerCase()}`,
       })
       if (!ok) return
-      dmotif = `Requalifié en ${type.toLowerCase()} à la validation`
     }
     setSaving(true)
     try {
-      await decideConge(c.id, statut, profile?.full_name || 'Direction', dmotif, { type })
-      toast.success(statut !== 'valide' ? 'Demande refusée' : (type && type !== c.type ? `Validé en ${type.toLowerCase()}` : 'Congé validé'))
-      notifierRH('decision', { ...c, type: type || c.type, statut, decision_motif: dmotif })
+      await changerTypeConge(c.id, type)
+      toast.success(`${qui} · ${c.type.toLowerCase()} passé en ${type.toLowerCase()}`)
       await reload()
-    }
-    catch (e) { toast.error(messageErreur(e)) } finally { setSaving(false) }
+    } catch (e) { toast.error(messageErreur(e)) } finally { setSaving(false) }
   }
   function ouvrirContre(c) {
     setCpPour(c.id)
@@ -781,14 +796,16 @@ export default function SmartRH({ profile, rhDelegue = false }) {
                       })()}
                     </div>
                     <div className="ract">
+                      {/* Requalifier avant de décider : un congé payé demandé
+                          par quelqu un sans solde se valide en sans solde
+                          plutôt que d être refusé. Seul « Congé payé » entame
+                          le solde, le type suffit donc à tout changer. */}
+                      <select className="tsel" value={c.type} disabled={saving}
+                        title="Changer le type de cette demande avant de décider"
+                        onChange={(e) => changerType(c, e.target.value)}>
+                        {TYPES_DIRECTION.map((t) => <option key={t} value={t}>{t}</option>)}
+                      </select>
                       <button className="ok" disabled={saving} onClick={() => decider(c, 'valide')}>Valider</button>
-                      {/* Requalifier plutôt que refuser : utile quand le solde
-                          ne couvre pas la demande. Seul un congé payé entame
-                          le solde, donc seul lui a besoin de cette sortie. */}
-                      {c.type === 'Congé payé' && (
-                        <button className="ss" disabled={saving} title="Valider ces dates, mais en congé sans solde : le solde n est pas entamé et ces jours ne sont pas rémunérés"
-                          onClick={() => decider(c, 'valide', { type: 'Sans solde' })}>En sans solde</button>
-                      )}
                       <button className="cp" disabled={saving} onClick={() => (cpPour === c.id ? setCpPour(null) : ouvrirContre(c))}>Autres dates</button>
                       <button className="ko" disabled={saving} onClick={() => decider(c, 'refuse')}>Refuser</button>
                     </div>
@@ -840,7 +857,11 @@ export default function SmartRH({ profile, rhDelegue = false }) {
                   <div className="prow" key={c.id}>
                     <span className="pn">{c.demandeur_nom || c.advisor_code}</span>
                     <span className="pd">{c.demi_journee ? `${fmt(c.date_debut)} (½)` : `${fmt(c.date_debut)} → ${fmt(c.date_fin)}`}</span>
-                    <span className="pt">{c.type}</span>
+                    <select className="pt tsel" value={c.type} disabled={saving}
+                      title="Changer le type de cette absence, même validée"
+                      onChange={(e) => changerType(c, e.target.value)}>
+                      {TYPES_DIRECTION.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
                     <span className="pj">{fmtJours(nbJoursAffiche(c))}{c.type === 'Congé payé' ? ' pris' : ''}</span>
                     {s && (
                       <span className={`ps${s.restant < 0 ? ' neg' : ''}`}>
@@ -1028,8 +1049,10 @@ const styles = `
 .srh .row.contre_proposee{ border-left-color:#5B4B8A }
 .srh .stag.contre_proposee{ background:#EDE7F8; color:#5B4B8A }
 .srh .ract .cp{ background:#fff; color:#5B4B8A; border:1px solid #C9BEEB; border-radius:8px; padding:7px 12px; font-size:12px; font-weight:700; cursor:pointer }
-.srh .ract .ss{ background:#fff; color:var(--gold-dk); border:1px solid #E4D5B0; border-radius:8px; padding:7px 12px; font-size:12px; font-weight:700; cursor:pointer }
-.srh .ract .ss:hover{ background:var(--gold-dk); color:#fff }
+.srh .tsel{ background:#fff; color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:6px 8px; font-size:12px; font-weight:650; cursor:pointer; max-width:130px }
+.srh .tsel:hover{ border-color:var(--gold-dk); color:var(--gold-dk) }
+.srh .tsel:disabled{ opacity:.5; cursor:default }
+.srh .prow select.pt{ padding:3px 6px; font-size:11px; font-weight:600 }
 .srh .ract .cp:hover{ background:#5B4B8A; color:#fff }
 .srh .cpform{ background:#F6F4FC; border:1px solid #DCD4EE; border-radius:11px; padding:12px 14px; margin:0 0 8px }
 .srh .cptit{ font-size:12px; font-weight:750; color:#5B4B8A; margin-bottom:8px }

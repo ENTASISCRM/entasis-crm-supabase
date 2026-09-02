@@ -293,14 +293,14 @@ demande de Louis :
   libellé : les trois voies de rattachement échouaient en même temps et
   son dossier ne remontait pas dans Rémunération. Profil lié, matricule
   `ELIOTT`, libellé nettoyé.
-* **Une demande de congé se valide « en sans solde ».** Dans la file à
-  valider de Smart RH, un congé payé porte un quatrième bouton à côté de
-  Valider : il requalifie la demande en congé sans solde et la valide d'un
-  coup. Utile quand le solde ne couvre pas les dates demandées : plutôt que
-  de refuser ou de creuser le négatif, la direction accorde les dates sans
-  entamer le solde. Le geste demande confirmation, dit ce qu'il change et
-  laisse un motif visible par le demandeur ; seul « Congé payé » entame le
-  solde (`src/lib/conges-solde.js`).
+* **La direction change le type d'un congé quand elle veut.** Un sélecteur
+  de type se pose sur chaque demande de la file à valider et sur chaque
+  absence déjà validée du planning. C'est le type qui décide du décompte :
+  seul « Congé payé » entame le solde (`src/lib/conges-solde.js`). Passer un
+  congé payé en sans solde accorde donc les dates sans entamer le solde,
+  utile quand celui ci ne les couvre pas ; l'inverse les réimpute. Sur une
+  absence déjà validée le geste demande confirmation, en disant dans quel
+  sens le solde du salarié va bouger.
 * **Le solde de congés se cale sur le bulletin de salaire.** Les quatre
   alternants affichaient un solde faux dans Smart RH. Le champ
   `conges_report` est prévu pour ça (`src/lib/conges-solde.js`) : il fige le
