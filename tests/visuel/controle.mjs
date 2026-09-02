@@ -207,6 +207,7 @@ const SCENARIOS = [
     },
   },
   { nom: 'remuneration', role: 'conseiller', route: '#/remuneration', attendu: 'Rémunération' },
+  { nom: 'smart-rh-direction', role: 'manager', route: '#/smart-rh', attendu: 'En sans solde' },
   { nom: 'multi-equipement', role: 'conseiller', route: '#/multi-equipement', attendu: 'Multi-équipement' },
   { nom: 'conformite', role: 'conseiller', route: '#/conformite', attendu: 'Recueils et devoirs de conseil' },
 ]
