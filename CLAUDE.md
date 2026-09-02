@@ -315,8 +315,11 @@ demande de Louis :
   la période sont redécomptés** ; comme la paie les a déjà imputés, il
   fallait alors gonfler le report d'une valeur qui ne correspondait à rien,
   et l'écran affichait « report 31 j » quand le bulletin disait 16.
-  Les quatre alternants sont calés sur leur bulletin d'août, arrêté au
-  31 août.
+  **Le solde repris est celui de la période en cours, colonne CP N du
+  bulletin**, pas la somme des deux colonnes. Le reliquat CP N moins 1 est
+  un acquis de la période précédente, il n'entre pas dans le compteur du
+  CRM. Les quatre alternants sont calés sur la colonne CP N de leur
+  bulletin d'août, arrêté au 31 août.
   **Un contrat qui succède à un autre reprend le solde arrêté à la veille de
   sa prise d'effet**, sinon l'acquisition repart de zéro et le solde recule
   du jour au lendemain. Le CDI qui démarre le 18 septembre porte le solde au
