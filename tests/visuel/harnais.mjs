@@ -14,7 +14,7 @@
 //
 // Usage :
 //   import { pageDemo } from './harnais.mjs'
-//   const page = await pageDemo(browser, { role: 'conseiller' })   // ou 'manager'
+//   const page = await pageDemo(browser, { role: 'conseiller' })   // 'manager', 'rh'
 //   await page.goto(`${url}/#/dashboard`)
 
 const ANNEE = new Date().getFullYear()
@@ -181,12 +181,16 @@ export const USER = { id: 'u-demo', email: 'demo@exemple.fr', aud: 'authenticate
 
 export const PROFIL_CONSEILLER = { id: 'u-demo', email: 'demo@exemple.fr', full_name: 'Conseiller Démo', role: 'conseiller', advisor_code: 'DEMO', is_active: true, rh_delegue: false }
 export const PROFIL_MANAGER = { id: 'u-demo', email: 'demo@exemple.fr', full_name: 'Direction Démo', role: 'manager', advisor_code: 'DIR', is_active: true, rh_delegue: true }
+// Deleguee RH : conseillere, pas manager, mais rh_delegue a vrai. Elle doit
+// voir et tenir la file de validation des conges comme la direction.
+export const PROFIL_RH = { id: 'u-demo', email: 'demo@exemple.fr', full_name: 'Responsable RH Démo', role: 'advisor', advisor_code: 'RHD', is_active: true, rh_delegue: true }
 
 // L equipe telle que la renvoie la RPC team_directory
 const AUTRE_CONSEILLER = { id: 'u-temoin', email: 'temoin@exemple.fr', full_name: 'Conseiller Témoin', role: 'conseiller', advisor_code: 'TEMO', is_active: true, rh_delegue: false }
 export const EQUIPE = {
   conseiller: [PROFIL_CONSEILLER, AUTRE_CONSEILLER, { ...PROFIL_MANAGER, id: 'u-direction', email: 'direction@exemple.fr' }],
   manager: [PROFIL_MANAGER, { ...PROFIL_CONSEILLER, id: 'u-conseiller', email: 'conseiller@exemple.fr' }, AUTRE_CONSEILLER],
+  rh: [PROFIL_RH, { ...PROFIL_CONSEILLER, id: 'u-conseiller', email: 'conseiller@exemple.fr' }, AUTRE_CONSEILLER],
 }
 
 export const CONTRAT = { id: 'k1', profile_id: 'u-demo', type_contrat: 'CDI', date_debut: `${ANNEE}-01-01`, date_fin: null, palier_pp_mensuel: 2500, palier_pu_mensuel: 5000, actif: true }
@@ -265,7 +269,7 @@ const LEADROOM = {
 
 // ── La page simulee ──────────────────────────────────────────────────────────
 export async function pageDemo(browser, { role = 'conseiller' } = {}) {
-  const profil = role === 'manager' ? PROFIL_MANAGER : PROFIL_CONSEILLER
+  const profil = role === 'manager' ? PROFIL_MANAGER : (role === 'rh' ? PROFIL_RH : PROFIL_CONSEILLER)
   const equipe = EQUIPE[role] || EQUIPE.conseiller
   const tables = {
     deals: DEALS,
