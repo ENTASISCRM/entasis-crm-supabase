@@ -3,6 +3,7 @@ import {
   CHAMPS_CAMPAGNE, POIDS_TOTAL, SITUATIONS_FAMILIALES,
   scoreCompletude, niveauDe, champRempliPour, dateCourte,
   prioriserFichesACompleter, completudeParConseiller, champsLesPlusManquants, champsPourCampagne,
+  nettoyerCompletion,
 } from './completude'
 
 const TODAY = '2026-09-02'
@@ -321,5 +322,31 @@ describe('champsPourCampagne', () => {
   it('accepte une colonne hors liste des champs de campagne', () => {
     const r = champsPourCampagne([{ id: '1', code_postal: '75011' }, { id: '2', code_postal: null }], ['code_postal'])
     expect(r).toMatchObject({ evaluables: 1, nonEvaluables: 1, manquantsParChamp: { code_postal: 1 } })
+  })
+})
+
+describe('nettoyerCompletion (la saisie en ligne de l accueil)', () => {
+  it('ne garde que les champs de la liste blanche, fournis et non vides', () => {
+    expect(nettoyerCompletion({ profession: ' Architecte ', statut_pro: '', email: null, nom: 'Pirate', id: 'x' }))
+      .toEqual({ profession: 'Architecte' })
+  })
+
+  it('convertit les montants en nombres et refuse un montant illisible', () => {
+    expect(nettoyerCompletion({ revenus_annuels: '85000', patrimoine_estime: 320000 }))
+      .toEqual({ revenus_annuels: 85000, patrimoine_estime: 320000 })
+    expect(() => nettoyerCompletion({ revenus_annuels: 'quatre vingt' })).toThrow(/revenus annuels/)
+    expect(() => nettoyerCompletion({ patrimoine_estime: '1 000 €' })).toThrow(/patrimoine estimé/)
+  })
+
+  it('met le téléphone à la même forme que la modale client', () => {
+    expect(nettoyerCompletion({ telephone: '0612345678' })).toEqual({ telephone: '06 12 34 56 78' })
+    expect(nettoyerCompletion({ telephone: '+33 (0)6 12 34 56 78' })).toEqual({ telephone: '06 12 34 56 78' })
+    expect(nettoyerCompletion({ telephone: '+41 79 123 45 67' })).toEqual({ telephone: '+41 79 123 45 67' })
+  })
+
+  it('rend un objet vide quand il n y a rien à écrire, jamais un effacement', () => {
+    expect(nettoyerCompletion({})).toEqual({})
+    expect(nettoyerCompletion({ email: '   ', date_naissance: undefined })).toEqual({})
+    expect(nettoyerCompletion(null)).toEqual({})
   })
 })

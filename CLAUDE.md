@@ -30,7 +30,7 @@ Trois commandes, dans cet ordre. Aucune ne doit régresser :
 
 ```
 npx eslint src/          # un avertissement préexistant, zéro erreur attendue
-npx vitest run           # 566 tests
+npx vitest run           # 587 tests
 npx vite build
 ```
 
@@ -164,6 +164,18 @@ soixante dix sept constats bruts. Ce qui a été corrigé le jour même :
   désormais toute requête qui ne va pas au serveur local.
 * Un nom de client réel figurait dans deux tests, deux commentaires et un
   document : remplacé par un nom inventé.
+
+Les réfutateurs (trois par constat) ont ensuite confirmé les faits de tous
+les constats corrigés et n'ont contredit aucun correctif. Deux retours ont
+été appliqués (le badge anniversaire reste affiché tant que la date manque,
+même si l'âge est connu) et la seconde synthèse a donné trois alignements
+de plus : **le seuil SCPI et la définition de « TNS » sont les mêmes dans
+la règle du Multi équipement et dans la campagne** (huit fiches exactement
+au seuil, cinq chefs d'entreprise étaient cibles d'un côté et ignorés de
+l'autre) ; l'échappement CSV vit dans un seul module (`src/lib/csv-format.js`)
+partagé par tous les exports ; la suppression de rattrapage d'une campagne
+à moitié écrite est vérifiée ; la liste blanche de la saisie en ligne
+(`nettoyerCompletion`) est dans la lib et testée.
 
 Ce que l'audit a mis en évidence sans correctif de code :
 

@@ -17,15 +17,9 @@
 ──────────────────────────────────────────────────────────────────────────── */
 
 import { journaliserExport } from './acces-log'
-
-function cellule(valeur) {
-  if (valeur == null) return ''
-  let s = String(valeur)
-  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`
-  // Guillemets doublés + encadrement si séparateur, guillemet ou saut de ligne.
-  if (/[";\n\r]/.test(s)) s = `"${s.replace(/"/g, '""')}"`
-  return s
-}
+// L'échappement et l'assemblage vivent dans un module pur, partagé avec les
+// autres producteurs de CSV : une seule protection contre les formules.
+import { contenuCsv } from './csv-format'
 
 /**
  * @param {string} nomFichier  sans extension, ex. 'clients-2026-08'
@@ -40,10 +34,7 @@ export function exporterCsv(nomFichier, colonnes, lignes, ressource) {
   journaliserExport(ressource || String(nomFichier).split('-')[0], lignes?.length ?? 0,
                     { fichier: nomFichier, colonnes: colonnes?.length ?? 0 })
 
-  const contenu = [colonnes, ...lignes]
-    .map(l => l.map(cellule).join(';'))
-    .join('\r\n')
-  const blob = new Blob(['﻿' + contenu], { type: 'text/csv;charset=utf-8;' })
+  const blob = new Blob([contenuCsv(colonnes, lignes)], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
