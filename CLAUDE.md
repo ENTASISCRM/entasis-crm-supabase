@@ -224,10 +224,9 @@ Ce que l'audit a mis en évidence sans correctif de code :
   première connexion Google, il faut alors poser le code `HYPPOLITE` et
   rattacher sa fiche contrat (identifiant
   `8e1bf94e-ce69-448b-abb1-bf57b82f42c2`, libellée « MOREL Hyppolite »).
-  Sa fiche contrat démarre au 1er septembre en base alors qu'il arrive le
-  14 : Louis n'a pas encore dit s'il faut corriger.
-* **Orthographe du nom d'Ilana** : « Zarrouk » sur son compte Google,
-  « Zarouk » sur sa fiche contrat. En attente de Louis, rien touché.
+  Sa date de début est passée au 14 septembre le 2 septembre, sur décision
+  de Louis. Reste une incohérence de saisie : la fin est au 1er septembre
+  2028 alors que le début est au 14 septembre 2026, à trancher.
 * **Pull request 41** sur ce dépôt, vieux test de design de mai : à
   fermer ou à refaire.
 * **Le compte Pappers rattaché aux outils de Louis n'a plus de crédits**
@@ -257,7 +256,11 @@ Ce qui compte si on y retouche :
 
 ### Onboarding des arrivants de septembre
 
-Alois Carini, Charlotte Billard, Ilana Zarouk et Eliott Bec sont
+L'orthographe retenue par Louis est **Zarrouk**, celle de son compte
+Google. Sa fiche contrat, qui disait « Zarouk », a été corrigée le
+2 septembre.
+
+Alois Carini, Charlotte Billard, Ilana Zarrouk et Eliott Bec sont
 finalisés (profil, code conseiller, fiche contrat rattachée). Hyppolite
 Morel arrive le 14. Le CRM se connecte par Google, le profil se crée à la
 première connexion ; la Lead Room a ses propres comptes.
