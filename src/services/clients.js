@@ -6,6 +6,7 @@
 // drift entre les 3 composants qui touchent cette table.
 
 import { supabase } from '../lib/supabase'
+import { verifierEcriture, MOTIF_DROITS } from '../lib/ecriture-verifiee'
 
 /**
  * Recherche fuzzy (autocomplete) par nom OU email OU téléphone.
@@ -315,4 +316,65 @@ export async function findOrCreate(clientData, userId) {
     console.error('[clients.findOrCreate] create failed:', e)
     return null
   }
+}
+
+// ─── Rattrapage des fiches sans prenom (item D6 du plan d amelioration) ────
+// 331 fiches sur 381 portent « Prénom Nom » dans le seul champ nom. Ces deux
+// fonctions servent l ecran de rattrapage reserve a la direction : lister
+// les fiches concernees, puis ecrire les separations qu une personne a
+// cochees et confirmees. Rien n est calcule ici : la proposition vient de
+// lib/noms, la decision vient de l ecran.
+
+/**
+ * Fiches dont le prenom est vide et dont le nom contient au moins un espace
+ * interieur, donc probablement « Prénom Nom » dans un seul champ.
+ * Triees par nom, 500 au plus. La RLS decide de ce que chacun voit.
+ */
+export async function listerFichesSansPrenom() {
+  const { data, error } = await supabase
+    .from('clients')
+    .select('id, nom, prenom, advisor_code, telephone, email')
+    .or('prenom.is.null,prenom.eq.')
+    .like('nom', '% %')
+    .order('nom', { ascending: true })
+    .limit(500)
+  if (error) throw error
+  // Le filtre SQL laisse passer un prenom fait d espaces et un nom dont le
+  // seul espace est en bordure : on resserre ici, c est bon marche.
+  return (data || []).filter((c) =>
+    String(c.prenom ?? '').trim() === '' && /\s/.test(String(c.nom ?? '').trim()),
+  )
+}
+
+/**
+ * Ecrit les separations validees, une fiche apres l autre pour qu un refus
+ * n emporte pas les autres. Chaque ecriture passe par verifierEcriture :
+ * une ligne que la RLS filtre en silence est comptee en echec avec un
+ * message clair, jamais en reussite.
+ *
+ * @param {Array<{ id: string, prenom: string, nom: string }>} lignes
+ * @returns {Promise<{ faites: string[], echecs: Array<{ id: string, message: string }> }>}
+ */
+export async function appliquerSeparations(lignes) {
+  const faites = []
+  const echecs = []
+  for (const ligne of (lignes || [])) {
+    const id = ligne?.id
+    try {
+      const prenom = String(ligne?.prenom ?? '').trim()
+      const nom = String(ligne?.nom ?? '').trim()
+      if (!id) throw new Error('Fiche sans identifiant, rien à écrire.')
+      if (!nom) throw new Error('Le nom proposé est vide, la fiche garderait un nom vide.')
+      const reponse = await supabase
+        .from('clients')
+        .update({ prenom: prenom || null, nom, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select('id')
+      verifierEcriture(reponse, `Fiche « ${[prenom, nom].filter(Boolean).join(' ')} »`, MOTIF_DROITS)
+      faites.push(id)
+    } catch (e) {
+      echecs.push({ id, message: e?.message || 'Erreur inconnue' })
+    }
+  }
+  return { faites, echecs }
 }
