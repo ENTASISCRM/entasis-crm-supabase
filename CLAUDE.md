@@ -232,6 +232,11 @@ Ce que l'audit a mis en évidence sans correctif de code :
   aucun calcul, mais il traîne dans Pilotage RH. À dater ou à retirer.
 * **Un dossier porte le co conseiller `MANAGER`**, qui n'est le code de
   personne. Impossible de deviner de qui il s'agit, à corriger à la main.
+* **Un nom diverge entre la paie et le CRM** : le bulletin d'un alternant
+  écrit son nom sans trait d'union et avec un U là où le CRM met un A. La
+  paie fait foi pour l'état civil, mais le nom du CRM s'affiche partout et
+  sert de repère à l'équipe : à trancher avec l'intéressé avant de toucher
+  au profil.
 * **Le CDI de Nans prend le relais le 18 septembre** : son alternance finit
   le 17, le CDI commence le 18 avec le drapeau `actif` à faux. Depuis que
   le contrat se choisit par ses dates, la bascule se fera seule, comme
@@ -282,8 +287,15 @@ demande de Louis :
   libellé : les trois voies de rattachement échouaient en même temps et
   son dossier ne remontait pas dans Rémunération. Profil lié, matricule
   `ELIOTT`, libellé nettoyé.
-* **Les vingt trois fiches contrat ont un matricule**, égal au code du
-  conseiller. Sept n'en avaient pas.
+* **Les vingt trois fiches contrat ont un matricule.** Sept n'en avaient
+  pas. **Le matricule de référence est celui du logiciel de paie**, relevé
+  sur le bulletin de salaire : quatre alternants portaient dans le CRM un
+  numéro à cinq chiffres qui ne correspondait à rien en paie, ils portent
+  désormais le leur. Le matricule suit le salarié et non le contrat : les
+  deux fiches d'un même conseiller, alternance puis CDI, portent le même.
+  Les autres fiches gardent le code conseiller comme matricule, faute de
+  bulletin sous la main ; à corriger quand un bulletin passe.
+  Aucune donnée d'un bulletin n'entre dans ce dépôt, matricule mis à part.
 * **Hyppolite Morel a son matricule `HYPPOLITE` posé d'avance** : quand son
   profil naîtra à sa première connexion, Pilotage RH le rapprochera tout
   seul de sa fiche. Sa fin de contrat est passée au 14 septembre 2028,
