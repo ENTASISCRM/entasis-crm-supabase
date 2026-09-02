@@ -30,7 +30,7 @@ Trois commandes, dans cet ordre. Aucune ne doit régresser :
 
 ```
 npx eslint src/          # un avertissement préexistant, zéro erreur attendue
-npx vitest run           # 475 tests
+npx vitest run           # 555 tests
 npx vite build
 ```
 
@@ -80,6 +80,20 @@ relecture. Tout ce qui suit est en ligne sur main.
   rattraper » dans Clients : séparation prénom et nom proposée, jamais
   appliquée sans case cochée et confirmation. Heuristiques dans
   `src/lib/noms.js`.
+* **Complétude des fiches.** Sur l'accueil du conseiller, le bloc
+  « Compléter ces fiches » (champs manquants saisissables en ligne,
+  `src/components/FichesACompleter.jsx`, logique dans
+  `src/lib/completude.js`) ; une jauge sur la fiche client ; la complétude
+  par conseiller dans Équipe pour la direction. Mesure du 2 septembre :
+  statut renseigné sur 19 % des fiches, revenus 18 %, date de naissance
+  9 %, et de 90 % à 0 % selon le conseiller.
+* **Campagnes ciblées** (vue direction « Campagnes » dans Clients,
+  `src/components/Campagnes.jsx`, logique dans `src/lib/campagnes.js`).
+  Six campagnes préconfigurées, critères en direct, et à côté du compte
+  de cibles le nombre de clients non évaluables par champ manquant. Lancer
+  fige les cibles dans `campagne_cibles` ; le conseiller les traite depuis
+  l'accueil (bloc « Campagne »). Tables `campagnes` et `campagne_cibles`,
+  RLS : seule la direction crée, chaque conseiller ne voit que ses cibles.
 * **Le contrat de rémunération se choisit par ses dates**
   (`api/_lib/contrats.js`), plus par le drapeau `actif` seul. Un
   renouvellement saisi à l'avance prend le relais le jour dit. Le drapeau
@@ -161,7 +175,8 @@ dates. Pour toute échéance lointaine, doubler d'un rappel simple.
 ## Les projets Supabase
 
 * **CRM** : `tvgbblbceqvdtqnbeoik`. Tables principales `deals`, `clients`,
-  `profiles`, `conseiller_contrats`, `contrats`, `conformite_dossiers`.
+  `profiles`, `conseiller_contrats`, `contrats`, `conformite_dossiers`,
+  `campagnes`, `campagne_cibles`.
 * **Lead Room** : `mtqowhjshvgkpkhnpilb`, application séparée avec **ses
   propres comptes**. Un conseiller a donc deux mots de passe distincts,
   source récurrente d'appels au support. Le bouton « Recevoir un lien
