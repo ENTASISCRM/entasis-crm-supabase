@@ -58,6 +58,13 @@ export function estFerie(d) {
 // la période. Par défaut le report est automatique et intégral (rien ne
 // se perd) ; la direction peut le figer via conseiller_contrats.
 // conges_report (saisi au 1er juin pour plafonner ou ajuster).
+//
+// conges_report_au déplace ce point de départ à une date quelconque, celle
+// d un bulletin de salaire. Le bulletin arrête le solde au 31 août et a déjà
+// imputé les congés d été ; sans cette date, le CRM les redécomptait et il
+// fallait gonfler le report pour compenser, ce qui affichait un chiffre qui
+// ne correspondait à aucun document. Avec elle, on saisit le solde du
+// bulletin tel quel et seuls les congés postérieurs sont décomptés.
 export function periodeReference(aujourd = new Date()) {
   const y = aujourd.getMonth() >= 5 ? aujourd.getFullYear() : aujourd.getFullYear() - 1
   return {
@@ -156,6 +163,27 @@ export function soldeConges(contrat, congesDeLaPersonne, aujourd = new Date()) {
   const acquis = joursAcquis(contrat, aujourd)
   if (acquis === null) return null
   const dejaPris = Number(contrat?.conges_deja_pris || 0)
+
+  // Solde arrêté à une date (bulletin de salaire) : on part de ce point,
+  // on ajoute ce qui a été acquis depuis, on retire ce qui a été pris
+  // depuis. Rien d antérieur n est recompté, la paie l a déjà fait.
+  const arreteAu = String(contrat?.conges_report_au || '').slice(0, 10)
+  if (arreteAu && contrat?.conges_report != null && contrat.conges_report !== '') {
+    const report = Number(contrat.conges_report)
+    const acquisAvant = joursAcquis(contrat, dl(arreteAu)) || 0
+    const acquisPeriode = acquis - acquisAvant
+    const cpApres = (congesDeLaPersonne || []).filter((c) =>
+      c.statut === 'valide' && c.type === 'Congé payé' && String(c.date_debut) > arreteAu)
+    const prisPeriode = cpApres.reduce((s, c) => s + joursDemande(c), 0)
+    return {
+      acquis, pris: prisPeriode, dejaPris,
+      report, acquisPeriode, prisPeriode,
+      arreteAu,
+      periode: { debutIso: arreteAu, finIso: periodeReference(aujourd).finIso },
+      restant: report + acquisPeriode - prisPeriode,
+    }
+  }
+
   const per = periodeReference(aujourd)
 
   // Acquis ventilé : avant la période (au 31 mai) et pendant. La somme des
