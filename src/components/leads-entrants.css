@@ -1,0 +1,54 @@
+/* Leads entrants : les quelques règles propres à l'écran, préfixe le-.
+   Tout le reste vient des classes partagées de styles.css (section-header,
+   priorities-list, priority-item, btn, form-input, table-wrap, data-table).
+   Contrastes au seuil AA : le gris tertiaire (--t3) ne porte jamais de texte
+   utile ici, le secondaire (--t2, 7 pour 1 sur blanc) le remplace. */
+
+/* Le sous titre porte les compteurs et le délai médian : du texte utile, donc
+   le gris secondaire (le tertiaire de la charte descend à 3,5 pour 1). */
+.le .section-sub { color: var(--t2); }
+
+.le-outils { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+.le-outils .form-input { max-width: 420px; }
+
+.le-groupe { margin-bottom: 24px; }
+.le-groupe-titre {
+  display: flex; align-items: baseline; gap: 8px;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--t2); margin-bottom: 8px;
+}
+.le-groupe-nombre {
+  font-variant-numeric: tabular-nums; letter-spacing: 0; font-size: 11.5px;
+  color: var(--t1); background: rgba(0,0,0,0.05); border-radius: 999px; padding: 1px 8px;
+}
+
+.le-liste { list-style: none; margin: 0; padding: 0; }
+/* La ligne n'ouvre rien au clic : le téléphone et le bouton portent les gestes. */
+.le-ligne { cursor: default; }
+.le-ligne:hover { transform: none; }
+.le-identite { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.le-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--t2); }
+.le-chip {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 600;
+  color: var(--t2); background: rgba(0,0,0,0.05); border: 0.5px solid var(--bd);
+  border-radius: 5px; padding: 1px 7px; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+}
+.le-tel { font-size: 13px; font-weight: 600; color: var(--t1); text-decoration: none; white-space: nowrap; }
+.le-tel:hover { text-decoration: underline; }
+.le-tel-vide { color: var(--t2); font-weight: 400; font-style: italic; }
+.le-dot-nouveau { background: var(--gold-dk); }
+.le-dot-moi { background: var(--navy); }
+
+.le-vide { font-size: 13px; color: var(--t2); padding: 8px 2px 4px; }
+.le-morts { font-size: 12.5px; color: var(--t2); margin: 0 0 28px; }
+
+/* Bloc manager, en bas de page, séparé d'un filet. */
+.le-rapprochement { margin-top: 36px; padding-top: 24px; border-top: 0.5px solid var(--bd); }
+.le-rapprochement .section-header { margin-bottom: 14px; }
+.le-situation-manque { color: #9A5B00; font-weight: 600; }
+.le-discret { font-size: 12.5px; color: var(--t2); }
+
+@media (max-width: 640px) {
+  .le-ligne { flex-wrap: wrap; }
+  .le-outils .form-input { max-width: none; }
+}
