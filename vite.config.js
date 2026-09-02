@@ -7,6 +7,11 @@ import react from '@vitejs/plugin-react'
 // a chaque mise en prod.
 export default defineConfig({
   plugins: [react()],
+  test: {
+    // Les copies de travail isolees des agents vivent sous .claude/worktrees :
+    // sans cette exclusion, vitest y ramassait cinq fois les memes tests.
+    exclude: ['**/node_modules/**', '**/dist/**', '**/.claude/**'],
+  },
   build: {
     rollupOptions: {
       output: {
