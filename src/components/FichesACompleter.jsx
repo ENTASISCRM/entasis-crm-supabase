@@ -144,7 +144,7 @@ export default function FichesACompleter({ profile, deals, onOpenClient, limite 
       <div className="section-header">
         <div>
           <div className="section-kicker">Données clients</div>
-          <div className="section-title">Fiches à compléter</div>
+          <div className="section-title">Compléter ces fiches</div>
           <div className="section-sub">
             {pluriel(toutes.length, 'fiche')} incomplète{toutes.length > 1 ? 's' : ''} sur {mesFiches}
             {' · '}

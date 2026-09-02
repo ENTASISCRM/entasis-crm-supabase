@@ -29,6 +29,8 @@ import InlineSelect from './components/ui/InlineSelect'
 import NotificationsBell from './components/ui/NotificationsBell'
 import ChecklistAccueil from './components/ui/ChecklistAccueil'
 import DossiersStagnants from './components/DossiersStagnants'
+import FichesACompleter from './components/FichesACompleter'
+import CompletudeEquipe from './components/CompletudeEquipe'
 import SequenceRelance from './components/dossiers/SequenceRelance'
 import * as congesService from './services/conges'
 import { usePersistedState } from './hooks/usePersistedState'
@@ -1624,6 +1626,9 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab,onQuickP
       {/* C2 : les dossiers En cours sans mouvement depuis 21 jours, avec
           Relancer (ouvre le dossier) et Abandonner (annulable). */}
       <DossiersStagnants deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch}/>
+      {/* Completude : les fiches du conseiller a completer, champs
+          manquants saisissables sans ouvrir la fiche. */}
+      <FichesACompleter profile={profile} deals={deals} onOpenClient={onOpenClient}/>
       <div style={{marginTop:28}}>
         <Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded onOuvrirClient={onOpenClient}/></Suspense>
       </div>
@@ -3466,6 +3471,8 @@ function TeamView({deals,objectifs,teamProfiles,month,profile}){
         )
       })}
       {!rows.length&&<div className="card"><div className="table-empty-state"><div className="empty-icon"><Icon.EmptyPeople/></div><div className="empty-title">Aucun conseiller actif</div><div className="empty-sub">Configure les profils dans <span className="code">public.profiles</span></div></div></div>}
+      {/* Completude des fiches par conseiller, en nombre, sans montant. */}
+      <CompletudeEquipe/>
     </div>
   )
 }

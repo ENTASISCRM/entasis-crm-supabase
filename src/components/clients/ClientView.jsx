@@ -13,6 +13,7 @@ import ClientEspaceCard from './ClientEspaceCard.jsx'
 import ClientTimeline from './ClientTimeline.jsx'
 import { partenaireDe, etapeDe } from '../../config/partenairesImmo'
 import { origineClient } from '../../lib/origine-client'
+import JaugeCompletude from './JaugeCompletude.jsx'
 
 // Copie une valeur dans le presse papiers avec retour visuel
 function copier(valeur, label) {
@@ -311,6 +312,9 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
           }}>
             {client.prenom} {client.nom}
           </h1>
+          <div style={{ marginBottom: '10px' }}>
+            <JaugeCompletude client={client} />
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '14px', color: 'var(--t2)' }}>
               Conseiller: {client.advisor_code || '—'}
