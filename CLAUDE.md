@@ -227,6 +227,19 @@ Ce que l'audit a mis en évidence sans correctif de code :
   Sa date de début est passée au 14 septembre le 2 septembre, sur décision
   de Louis. Reste une incohérence de saisie : la fin est au 1er septembre
   2028 alors que le début est au 14 septembre 2026, à trancher.
+* **Deux profils portent un nom tout en minuscules** (« claire saisse » et
+  « martin borgis », ce dernier étant manager). `normaliser_nom_complet`
+  les corrigerait, mais elle ne joue qu'à la création : une mise à jour
+  manuelle est nécessaire, en attente de Louis.
+* **Trois orthographes pour le même conseiller** : le profil dit
+  « Nans Marro-Dauzat », sa fiche d'alternance « Nans MARRO-DUZAT » et sa
+  fiche CDI « Nans Marrot-Dauzat ». Même motif pour « Victor OSCHENSEI »
+  contre « Victor Ochsenbein ». Sans conséquence tant que le profil est
+  rattaché, mais illisible dans Pilotage RH.
+* **Le CDI de Nans prend le relais le 18 septembre** : son alternance finit
+  le 17, le CDI commence le 18 avec le drapeau `actif` à faux. Depuis que
+  le contrat se choisit par ses dates, la bascule se fera seule, comme
+  celle de Quentin le 1er septembre. Rien à programmer.
 * **Pull request 41** sur ce dépôt, vieux test de design de mai : à
   fermer ou à refaire.
 * **Le compte Pappers rattaché aux outils de Louis n'a plus de crédits**
@@ -260,7 +273,23 @@ L'orthographe retenue par Louis est **Zarrouk**, celle de son compte
 Google. Sa fiche contrat, qui disait « Zarouk », a été corrigée le
 2 septembre.
 
-Alois Carini, Charlotte Billard, Ilana Zarrouk et Eliott Bec sont
+**Eliott Bec n'est pas finalisé**, contrairement à ce que ce mémo a
+longtemps affirmé. Son profil existe (code `ELIOTT`, actif) mais sa fiche
+contrat n'y est pas rattachée, n'a pas de matricule, et son libellé porte
+deux espaces. Conséquence : `codesContrat` (`api/_lib/calcul-commission.js`)
+ne trouve ni matricule, ni profil, ni libellé qui corresponde à `ELIOTT`,
+donc ses dossiers ne se rattachent pas à son contrat dans Rémunération. À
+réparer d'un seul geste dans Pilotage RH : lier le profil, poser le
+matricule `ELIOTT`, retirer le double espace.
+
+**Le matricule sert au rattachement**, ce n'est pas un champ décoratif :
+Pilotage RH rapproche un contrat d'un profil quand `matricule` égale
+`advisor_code`, et le calcul de commission cherche les dossiers par
+matricule, libellé du contrat, ou code du profil rattaché. Sept fiches
+contrat n'en ont pas ; pour six d'entre elles le profil rattaché fait le
+travail, seule celle d'Eliott Bec est vraiment orpheline.
+
+Alois Carini, Charlotte Billard et Ilana Zarrouk sont
 finalisés (profil, code conseiller, fiche contrat rattachée). Hyppolite
 Morel arrive le 14. Le CRM se connecte par Google, le profil se crée à la
 première connexion ; la Lead Room a ses propres comptes.
