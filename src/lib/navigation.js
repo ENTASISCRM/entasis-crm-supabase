@@ -78,6 +78,7 @@ export function buildNavDomains({ isManager, isRhDelegue, canSmartRh }) {
         // Ordre : pilotage direction d'abord, self-service ensuite.
         ...((isManager || isRhDelegue) ? [
           { tab: 'team', label: 'Équipe' },
+          { tab: 'connexions', label: 'Connexions' },
           { tab: 'pilotage-rh', label: 'Pilotage RH' },
           { tab: 'recrutement', label: 'Recrutement' },
         ] : []),

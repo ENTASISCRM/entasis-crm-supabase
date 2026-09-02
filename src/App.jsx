@@ -51,6 +51,7 @@ const EditorialHub = lazy(() => import('./components/EditorialHub'))
 const PilotageRH = lazy(() => import('./components/PilotageRH'))
 const Recrutement = lazy(() => import('./components/Recrutement'))
 const SmartRH = lazy(() => import('./components/SmartRH'))
+const Connexions = lazy(() => import('./components/Connexions'))
 const Remuneration = lazy(() => import('./components/Remuneration'))
 const ManagementView = lazy(() => import('./components/ManagementView'))
 const UcsStructures = lazy(() => import('./components/UcsStructures'))
@@ -983,7 +984,7 @@ async function genererFicheParrainage(profile){
 // portent déjà l'identité visuelle de chaque écran.
 // Ecrans ou les actions commerciales de la barre du haut ont un sens
 const ECRANS_COMMERCIAUX = ['dashboard','pipeline','dossiers','clients','multi-equipement','leads','agenda','forecast']
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers','multi-equipement':'Multi-équipement',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers',team:'Équipe',leads:'Leads','ucs-structures':'UCS Produits Structurés',allocations:'Allocations types',partenaires:'Partenaires · annuaire',immobilier:'Immobilier · dossiers transmis',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH','recrutement':'Recrutement',conformite:'Conformité',editorial:'Agent éditorial',cockpit:'Cockpit ratios'}
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers','multi-equipement':'Multi-équipement',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers',team:'Équipe',leads:'Leads','ucs-structures':'UCS Produits Structurés',allocations:'Allocations types',partenaires:'Partenaires · annuaire',immobilier:'Immobilier · dossiers transmis',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH',connexions:'Connexions au CRM','recrutement':'Recrutement',conformite:'Conformité',editorial:'Agent éditorial',cockpit:'Cockpit ratios'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile,onHelp,notifications,notifScope}){
   return (
@@ -5489,6 +5490,7 @@ export default function App(){
           {activeTab==='leads'&&leadsVue==='live'&&<LeadRoomEmbed/>}
           {activeTab==='leads'&&leadsVue!=='live'&&<LeadsEntrants profile={profile} onCreerDossier={(d)=>{setEditingDeal(d);setModalOpen(true)}} onOuvrirDossier={(id)=>{const d=deals.find(x=>x.id===id);if(d)startEdit(d);else toast.error('Ce dossier n’est pas dans la liste chargée, rechargez la page.')}} onOuvrirLeadRoom={()=>setLeadsVue('live')}/>}
           {activeTab==='smart-rh'&&canSmartRh&&<SmartRH profile={profile} rhDelegue={isRhDelegue}/>}
+          {activeTab==='connexions'&&(isManager||isRhDelegue)&&<Connexions/>}
           {activeTab==='pilotage-rh'&&(isManager||isRhDelegue)&&<PilotageRH profile={profile}/>}
           {activeTab==='recrutement'&&(isManager||isRhDelegue)&&<Recrutement/>}
           {activeTab==='pipeline'&&<PipelineBoard deals={deals} month={month} profile={profile} onEdit={startEdit} onQuickPatch={quickPatchDeal}/>}

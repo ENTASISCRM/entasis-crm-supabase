@@ -204,6 +204,18 @@ const finMoisDernier = (() => {
   const f = new Date(d.getFullYear(), d.getMonth(), 0)
   return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`
 })()
+// Connexions fictives pour l ecran Connexions au CRM. Le jeu contient un cas
+// tout juste arrive (vue en direct), un depuis une autre ville que d habitude
+// et un depuis l etranger, pour que les trois etats se voient a la capture.
+const ilYAMinutes = (minutes) => new Date(Date.now() - minutes * 60000).toISOString()
+export const CONNEXIONS = [
+  { id: 1, user_id: 'u-demo', email: 'demo@exemple.fr', full_name: 'Conseiller Démo', ip: '82.64.10.7', ip_source: 'serveur', user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36', pays: 'FR', region: 'IDF', ville: 'Paris', created_at: ilYAMinutes(4) },
+  { id: 2, user_id: 'u-autre', email: 'temoin@exemple.fr', full_name: 'Conseiller Témoin', ip: '90.12.44.180', ip_source: 'serveur', user_agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1', pays: 'FR', region: 'IDF', ville: 'Paris', created_at: ilYAMinutes(180) },
+  { id: 3, user_id: 'u-autre', email: 'temoin@exemple.fr', full_name: 'Conseiller Témoin', ip: '185.23.9.44', ip_source: 'serveur', user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128.0.0.0 Safari/537.36 Edg/128.0.0.0', pays: 'ES', region: 'MD', ville: 'Madrid', created_at: ilYAMinutes(1500) },
+  { id: 4, user_id: 'u-demo', email: 'demo@exemple.fr', full_name: 'Conseiller Démo', ip: '82.64.10.7', ip_source: 'serveur', user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/128.0.0.0 Safari/537.36', pays: 'FR', region: 'ARA', ville: 'Lyon', created_at: ilYAMinutes(2900) },
+  { id: 5, user_id: 'u-demo', email: 'demo@exemple.fr', full_name: 'Conseiller Démo', ip: '82.64.10.7', ip_source: 'serveur', user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/128.0.0.0 Safari/537.36', pays: 'FR', region: 'IDF', ville: 'Paris', created_at: ilYAMinutes(4400) },
+]
+
 export const CONTRAT_NEGATIF = { id: 'k2', profile_id: 'u-autre', full_name: 'Camille Ferrand', type_contrat: 'ALTERNANT', date_debut: `${ANNEE - 1}-09-01`, date_fin: `${ANNEE + 1}-09-01`, conges_report: -1.5, conges_report_au: finMoisDernier, conges_deja_pris: 0, actif: true }
 
 // Reponse de l API de remuneration, vue conseiller. Ce sont les chiffres du
@@ -300,6 +312,7 @@ export async function pageDemo(browser, { role = 'conseiller' } = {}) {
   const rpcs = {
     team_directory: equipe,
     cabinet_totals_month: TOTAUX_CABINET,
+    journal_connexions: CONNEXIONS,
   }
 
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
