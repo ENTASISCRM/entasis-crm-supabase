@@ -334,6 +334,12 @@ demande de Louis :
   sa prise d'effet**, sinon l'acquisition repart de zéro et le solde recule
   du jour au lendemain. Le CDI qui démarre le 18 septembre porte le solde du
   17, soit 7,5 jours ; il en gagne 2,5 le 30, comme les autres.
+* **Un commentaire se joint à chaque décision de congé.** Un champ libre dans
+  la ligne de la demande à valider, facultatif, valable pour un accord comme
+  pour un refus. Il part au salarié dans le mail de décision et reste affiché
+  sur sa demande, en gris pour un accord, en rouge pour un refus. Le refus
+  demande maintenant confirmation par la fenêtre maison, qui rappelle le
+  commentaire ; l'ancien `window.prompt` natif a disparu.
 * **Une personne partie sort de Smart RH le 5 du mois suivant.** Un contrat
   qui se termine dans le mois reste affiché jusqu'au 4 du mois d'après, le
   temps de la paie et de la feuille de temps, puis il quitte les compteurs de

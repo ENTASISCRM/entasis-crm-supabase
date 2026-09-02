@@ -539,14 +539,36 @@ export default function SmartRH({ profile, rhDelegue = false }) {
       await reload()
     } catch (e) { toast.error(messageErreur(e)) } finally { setSaving(false) }
   }
+  // Commentaire libre que la direction joint a sa decision, saisi dans la
+  // ligne de la demande. Facultatif, valable pour un accord comme pour un
+  // refus : il part au salarie avec la reponse et reste sur sa demande.
+  const [commentaires, setCommentaires] = useState({})
+  const commentaireDe = (id) => (commentaires[id] || '').trim()
+  const setCommentaire = (id, v) => setCommentaires((m) => ({ ...m, [id]: v }))
+
   async function decider(c, statut) {
-    let dmotif = null
+    const dmotif = commentaireDe(c.id) || null
+    // Un refus se confirme : il part au salarie et on ne le reprend pas d un
+    // clic. Une validation, si, en changeant le type ou en annulant.
     if (statut === 'refuse') {
-      dmotif = window.prompt(`Refuser la demande de ${c.demandeur_nom || 'ce collaborateur'}. Motif (facultatif) :`, '')
-      if (dmotif === null) return
+      const qui = c.demandeur_nom || 'ce collaborateur'
+      if (!(await confirmDialog({
+        title: `Refuser la demande de ${qui} ?`,
+        message: dmotif
+          ? `Le refus lui sera notifié avec ton commentaire : « ${dmotif} »`
+          : 'Le refus lui sera notifié sans commentaire. Tu peux en saisir un dans la ligne avant de refuser.',
+        confirmLabel: 'Refuser',
+        danger: true,
+      }))) return
     }
     setSaving(true)
-    try { await decideConge(c.id, statut, profile?.full_name || 'Direction', dmotif); toast.success(statut === 'valide' ? 'Congé validé' : 'Demande refusée'); notifierRH('decision', { ...c, statut, decision_motif: dmotif }); await reload() }
+    try {
+      await decideConge(c.id, statut, profile?.full_name || 'Direction', dmotif)
+      toast.success(statut === 'valide' ? 'Congé validé' : 'Demande refusée')
+      notifierRH('decision', { ...c, statut, decision_motif: dmotif })
+      setCommentaire(c.id, '')
+      await reload()
+    }
     catch (e) { toast.error(messageErreur(e)) } finally { setSaving(false) }
   }
 
@@ -700,7 +722,11 @@ export default function SmartRH({ profile, rhDelegue = false }) {
                 <div className="rmain">
                   <div className="rl1">{c.type} {badge(c.statut)}</div>
                   <div className="rl2">{c.demi_journee ? `${fmt(c.date_debut)} (demi-journée)` : `${fmt(c.date_debut)} au ${fmt(c.date_fin)}`} · {fmtJours(nbJoursAffiche(c))}{c.type === 'Congé payé' ? ' décomptés' : ''}</div>
-                  {c.decision_motif && (c.statut === 'refuse' || c.statut === 'valide') && <div className="rmotif">{c.statut === 'refuse' ? 'Motif : ' : ''}{c.decision_motif}</div>}
+                  {c.decision_motif && (c.statut === 'refuse' || c.statut === 'valide') && (
+                    <div className={`rmotif${c.statut === 'valide' ? ' ok' : ''}`}>
+                      {c.statut === 'refuse' ? 'Motif : ' : 'Commentaire : '}{c.decision_motif}
+                    </div>
+                  )}
                   {c.statut === 'contre_proposee' && (
                     <div className="cpprop">
                       La direction propose plutôt : <b>{c.contre_demi_journee
@@ -796,6 +822,19 @@ export default function SmartRH({ profile, rhDelegue = false }) {
                           </div>
                         )
                       })()}
+                      {/* Commentaire facultatif joint à la décision : il part
+                          au salarié avec la réponse et reste affiché sur sa
+                          demande. Utile pour accorder en expliquant, autant
+                          que pour motiver un refus. */}
+                      <input
+                        className="rcom"
+                        type="text"
+                        value={commentaires[c.id] || ''}
+                        disabled={saving}
+                        placeholder="Commentaire (facultatif), transmis au salarié"
+                        aria-label={`Commentaire sur la demande de ${c.demandeur_nom || 'ce collaborateur'}`}
+                        onChange={(e) => setCommentaire(c.id, e.target.value)}
+                      />
                     </div>
                     <div className="ract">
                       {/* Requalifier avant de décider : un congé payé demandé
@@ -1041,6 +1080,11 @@ const styles = `
 .srh .rl1{ font-weight:750; color:var(--navy); font-size:13px; display:flex; align-items:center; gap:8px; flex-wrap:wrap }
 .srh .rl2{ font-size:11.5px; color:#5b6470; margin-top:2px }
 .srh .rmotif{ font-size:11px; color:#B4453B; margin-top:2px }
+.srh .rmotif.ok{ color:#5b6470 }
+.srh .rcom{ display:block; width:100%; margin-top:6px; border:1px solid var(--line); border-radius:8px; padding:6px 9px; font-size:12px; background:#fff; color:var(--ink) }
+.srh .rcom::placeholder{ color:var(--t3,#8a8a8e) }
+.srh .rcom:focus{ outline:none; border-color:var(--gold-dk); box-shadow:0 0 0 3px rgba(201,169,97,.15) }
+.srh .rcom:disabled{ background:#FAF9F7 }
 .srh .stag{ font-size:9.5px; font-weight:800; letter-spacing:.04em; border-radius:999px; padding:2px 8px; text-transform:uppercase }
 .srh .stag.en_attente{ background:#FBEED8; color:#9A6A1B }
 .srh .stag.valide{ background:#E7F3EC; color:var(--vert) }
