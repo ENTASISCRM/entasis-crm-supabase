@@ -28,6 +28,8 @@ import ShortcutsHelp from './components/ui/ShortcutsHelp'
 import InlineSelect from './components/ui/InlineSelect'
 import NotificationsBell from './components/ui/NotificationsBell'
 import ChecklistAccueil from './components/ui/ChecklistAccueil'
+import DossiersStagnants from './components/DossiersStagnants'
+import SequenceRelance from './components/dossiers/SequenceRelance'
 import * as congesService from './services/conges'
 import { usePersistedState } from './hooks/usePersistedState'
 import { noterRecent } from './lib/recents'
@@ -73,6 +75,7 @@ import {
   anneeDuDeal,
   dealDuMois, estSimpleRdv, entonnoirLeads, compterPipeline } from './lib/metrics'
 import { construireMaJournee, dateReport } from './lib/ma-journee'
+import { patchApresFait, messageApresFait } from './lib/sequences'
 import {
   MONTHS,
   STATUS_OPTIONS,
@@ -1616,6 +1619,9 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab,onQuickP
       </div>
       {/* D3 : ce qui doit être fait aujourd'hui passe AVANT le reste. */}
       <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch}/>
+      {/* C2 : les dossiers En cours sans mouvement depuis 21 jours, avec
+          Relancer (ouvre le dossier) et Abandonner (annulable). */}
+      <DossiersStagnants deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch}/>
       <div style={{marginTop:28}}>
         <Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded onOuvrirClient={onOpenClient}/></Suspense>
       </div>
@@ -1705,6 +1711,9 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onQ
       </div>
       <div style={{marginBottom:24}}><Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded onOuvrirClient={onOpenClient}/></Suspense></div>
       <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch}/>
+      {/* C2 : les dossiers En cours sans mouvement depuis 21 jours, avec
+          Relancer (ouvre le dossier) et Abandonner (annulable). */}
+      <DossiersStagnants deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch}/>
       <div className="grid-2 gap-16 mb-24">
         <AreaChart title="PP cabinet annualisée" subtitle="Réalisé + pipeline → objectif" actual={ppS} projected={ppS+ppP} target={ppTarget}/>
         <AreaChart title="PU cabinet" subtitle="Versements uniques consolidés" actual={puS} projected={puS+puP} target={puTarget}/>
@@ -1813,7 +1822,9 @@ function ActionsDuJour({deals,profile,onEdit,onQuickPatch}){
   const {rdv,retard,jour}=file
 
   // Les trois gestes : écriture optimiste + annulation via quickPatchDeal.
-  const fait=(d)=>onQuickPatch?.(d,{next_action:null,next_action_date:null},`Action terminée · ${getClientName(d)}`,{undoable:true})
+  // B2 : si le dossier suit une sequence de relance, « Fait » arme l etape
+  // suivante au bon delai ; sinon il termine l action, comme avant.
+  const fait=(d)=>{const patch=patchApresFait(d,today);onQuickPatch?.(d,patch,`${messageApresFait(d,patch)||'Action terminée'} · ${getClientName(d)}`,{undoable:true})}
   const reporter=(d,choix)=>onQuickPatch?.(d,{next_action_date:dateReport(choix,today)},choix==='demain'?'Reporté à demain':'Reporté d’une semaine',{undoable:true})
   const Geste=({label,title,onClick})=>(
     <button className="btn btn-ghost btn-sm" title={title} style={{padding:'2px 8px',fontSize:11,flexShrink:0}}
@@ -4453,6 +4464,9 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                 dossier vivant sans étape suivante datée. Alimente la liste
                 « Mes actions du jour » de l'accueil. */}
             {!expressMode && (<>
+              {/* B2 : un gabarit pose la chaine de relances, les champs
+                  Prochaine action et Pour le en dessous suivent. */}
+              <SequenceRelance deal={deal} set={set} />
               <div className="form-row form-row-2">
                 <div className="form-group">
                   <label className="form-label">Prochaine action</label>
