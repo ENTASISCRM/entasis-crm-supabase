@@ -148,6 +148,14 @@ export function normalizeDeal(d) {
   if ('next_action_date' in d) {
     prochaineAction.next_action_date = d.next_action_date || null;
   }
+  // B2 : la séquence de relance suit la même règle. sequence_etape est un
+  // integer en base, une chaîne vide y ferait échouer l'écriture.
+  if ('sequence_key' in d) {
+    prochaineAction.sequence_key = d.sequence_key ? String(d.sequence_key).trim() || null : null;
+  }
+  if ('sequence_etape' in d) {
+    prochaineAction.sequence_etape = d.sequence_etape === '' || d.sequence_etape == null ? null : Number(d.sequence_etape);
+  }
   return {
     ...d,
     pp_m: Number(d.pp_m || 0),
