@@ -463,3 +463,44 @@ export async function listerPourCiblage() {
   }
   return lignes
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Doublons et fusion (demande Thomas 26/08)
+//
+// Supprimer une fiche en doublon serait destructeur : la cle etrangere vers
+// clients est en CASCADE pour les contrats, documents, echanges et
+// equipements. Sur les 21 groupes detectes, la majorite porte des donnees des
+// DEUX cotes. On fusionne donc, on ne supprime pas.
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * Groupes de fiches en doublon, deja regroupes et comptes par la base.
+ * La RLS s'applique : un conseiller ne voit que son perimetre.
+ * @returns [{ cle, critere, fiches: [...] }] tries du plus fiable au moins sur
+ */
+export async function listerDoublons() {
+  const { data, error } = await supabase.rpc('doublons_clients')
+  if (error) throw error
+
+  const parGroupe = new Map()
+  for (const l of data || []) {
+    if (!parGroupe.has(l.cle)) parGroupe.set(l.cle, { cle: l.cle, critere: l.critere, fiches: [] })
+    parGroupe.get(l.cle).fiches.push(l)
+  }
+  // Un groupe dont la RLS ne laisse voir qu'une fiche n'est pas actionnable.
+  return [...parGroupe.values()].filter((g) => g.fiches.length > 1)
+}
+
+/**
+ * Fusionne deux fiches. Tout est rapatrie sur `gardeId`, `absorbeId` disparait.
+ * Les regles de droit vivent dans la fonction SQL, pas ici.
+ * @returns { ok, deplace: { dossiers, contrats, documents, ... } }
+ */
+export async function fusionner(gardeId, absorbeId) {
+  const { data, error } = await supabase.rpc('fusionner_clients', {
+    p_garde: gardeId,
+    p_absorbe: absorbeId,
+  })
+  if (error) throw error
+  return data
+}

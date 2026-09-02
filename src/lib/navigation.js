@@ -46,6 +46,9 @@ export function buildNavDomains({ isManager, isRhDelegue, canSmartRh }) {
       views: [
         { tab: 'clients', sub: 'annuaire', label: 'Annuaire' },
         { tab: 'clients', sub: 'dossiers', label: 'Dossiers du mois' },
+        // Ouvert a tous : c est le conseiller qui vit avec ses doublons. La
+        // fonction SQL refuse la fusion entre fiches de conseillers differents.
+        { tab: 'clients', sub: 'doublons', label: 'Doublons' },
         // D6 : le rattrapage des fiches sans prenom, reserve a la direction.
         ...(isManager ? [{ tab: 'clients', sub: 'rattrapage', label: 'Fiches à rattraper' }] : []),
         // Campagnes ciblees sur les fiches, definies par la direction.

@@ -57,6 +57,7 @@ const UcsStructures = lazy(() => import('./components/UcsStructures'))
 const AllocationsTypes = lazy(() => import('./components/AllocationsTypes'))
 const ClientsView = lazy(() => import('./components/clients/ClientsView'))
 const RattrapageFiches = lazy(() => import('./components/clients/RattrapageFiches'))
+const DoublonsClients = lazy(() => import('./components/clients/DoublonsClients'))
 const Campagnes = lazy(() => import('./components/Campagnes'))
 const ClientView = lazy(() => import('./components/clients/ClientView'))
 // Conformite embarque jspdf : lazy pour rester hors du bundle de login.
@@ -4742,6 +4743,7 @@ export default function App(){
             // sur l'annuaire au lieu d'un onglet Clients vide.
             const direction = profile?.role === 'manager'
             const sousVue = parts[1] === 'dossiers' ? 'dossiers'
+              : parts[1] === 'doublons' ? 'doublons'
               : (parts[1] === 'rattrapage' || parts[1] === 'campagnes') && direction ? parts[1]
               : 'annuaire'
             setClientsVue(sousVue)
@@ -4766,6 +4768,7 @@ export default function App(){
       if (selectedClientId) next = '#/clients/c/' + encodeURIComponent(selectedClientId)
       else if (clientsVue === 'dossiers') next = '#/clients/dossiers'
       else if (clientsVue === 'rattrapage') next = '#/clients/rattrapage'
+      else if (clientsVue === 'doublons') next = '#/clients/doublons'
       else if (clientsVue === 'campagnes') next = '#/clients/campagnes'
       else next = '#/clients'
     }
@@ -5492,6 +5495,7 @@ export default function App(){
           {/* D6 : rattrapage des fiches sans prenom, direction seulement ; la
               RLS reste le vrai verrou sur chaque ecriture. */}
           {activeTab==='clients'&&!selectedClientId&&clientsVue==='rattrapage'&&isManager&&<RattrapageFiches profile={profile}/>}
+          {activeTab==='clients'&&!selectedClientId&&clientsVue==='doublons'&&<DoublonsClients profile={profile}/>}
           {/* Campagnes ciblees : ciblage en direct, lancement, entonnoir. */}
           {activeTab==='clients'&&!selectedClientId&&clientsVue==='campagnes'&&isManager&&<Campagnes profile={profile} teamProfiles={teamProfiles}/>}
           {activeTab==='clients'&&!selectedClientId&&clientsVue==='dossiers'&&<DealsTable deals={deals} month={month} profile={profile} onEdit={startEdit} onDelete={deleteDeal} onRefresh={loadAll} onQuickPatch={quickPatchDeal} onSelectClient={(clientId) => {
