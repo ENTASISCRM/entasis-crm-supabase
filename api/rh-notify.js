@@ -122,7 +122,7 @@ export default async function handler(req, res) {
         subject: valide ? 'Votre demande de congé est validée' : 'Votre demande de congé est refusée',
         lignes: [
           `Votre demande (${conge.type || 'Congé payé'}, ${periode(conge)}) a été <b>${valide ? 'validée' : 'refusée'}</b> par ${prof?.full_name || 'la direction'}.`,
-          !valide && conge.decision_motif ? `Motif : ${conge.decision_motif}` : '',
+          conge.decision_motif ? `${valide ? 'Commentaire' : 'Motif'} : ${conge.decision_motif}` : '',
           `Le détail est visible dans l onglet Smart RH du CRM.`,
         ].filter(Boolean),
       })
