@@ -30,7 +30,7 @@ Trois commandes, dans cet ordre. Aucune ne doit régresser :
 
 ```
 npx eslint src/          # un avertissement préexistant, zéro erreur attendue
-npx vitest run           # 345 tests
+npx vitest run           # 475 tests
 npx vite build
 ```
 
@@ -57,140 +57,101 @@ le rendu, pas le diff.
 * Déploiement Vercel automatique sur main, et une préversion par pull
   request.
 
-## Où on en est au 1er septembre 2026
+## Où on en est au 2 septembre 2026
+
+Le 1er septembre, Louis a demandé « tout d'un coup » et a fusionné sans
+relecture. Tout ce qui suit est en ligne sur main.
+
+### Ce qui est en ligne depuis le 1er septembre
+
+* **Séquences de relance** (plan B2). Dans la modale dossier, un gabarit
+  (`src/config/sequencesRelance.js`) pose la chaîne d'étapes datées ; le
+  geste Fait de Ma journée arme l'étape suivante (`src/lib/sequences.js`).
+  Deux colonnes sur `deals` : `sequence_key`, `sequence_etape`.
+* **Dossiers sans mouvement** (plan C2). Bloc sous la file du matin,
+  seuil 21 jours, logique dans `src/lib/stagnants.js`.
+* **Leads entrants** (plan A6, lecture d'abord). Le domaine Leads lit la
+  table `leads` du CRM (`src/components/LeadsEntrants.jsx`), la Lead Room
+  reste en seconde vue. Le rapprochement direction « signés là bas, pas
+  ici » passe par `api/leads-rapprochement.js`, qui attend deux variables
+  Vercel : `LEADROOM_SUPABASE_URL` et `LEADROOM_SUPABASE_SERVICE_ROLE_KEY`.
+  **Tant qu'elles ne sont pas posées, le bloc dit « indisponible ».**
+* **Rattrapage des fiches** (plan D6). Vue direction « Fiches à
+  rattraper » dans Clients : séparation prénom et nom proposée, jamais
+  appliquée sans case cochée et confirmation. Heuristiques dans
+  `src/lib/noms.js`.
+* **Le contrat de rémunération se choisit par ses dates**
+  (`api/_lib/contrats.js`), plus par le drapeau `actif` seul. Un
+  renouvellement saisi à l'avance prend le relais le jour dit. Le drapeau
+  reste une exclusion manuelle et un filet quand rien n'est en poste.
+* **L'agenda d'équipe lit les profils** (`api/team-calendar.js`) au lieu
+  d'une liste figée qui confondait les conseillers.
+* **Le nom d'un profil est mis au propre à sa création** (fonction SQL
+  `normaliser_nom_complet`, appelée par `handle_new_user`).
+* La fiche client affiche à nouveau tous ses champs (les sections
+  repliables s'appellent `form-pliable`, le nom générique `form-section`
+  est réservé aux sections plates). Deux modales visaient des classes
+  inexistantes : les vrais noms sont `modal-box`, `modal-head`,
+  `modal-foot`, et `src/design-system.md` le dit désormais.
+* Les quatorze logos partenaires sont en place. Le correctif Pappers du
+  Lead Room est déployé (structure regroupée, homonymes signalés).
+
+### Ce qui reste ouvert
+
+* **Contrôle visuel automatique en CI** : chantier lancé le 1er septembre
+  (`tests/visuel/`, workflow `controle-visuel.yml`). Vérifier qu'il est
+  bien sur main ; sinon il est sur une branche de travail à intégrer.
+* **Hyppolite Morel arrive le 14 septembre** : son profil CRM naît à sa
+  première connexion Google, il faut alors poser le code `HYPPOLITE` et
+  rattacher sa fiche contrat (identifiant
+  `8e1bf94e-ce69-448b-abb1-bf57b82f42c2`, libellée « MOREL Hyppolite »).
+  Sa fiche contrat démarre au 1er septembre en base alors qu'il arrive le
+  14 : Louis n'a pas encore dit s'il faut corriger.
+* **Orthographe du nom d'Ilana** : « Zarrouk » sur son compte Google,
+  « Zarouk » sur sa fiche contrat. En attente de Louis, rien touché.
+* **Pull request 41** sur ce dépôt, vieux test de design de mai : à
+  fermer ou à refaire.
+* **Le compte Pappers rattaché aux outils de Louis n'a plus de crédits**
+  (sans rapport avec la clé du Lead Room).
 
 ### L'onglet Partenaires
 
 L'ancien onglet Immobilier est devenu le domaine **Partenaires**, avec deux
-vues : l'**Annuaire** (le carnet du cabinet, dix sept contacts classés en
-cinq métiers) et **Immobilier dossiers**, la transmission aux référents,
-inchangée.
+vues : l'**Annuaire** (dix sept contacts classés en cinq métiers) et
+**Immobilier dossiers**, la transmission aux référents.
 
-L'annuaire a été refait trois fois avant de tenir : cartes, puis lignes
-denses, puis passe esthétique. Ce qui compte si on y retouche :
+Ce qui compte si on y retouche :
 
-* **La densité est un acquis.** On est passé de 2,6 écrans à dérouler pour
-  dix sept contacts à environ 1,7. Louis avait dit « on doit scroll 20 ans ».
-  Ne pas regagner du décor au prix du scroll.
-* **Les coordonnées n'ont pas de cadre permanent.** Quarante rectangles
-  gris faisaient formulaire administratif. Le cadre apparaît au survol.
+* **La densité est un acquis.** Environ 1,7 écran à dérouler pour dix sept
+  contacts. Ne pas regagner du décor au prix du scroll.
+* **Les coordonnées n'ont pas de cadre permanent.** Le cadre apparaît au
+  survol.
 * **Téléphones et adresses sont dans deux colonnes fixes.** Ils tombent au
-  même pixel sur toutes les lignes. C'est ce qui sépare un annuaire d'une
-  liste bricolée, vérifier après toute modification de la grille.
-* **Écrire ouvre Gmail**, jamais `mailto:` : le cabinet est sur Google
-  Workspace et un `mailto:` ouvre l'application Mail que personne n'utilise.
-* Contrastes tous au seuil AA, mesurés au navigateur. La teinte grise
-  tertiaire de la charte passe sous le seuil dès qu'elle porte du texte
-  utile, d'où l'usage du gris secondaire ici.
+  même pixel sur toutes les lignes, vérifier après toute modification.
+* **Écrire ouvre Gmail**, jamais `mailto:`.
+* Un logo déposé dans `src/assets/logos/` s'affiche automatiquement (nom
+  de la société en minuscules, accents retirés, ponctuation en tirets ;
+  voir le `LISEZMOI.md` du dossier et `scripts/preparer-logos.py`).
+* Deux confusions déjà faites : la société de Hugo Busuttil s'appelle
+  **ASIO** ; **Asselio est une autre maison**, sous la marque Abeille ;
+  **Julien Renversé est chez François 1er**, pas chez Asselio.
 
-### Les logos des partenaires
+### Onboarding des arrivants de septembre
 
-Un logo déposé dans `src/assets/logos/` s'affiche automatiquement sur
-toutes les lignes de la maison concernée, sans toucher au code. Le nom du
-fichier vient du nom de la société, en minuscules, accents retirés,
-ponctuation en tirets. Voir le `LISEZMOI.md` du dossier.
-
-**Déjà en place** : `notaire-partenaire.svg` (étude Cédric Deplano),
-`asio.png`, `april.png`.
-
-**Manquent encore onze maisons** : Althéra Patrimoine, François 1er,
-SwissLife, Generali, Harlay Avocat, Asselio, Irbis, i Kapital, Wemo Reim,
-SCPI Log In, SCPI Reason MNK.
-
-### Première tâche à faire : finir les logos
-
-C'est le chantier en cours, à terminer en priorité. En local, contrairement
-à la session cloud qui n'avait aucune sortie réseau, l'accès à internet et
-aux dossiers de Louis est disponible : les onze fichiers peuvent être
-récupérés directement.
-
-**Étape 1, chercher ce qui est déjà sur la machine.** Louis a téléchargé
-plusieurs de ces logos. Regarder dans son dossier de téléchargements et sur
-son bureau, y compris dans les archives déjà décompressées. Il avait
-notamment sous la main Althéra Patrimoine, Generali, Harlay, i Kapital,
-SwissLife, Wemo Reim et MNK Partners.
-
-**Étape 2, télécharger ce qui manque.** Les adresses exactes des logos
-officiels, relevées dans le fichier fourni par Louis :
-
-| Fichier à produire | Adresse |
-| --- | --- |
-| `althera-patrimoine.png` | https://althera-patrimoine.com/wp-content/uploads/2022/11/logo-principal-althera-patrimoine.png |
-| `francois-1er.png` | https://francois1er.com/wp-content/uploads/2020/07/Logo-Francois-1er-Fin-Pantone-2955C_SMALL.png |
-| `asselio.svg` | https://www.asselio.com/wp-content/uploads/2025/12/logo-asselio-partenaires.svg |
-| `irbis.svg` | https://www.irbis-finance.com/wp-content/uploads/2024/09/IRBIS-logo-original.svg |
-| `i-kapital.webp` | https://i-kapital.fr/wp-content/uploads/2024/07/logo-ikapital-investissement-cabinet.webp |
-| `scpi-log-in.jpg` | https://theoreim.com/wp-content/uploads/2022/09/Logo-SCPI-Theoreim-logistique1e.jpg |
-| `scpi-reason-mnk.png` | https://mnk-partners.com/wp-content/uploads/2024/11/LOGO_REASON_ORANGE.png |
-| `adezio.png` | https://www.adezio.fr/uploads/assets/logo-full.png |
-
-Restent SwissLife, Generali, Harlay Avocat et Wemo Reim, à prendre sur le
-site de chaque maison ou sur `brandfetch.com/<domaine>` qui donne les
-versions officielles.
-
-**Étape 3, préparer chaque fichier** avec le script ci dessous, puis
-renommer la sortie au nom attendu par l'annuaire.
-
-**Étape 4, vérifier à l'écran** avant de pousser : lancer le serveur de
-développement, ouvrir l'onglet Partenaires, contrôler que chaque logo est
-net, centré, et qu'aucune ligne n'a perdu son monogramme par erreur.
-
-**Étape 5, ouvrir une pull request** et montrer une capture à Louis. Ne
-pas fusionner sans son accord.
-
-Deux pièges déjà rencontrés :
-
-* Le logo complet avec le nom écrit dessous devient illisible dans une
-  pastille de 32 pixels. Préférer systématiquement le symbole seul quand
-  il existe : le carré au H de Harlay, le swoosh de SwissLife, le lion de
-  Generali, le carré compact de Wemo Reim.
-* Un fichier au fond blanc non détouré fait une tache claire sur la ligne.
-  Le script s'en occupe, mais vérifier le résultat.
-
-Pour préparer un fichier téléchargé :
-
-```
-python3 scripts/preparer-logos.py ~/Telechargements/swisslife.png
-```
-
-Le script détoure le fond, recadre au plus juste, centre dans un carré à
-marge constante et exporte en PNG de 256 pixels. Deux points de vigilance :
-préférer le symbole seul au logo avec le nom écrit dessous, illisible à 32
-pixels, et vérifier le rendu à l'écran avant de pousser.
-
-À savoir sur les noms, deux confusions déjà faites :
-
-* La société de Hugo Busuttil s'appelle **ASIO** (et non Adezio).
-* **Asselio est une autre maison**, sous la marque Abeille Assurances.
-
-### Ce qui attend une action de Louis
-
-* **Pull request 71** sur le dépôt `entasis-leadroom` : le correctif de
-  l'enrichissement Pappers. Trois défauts : la requête était construite à
-  l'envers, les homonymes étaient présentés comme des faits, et la clé
-  écrite ne correspondait pas à celle lue par l'écran. Vérifié le 31 août
-  au soir, l'ancien code tournait encore, donc la pull request n'est pas
-  fusionnée.
-* **Pull request 41** sur ce dépôt : un vieux test de design de mai, basé
-  sur un état du code périmé. À fermer, ou à refaire sur la base actuelle.
-* **Onze logos** à fournir (voir plus haut).
-
-### Onboarding des arrivants du 1er septembre
-
-Cinq personnes : Alois Carini, Charlotte Billard, Hyppolite Morel, Ilana
-Zarouk (contrats déjà saisis) et Eliott Bec (stagiaire).
-
-Leurs comptes Lead Room ont été créés et vérifiés, leurs accès envoyés à
-Jean Decamps. Le CRM se connecte par Google, donc leur profil se crée à la
-première connexion. Un contrôle programmé rattache ensuite le code
-conseiller et la fiche contrat.
-
-Attention aux libellés en base : la fiche d'Hyppolite est enregistrée
-« MOREL Hyppolite » et celle d'Eliott « Eliott  Bec » avec deux espaces.
-Faire les correspondances avec un motif souple, jamais une égalité stricte.
+Alois Carini, Charlotte Billard, Ilana Zarouk et Eliott Bec sont
+finalisés (profil, code conseiller, fiche contrat rattachée). Hyppolite
+Morel arrive le 14. Le CRM se connecte par Google, le profil se crée à la
+première connexion ; la Lead Room a ses propres comptes.
 
 **Aucun mot de passe ne figure dans ce dépôt, et il ne doit jamais y en
-avoir.** Ils ont été transmis par message et par courriel uniquement.
+avoir.**
+
+### Une leçon sur les tâches programmées
+
+Une tâche programmée liée à une session peut mourir en silence quand la
+session est recyclée : celle du changement de contrat de Quentin n'est
+jamais partie. C'est pour cela que le contrat se choisit désormais par ses
+dates. Pour toute échéance lointaine, doubler d'un rappel simple.
 
 ## Les projets Supabase
 
