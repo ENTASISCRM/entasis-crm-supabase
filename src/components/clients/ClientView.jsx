@@ -73,7 +73,9 @@ function calculerCompletude(client) {
     total: CHAMPS_REQUIS.length,
     manquants,
     complet: manquants.length === 0,
-    dateNaissanceManquante: !champRempli(client?.date_naissance),
+    // Recommandee seulement si ni la date ni l age ne sont connus, meme
+    // regle que la jauge de completude.
+    dateNaissanceManquante: !champRempli(client?.date_naissance) && !champRempli(client?.age),
   }
 }
 
@@ -336,13 +338,15 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
               {statusLabel(globalStatus)}
             </span>
 
-            {/* Score de completude, toujours visible (vert a 6/6). */}
+            {/* Le verrou de signature (6 champs), toujours visible (vert a
+                6/6). La jauge de completude sous le titre mesure autre chose
+                (les champs qui servent aux campagnes) : chacune dit son objet. */}
             <span
-              title="Complétude de la fiche client (6 champs obligatoires pour signer)"
+              title="Champs obligatoires pour signer un dossier (6). La jauge sous le titre mesure la complétude pour les campagnes."
               style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
             >
               <span style={{ fontSize: '13px', fontWeight: '600', color: scoreCouleur, whiteSpace: 'nowrap' }}>
-                Fiche {completude.remplis}/{completude.total}
+                Signature {completude.remplis}/{completude.total}
               </span>
               <span style={{
                 width: '64px',

@@ -130,7 +130,7 @@ Maquette : sur la fiche client, « Encours estimé : X € au 30/06 » ; chez le
 
 ### 10. D6, enrichissement des fiches
 
-Maquette : à la création, le champ nom détecte « Aurélie Buiret » et propose la séparation prénom Aurélie, nom Buiret, à confirmer d'un clic ; un écran de rattrapage liste les 330 fiches concernées avec proposition et validation par lot. Tables : clients (prenom, nom, telephone normalisé). Critères : aucune fiche modifiée sans validation explicite ; opération réversible (journal des valeurs d'origine) ; le stock des fiches sans prénom descend sous 10 pour cent en un mois. Estimation : 2 à 3 jours, le risque est la donnée, pas le code : script relu et testé sur copie avant tout passage.
+Maquette : à la création, le champ nom détecte « Aurélie Exemple » et propose la séparation prénom Aurélie, nom Exemple, à confirmer d'un clic ; un écran de rattrapage liste les 330 fiches concernées avec proposition et validation par lot. Tables : clients (prenom, nom, telephone normalisé). Critères : aucune fiche modifiée sans validation explicite ; opération réversible (journal des valeurs d'origine) ; le stock des fiches sans prénom descend sous 10 pour cent en un mois. Estimation : 2 à 3 jours, le risque est la donnée, pas le code : script relu et testé sur copie avant tout passage.
 
 ## Synthèse
 

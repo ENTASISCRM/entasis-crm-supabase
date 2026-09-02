@@ -53,7 +53,7 @@ describe('scoreTexte — ce que la recherche actuelle rate', () => {
   })
 
   it('trouve aussi dans l’autre sens : accent tapé, fiche sans accent', () => {
-    expect(scoreTexte('Aurelie Buiret', 'aurélie')).toBeGreaterThan(0)
+    expect(scoreTexte('Aurelie Exemple', 'aurélie')).toBeGreaterThan(0)
   })
 
   it('se moque de l’ordre des mots', () => {

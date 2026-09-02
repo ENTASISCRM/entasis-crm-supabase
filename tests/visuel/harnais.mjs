@@ -7,7 +7,7 @@
 // choses : on ecrit une session factice dans la cle de stockage du client
 // Supabase (entasis-auth-v1), puis on intercepte chaque appel reseau vers
 // Supabase et vers l API du site pour repondre avec les jeux de donnees ci
-// dessous. Rien ne sort du navigateur.
+// dessous, et on coupe tout le reste. Rien ne sort du navigateur.
 //
 // Toutes les personnes citees ici sont inventees. Aucun nom reel, aucune
 // donnee client reelle : ces jeux servent uniquement a peupler l ecran.
@@ -68,8 +68,44 @@ for (let i = 0; i <= MOIS_COURANT; i++) {
     advisor_code: encours.advisor_code, co_advisor_code: null,
     pp_m: 60 + i * 10, pu: 0, month: MOIS[i],
     priority: i % 4 === 1 ? 'Haute' : 'Normale', source: 'Recommandation', created_at: `${dateDuMois(i, 12)}T09:00:00Z`,
+    updated_at: `${dateDuMois(i, 12)}T09:00:00Z`,
   })
 }
+
+// Un instant il y a N jours, pour les jeux qui dependent du jour ou tourne
+// le controle (dossier sans mouvement, leads recents, cibles de campagne).
+const ilYA = (jours) => new Date(Date.now() - jours * 86400000).toISOString()
+
+// Un dossier en cours sans mouvement depuis 40 jours, quel que soit le mois :
+// le bloc « Dossiers sans mouvement » de l accueil a toujours une ligne.
+DEALS.push({
+  id: 'stagnant-1', client_id: CLIENTS[0].id, client: CLIENTS[0].nom, clients: jointureClient(CLIENTS[0]),
+  product: 'PER Individuel', notes: '', status: 'En cours', date_signed: null, date_rdv: null,
+  advisor_code: 'DEMO', co_advisor_code: null, pp_m: 80, pu: 0, month: MOIS[MOIS_COURANT],
+  priority: 'Normale', source: 'Recommandation', created_at: ilYA(60), updated_at: ilYA(40),
+})
+
+// ── Leads entrants (copie CRM de la Lead Room), tous inventes ───────────────
+export const LEADS = [
+  { id: 'l1', nom: 'Lead Exemple', telephone: '0611000001', email: 'lead1@demo.fr', campagne: 'PER', status: 'available', taken_by: null, taken_at: null, booked_at: null, email_confirmed: 'true', created_at: ilYA(0.2), updated_at: ilYA(0.2) },
+  { id: 'l2', nom: 'Lead Pris', telephone: '0611000002', email: 'lead2@demo.fr', campagne: 'Prévoyance', status: 'taken', taken_by: 'u-demo', taken_at: ilYA(1), booked_at: null, email_confirmed: 'true', created_at: ilYA(2), updated_at: ilYA(1) },
+  { id: 'l3', nom: 'Lead Collègue', telephone: '0611000003', email: null, campagne: 'SCPI', status: 'taken', taken_by: 'u-temoin', taken_at: ilYA(3), booked_at: ilYA(2), email_confirmed: 'false', created_at: ilYA(4), updated_at: ilYA(2) },
+]
+
+// ── Campagnes ciblees : une campagne en cours, une cible pour le conseiller ─
+export const CAMPAGNES = [{
+  id: 'cp1', nom: 'Prévoyance TNS', criteres: { statuts: ['TNS'], famillesAbsentes: ['prevoyance'] },
+  sequence_key: 'relance_devis', accroche: 'Un mot sur la protection de vos revenus.',
+  created_by: 'u-demo', created_at: ilYA(3), cloturee_at: null,
+}]
+// Le service joint clients(...) et campagnes(...) : le harnais ne fait pas de
+// jointure, les objets joints sont poses directement sur la ligne.
+export const CIBLES = [{
+  id: 'ct1', campagne_id: 'cp1', client_id: CLIENTS[5].id, advisor_code: 'DEMO', statut: 'a_contacter',
+  note: null, updated_at: ilYA(3), updated_by: 'u-demo',
+  clients: { id: CLIENTS[5].id, nom: CLIENTS[5].nom, prenom: null, telephone: CLIENTS[5].telephone, email: CLIENTS[5].email },
+  campagnes: CAMPAGNES[0],
+}]
 
 export const FAMILLES = [
   { key: 'per', label: 'PER', couleur: '#C9A961', ordre: 1 },
@@ -148,7 +184,9 @@ export const REMUNERATION = {
       ppRealisee: 900, puRealisee: 5000,
       palierPpAtteint: false, palierPuAtteint: true, rentabilise: true, detail: [],
     },
-    dealsMoisCount: 2,
+    // Le meme nombre que la liste des dossiers du mois affichee plus bas :
+    // deux chiffres qui se contredisent a l ecran font douter du calcul.
+    dealsMoisCount: DEALS.filter((d) => d.status === 'Signé' && d.month === MOIS[MOIS_COURANT] && d.advisor_code === 'DEMO').length,
   },
   manager: { lignes: [], totals: {} },
 }
@@ -220,6 +258,9 @@ export async function pageDemo(browser, { role = 'conseiller' } = {}) {
     dossiers_immo: DOSSIERS_IMMO,
     conformite_dossiers: CONFORMITE,
     objectifs: OBJECTIFS,
+    leads: LEADS,
+    campagnes: CAMPAGNES,
+    campagne_cibles: CIBLES,
   }
   const rpcs = {
     team_directory: equipe,
@@ -241,6 +282,17 @@ export async function pageDemo(browser, { role = 'conseiller' } = {}) {
 
   const json = (route, corps, statut = 200, entetes = {}) =>
     route.fulfill({ status: statut, contentType: 'application/json', headers: entetes, body: JSON.stringify(corps) })
+
+  // Rien ne sort du navigateur : toute requete qui n est ni le serveur local
+  // du CRM ni une des routes simulees ci dessous est coupee (polices, hote
+  // Supabase fictif hors des chemins connus, fonctions edge). Playwright
+  // consulte les routes de la derniere a la premiere : celle ci, posee en
+  // premier, ne voit que ce que les autres ont laisse passer.
+  await page.route('**/*', (route) => {
+    const url = route.request().url()
+    if (/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?\//.test(url) || url.startsWith('data:') || url.startsWith('blob:')) return route.continue()
+    return route.abort()
+  })
 
   // Authentification : /user renvoie l utilisateur factice, le reste un objet vide
   await page.route('**/auth/v1/**', (route) => {

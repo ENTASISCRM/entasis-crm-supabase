@@ -75,10 +75,15 @@ const nombreOuNull = (v) => {
 /** Complète des critères partiels avec la forme vide, pour ne jamais lire un tableau absent. */
 export function normaliserCriteres(criteres) {
   const c = criteres || {}
+  // Une fourchette d'âge saisie à l'envers (60 à 40) est remise à l'endroit
+  // plutôt que de ne cibler personne sans le dire.
+  let ageMin = nombreOuNull(c.ageMin)
+  let ageMax = nombreOuNull(c.ageMax)
+  if (ageMin != null && ageMax != null && ageMin > ageMax) [ageMin, ageMax] = [ageMax, ageMin]
   return {
     statuts: listeOuVide(c.statuts),
-    ageMin: nombreOuNull(c.ageMin),
-    ageMax: nombreOuNull(c.ageMax),
+    ageMin,
+    ageMax,
     revenusMin: nombreOuNull(c.revenusMin),
     patrimoineMin: nombreOuNull(c.patrimoineMin),
     situations: listeOuVide(c.situations),
@@ -134,7 +139,10 @@ const texteVide = (v) => v == null || String(v).trim() === ''
 const montantConnu = (v) => { const n = nombreOuNull(v); return n != null && n > 0 }
 const enfantsConnus = (v) => { const n = nombreOuNull(v); return n != null && n > 0 }
 
-const normaliserTexte = (v) => String(v ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase()
+// Accents, casse, apostrophes et ponctuation ignorés : « Chef d entreprise »
+// et « Chef d'entreprise » sont le même statut.
+const normaliserTexte = (v) => String(v ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
 const dansListe = (liste, valeur) => {
   const cible = normaliserTexte(valeur)
   return liste.some((x) => normaliserTexte(x) === cible)

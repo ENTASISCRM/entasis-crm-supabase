@@ -10,9 +10,10 @@
 // restent là bas dans cette version : ici, aucune écriture dans leads.
 //
 // Le geste utile est « Créer le dossier » : il ouvre la modale dossier
-// préremplie (nom, téléphone, email, source lead_room, lead_id), le même
-// brouillon que celui que le pont écrit quand un RDV est calé. C'est ce qui
-// évite qu'une affaire signée là bas reste invisible ici.
+// préremplie (nom, téléphone, email, source lead_room), le même brouillon
+// que celui que le pont écrit quand un RDV est calé, sans lead_id (la copie
+// CRM ne connaît pas l'identifiant Lead Room). C'est ce qui évite qu'une
+// affaire signée là bas reste invisible ici.
 //
 // Périmètre : la RLS de leads (lecture pour tout membre actif) fait foi. Le
 // bloc de rapprochement en bas est réservé au manager et passe par une
@@ -37,7 +38,8 @@ const JOURS = 30
 
 const pluriel = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`
 
-export default function LeadsEntrants({ profile, onCreerDossier, onOuvrirLeadRoom }) {
+export default function LeadsEntrants({ profile, onCreerDossier, onOuvrirDossier, onOuvrirLeadRoom }) {
+  const estManager = profile?.role === 'manager'
   const [leads, setLeads] = useState(null)         // null : pas encore chargé
   const [chargeLe, setChargeLe] = useState(() => new Date())
   const [erreur, setErreur] = useState(null)
@@ -69,11 +71,15 @@ export default function LeadsEntrants({ profile, onCreerDossier, onOuvrirLeadRoo
   )
   const delai = useMemo(() => delaiPremierAppel(leads || [], { today: chargeLe }), [leads, chargeLe])
 
+  // « Créer le dossier » n'est pas proposé sur un lead pris par un collègue :
+  // son brouillon, posé par le pont sous son code, est invisible pour moi
+  // (RLS), et je créerais un second dossier pour la même affaire. La
+  // direction, qui voit tous les dossiers, garde le geste partout.
   const groupes = useMemo(() => [
-    { cle: 'aMoi', titre: 'À moi', dot: 'le-dot-moi', items: rechercherLeads(tous.aMoi, requete) },
-    { cle: 'nouveaux', titre: 'Nouveaux, personne ne les a pris', dot: 'le-dot-nouveau', items: rechercherLeads(tous.nouveaux, requete) },
-    { cle: 'enCours', titre: 'Pris par un collègue', dot: 'normal', items: rechercherLeads(tous.enCours, requete) },
-  ], [tous, requete])
+    { cle: 'aMoi', titre: 'À moi', dot: 'le-dot-moi', items: rechercherLeads(tous.aMoi, requete), creation: true },
+    { cle: 'nouveaux', titre: 'Nouveaux, personne ne les a pris', dot: 'le-dot-nouveau', items: rechercherLeads(tous.nouveaux, requete), creation: true },
+    { cle: 'enCours', titre: 'Pris par un collègue', dot: 'normal', items: rechercherLeads(tous.enCours, requete), creation: estManager },
+  ], [tous, requete, estManager])
 
   const sousTitre = [
     `${pluriel(tous.nouveaux.length, 'nouveau', 'nouveaux')} · ${tous.aMoi.length} à moi`,
@@ -149,9 +155,13 @@ export default function LeadsEntrants({ profile, onCreerDossier, onOuvrirLeadRoo
                       ) : (
                         <span className="le-tel le-tel-vide">sans numéro</span>
                       )}
-                      <button type="button" className="btn btn-outline btn-sm" onClick={() => creer(lead)}>
-                        Créer le dossier
-                      </button>
+                      {g.creation ? (
+                        <button type="button" className="btn btn-outline btn-sm" onClick={() => creer(lead)}>
+                          Créer le dossier
+                        </button>
+                      ) : (
+                        <span className="le-discret" title="Le dossier se crée depuis le compte du conseiller qui a pris le lead">pris par un collègue</span>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -167,7 +177,7 @@ export default function LeadsEntrants({ profile, onCreerDossier, onOuvrirLeadRoo
       )}
 
       {profile?.role === 'manager' && (
-        <LeadsRapprochement advisorCode={profile?.advisor_code} onCreerDossier={onCreerDossier} />
+        <LeadsRapprochement advisorCode={profile?.advisor_code} onCreerDossier={onCreerDossier} onOuvrirDossier={onOuvrirDossier} />
       )}
     </div>
   )

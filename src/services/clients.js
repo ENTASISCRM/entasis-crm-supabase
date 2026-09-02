@@ -6,6 +6,7 @@
 // drift entre les 3 composants qui touchent cette table.
 
 import { supabase } from '../lib/supabase'
+import { normaliserTelephone } from '../lib/noms'
 import { verifierEcriture, MOTIF_DROITS } from '../lib/ecriture-verifiee'
 
 /**
@@ -339,8 +340,9 @@ export async function listerFichesSansPrenom() {
     .order('nom', { ascending: true })
     .limit(500)
   if (error) throw error
-  // Le filtre SQL laisse passer un prenom fait d espaces et un nom dont le
-  // seul espace est en bordure : on resserre ici, c est bon marche.
+  // Le filtre SQL laisse passer un nom dont le seul espace est en bordure
+  // (« Dupont ») : on resserre ici, c est bon marche. Un prenom fait
+  // d espaces n est pas vu par le filtre et reste hors de la liste.
   return (data || []).filter((c) =>
     String(c.prenom ?? '').trim() === '' && /\s/.test(String(c.nom ?? '').trim()),
   )
@@ -392,10 +394,13 @@ const PAGE_COMPLETUDE = 1000
 export async function listerPourCompletude() {
   const lignes = []
   for (let depart = 0; ; depart += PAGE_COMPLETUDE) {
+    // Tri sur nom PUIS id : entre deux pages, deux homonymes gardaient un
+    // ordre indetermine et une fiche pouvait manquer ou apparaitre deux fois.
     const { data, error } = await supabase
       .from('clients')
       .select('id, nom, prenom, email, telephone, date_naissance, age, situation_familiale, statut_pro, profession, revenus_annuels, patrimoine_estime, advisor_code, co_advisor_code, created_at')
       .order('nom', { ascending: true })
+      .order('id', { ascending: true })
       .range(depart, depart + PAGE_COMPLETUDE - 1)
     if (error) throw error
     lignes.push(...(data || []))
@@ -413,7 +418,9 @@ const CHAMPS_COMPLETION = {
   profession: (v) => String(v).trim(),
   revenus_annuels: (v) => Number(v),
   patrimoine_estime: (v) => Number(v),
-  telephone: (v) => String(v).trim(),
+  // Meme forme que la modale client : « 06 12 34 56 78 » quelle que soit la
+  // saisie, un numero etranger rendu tel quel.
+  telephone: (v) => normaliserTelephone(v),
   email: (v) => String(v).trim(),
 }
 
@@ -456,9 +463,9 @@ export async function completerFiche(clientId, patch = {}) {
 // ─── Ciblage des campagnes ─────────────────────────────────────────────────
 // L ecran Campagnes evalue ses criteres sur les fiches en memoire : il lui
 // faut les colonnes de ciblage (statut, age, revenus, patrimoine, situation,
-// enfants) et les coordonnees pour l export. 500 fiches au plus, par nom :
-// la base en compte 381 au 2 septembre, et la RLS decide de ce que chacun
-// voit.
+// enfants) et les coordonnees pour l export. Pagine par 1000 comme la
+// completude : un plafond fixe aurait coupe la liste en silence le jour ou
+// le cabinet le depasse. La RLS decide de ce que chacun voit.
 
 export const COLONNES_CIBLAGE = [
   'id', 'nom', 'prenom', 'email', 'telephone', 'date_naissance', 'age',
@@ -467,11 +474,17 @@ export const COLONNES_CIBLAGE = [
 ].join(', ')
 
 export async function listerPourCiblage() {
-  const { data, error } = await supabase
-    .from('clients')
-    .select(COLONNES_CIBLAGE)
-    .order('nom', { ascending: true })
-    .limit(500)
-  if (error) throw error
-  return data || []
+  const lignes = []
+  for (let depart = 0; ; depart += PAGE_COMPLETUDE) {
+    const { data, error } = await supabase
+      .from('clients')
+      .select(COLONNES_CIBLAGE)
+      .order('nom', { ascending: true })
+      .order('id', { ascending: true })
+      .range(depart, depart + PAGE_COMPLETUDE - 1)
+    if (error) throw error
+    lignes.push(...(data || []))
+    if (!data || data.length < PAGE_COMPLETUDE) break
+  }
+  return lignes
 }

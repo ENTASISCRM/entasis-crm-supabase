@@ -87,6 +87,14 @@ describe('demarrerSequence', () => {
 })
 
 describe('patchApresFait', () => {
+  it('un gabarit posé sans étape valable est arrêté, et le toast le dit', () => {
+    const d = { sequence_key: 'relance_devis', sequence_etape: null, next_action_date: TODAY }
+    const patch = patchApresFait(d, TODAY)
+    expect(patch.sequence_key).toBeNull()
+    expect(messageApresFait(d, patch)).toBe('Séquence arrêtée, étape inconnue')
+    expect(messageApresFait({ sequence_key: 'relance_devis', sequence_etape: 3 }, patch)).toBe('Séquence terminée')
+  })
+
   it('arme l’étape 2 au bon délai, sans toucher à la clé', () => {
     const d = deal({ sequence_key: 'relance_devis', sequence_etape: 1, next_action: 'Appel de suivi du devis', next_action_date: '2026-08-28' })
     expect(patchApresFait(d, TODAY)).toEqual({

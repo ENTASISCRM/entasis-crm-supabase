@@ -25,7 +25,7 @@ const dateFr = (v) => {
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-export default function LeadsRapprochement({ advisorCode, onCreerDossier }) {
+export default function LeadsRapprochement({ advisorCode, onCreerDossier, onOuvrirDossier }) {
   const [lignes, setLignes] = useState(null)      // null : pas encore chargé
   const [erreur, setErreur] = useState(null)
   const [nonConfigure, setNonConfigure] = useState(false)
@@ -44,12 +44,17 @@ export default function LeadsRapprochement({ advisorCode, onCreerDossier }) {
     return () => { vivant = false }
   }, [])
 
-  // Pour un dossier resté en brouillon, on reprend le contact du dossier CRM :
-  // à la sauvegarde, App.jsx retrouve le brouillon par email ou téléphone et
-  // le complète au lieu d'en créer un second.
-  const ouvrir = (l) => onCreerDossier?.(
-    dossierPourLead({ id: l.leadId, nom: l.nom, email: l.email, telephone: l.telephone }, l.conseiller || advisorCode),
-  )
+  // Un dossier existe déjà (brouillon, en cours ou annulé) : on l'ouvre tel
+  // quel. Créer un brouillon neuf à côté heurtait l'index unique sur lead_id
+  // dès que le dossier existant n'était plus reconnu comme brouillon (un
+  // Annulé par exemple). Sans dossier, on crée le brouillon avec le vrai
+  // identifiant Lead Room, celui que le rapprochement lit.
+  const ouvrir = (l) => {
+    if (l.dossier?.id && onOuvrirDossier) return onOuvrirDossier(l.dossier.id)
+    return onCreerDossier?.(
+      dossierPourLead({ nom: l.nom, email: l.email, telephone: l.telephone }, l.conseiller || advisorCode, { leadRoomId: l.leadId }),
+    )
+  }
 
   return (
     <section className="le-rapprochement" aria-labelledby="le-rapprochement-titre">
@@ -107,7 +112,7 @@ export default function LeadsRapprochement({ advisorCode, onCreerDossier }) {
                     <td>{l.conseiller || 'inconnu'}</td>
                     <td style={{ textAlign: 'right' }}>
                       <button type="button" className="btn btn-outline btn-sm" onClick={() => ouvrir(l)}>
-                        {sansDossier ? 'Créer le dossier' : 'Compléter le dossier'}
+                        {sansDossier ? 'Créer le dossier' : 'Ouvrir le dossier'}
                       </button>
                     </td>
                   </tr>

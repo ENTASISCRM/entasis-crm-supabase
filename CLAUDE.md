@@ -30,7 +30,7 @@ Trois commandes, dans cet ordre. Aucune ne doit régresser :
 
 ```
 npx eslint src/          # un avertissement préexistant, zéro erreur attendue
-npx vitest run           # 475 tests
+npx vitest run           # 566 tests
 npx vite build
 ```
 
@@ -80,15 +80,33 @@ relecture. Tout ce qui suit est en ligne sur main.
   rattraper » dans Clients : séparation prénom et nom proposée, jamais
   appliquée sans case cochée et confirmation. Heuristiques dans
   `src/lib/noms.js`.
+* **Complétude des fiches.** Sur l'accueil du conseiller, le bloc
+  « Compléter ces fiches » (champs manquants saisissables en ligne,
+  `src/components/FichesACompleter.jsx`, logique dans
+  `src/lib/completude.js`) ; une jauge sur la fiche client ; la complétude
+  par conseiller dans Équipe pour la direction. Mesure du 2 septembre :
+  statut renseigné sur 19 % des fiches, revenus 18 %, date de naissance
+  9 %, et de 90 % à 0 % selon le conseiller.
+* **Campagnes ciblées** (vue direction « Campagnes » dans Clients,
+  `src/components/Campagnes.jsx`, logique dans `src/lib/campagnes.js`).
+  Six campagnes préconfigurées, critères en direct, et à côté du compte
+  de cibles le nombre de clients non évaluables par champ manquant. Lancer
+  fige les cibles dans `campagne_cibles` ; le conseiller les traite depuis
+  l'accueil (bloc « Campagne »). Tables `campagnes` et `campagne_cibles`,
+  RLS : seule la direction crée, chaque conseiller ne voit que ses cibles.
 * **Le contrat de rémunération se choisit par ses dates**
   (`api/_lib/contrats.js`), plus par le drapeau `actif` seul. Un
   renouvellement saisi à l'avance prend le relais le jour dit. Le drapeau
-  reste une exclusion manuelle et un filet quand rien n'est en poste.
+  départage deux contrats qui se chevauchent et sert de filet dans le mois
+  du départ seulement : un contrat terminé ne compte plus le mois suivant,
+  une embauche future ne compte pas avant sa date. Le drapeau n'exclut pas
+  à lui seul un contrat en poste : pour écarter une ligne, lui donner une
+  date de fin.
 * **L'agenda d'équipe lit les profils** (`api/team-calendar.js`) au lieu
   d'une liste figée qui confondait les conseillers.
 * **Le nom d'un profil est mis au propre à sa création** (fonction SQL
   `normaliser_nom_complet`, appelée par `handle_new_user`).
-* **Un contrôle visuel automatique** joue quinze écrans à chaque pull
+* **Un contrôle visuel automatique** joue dix huit écrans à chaque pull
   request (voir plus bas).
 * La fiche client affiche à nouveau tous ses champs (les sections
   repliables s'appellent `form-pliable`, le nom générique `form-section`
@@ -98,10 +116,75 @@ relecture. Tout ce qui suit est en ligne sur main.
 * Les quatorze logos partenaires sont en place. Le correctif Pappers du
   Lead Room est déployé (structure regroupée, homonymes signalés).
 
+### L'audit du 2 septembre après midi
+
+Un audit adversarial de tout ce qui avait été mis en ligne dans la journée
+(deux workflows, treize auditeurs, trois réfutateurs par constat) a rendu
+soixante dix sept constats bruts. Ce qui a été corrigé le jour même :
+
+* **Rémunération, vue direction** : un contrat terminé restait compté tous
+  les mois suivants et une embauche future tous les mois précédents (quatre
+  contrats terminés en juillet et août comptés en septembre). Le filet du
+  contrat actif est désormais borné au mois du départ (`api/_lib/contrats.js`).
+* **Trois fonctions Vercel** (agenda d'équipe, rapprochement des leads,
+  rémunération) vérifient maintenant `is_active` en plus du rôle, comme la
+  fonction SQL `is_manager`.
+* **Création de profil** : la restriction de domaine versionnée en mai
+  n'avait jamais été appliquée. Un compte Google hors
+  `@entasis-conseil.fr` obtient désormais un profil **inactif**, à activer
+  dans Pilotage RH ; `normaliser_nom_complet` ne touche plus qu'aux mots
+  écrits tout en minuscules (« Paul Le Goff », « Sophie McCarthy » et
+  « Sean O'Neil » restent tels quels) ; un conseiller ne peut plus réécrire
+  que le statut et la note de ses cibles de campagne. Migration
+  `20260902120000_profils_hors_domaine_inactifs_et_noms_v2.sql`, appliquée.
+* **Leads** : « Créer le dossier » ne pose plus de `lead_id` depuis la copie
+  CRM (identifiant local, inconnu de la Lead Room) ; il n'est plus proposé
+  sur un lead pris par un collègue ; le rapprochement direction ouvre le
+  dossier existant au lieu d'en créer un second ; une panne de lecture
+  s'affiche au lieu de « Aucun lead ».
+* **Direction sur son accueil** : les blocs « Compléter ces fiches » et
+  « Campagne » s'affichent aussi au manager qui a un code conseiller (57
+  fiches lui sont rattachées) ; un conseiller qui suit un lien
+  `#/clients/campagnes` ou `#/clients/rattrapage` retombe sur l'annuaire.
+* **Fiches à rattraper** : une civilité ou un couple (« Mme », « M et Mme »)
+  n'est plus proposé comme prénom sûr, donc jamais précoché.
+* **Dossiers sans mouvement** : Abandonner demande confirmation ; un dossier
+  qui porte une relance en retard n'est plus montré deux fois (il est déjà
+  dans la file du matin).
+* **Campagnes et complétude** : « Chef d'entreprise » saisi sans apostrophe
+  depuis le Multi équipement était exclu en silence (liste unique, comparaison
+  sans ponctuation) ; fourchette d'âge inversée remise à l'endroit ; geste
+  « Signé » sur une cible ; erreur de chargement visible ; pagination du
+  ciblage ; un rendez vous sans date ne tient plus le premier rang ; le
+  score cabinet se calcule sur les scores bruts ; le tableau de complétude
+  par conseiller est réservé au manager.
+* **Contrôle visuel** : dix huit écrans (plus Leads entrants, Campagnes,
+  Fiches à rattraper), une assertion positive par écran (un texte attendu),
+  un dossier sans mouvement garanti dans le jeu, et le harnais coupe
+  désormais toute requête qui ne va pas au serveur local.
+* Un nom de client réel figurait dans deux tests, deux commentaires et un
+  document : remplacé par un nom inventé.
+
+Ce que l'audit a mis en évidence sans correctif de code :
+
+* **Le 17 septembre, une trentaine de dossiers apparaîtront d'un coup dans
+  « Dossiers sans mouvement »** : la migration du 25 août a mis à jour
+  159 dossiers et le déclencheur `trg_deals_updated_at` a pris ça pour un
+  mouvement. Ce n'est pas un bug ce jour là, c'est un rattrapage. Pour la
+  suite, **toute mise à jour de masse dans une migration doit désactiver
+  `trg_deals_updated_at` le temps de l'UPDATE** (`alter table deals disable
+  trigger trg_deals_updated_at` puis `enable`).
+* Deux lignes de `conseiller_contrats` en poste en septembre n'ont aucun
+  profil rattaché (dont un stagiaire) : la vue direction les compte sans
+  pouvoir les rapprocher de dossiers. À rattacher ou à dater.
+* Trois profils existants ont une casse que `normaliser_nom_complet`
+  corrigerait ; la fonction ne joue qu'à la création. À corriger à la main
+  si Louis le veut.
+
 ### Ce qui reste ouvert
 
 * **Contrôle visuel automatique** : en place. `npm run test:visuel` joue
-  quinze écrans avec une session simulée et des données fictives
+  dix huit écrans avec une session simulée et des données fictives
   (`tests/visuel/`), et le workflow `controle-visuel.yml` le rejoue à
   chaque pull request en déposant les captures en artefact. En local, il
   faut un serveur `vite preview` sur le port 4173 et Chromium (variable
@@ -161,14 +244,15 @@ dates. Pour toute échéance lointaine, doubler d'un rappel simple.
 ## Les projets Supabase
 
 * **CRM** : `tvgbblbceqvdtqnbeoik`. Tables principales `deals`, `clients`,
-  `profiles`, `conseiller_contrats`, `contrats`, `conformite_dossiers`.
+  `profiles`, `conseiller_contrats`, `contrats`, `conformite_dossiers`,
+  `campagnes`, `campagne_cibles`.
 * **Lead Room** : `mtqowhjshvgkpkhnpilb`, application séparée avec **ses
   propres comptes**. Un conseiller a donc deux mots de passe distincts,
   source récurrente d'appels au support. Le bouton « Recevoir un lien
   magique par email » dépanne à tous les coups.
 * Le plan d'amélioration recommande de ramener les leads dans le CRM pour
   supprimer cette double connexion : la table `leads` est alimentée
-  quotidiennement et n'est lue par aucun écran.
+  quotidiennement et lue par l'écran Leads entrants depuis le 1er septembre.
 
 ## Les documents de fond
 

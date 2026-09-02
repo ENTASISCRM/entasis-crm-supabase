@@ -58,6 +58,21 @@ describe('evaluerCibles, chaque critère', () => {
     expect(r.cibles).toHaveLength(1)
   })
 
+  it('statut : la comparaison ignore l apostrophe et la ponctuation (« Chef d entreprise »)', () => {
+    const r = evaluerCibles([
+      fiche({ id: 'a', statut_pro: 'Chef d entreprise' }),
+      fiche({ id: 'b', statut_pro: "Chef d’entreprise" }),
+    ], [], crit({ statuts: ["Chef d'entreprise"] }), { today: TODAY })
+    expect(r.cibles.map((c) => c.id)).toEqual(['a', 'b'])
+    expect(r.exclus).toBe(0)
+  })
+
+  it('âge : une fourchette saisie à l envers est remise à l endroit', () => {
+    expect(normaliserCriteres({ ageMin: 60, ageMax: 40 })).toMatchObject({ ageMin: 40, ageMax: 60 })
+    expect(normaliserCriteres({ ageMin: 40, ageMax: 60 })).toMatchObject({ ageMin: 40, ageMax: 60 })
+    expect(normaliserCriteres({ ageMin: 50 })).toMatchObject({ ageMin: 50, ageMax: null })
+  })
+
   it('âge : bornes comprises, depuis la date de naissance ou l âge saisi', () => {
     const r = evaluerCibles([
       fiche({ id: 'a', date_naissance: '1976-09-02' }),  // 50 ans aujourd hui

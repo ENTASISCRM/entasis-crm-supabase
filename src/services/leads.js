@@ -21,8 +21,9 @@ export const LIMITE_LEADS = 300
 
 /**
  * Leads reçus sur les N derniers jours, du plus récent au plus ancien.
- * Renvoie [] sur erreur, journalisée : une liste vide vaut mieux qu'un écran
- * cassé, et la Lead Room reste accessible à côté.
+ * Une erreur de lecture est journalisée puis relancée : l'écran l'affiche en
+ * bandeau au lieu de dire « Aucun lead reçu », ce qui aurait caché une panne
+ * derrière un faux calme.
  */
 export async function listRecents({ jours = 30 } = {}) {
   const depuis = new Date(Date.now() - jours * 86400000).toISOString()
@@ -34,7 +35,7 @@ export async function listRecents({ jours = 30 } = {}) {
     .limit(LIMITE_LEADS)
   if (error) {
     logger.error('[leads] listRecents', error)
-    return []
+    throw error
   }
   return data || []
 }

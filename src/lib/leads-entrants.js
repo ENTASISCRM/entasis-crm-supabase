@@ -49,6 +49,22 @@ export function ageHeures(createdAt, today = new Date()) {
 // Indicatifs des departements et collectivites d outre mer.
 const OUTRE_MER = ['262', '269', '590', '594', '596', '508', '681', '687', '689']
 
+// Longueur de l'indicatif pays (plan E.164) : un chiffre pour l'Amérique du
+// Nord (1) et la Russie (7), deux chiffres pour une liste fermée, trois pour
+// tout le reste (Afrique, Polynésie, Maroc, Nouvelle Calédonie...). Sans
+// cette table, un numéro marocain s'affichait « +21 261 234 567 ».
+const INDICATIFS_DEUX = new Set([
+  '20', '27', '30', '31', '32', '33', '34', '36', '39', '40', '41', '43', '44', '45', '46', '47', '48', '49',
+  '51', '52', '53', '54', '55', '56', '57', '58', '60', '61', '62', '63', '64', '65', '66',
+  '81', '82', '84', '86', '90', '91', '92', '93', '94', '95', '98',
+])
+export function longueurIndicatif(international) {
+  const s = String(international || '')
+  if (s.startsWith('1') || s.startsWith('7')) return 1
+  if (INDICATIFS_DEUX.has(s.slice(0, 2))) return 2
+  return 3
+}
+
 export function formaterTelephone(brut) {
   const chiffres = String(brut ?? '').replace(/\D/g, '').replace(/^00/, '')
   if (!chiffres) return { affiche: '', appel: null }
@@ -59,11 +75,12 @@ export function formaterTelephone(brut) {
   // se lit comme en metropole (+262 692 00 00 00). Sans ce cas, un lead de
   // La Reunion s affichait « +26 269 200 000 0 ».
   const outreMer = OUTRE_MER.find(code => international.startsWith(code)) && international.length === 12
+  const n = longueurIndicatif(international)
   const affiche = francais
     ? ('0' + international.slice(2)).replace(/(\d{2})(?=\d)/g, '$1 ')
     : outreMer
       ? `+${international.slice(0, 3)} ${international.slice(3, 6)} ${international.slice(6).replace(/(\d{2})(?=\d)/g, '$1 ')}`
-      : `+${international.slice(0, 2)} ${international.slice(2).replace(/(\d{3})(?=\d)/g, '$1 ')}`.trim()
+      : `+${international.slice(0, n)} ${international.slice(n).replace(/(\d{3})(?=\d)/g, '$1 ')}`.trim()
   return { affiche, appel: `+${international}` }
 }
 
@@ -128,11 +145,19 @@ export function rechercherLeads(leads, requete) {
 /**
  * Le dossier prérempli qu'ouvre la modale « Créer le dossier » depuis un lead.
  * Même brouillon que celui que le pont écrit quand un RDV est calé : source
- * lead_room, lead_id posé, produit « Autre », statut « Prévu ». À la
- * sauvegarde, App.jsx retrouve un brouillon existant par lead_id, email ou
- * téléphone et le complète au lieu de créer un doublon.
+ * lead_room, produit « Autre », statut « Prévu ». À la sauvegarde, App.jsx
+ * retrouve un brouillon existant par email ou téléphone et le complète au
+ * lieu de créer un doublon.
+ *
+ * lead_id n'est posé QUE si l'appelant fournit l'identifiant Lead Room
+ * (leadRoomId). L'identifiant de la copie CRM (public.leads.id) est un uuid
+ * local, inconnu de la Lead Room : le poser comme lead_id rendait le
+ * rapprochement direction aveugle et laissait passer un second dossier quand
+ * le pont écrivait ensuite le sien avec le vrai identifiant (audit du
+ * 2 septembre : 217 dossiers avec lead_id, aucun ne correspondait à un lead
+ * de la copie).
  */
-export function dossierPourLead(lead, advisorCode) {
+export function dossierPourLead(lead, advisorCode, { leadRoomId = null } = {}) {
   const tel = formaterTelephone(lead?.telephone)
   return {
     ...emptyDeal(advisorCode),
@@ -140,7 +165,7 @@ export function dossierPourLead(lead, advisorCode) {
     client_phone: tel.affiche,
     client_email: String(lead?.email || '').trim(),
     source: 'lead_room',
-    lead_id: lead?.id ?? null,
+    lead_id: leadRoomId ?? null,
     product: 'Autre',
     status: 'Prévu',
   }

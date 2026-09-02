@@ -134,6 +134,16 @@ describe('prioriserFichesACompleter', () => {
     deal({ id: 'e', client_id: 'encours', status: 'En cours' }),
   ]
 
+  it('un rendez vous sans date ne tient pas le premier rang indéfiniment', () => {
+    const r = prioriserFichesACompleter(
+      [{ ...sans('email'), id: 'sansdate', nom: 'Sans Date' }, { ...sans('email'), id: 'rdv', nom: 'Rendez Vous' }],
+      [deal({ id: 'x', client_id: 'sansdate', status: 'Prévu', date_expected: null }), dossiers[0]],
+      { advisorCode: 'DEMO', today: TODAY, limite: 10 },
+    )
+    expect(r.map((f) => f.id)).toEqual(['rdv', 'sansdate'])
+    expect(r[1].raison).toBe('rendez vous à dater')
+  })
+
   it('classe rendez vous à venir, signé récent, en cours, puis les autres', () => {
     const r = prioriserFichesACompleter(fiches, dossiers, { advisorCode: 'DEMO', today: TODAY, limite: 10 })
     expect(r.map((f) => f.id)).toEqual(['rdv', 'signe', 'encours', 'autre'])

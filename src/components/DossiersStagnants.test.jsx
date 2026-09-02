@@ -2,9 +2,12 @@ import { describe, it, expect } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import DossiersStagnants from './DossiersStagnants'
 
+// Midi local : entre 22h et minuit UTC, un instant a minuit tombait sur le
+// lendemain a Paris et le compte de jours perdait une unite.
 const il_y_a = (jours) => {
   const d = new Date()
   d.setDate(d.getDate() - jours)
+  d.setHours(12, 0, 0, 0)
   return d.toISOString()
 }
 const deals = [

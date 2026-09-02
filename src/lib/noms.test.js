@@ -22,12 +22,22 @@ describe('normaliserNomComplet', () => {
   it('laisse les particules en minuscule', () => {
     expect(normaliserNomComplet('paulin de la fontaine')).toBe('Paulin de la Fontaine')
     expect(normaliserNomComplet('Ludwig VAN beethoven')).toBe('Ludwig VAN Beethoven')
-    expect(normaliserNomComplet('anna Von Trapp')).toBe('Anna von Trapp')
+    expect(normaliserNomComplet('anna Von Trapp')).toBe('Anna Von Trapp')
   })
 
   it('garde le tiret des prénoms composés avec une majuscule après', () => {
     expect(normaliserNomComplet('jean-michel sionneau')).toBe('Jean-Michel Sionneau')
     expect(normaliserNomComplet('MARIE-CLAIRE dupont')).toBe('MARIE-CLAIRE Dupont')
+  })
+
+  it('respecte un nom qui porte déjà une majuscule (article, apostrophe, majuscule interne)', () => {
+    expect(normaliserNomComplet('Paul Le Goff')).toBe('Paul Le Goff')
+    expect(normaliserNomComplet('Sophie McCarthy')).toBe('Sophie McCarthy')
+    expect(normaliserNomComplet("Sean O'Neil")).toBe("Sean O'Neil")
+    expect(normaliserNomComplet("Jean d'Ormesson")).toBe("Jean d'Ormesson")
+    expect(normaliserNomComplet("Jeanne D'Arc")).toBe("Jeanne D'Arc")
+    expect(normaliserNomComplet('Jean LeBlanc')).toBe('Jean LeBlanc')
+    expect(normaliserNomComplet('le goff paul')).toBe('Le Goff Paul')
   })
 
   it('gère le d apostrophe et les apostrophes internes', () => {
@@ -36,7 +46,7 @@ describe('normaliserNomComplet', () => {
   })
 
   it('ne touche pas aux accents', () => {
-    expect(normaliserNomComplet('aurélie buiret')).toBe('Aurélie Buiret')
+    expect(normaliserNomComplet('aurélie exemple')).toBe('Aurélie Exemple')
     expect(normaliserNomComplet('émile zola')).toBe('Émile Zola')
   })
 
@@ -49,9 +59,16 @@ describe('normaliserNomComplet', () => {
 })
 
 describe('separerNomComplet', () => {
+  it('ne propose jamais une civilité, un couple ou une annotation comme prénom sûr', () => {
+    expect(separerNomComplet('Mr et Mme DUPONT')).toMatchObject({ prenom: '', nom: 'DUPONT', confiance: 'faible' })
+    expect(separerNomComplet('Mme Exemple')).toMatchObject({ prenom: '', nom: 'Mme Exemple', confiance: 'faible' })
+    expect(separerNomComplet('Jean DUPONT (père)')).toMatchObject({ prenom: '', nom: 'DUPONT', confiance: 'faible' })
+    expect(separerNomComplet('Camille & Dominique Exemple').confiance).toBe('faible')
+  })
+
   it('un seul mot : pas de prénom, confiance faible', () => {
-    const r = separerNomComplet('Buiret')
-    expect(r).toMatchObject({ prenom: '', nom: 'Buiret', confiance: 'faible' })
+    const r = separerNomComplet('Exemple')
+    expect(r).toMatchObject({ prenom: '', nom: 'Exemple', confiance: 'faible' })
     expect(r.raison).toBeTruthy()
   })
 
@@ -84,7 +101,7 @@ describe('separerNomComplet', () => {
   })
 
   it('deux mots : prénom puis nom, confiance moyenne', () => {
-    expect(separerNomComplet('Aurélie Buiret')).toMatchObject({ prenom: 'Aurélie', nom: 'Buiret', confiance: 'moyenne' })
+    expect(separerNomComplet('Aurélie Exemple')).toMatchObject({ prenom: 'Aurélie', nom: 'Exemple', confiance: 'moyenne' })
   })
 
   it('le tiret garde un prénom composé ensemble', () => {

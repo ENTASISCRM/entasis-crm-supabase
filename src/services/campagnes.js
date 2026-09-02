@@ -93,13 +93,16 @@ export async function creerCampagne({ nom, criteres, sequence_key, accroche }, c
 /**
  * Les cibles encore à contacter, avec la fiche client et la campagne
  * jointes. La RLS rend celles du conseiller connecté (toutes pour la
- * direction). Les campagnes clôturées sont écartées ici, à l'affichage.
+ * direction). Les campagnes clôturées sont écartées par la requête elle
+ * même (jointure interne filtrée) : on ne rapatrie pas des mois de cibles
+ * closes pour les jeter côté navigateur.
  */
 export async function listerMesCibles() {
   const { data, error } = await supabase
     .from('campagne_cibles')
-    .select(`${COLONNES_CIBLE}, clients(id, nom, prenom, telephone, email), campagnes(id, nom, accroche, sequence_key, created_at, cloturee_at)`)
+    .select(`${COLONNES_CIBLE}, clients(id, nom, prenom, telephone, email), campagnes!inner(id, nom, accroche, sequence_key, created_at, cloturee_at)`)
     .eq('statut', 'a_contacter')
+    .is('campagnes.cloturee_at', null)
     .order('updated_at', { ascending: false })
   if (error) throw error
   return (data || []).filter((c) => !c.campagnes?.cloturee_at)

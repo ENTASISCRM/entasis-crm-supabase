@@ -51,9 +51,26 @@ describe('contratDeReference', () => {
     expect(contratDeReference([a, b], REF).id).toBe('b')
     expect(contratDeReference([a, c({ id: 'e', actif: false, date_debut: '2026-02-01' })], REF).id).toBe('e')
   })
-  it('retombe sur le contrat actif quand plus rien n est en poste', () => {
-    const termine = c({ id: 't', actif: true, date_debut: '2025-09-08', date_fin: '2026-08-26' })
+  it('un contrat termine le mois precedent ne compte plus, meme actif (vue direction du 2 septembre)', () => {
+    const termine = c({ id: 'alternant', actif: true, date_debut: '2025-09-01', date_fin: '2026-08-26' })
+    expect(contratDeReference([termine], REF)).toBeNull()
+    expect(contratDeReference([termine], new Date('2026-08-30T09:00:00')).id).toBe('alternant')
+    expect(contratsDeReferenceParPersonne([termine], REF)).toEqual([])
+  })
+  it('une embauche du mois suivant ne compte pas ce mois', () => {
+    const futur = c({ id: 'futur', actif: true, date_debut: '2026-10-01' })
+    expect(contratDeReference([futur], REF)).toBeNull()
+    expect(contratsDeReferenceParPersonne([futur], REF)).toEqual([])
+    expect(contratDeReference([futur], new Date('2026-10-15T09:00:00')).id).toBe('futur')
+  })
+  it('accepte un objet Date et une valeur illisible comme bornes', () => {
+    expect(estEnPoste(c({ date_debut: new Date('2026-09-01T00:00:00'), date_fin: new Date('2026-09-30T00:00:00') }), REF)).toBe(true)
+    expect(estEnPoste(c({ date_debut: 'n importe quoi' }), REF)).toBe(true)
+  })
+  it('retombe sur le contrat actif quand plus rien n est en poste, dans le mois du depart seulement', () => {
+    const termine = c({ id: 't', actif: true, date_debut: '2025-09-08', date_fin: '2026-09-10' })
     expect(contratDeReference([termine], REF).id).toBe('t')
+    expect(contratDeReference([termine], new Date('2026-10-15T09:00:00'))).toBeNull()
   })
   it('ne renvoie rien pour une liste vide ou sans contrat actif ni en poste', () => {
     expect(contratDeReference([], REF)).toBeNull()

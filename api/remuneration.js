@@ -62,8 +62,10 @@ export default async function handler(req, res) {
     : new Date()
 
   const { data: prof } = await sb
-    .from('profiles').select('id, role, advisor_code, full_name').eq('id', user.id).maybeSingle()
-  const isManager = prof?.role === 'manager'
+    .from('profiles').select('id, role, advisor_code, full_name, is_active').eq('id', user.id).maybeSingle()
+  // Role ET compte actif, comme la fonction SQL is_manager() ; la RLS
+  // bloque deja les donnees d un compte desactive, on refuse aussi ici.
+  const isManager = prof?.role === 'manager' && prof?.is_active === true
 
   // Quel contrat compte pour le mois de reference : celui en poste a cette
   // date d apres ses dates de debut et de fin (api/_lib/contrats.js). Le
