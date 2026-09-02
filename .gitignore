@@ -46,3 +46,7 @@ public/version.json
 # (SEC-02, SEC-07). Gardés hors du dépôt tant qu'ils sont exploitables.
 AUDIT.md
 AUDIT-correctifs.sql
+
+# Captures du controle visuel (tests/visuel/controle.mjs) : regenerees a chaque
+# execution, deposees en artefact par la CI, jamais versionnees.
+tests/visuel/captures/

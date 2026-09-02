@@ -1,0 +1,72 @@
+# Controle visuel : ouvre les ecrans principaux du CRM dans un navigateur,
+# avec une session simulee et des donnees fictives, verifie des invariants de
+# rendu et depose les captures en artefact. Joue a chaque pull request vers
+# main et a la demande depuis l onglet Actions.
+#
+# Aucun secret n est necessaire : le fichier .env ecrit ci dessous ne contient
+# que des valeurs fictives, tous les appels Supabase sont interceptes par le
+# harnais (tests/visuel/harnais.mjs).
+
+name: Controle visuel
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  controle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Dependances
+        run: npm ci
+
+      - name: Navigateur Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Valeurs fictives : Vite exige ces deux variables pour construire,
+      # aucune vraie cle ne doit jamais figurer ici.
+      - name: Fichier .env fictif
+        run: |
+          printf 'VITE_SUPABASE_URL=https://exemple.supabase.co\nVITE_SUPABASE_ANON_KEY=cle-fictive\n' > .env
+
+      - name: Construction
+        run: npx vite build
+
+      # Le serveur de preview tourne en tache de fond, on attend qu il reponde
+      # avant de lancer le navigateur.
+      - name: Serveur de preview
+        run: |
+          npx vite preview --port 4173 --strictPort &
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:4173/ > /dev/null; then break; fi
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:4173/ > /dev/null
+
+      - name: Scenarios au navigateur
+        run: node tests/visuel/controle.mjs
+        env:
+          CRM_URL: http://127.0.0.1:4173
+
+      # Les captures sont deposees meme en cas d echec : c est justement la
+      # qu on veut les regarder.
+      - name: Captures en artefact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: captures-visuelles
+          path: tests/visuel/captures/
+          retention-days: 14
+          if-no-files-found: warn
