@@ -88,6 +88,8 @@ relecture. Tout ce qui suit est en ligne sur main.
   d'une liste figée qui confondait les conseillers.
 * **Le nom d'un profil est mis au propre à sa création** (fonction SQL
   `normaliser_nom_complet`, appelée par `handle_new_user`).
+* **Un contrôle visuel automatique** joue quinze écrans à chaque pull
+  request (voir plus bas).
 * La fiche client affiche à nouveau tous ses champs (les sections
   repliables s'appellent `form-pliable`, le nom générique `form-section`
   est réservé aux sections plates). Deux modales visaient des classes
@@ -98,9 +100,12 @@ relecture. Tout ce qui suit est en ligne sur main.
 
 ### Ce qui reste ouvert
 
-* **Contrôle visuel automatique en CI** : chantier lancé le 1er septembre
-  (`tests/visuel/`, workflow `controle-visuel.yml`). Vérifier qu'il est
-  bien sur main ; sinon il est sur une branche de travail à intégrer.
+* **Contrôle visuel automatique** : en place. `npm run test:visuel` joue
+  quinze écrans avec une session simulée et des données fictives
+  (`tests/visuel/`), et le workflow `controle-visuel.yml` le rejoue à
+  chaque pull request en déposant les captures en artefact. En local, il
+  faut un serveur `vite preview` sur le port 4173 et Chromium (variable
+  `PLAYWRIGHT_CHROMIUM_PATH` si celui de Playwright n'est pas installé).
 * **Hyppolite Morel arrive le 14 septembre** : son profil CRM naît à sa
   première connexion Google, il faut alors poser le code `HYPPOLITE` et
   rattacher sa fiche contrat (identifiant

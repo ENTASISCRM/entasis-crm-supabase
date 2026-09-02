@@ -49,3 +49,6 @@ AUDIT-correctifs.sql
 
 # Copies de travail isolees des agents, jamais versionnees
 .claude/worktrees/
+# Captures du controle visuel (tests/visuel/controle.mjs) : regenerees a chaque
+# execution, deposees en artefact par la CI, jamais versionnees.
+tests/visuel/captures/
