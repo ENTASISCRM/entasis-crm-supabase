@@ -1,0 +1,117 @@
+/* Complétude des fiches clients : les quelques règles propres à la jauge, au
+   bloc « Fiches à compléter » de l'accueil et au tableau direction, préfixe
+   cpl. Tout le reste vient des classes partagées de styles.css
+   (section-header, priorities-list, priority-item, btn, form-input,
+   table-wrap, data-table).
+
+   Couleurs par niveau. Le texte passe le seuil AA sur fond clair (4,5 pour 1
+   au moins), la barre le seuil des composants (3 pour 1). Pas de rouge : une
+   fiche vide est « à démarrer », en gris, pas une faute. La progression va du
+   gris à l'or puis au vert, pour se lire comme un chemin. */
+.cpl-jauge {
+  --cpl-barre: #A1A1A6;
+  --cpl-encre: #6E6E73;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  vertical-align: middle;
+  outline: none;
+}
+.cpl-jauge[data-niveau="partielle"] { --cpl-barre: #C9A961; --cpl-encre: #7A5C1E; }
+.cpl-jauge[data-niveau="presque"] { --cpl-barre: #6BBF59; --cpl-encre: #2E7D32; }
+.cpl-jauge[data-niveau="complete"] { --cpl-barre: #34C759; --cpl-encre: #1B7A3E; }
+
+.cpl-barre {
+  display: inline-block;
+  width: 96px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(60,60,67,0.12);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.cpl-compact .cpl-barre { width: 56px; height: 5px; }
+.cpl-remplissage {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--cpl-barre);
+  transition: width var(--tr);
+}
+.cpl-pct {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cpl-encre);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.cpl-compact .cpl-pct { font-size: 12px; }
+.cpl-libelle { font-size: 12.5px; color: var(--t2); white-space: nowrap; }
+
+/* La bulle des champs manquants, au survol et au clavier. Elle flotte sous
+   la jauge, jamais dans le flux : la ligne de liste garde sa hauteur. */
+.cpl-bulle {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 30;
+  min-width: 200px;
+  max-width: 280px;
+  padding: 10px 12px;
+  background: var(--card);
+  border: 0.5px solid var(--bd-strong);
+  border-radius: var(--rad);
+  box-shadow: var(--sh);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--t1);
+  white-space: normal;
+  text-align: left;
+}
+.cpl-jauge:hover .cpl-bulle, .cpl-jauge:focus-visible .cpl-bulle { display: block; }
+.cpl-jauge:focus-visible .cpl-barre { box-shadow: 0 0 0 3px var(--apple-blue-bg); }
+.cpl-bulle-titre { font-weight: 600; margin-bottom: 4px; }
+.cpl-bulle ul { margin: 0; padding-left: 16px; }
+.cpl-bulle li { margin: 1px 0; }
+.cpl-bulle-poids { color: var(--t2); font-variant-numeric: tabular-nums; }
+
+/* Le bloc de l'accueil. Une ligne de liste porte l'identité, la raison, la
+   jauge, puis les champs manquants à saisir : elle s'empile au lieu de
+   s'étaler, et le clic n'ouvre rien, le bouton s'en charge. Les sélecteurs
+   doublent la classe partagée : l'ordre des feuilles dans le paquet livré
+   n'est pas garanti, la spécificité l'est. */
+.cpl .section-sub { color: var(--t2); }
+.priority-item.cpl-ligne { flex-direction: column; align-items: stretch; gap: 10px; cursor: default; }
+.priority-item.cpl-ligne:hover { transform: none; }
+.cpl-tete { display: flex; align-items: center; gap: 12px; min-width: 0; width: 100%; }
+.cpl-identite { flex: 1; min-width: 0; }
+.cpl-tete .priority-item-detail { color: var(--t2); }
+.cpl-gestes { display: inline-flex; gap: 4px; flex-shrink: 0; }
+
+.cpl-saisies { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; width: 100%; }
+.cpl-champ { display: flex; flex-direction: column; gap: 3px; flex: 1 1 150px; max-width: 220px; min-width: 0; }
+.cpl-champ-libelle { font-size: 11px; font-weight: 600; color: var(--t2); letter-spacing: 0.01em; white-space: nowrap; }
+.cpl-champ .form-input, .cpl-champ .form-select { height: 32px; font-size: 13px; padding: 0 10px; }
+.cpl-ligne .btn-primary.btn-sm { height: 32px; }
+
+/* Le tableau direction. Une petite barre à côté du score moyen, les champs
+   manquants en puces. */
+.cpl-score-cellule { display: inline-flex; align-items: center; gap: 8px; }
+.cpl-puces { display: flex; flex-wrap: wrap; gap: 6px; }
+.cpl-puce {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11.5px; color: var(--t1); background: rgba(0,0,0,0.05);
+  border-radius: 999px; padding: 2px 9px; white-space: nowrap;
+}
+.cpl-puce-nombre { font-variant-numeric: tabular-nums; color: var(--t2); }
+.data-table .cpl-tfoot td { font-weight: 600; color: var(--t1); background: rgba(0,0,0,0.02); border-top: 0.5px solid var(--bd); }
+.data-table .cpl-tfoot td .cpl-pct { font-size: 13px; }
+.cpl-vide { font-size: 13px; color: var(--t2); padding: 8px 2px 4px; }
+
+@media (max-width: 640px) {
+  .cpl-tete { flex-wrap: wrap; }
+  .cpl-champ { max-width: none; }
+}

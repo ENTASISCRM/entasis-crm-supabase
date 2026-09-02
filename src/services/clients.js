@@ -378,3 +378,77 @@ export async function appliquerSeparations(lignes) {
   }
   return { faites, echecs }
 }
+
+// ─── Completude des fiches (campagnes ciblees) ────────────────────────────────
+// Le bloc « Fiches a completer » de l accueil et le tableau de completude de
+// la direction lisent les memes colonnes : celles qui comptent pour une
+// campagne (lib/completude), plus l identite et le rattachement. La RLS fait
+// le tri : un conseiller recoit ses fiches (principal ou co conseiller), le
+// manager toutes. On pagine par 1000 parce que PostgREST plafonne la a
+// chaque appel et que le cabinet depasse deja les 381 fiches.
+
+const PAGE_COMPLETUDE = 1000
+
+export async function listerPourCompletude() {
+  const lignes = []
+  for (let depart = 0; ; depart += PAGE_COMPLETUDE) {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('id, nom, prenom, email, telephone, date_naissance, age, situation_familiale, statut_pro, profession, revenus_annuels, patrimoine_estime, advisor_code, co_advisor_code, created_at')
+      .order('nom', { ascending: true })
+      .range(depart, depart + PAGE_COMPLETUDE - 1)
+    if (error) throw error
+    lignes.push(...(data || []))
+    if (!data || data.length < PAGE_COMPLETUDE) break
+  }
+  return lignes
+}
+
+// Les champs qu on peut completer en ligne depuis l accueil, avec leur
+// conversion. Rien d autre ne passe : une cle hors liste est ignoree.
+const CHAMPS_COMPLETION = {
+  date_naissance: (v) => String(v).trim(),
+  situation_familiale: (v) => String(v).trim(),
+  statut_pro: (v) => String(v).trim(),
+  profession: (v) => String(v).trim(),
+  revenus_annuels: (v) => Number(v),
+  patrimoine_estime: (v) => Number(v),
+  telephone: (v) => String(v).trim(),
+  email: (v) => String(v).trim(),
+}
+
+const LIBELLE_NOMBRE = { revenus_annuels: 'revenus annuels', patrimoine_estime: 'patrimoine estimé' }
+
+/**
+ * Complete une fiche depuis l accueil : n ecrit QUE les champs fournis et non
+ * vides, jamais un effacement. Une valeur numerique illisible est refusee
+ * avant tout appel a la base. L ecriture passe par verifierEcriture : une
+ * fiche que la RLS filtre en silence remonte une erreur lisible, jamais un
+ * faux « enregistre ».
+ *
+ * @param {string} clientId
+ * @param {Object} patch  { date_naissance, situation_familiale, statut_pro, profession, revenus_annuels, patrimoine_estime, telephone, email }
+ * @returns {Promise<Object>} les champs effectivement ecrits (vide si rien a ecrire)
+ */
+export async function completerFiche(clientId, patch = {}) {
+  if (!clientId) throw new Error('Fiche sans identifiant, rien à écrire.')
+  const clean = {}
+  for (const [cle, convertir] of Object.entries(CHAMPS_COMPLETION)) {
+    const brut = patch?.[cle]
+    if (brut == null || String(brut).trim() === '') continue
+    const valeur = convertir(brut)
+    if (typeof valeur === 'number' && !Number.isFinite(valeur)) {
+      throw new Error(`La valeur saisie pour « ${LIBELLE_NOMBRE[cle] || cle} » n’est pas un nombre.`)
+    }
+    if (valeur === '') continue
+    clean[cle] = valeur
+  }
+  if (Object.keys(clean).length === 0) return {}
+  const reponse = await supabase
+    .from('clients')
+    .update({ ...clean, updated_at: new Date().toISOString() })
+    .eq('id', clientId)
+    .select('id')
+  verifierEcriture(reponse, 'Enregistrement de la fiche client', MOTIF_DROITS)
+  return clean
+}
