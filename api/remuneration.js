@@ -19,6 +19,7 @@ import {
   commissionsMois,
 } from './_lib/calcul-commission.js'
 import { TYPES_AVEC_SEUIL_RENTABILITE } from './_lib/bareme-entasis.js'
+import { contratDeReference, contratsDeReferenceParPersonne } from './_lib/contrats.js'
 
 // Taux UCS (simulateur) fixe par TYPE de contrat, independant de la
 // rentabilite du mois : salaries (CDI, CDD, Alternant, Stagiaire) au taux CDI
@@ -64,14 +65,10 @@ export default async function handler(req, res) {
     .from('profiles').select('id, role, advisor_code, full_name').eq('id', user.id).maybeSingle()
   const isManager = prof?.role === 'manager'
 
-  // Un contrat compte pour le mois de reference s il est EN POSTE sur ce mois :
-  // commence au plus tard a la fin du mois, et pas termine avant le debut du mois.
-  // Sans ce filtre, une embauche de septembre gonflait la masse fixe de juillet.
-  const moisStart = new Date(dateRef.getFullYear(), dateRef.getMonth(), 1)
-  const moisEnd = new Date(dateRef.getFullYear(), dateRef.getMonth() + 1, 0, 23, 59, 59)
-  const enPosteCeMois = (c) =>
-    (!c.date_debut || new Date(c.date_debut) <= moisEnd) &&
-    (!c.date_fin || new Date(c.date_fin) >= moisStart)
+  // Quel contrat compte pour le mois de reference : celui en poste a cette
+  // date d apres ses dates de debut et de fin (api/_lib/contrats.js). Le
+  // drapeau actif n est plus la seule verite : un renouvellement saisi a
+  // l avance prend le relais tout seul le jour dit, sans bascule manuelle.
 
   // Deals : la RLS cloisonne (conseiller = les siens, manager = tous).
   const { data: deals, error: dErr } = await sb
@@ -99,10 +96,14 @@ export default async function handler(req, res) {
       if (!isManager) return res.status(403).json({ error: 'Reserve a la direction' })
       const { data: contrats, error: cErr } = await sb
         .from('conseiller_contrats')
-        .select('*, profile:profile_id(id, advisor_code, email, full_name)')
+        .select('*, profile:profile_id(id, advisor_code, email, full_name, is_active)')
       if (cErr) return res.status(500).json({ error: 'Contrats: ' + cErr.message })
-      const lignes = (contrats || [])
-        .filter(c => c.actif && c.type_contrat !== 'GERANT' && enPosteCeMois(c))
+      // Un contrat de reference par personne, choisi par les dates ; les
+      // comptes desactives (profil is_active a faux) sortent de la vue.
+      const candidats = (contrats || [])
+        .filter(c => c.type_contrat !== 'GERANT')
+        .filter(c => !c.profile || c.profile.is_active !== false)
+      const lignes = contratsDeReferenceParPersonne(candidats, dateRef)
         .map(c => calcLigne(c, c.profile || null))
       const totals = {
         fixe: lignes.reduce((s, l) => s + Number(l.contrat.salaire_brut_mensuel || 0), 0),
@@ -112,9 +113,11 @@ export default async function handler(req, res) {
       return res.status(200).json({ mode: 'manager', lignes, totals })
     }
 
-    // perso : le contrat de l appelant (RLS restreint a sa propre ligne)
-    const { data: contrat } = await sb
-      .from('conseiller_contrats').select('*').eq('profile_id', user.id).eq('actif', true).maybeSingle()
+    // perso : les contrats de l appelant (la RLS ne rend que les siens), et
+    // le contrat de reference pour le mois demande se choisit par les dates.
+    const { data: mesContrats } = await sb
+      .from('conseiller_contrats').select('*').eq('profile_id', user.id)
+    const contrat = contratDeReference(mesContrats || [], dateRef)
     if (!contrat) {
       return res.status(200).json({ mode: 'perso', contrat: null, rentab: RENTAB_VIDE, comm: COMM_VIDE, dealsMoisCount: 0, tauxCdiApplicable: false })
     }

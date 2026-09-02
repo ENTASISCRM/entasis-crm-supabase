@@ -46,3 +46,6 @@ public/version.json
 # (SEC-02, SEC-07). Gardés hors du dépôt tant qu'ils sont exploitables.
 AUDIT.md
 AUDIT-correctifs.sql
+
+# Copies de travail isolees des agents, jamais versionnees
+.claude/worktrees/

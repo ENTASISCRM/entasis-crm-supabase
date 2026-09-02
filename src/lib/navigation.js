@@ -25,8 +25,12 @@ export function buildNavDomains({ isManager, isRhDelegue, canSmartRh }) {
       views: [{ tab: 'dashboard', label: isManager ? 'Vue cabinet' : 'Mon mois' }],
     },
     {
-      key: 'leads', label: 'Leads Live', icon: 'Leads',
-      views: [{ tab: 'leads', label: 'Leads Live' }],
+      // A6 : les leads se lisent dans le CRM ; la Lead Room reste a un clic.
+      key: 'leads', label: 'Leads', icon: 'Leads',
+      views: [
+        { tab: 'leads', sub: 'entrants', label: 'Leads entrants' },
+        { tab: 'leads', sub: 'live', label: 'Leads Live' },
+      ],
     },
     {
       key: 'activite', label: 'Activité', icon: 'Pipeline',
@@ -42,6 +46,8 @@ export function buildNavDomains({ isManager, isRhDelegue, canSmartRh }) {
       views: [
         { tab: 'clients', sub: 'annuaire', label: 'Annuaire' },
         { tab: 'clients', sub: 'dossiers', label: 'Dossiers du mois' },
+        // D6 : le rattrapage des fiches sans prenom, reserve a la direction.
+        ...(isManager ? [{ tab: 'clients', sub: 'rattrapage', label: 'Fiches à rattraper' }] : []),
         { tab: 'multi-equipement', label: 'Multi-équipement' },
         { tab: 'conformite', label: 'Conformité' },
       ],

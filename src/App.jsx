@@ -28,6 +28,8 @@ import ShortcutsHelp from './components/ui/ShortcutsHelp'
 import InlineSelect from './components/ui/InlineSelect'
 import NotificationsBell from './components/ui/NotificationsBell'
 import ChecklistAccueil from './components/ui/ChecklistAccueil'
+import DossiersStagnants from './components/DossiersStagnants'
+import SequenceRelance from './components/dossiers/SequenceRelance'
 import * as congesService from './services/conges'
 import { usePersistedState } from './hooks/usePersistedState'
 import { noterRecent } from './lib/recents'
@@ -41,6 +43,7 @@ const OutilsCGP = lazy(() => import('./components/OutilsCGP'))
 const ImmobilierNeuf = lazy(() => import('./components/ImmobilierNeuf'))
 // Annuaire des partenaires : le carnet du cabinet, tous metiers confondus
 const AnnuairePartenaires = lazy(() => import('./components/AnnuairePartenaires'))
+const LeadsEntrants = lazy(() => import('./components/LeadsEntrants'))
 const EditorialHub = lazy(() => import('./components/EditorialHub'))
 const PilotageRH = lazy(() => import('./components/PilotageRH'))
 const Recrutement = lazy(() => import('./components/Recrutement'))
@@ -50,6 +53,7 @@ const ManagementView = lazy(() => import('./components/ManagementView'))
 const UcsStructures = lazy(() => import('./components/UcsStructures'))
 const AllocationsTypes = lazy(() => import('./components/AllocationsTypes'))
 const ClientsView = lazy(() => import('./components/clients/ClientsView'))
+const RattrapageFiches = lazy(() => import('./components/clients/RattrapageFiches'))
 const ClientView = lazy(() => import('./components/clients/ClientView'))
 // Conformite embarque jspdf : lazy pour rester hors du bundle de login.
 const Conformite = lazy(() => import('./components/Conformite'))
@@ -73,6 +77,7 @@ import {
   anneeDuDeal,
   dealDuMois, estSimpleRdv, entonnoirLeads, compterPipeline } from './lib/metrics'
 import { construireMaJournee, dateReport } from './lib/ma-journee'
+import { patchApresFait, messageApresFait } from './lib/sequences'
 import {
   MONTHS,
   STATUS_OPTIONS,
@@ -973,7 +978,7 @@ async function genererFicheParrainage(profile){
 // portent déjà l'identité visuelle de chaque écran.
 // Ecrans ou les actions commerciales de la barre du haut ont un sens
 const ECRANS_COMMERCIAUX = ['dashboard','pipeline','dossiers','clients','multi-equipement','leads','agenda','forecast']
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers','multi-equipement':'Multi-équipement',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers',team:'Équipe',leads:'Leads Live','ucs-structures':'UCS Produits Structurés',allocations:'Allocations types',partenaires:'Partenaires · annuaire',immobilier:'Immobilier · dossiers transmis',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH','recrutement':'Recrutement',conformite:'Conformité',editorial:'Agent éditorial',cockpit:'Cockpit ratios'}
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers','multi-equipement':'Multi-équipement',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers',team:'Équipe',leads:'Leads','ucs-structures':'UCS Produits Structurés',allocations:'Allocations types',partenaires:'Partenaires · annuaire',immobilier:'Immobilier · dossiers transmis',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH','recrutement':'Recrutement',conformite:'Conformité',editorial:'Agent éditorial',cockpit:'Cockpit ratios'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile,onHelp,notifications,notifScope}){
   return (
@@ -1616,6 +1621,9 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab,onQuickP
       </div>
       {/* D3 : ce qui doit être fait aujourd'hui passe AVANT le reste. */}
       <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch}/>
+      {/* C2 : les dossiers En cours sans mouvement depuis 21 jours, avec
+          Relancer (ouvre le dossier) et Abandonner (annulable). */}
+      <DossiersStagnants deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch}/>
       <div style={{marginTop:28}}>
         <Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded onOuvrirClient={onOpenClient}/></Suspense>
       </div>
@@ -1705,6 +1713,9 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onQ
       </div>
       <div style={{marginBottom:24}}><Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded onOuvrirClient={onOpenClient}/></Suspense></div>
       <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch}/>
+      {/* C2 : les dossiers En cours sans mouvement depuis 21 jours, avec
+          Relancer (ouvre le dossier) et Abandonner (annulable). */}
+      <DossiersStagnants deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch}/>
       <div className="grid-2 gap-16 mb-24">
         <AreaChart title="PP cabinet annualisée" subtitle="Réalisé + pipeline → objectif" actual={ppS} projected={ppS+ppP} target={ppTarget}/>
         <AreaChart title="PU cabinet" subtitle="Versements uniques consolidés" actual={puS} projected={puS+puP} target={puTarget}/>
@@ -1813,7 +1824,9 @@ function ActionsDuJour({deals,profile,onEdit,onQuickPatch}){
   const {rdv,retard,jour}=file
 
   // Les trois gestes : écriture optimiste + annulation via quickPatchDeal.
-  const fait=(d)=>onQuickPatch?.(d,{next_action:null,next_action_date:null},`Action terminée · ${getClientName(d)}`,{undoable:true})
+  // B2 : si le dossier suit une sequence de relance, « Fait » arme l etape
+  // suivante au bon delai ; sinon il termine l action, comme avant.
+  const fait=(d)=>{const patch=patchApresFait(d,today);onQuickPatch?.(d,patch,`${messageApresFait(d,patch)||'Action terminée'} · ${getClientName(d)}`,{undoable:true})}
   const reporter=(d,choix)=>onQuickPatch?.(d,{next_action_date:dateReport(choix,today)},choix==='demain'?'Reporté à demain':'Reporté d’une semaine',{undoable:true})
   const Geste=({label,title,onClick})=>(
     <button className="btn btn-ghost btn-sm" title={title} style={{padding:'2px 8px',fontSize:11,flexShrink:0}}
@@ -4453,6 +4466,9 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                 dossier vivant sans étape suivante datée. Alimente la liste
                 « Mes actions du jour » de l'accueil. */}
             {!expressMode && (<>
+              {/* B2 : un gabarit pose la chaine de relances, les champs
+                  Prochaine action et Pour le en dessous suivent. */}
+              <SequenceRelance deal={deal} set={set} />
               <div className="form-row form-row-2">
                 <div className="form-group">
                   <label className="form-label">Prochaine action</label>
@@ -4561,6 +4577,7 @@ export default function App(){
   // Sous-vue de l onglet Clients : annuaire (fiches) ou dossiers du mois
   // (l ancien onglet Dossiers, absorbe ici — meme donnees, un chemin de moins).
   const [clientsVue,setClientsVue]=useState('annuaire')
+  const [leadsVue,setLeadsVue]=useState('entrants')
   const [dossiersImmoCount,setDossiersImmoCount]=useState(0)
   const [editorialPending,setEditorialPending]=useState({count:0,nextDeadline:null})
   const [reloadCallback,setReloadCallback]=useState(null) // Callback après sauvegarde deal
@@ -4694,8 +4711,9 @@ export default function App(){
         setActiveTab(tab)
         if (tab === 'clients') {
           if (parts[1] === 'c' && parts[2]) { setSelectedClientId(parts[2]); setClientsVue('annuaire') }
-          else { setSelectedClientId(null); setClientsVue(parts[1] === 'dossiers' ? 'dossiers' : 'annuaire') }
+          else { setSelectedClientId(null); setClientsVue(parts[1] === 'dossiers' ? 'dossiers' : parts[1] === 'rattrapage' ? 'rattrapage' : 'annuaire') }
         }
+        if (tab === 'leads') setLeadsVue(parts[1] === 'live' ? 'live' : 'entrants')
       }
       // Libéré après le commit du batch : l'effet écrivain (ci-dessous) voit
       // encore le drapeau levé et ne réécrit pas le hash qu'on vient de lire.
@@ -4713,8 +4731,10 @@ export default function App(){
     if (activeTab === 'clients') {
       if (selectedClientId) next = '#/clients/c/' + encodeURIComponent(selectedClientId)
       else if (clientsVue === 'dossiers') next = '#/clients/dossiers'
+      else if (clientsVue === 'rattrapage') next = '#/clients/rattrapage'
       else next = '#/clients'
     }
+    if (activeTab === 'leads') next = leadsVue === 'live' ? '#/leads/live' : '#/leads'
     if (window.location.hash !== next) {
       // Première écriture en replaceState (pas d'entrée d'historique parasite
       // au chargement) ; ensuite chaque navigation pousse une entrée → le
@@ -4723,7 +4743,7 @@ export default function App(){
       else window.history.replaceState(null, '', next)
     }
     wroteHashOnce.current = true
-  }, [session, profile, activeTab, clientsVue, selectedClientId])
+  }, [session, profile, activeTab, clientsVue, selectedClientId, leadsVue])
 
   // Si l'onglet actif devient inaccessible après coup — contractType arrive
   // en async et peut retirer Smart RH d'un stagiaire, un rôle peut changer —
@@ -5387,10 +5407,12 @@ export default function App(){
             <SubTabs
               ariaLabel={`Vues ${activeDomain.label}`}
               tabs={activeDomain.views.map(v => ({ key: viewId(v), label: v.label, badge: subBadges[v.badgeKey] || 0 }))}
-              active={activeTab === 'clients' ? `clients:${selectedClientId ? 'annuaire' : clientsVue}` : activeTab}
+              active={activeTab === 'clients' ? `clients:${selectedClientId ? 'annuaire' : clientsVue}` : activeTab === 'leads' ? `leads:${leadsVue}` : activeTab}
               onChange={(id) => {
                 if (id.startsWith('clients:')) {
                   setActiveTab('clients'); setSelectedClientId(null); setClientsVue(id.split(':')[1])
+                } else if (id.startsWith('leads:')) {
+                  setActiveTab('leads'); setLeadsVue(id.split(':')[1])
                 } else {
                   setActiveTab(id)
                 }
@@ -5405,11 +5427,18 @@ export default function App(){
               compose ; onOpenClient : les listes de travail ouvrent la
               fiche ; onQuickPatch : les gestes de Ma journée (phase 0). */}
           {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles} profile={profile} onEdit={startEdit} onQuickPatch={quickPatchDeal} onGoView={(tab,sub)=>{if(sub)setClientsVue(sub);setActiveTab(tab)}} onOpenClient={(id)=>{setSelectedClientId(id);setClientsVue('annuaire');setActiveTab('clients')}}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile} onEdit={startEdit} onGoTab={setActiveTab} onQuickPatch={quickPatchDeal} onGoView={(tab,sub)=>{if(sub)setClientsVue(sub);setActiveTab(tab)}} onOpenClient={(id)=>{setSelectedClientId(id);setClientsVue('annuaire');setActiveTab('clients')}}/>)}
-          {activeTab==='leads'&&<LeadRoomEmbed/>}
+          {/* A6 : les leads entrants se lisent dans le CRM ; la Lead Room en
+              iframe reste la seconde vue. Creer le dossier ouvre la modale
+              preremplie, comme « Nouveau dossier ». */}
+          {activeTab==='leads'&&leadsVue==='live'&&<LeadRoomEmbed/>}
+          {activeTab==='leads'&&leadsVue!=='live'&&<LeadsEntrants profile={profile} onCreerDossier={(d)=>{setEditingDeal(d);setModalOpen(true)}} onOuvrirLeadRoom={()=>setLeadsVue('live')}/>}
           {activeTab==='smart-rh'&&canSmartRh&&<SmartRH profile={profile} rhDelegue={isRhDelegue}/>}
           {activeTab==='pilotage-rh'&&(isManager||isRhDelegue)&&<PilotageRH profile={profile}/>}
           {activeTab==='recrutement'&&(isManager||isRhDelegue)&&<Recrutement/>}
           {activeTab==='pipeline'&&<PipelineBoard deals={deals} month={month} profile={profile} onEdit={startEdit} onQuickPatch={quickPatchDeal}/>}
+          {/* D6 : rattrapage des fiches sans prenom, direction seulement ; la
+              RLS reste le vrai verrou sur chaque ecriture. */}
+          {activeTab==='clients'&&!selectedClientId&&clientsVue==='rattrapage'&&isManager&&<RattrapageFiches profile={profile}/>}
           {activeTab==='clients'&&!selectedClientId&&clientsVue==='dossiers'&&<DealsTable deals={deals} month={month} profile={profile} onEdit={startEdit} onDelete={deleteDeal} onRefresh={loadAll} onQuickPatch={quickPatchDeal} onSelectClient={(clientId) => {
             setSelectedClientId(clientId)
             setClientsVue('annuaire')

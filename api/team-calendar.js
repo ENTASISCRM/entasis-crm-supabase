@@ -2,20 +2,27 @@ import { createSign } from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 import { verifyAuth } from './_auth.js'
 
-// Liste des conseillers avec leur email et advisor_code
-const TEAM = [
-  { email: 'danny@entasis-conseil.fr', code: 'DANNY' },
-  { email: 'jean.decamps@entasis-conseil.fr', code: 'JEAN' },
-  { email: 'louis.hatton@entasis-conseil.fr', code: 'LH' },
-  { email: 'thomas@entasis-conseil.fr', code: 'THOMASPOPEA' },
-  { email: 'messager.clement@entasis-conseil.fr', code: 'CLEMENT' },
-  { email: 'victor@entasis-conseil.fr', code: 'DB' },
-  { email: 'alexis@entasis-conseil.fr', code: 'ALEXIS' },
-  { email: 'gianni@entasis-conseil.fr', code: 'GIANNI' },
-  { email: 'quentin@entasis-conseil.fr', code: 'QUENTIN' },
-  { email: 'dany@entasis-conseil.fr', code: 'DANY' },
-  { email: 'nans@entasis-conseil.fr', code: 'NANS' },
-]
+// L equipe se lit dans profiles, plus dans une liste figee. La liste codee en
+// dur confondait les conseillers (Victor portait le code de Dany, Clement et
+// Quentin avaient des codes disparus) et ignorait les arrivants : la vue
+// Semaine des managers comptait des rendez vous a cote. Seuls les comptes
+// Google Workspace du cabinet sont interrogeables par le compte de service,
+// d ou le filtre sur le domaine ; un manager avec une adresse personnelle
+// n a simplement pas d agenda dans cette vue.
+const DOMAINE_AGENDA = '@entasis-conseil.fr'
+
+async function chargerEquipe(admin) {
+  const { data, error } = await admin
+    .from('profiles')
+    .select('email, advisor_code, role, is_active')
+    .eq('is_active', true)
+    .in('role', ['advisor', 'manager'])
+  if (error) throw new Error('Profils : ' + error.message)
+  return (data || [])
+    .filter(p => p.email && p.email.toLowerCase().endsWith(DOMAINE_AGENDA))
+    .map(p => ({ email: p.email.toLowerCase(), code: p.advisor_code || p.email.split('@')[0].toUpperCase() }))
+    .sort((a, b) => a.code.localeCompare(b.code))
+}
 
 // Mots-clés pour détecter les réunions internes Entasis
 const INTERNAL_KEYWORDS = [
@@ -116,8 +123,8 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Non autorisé' })
   }
 
-  // 2. Cet endpoint expose les agendas Google des 11 conseillers (vue équipe
-  //    de la Revue hebdo, écran manager). Les données viennent d'un service
+  // 2. Cet endpoint expose les agendas Google de toute l equipe active (vue
+  //    Semaine de la Revue hebdo, ecran manager). Les données viennent d'un service
   //    account Google, aucune RLS ne s'applique : on contrôle donc le rôle
   //    nous-mêmes, via le client service_role, comme api/impersonate.js.
   const adminKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -148,12 +155,15 @@ export default async function handler(req, res) {
 
     const serviceAccount = JSON.parse(serviceAccountKey)
 
+    // L equipe du jour, lue en base (voir chargerEquipe).
+    const TEAM = await chargerEquipe(admin)
+
     // Paramètres de la semaine
     const { weekKey } = req.query
     // weekKey format: "2026-W14"
 
     // Calculer lundi et dimanche de la semaine
-    let monday, sunday
+    let monday
     if (weekKey) {
       const [year, weekPart] = weekKey.split('-W')
       const weekNum = parseInt(weekPart)
@@ -169,7 +179,7 @@ export default async function handler(req, res) {
       monday.setDate(monday.getDate() - ((day + 6) % 7))
     }
     monday.setHours(0, 0, 0, 0)
-    sunday = new Date(monday)
+    const sunday = new Date(monday)
     sunday.setDate(monday.getDate() + 6)
     sunday.setHours(23, 59, 59, 999)
 

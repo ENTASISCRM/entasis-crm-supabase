@@ -3,6 +3,10 @@ import { toast } from 'react-hot-toast'
 import { STATUTS_PRO, messageErreur } from '../../lib/ui-shared'
 import { confirmDialog } from '../ui/confirm'
 import * as clientsService from '../../services/clients'
+// Normalisation des numeros et proposition de separation prenom / nom : les
+// regles vivent dans lib/noms, partagees avec l ecran de rattrapage des
+// fiches, et testees a part. Ici on ne fait que les brancher sur le formulaire.
+import { normaliserTelephone, separerNomComplet } from '../../lib/noms'
 
 // Rouge charte pour le manque (semantique "champ obligatoire vide").
 const ROUGE_MANQUE = '#B4453B'
@@ -34,20 +38,6 @@ function PastilleRequise({ vide }) {
   )
 }
 
-// Normalise un numero francais a la perte de focus du champ : espaces,
-// points, tirets et parentheses retires, prefixe international 33 ramene
-// a 0, puis regroupement par paires de chiffres. Un numero non reconnu est
-// laisse tel quel, aucun blocage. Fiabilise les liens tel de la fiche
-// client et le rapprochement Lead Room qui compare les numeros.
-function normaliserTelephone(brut) {
-  if (!brut) return brut
-  let t = String(brut).trim().replace(/[\s.()-]/g, '')
-  if (t.startsWith('+33')) t = '0' + t.slice(3)
-  else if (t.startsWith('0033')) t = '0' + t.slice(4)
-  if (/^0\d{9}$/.test(t)) return t.replace(/(\d{2})(?=\d)/g, '$1 ')
-  return String(brut).trim()
-}
-
 export default function ClientModal({ open, client, onClose, onSave, supabase, profile }) {
   const [form, setForm] = useState({
     nom: '',
@@ -72,6 +62,20 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
   })
 
   const [loading, setLoading] = useState(false)
+
+  // Proposition de separation prenom / nom, calculee a la perte de focus du
+  // champ Nom quand le prenom est vide et que le nom contient un espace
+  // (331 fiches sur 381 sont saisies « Prénom Nom » dans le seul champ nom).
+  // Jamais appliquee toute seule : la personne clique Oui, ou Non. Le Non est
+  // memorise pour cette saisie precise afin de ne pas reproposer la meme
+  // chose a chaque blur ; une nouvelle saisie du nom rouvre la proposition.
+  const [proposition, setProposition] = useState(null)
+  const [nomRefuse, setNomRefuse] = useState('')
+
+  useEffect(() => {
+    setProposition(null)
+    setNomRefuse('')
+  }, [client, open])
 
   // Options pour les objectifs
   const OBJECTIFS_OPTIONS = ['Retraite', 'Transmission', 'Défiscalisation', 'Épargne', 'Immobilier', 'Protection']
@@ -143,6 +147,28 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
     ['revenus', form.revenus_annuels],
     ['patrimoine', form.patrimoine_estime],
   ].filter(([, v]) => champVide(v)).map(([label]) => label)
+
+  function proposerSeparation() {
+    const nom = String(form.nom || '').trim()
+    if (form.prenom?.trim() || !/\s/.test(nom) || nom === nomRefuse) {
+      setProposition(null)
+      return
+    }
+    const r = separerNomComplet(nom)
+    setProposition(r.prenom && r.nom ? r : null)
+  }
+
+  function accepterSeparation() {
+    if (!proposition) return
+    set('prenom', proposition.prenom)
+    set('nom', proposition.nom)
+    setProposition(null)
+  }
+
+  function refuserSeparation() {
+    setNomRefuse(String(form.nom || '').trim())
+    setProposition(null)
+  }
 
   const toggleObjectif = (objectif) => {
     if (form.objectifs.includes(objectif)) {
@@ -331,10 +357,20 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
                 <input
                   className="form-input"
                   value={form.nom}
-                  onChange={e => set('nom', e.target.value)}
+                  onChange={e => { set('nom', e.target.value); if (proposition) setProposition(null) }}
+                  onBlur={proposerSeparation}
                   placeholder="Dupont"
                   required
                 />
+                {proposition && (
+                  <div className="form-hint" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', color: 'var(--t2)' }}>
+                    <span>
+                      Séparer en prénom <strong>{proposition.prenom}</strong> et nom <strong>{proposition.nom}</strong> ?
+                    </span>
+                    <button type="button" className="btn btn-outline btn-sm" onClick={accepterSeparation}>Oui</button>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={refuserSeparation}>Non</button>
+                  </div>
+                )}
               </div>
             </div>
             <div className="form-row form-row-2">
