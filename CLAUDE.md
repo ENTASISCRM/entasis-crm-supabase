@@ -106,7 +106,7 @@ relecture. Tout ce qui suit est en ligne sur main.
   d'une liste figée qui confondait les conseillers.
 * **Le nom d'un profil est mis au propre à sa création** (fonction SQL
   `normaliser_nom_complet`, appelée par `handle_new_user`).
-* **Un contrôle visuel automatique** joue dix neuf écrans à chaque pull
+* **Un contrôle visuel automatique** joue vingt écrans à chaque pull
   request (voir plus bas).
 * La fiche client affiche à nouveau tous ses champs (les sections
   repliables s'appellent `form-pliable`, le nom générique `form-section`
@@ -215,7 +215,7 @@ Ce que l'audit a mis en évidence sans correctif de code :
 ### Ce qui reste ouvert
 
 * **Contrôle visuel automatique** : en place. `npm run test:visuel` joue
-  dix neuf écrans avec une session simulée et des données fictives
+  vingt écrans avec une session simulée et des données fictives
   (`tests/visuel/`), et le workflow `controle-visuel.yml` le rejoue à
   chaque pull request en déposant les captures en artefact. En local, il
   faut un serveur `vite preview` sur le port 4173 et Chromium (variable
@@ -293,6 +293,11 @@ demande de Louis :
   libellé : les trois voies de rattachement échouaient en même temps et
   son dossier ne remontait pas dans Rémunération. Profil lié, matricule
   `ELIOTT`, libellé nettoyé.
+* **La responsable RH tient la même file que la direction.** Smart RH
+  traite le délégué RH comme un manager (`rh_delegue` sur le profil,
+  `is_rh()` en base) : il voit l'onglet même sous contrat de mandataire,
+  valide, refuse et requalifie. Un écran du contrôle visuel le joue avec un
+  profil conseiller délégué RH, pour que ce droit ne se perde pas.
 * **La direction change le type d'un congé quand elle veut.** Un sélecteur
   de type se pose sur chaque demande de la file à valider et sur chaque
   absence déjà validée du planning. C'est le type qui décide du décompte :

@@ -208,6 +208,8 @@ const SCENARIOS = [
   },
   { nom: 'remuneration', role: 'conseiller', route: '#/remuneration', attendu: 'Rémunération' },
   { nom: 'smart-rh-direction', role: 'manager', route: '#/smart-rh', attendu: 'À valider' },
+  // La responsable RH n est pas manager : elle doit tenir la même file.
+  { nom: 'smart-rh-responsable-rh', role: 'rh', route: '#/smart-rh', attendu: 'À valider' },
   { nom: 'multi-equipement', role: 'conseiller', route: '#/multi-equipement', attendu: 'Multi-équipement' },
   { nom: 'conformite', role: 'conseiller', route: '#/conformite', attendu: 'Recueils et devoirs de conseil' },
 ]
