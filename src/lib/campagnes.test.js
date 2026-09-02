@@ -2,8 +2,9 @@ import { describe, it, expect } from 'vitest'
 import {
   CRITERES_VIDES, CAMPAGNES_PRECONFIGUREES, STATUTS_CIBLE, COLONNES_CSV, CHAMPS_EVALUES,
   ageDe, evaluerCibles, libelleNonEvaluables, criteresActifs, normaliserCriteres, resumeCriteres,
-  campagnePreconfiguree, entonnoir, ligneCsv, exportCsv, slugCampagne, regrouperMesCibles,
+  campagnePreconfiguree, entonnoir, ligneCsv, slugCampagne, regrouperMesCibles,
 } from './campagnes'
+import { contenuCsv } from './csv-format'
 import { SEUILS } from '../config/multiEquipementRules'
 import { SEQUENCES } from '../config/sequencesRelance'
 
@@ -224,6 +225,37 @@ describe('evaluerCibles, les non évaluables', () => {
     expect(r.total).toBe(5)
   })
 
+  it('un critère de famille qui échoue exclut, même si un champ de fiche était inconnu', () => {
+    // La famille est toujours évaluable : elle tranche, et le champ vide ne
+    // doit pas transformer une exclusion certaine en gisement à compléter.
+    const r = evaluerCibles([fiche({ id: 'a', statut_pro: null })], [vue('a', ['prevoyance'])],
+      crit({ statuts: ['TNS'], famillesAbsentes: ['prevoyance'] }), { today: TODAY })
+    expect(r.exclus).toBe(1)
+    expect(r.nbNonEvaluables).toBe(0)
+    expect(r.nonEvaluables.statut_pro).toBe(0)
+  })
+
+  it('le résultat ne dépend pas de l ordre où les critères ont été saisis', () => {
+    const fiches = [
+      fiche({ id: 'a', statut_pro: 'TNS', revenus_annuels: 90000 }),
+      fiche({ id: 'b', statut_pro: 'Salarié', revenus_annuels: null }),
+      fiche({ id: 'c', statut_pro: null, revenus_annuels: 90000 }),
+    ]
+    const direct = evaluerCibles(fiches, [], crit({ statuts: ['TNS'], revenusMin: 80000 }), { today: TODAY })
+    const inverse = evaluerCibles(fiches, [], crit({ revenusMin: 80000, statuts: ['TNS'] }), { today: TODAY })
+    expect(inverse.cibles.map((c) => c.id)).toEqual(direct.cibles.map((c) => c.id))
+    expect(inverse.exclus).toBe(direct.exclus)
+    expect(inverse.nonEvaluables).toEqual(direct.nonEvaluables)
+  })
+
+  it('une ligne de vue sans tableau de familles vaut aucune famille, jamais une erreur', () => {
+    const equipementCasse = [{ client_id: 'a', familles: null }, { client_id: 'b' }]
+    const r = evaluerCibles([fiche({ id: 'a' }), fiche({ id: 'b' })], equipementCasse,
+      crit({ famillesAbsentes: ['per'] }), { today: TODAY })
+    expect(r.cibles.map((c) => c.id)).toEqual(['a', 'b'])
+    expect(r.cibles[0].familles).toEqual([])
+  })
+
   it('sans aucun critère, tout le monde est cible et rien n est inconnu', () => {
     const r = evaluerCibles([fiche({ id: 'a' }), fiche({ id: 'b' })], [], CRITERES_VIDES, { today: TODAY })
     expect(r.cibles).toHaveLength(2)
@@ -363,8 +395,11 @@ describe('export CSV', () => {
     expect(ligneCsv({ nom: 'Seul', statut: 'rdv' })).toEqual(['Seul', '', '', '', '', 'Rendez vous', '', '', '', ''])
   })
 
-  it('le fichier commence par le BOM, sépare par point virgule et termine les lignes en CRLF', () => {
-    const csv = exportCsv([cible])
+  // L'assemblage du fichier et la protection contre les formules vivent dans
+  // src/lib/csv-format.js, partagé avec l'export d'écran et testé à part. Ici
+  // on vérifie que les lignes de campagne le traversent bien.
+  it('le fichier assemblé porte l en tête puis la ligne de la cible', () => {
+    const csv = contenuCsv(COLONNES_CSV, [ligneCsv(cible)])
     expect(csv.charCodeAt(0)).toBe(0xfeff)
     const lignes = csv.slice(1).split('\r\n')
     expect(lignes).toHaveLength(2)
@@ -372,8 +407,8 @@ describe('export CSV', () => {
     expect(lignes[1].split(';')[0]).toBe('Exemple')
   })
 
-  it('protège les points virgules, les guillemets et les formules', () => {
-    const csv = exportCsv([{ nom: 'Un; deux', prenom: 'Dit "Cam"', telephone: '=1+1' }])
+  it('protège les points virgules, les guillemets et les formules d une cible', () => {
+    const csv = contenuCsv(COLONNES_CSV, [ligneCsv({ nom: 'Un; deux', prenom: 'Dit "Cam"', telephone: '=1+1' })])
     const ligne = csv.split('\r\n')[1]
     expect(ligne.startsWith('"Un; deux";"Dit ""Cam""";\'=1+1;')).toBe(true)
   })

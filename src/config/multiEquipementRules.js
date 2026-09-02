@@ -9,7 +9,7 @@
 export const SEUILS = {
   revenusFortPotentiel: 80000,     // « fort potentiel » si revenus >= ceci
   patrimoineFortPotentiel: 300000, //   OU patrimoine >= ceci
-  revenusScpi: 100000,             // cible SCPI au dessus de ce revenu
+  revenusScpi: 100000,             // cible SCPI a partir de ce revenu, borne comprise
 }
 
 // Détection TNS / profession libérale à partir du champ `profession` (texte libre).
@@ -27,9 +27,19 @@ export function estTns(profession) {
 // Vrai si le client est TNS ou en profession libérale. On se fie d'abord au
 // STATUT structuré (fiable, obligatoire à la signature), et on retombe sur le
 // texte profession pour la data historique sans statut.
+// Les trois statuts que la direction range sous « TNS » quand elle chiffre une
+// campagne prevoyance : TNS, chef d'entreprise, profession liberale. Meme
+// liste que le preglage prevoyance_tns de src/lib/campagnes.js ; sans le chef
+// d'entreprise, cinq fiches etaient cibles de la campagne sans jamais recevoir
+// la suggestion prevoyance ici. La ponctuation est ignoree pour que
+// « Chef d entreprise » et « Chef d'entreprise » soient le meme statut.
+const sansPonctuation = (v) => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+const STATUTS_TNS = ['tns', 'chef d entreprise', 'profession liberale']
+
 export function estTnsOuLiberal(c) {
-  const s = (c?.statut || '').toLowerCase()
-  if (s === 'tns' || s.includes('libéral') || s.includes('liberal')) return true
+  const s = sansPonctuation(c?.statut)
+  if (s && STATUTS_TNS.includes(s)) return true
   return estTns(c?.profession)
 }
 
@@ -62,7 +72,10 @@ export const REGLES = [
     famille_suggeree: 'scpi',
     label: 'Proposer SCPI',
     raison: 'Revenus élevés sans SCPI : diversifier en pierre papier et générer du foncier.',
-    applicable: (c) => Number(c.revenus || 0) > SEUILS.revenusScpi && !c.familles.includes('scpi'),
+    // Borne comprise, comme la campagne SCPI (src/lib/campagnes.js). Huit
+    // fiches sont exactement au seuil : elles etaient cibles de la campagne
+    // sans jamais recevoir la suggestion ici.
+    applicable: (c) => Number(c.revenus || 0) >= SEUILS.revenusScpi && !c.familles.includes('scpi'),
   },
 ]
 

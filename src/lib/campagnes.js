@@ -426,22 +426,9 @@ export function ligneCsv(cible, { famillesLabels = {}, conseillersLabels = {} } 
   ]
 }
 
-function celluleCsv(valeur) {
-  if (valeur == null) return ''
-  let s = String(valeur)
-  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`
-  if (/[";\n\r]/.test(s)) s = `"${s.replace(/"/g, '""')}"`
-  return s
-}
-
-/** Le fichier entier, BOM compris, prêt pour un Blob text/csv. */
-export function exportCsv(cibles, opts = {}) {
-  const lignes = (Array.isArray(cibles) ? cibles : []).map((c) => ligneCsv(c, opts))
-  const contenu = [COLONNES_CSV, ...lignes]
-    .map((l) => l.map(celluleCsv).join(';'))
-    .join('\r\n')
-  return '﻿' + contenu
-}
+// L'écran exporte avec exporterCsv (src/lib/export-csv.js), qui journalise et
+// partage l'échappement de src/lib/csv-format.js. Cette lib ne fabrique que
+// les lignes : pas de seconde protection contre les formules à maintenir.
 
 // ─── Petits utilitaires pour les écrans ───────────────────────────────────
 

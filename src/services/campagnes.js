@@ -82,9 +82,22 @@ export async function creerCampagne({ nom, criteres, sequence_key, accroche }, c
       inserees += verifierEcritureLot(reponse, lot.length, 'Enregistrement des cibles').length
     }
   } catch (e) {
-    // La suppression est en cascade sur les cibles déjà écrites. Si elle
-    // échoue à son tour, c'est l'erreur d'origine qu'on remonte.
-    await supabase.from('campagnes').delete().eq('id', campagne.id).then(() => {}, () => {})
+    // La suppression est en cascade sur les cibles déjà écrites. On vérifie
+    // qu'elle a bien retiré la ligne : sans ça, une campagne à moitié remplie
+    // restait visible chez les conseillers sans que personne le sache. Si le
+    // rattrapage échoue à son tour, on le dit, sans perdre l'erreur d'origine
+    // qui reste la cause.
+    let rattrape = true
+    try {
+      const efface = await supabase.from('campagnes').delete().eq('id', campagne.id).select('id')
+      rattrape = !efface.error && (efface.data || []).length > 0
+    } catch {
+      rattrape = false
+    }
+    if (!rattrape) {
+      const cause = e?.message || 'erreur inconnue'
+      throw new Error(`${cause} · la campagne « ${nomPropre} » n'a pas pu être retirée et reste peut être partiellement enregistrée : prévenez la direction avant d'en relancer une.`)
+    }
     throw e
   }
   return { id: campagne.id, nbCibles: inserees }

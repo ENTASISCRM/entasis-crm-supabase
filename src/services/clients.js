@@ -6,7 +6,7 @@
 // drift entre les 3 composants qui touchent cette table.
 
 import { supabase } from '../lib/supabase'
-import { normaliserTelephone } from '../lib/noms'
+import { nettoyerCompletion } from '../lib/completude'
 import { verifierEcriture, MOTIF_DROITS } from '../lib/ecriture-verifiee'
 
 /**
@@ -409,23 +409,6 @@ export async function listerPourCompletude() {
   return lignes
 }
 
-// Les champs qu on peut completer en ligne depuis l accueil, avec leur
-// conversion. Rien d autre ne passe : une cle hors liste est ignoree.
-const CHAMPS_COMPLETION = {
-  date_naissance: (v) => String(v).trim(),
-  situation_familiale: (v) => String(v).trim(),
-  statut_pro: (v) => String(v).trim(),
-  profession: (v) => String(v).trim(),
-  revenus_annuels: (v) => Number(v),
-  patrimoine_estime: (v) => Number(v),
-  // Meme forme que la modale client : « 06 12 34 56 78 » quelle que soit la
-  // saisie, un numero etranger rendu tel quel.
-  telephone: (v) => normaliserTelephone(v),
-  email: (v) => String(v).trim(),
-}
-
-const LIBELLE_NOMBRE = { revenus_annuels: 'revenus annuels', patrimoine_estime: 'patrimoine estimé' }
-
 /**
  * Complete une fiche depuis l accueil : n ecrit QUE les champs fournis et non
  * vides, jamais un effacement. Une valeur numerique illisible est refusee
@@ -439,17 +422,9 @@ const LIBELLE_NOMBRE = { revenus_annuels: 'revenus annuels', patrimoine_estime: 
  */
 export async function completerFiche(clientId, patch = {}) {
   if (!clientId) throw new Error('Fiche sans identifiant, rien à écrire.')
-  const clean = {}
-  for (const [cle, convertir] of Object.entries(CHAMPS_COMPLETION)) {
-    const brut = patch?.[cle]
-    if (brut == null || String(brut).trim() === '') continue
-    const valeur = convertir(brut)
-    if (typeof valeur === 'number' && !Number.isFinite(valeur)) {
-      throw new Error(`La valeur saisie pour « ${LIBELLE_NOMBRE[cle] || cle} » n’est pas un nombre.`)
-    }
-    if (valeur === '') continue
-    clean[cle] = valeur
-  }
+  // Liste blanche, conversion et refus d un nombre illisible : lib/completude,
+  // testee sans reseau.
+  const clean = nettoyerCompletion(patch)
   if (Object.keys(clean).length === 0) return {}
   const reponse = await supabase
     .from('clients')

@@ -27,6 +27,8 @@
 // navigateur. Aucun montant, aucune rémunération : on compte des champs.
 // ═══════════════════════════════════════════════════════════════════════════
 
+import { normaliserTelephone } from './noms'
+
 import { jourDe } from './ui-shared'
 import { jourISO } from './ma-journee'
 
@@ -297,4 +299,47 @@ export function champsPourCampagne(clients, champsRequis) {
     if (complete) evaluables += 1
   }
   return { total, evaluables, nonEvaluables: total - evaluables, manquantsParChamp }
+}
+
+// ─── Complétion en ligne depuis l'accueil ────────────────────────────────────
+// Les champs qu'on peut compléter depuis le bloc « Compléter ces fiches »,
+// avec leur conversion. Rien d'autre ne passe : une clé hors liste est
+// ignorée, jamais un effacement. Le service (services/clients.js) ne fait que
+// poser le résultat en base ; la logique vit ici pour se tester sans réseau.
+const CHAMPS_COMPLETION = {
+  date_naissance: (v) => String(v).trim(),
+  situation_familiale: (v) => String(v).trim(),
+  statut_pro: (v) => String(v).trim(),
+  profession: (v) => String(v).trim(),
+  revenus_annuels: (v) => Number(v),
+  patrimoine_estime: (v) => Number(v),
+  // Même forme que la modale client : « 06 12 34 56 78 » quelle que soit la
+  // saisie, un numéro étranger rendu tel quel.
+  telephone: (v) => normaliserTelephone(v),
+  email: (v) => String(v).trim(),
+}
+
+const LIBELLE_NOMBRE = { revenus_annuels: 'revenus annuels', patrimoine_estime: 'patrimoine estimé' }
+
+/**
+ * Ne garde que les champs autorisés, fournis et non vides, convertis. Une
+ * valeur numérique illisible est refusée avec un message lisible, avant tout
+ * appel à la base.
+ *
+ * @param {Object} patch  saisies brutes, par clé de champ
+ * @returns {Object} les champs prêts à écrire (vide si rien à écrire)
+ */
+export function nettoyerCompletion(patch = {}) {
+  const clean = {}
+  for (const [cle, convertir] of Object.entries(CHAMPS_COMPLETION)) {
+    const brut = patch?.[cle]
+    if (brut == null || String(brut).trim() === '') continue
+    const valeur = convertir(brut)
+    if (typeof valeur === 'number' && !Number.isFinite(valeur)) {
+      throw new Error(`La valeur saisie pour « ${LIBELLE_NOMBRE[cle] || cle} » n’est pas un nombre.`)
+    }
+    if (valeur === '') continue
+    clean[cle] = valeur
+  }
+  return clean
 }
