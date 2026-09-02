@@ -30,7 +30,7 @@ Trois commandes, dans cet ordre. Aucune ne doit régresser :
 
 ```
 npx eslint src/          # un avertissement préexistant, zéro erreur attendue
-npx vitest run           # 608 tests
+npx vitest run           # 622 tests
 npx vite build
 ```
 
@@ -320,10 +320,20 @@ demande de Louis :
   un acquis de la période précédente, il n'entre pas dans le compteur du
   CRM. Les quatre alternants sont calés sur la colonne CP N de leur
   bulletin d'août, arrêté au 31 août.
+  **L'acquisition reprend à la fin du mois calendaire suivant, pas à
+  l'anniversaire du contrat.** La paie crédite les 2,5 jours au dernier jour
+  du mois travaillé : un bulletin d'août a déjà crédité août. Compter depuis
+  l'anniversaire du contrat recréditait ce même mois dès le 1er septembre
+  pour qui a démarré un 1er du mois, et deux soldes négatifs du bulletin
+  (moins 1,5 et moins 2,5) s'affichaient à 1 et 0 le lendemain. La prochaine
+  échéance des quatre alternants est le 30 septembre.
+  **Un solde négatif s'affiche tel quel, en rouge et en évidence.** Il est
+  normal, ce sont des congés pris par anticipation ; le masquer par un
+  arrondi ou une acquisition anticipée fait mentir l'écran.
   **Un contrat qui succède à un autre reprend le solde arrêté à la veille de
   sa prise d'effet**, sinon l'acquisition repart de zéro et le solde recule
-  du jour au lendemain. Le CDI qui démarre le 18 septembre porte le solde au
-  17.
+  du jour au lendemain. Le CDI qui démarre le 18 septembre porte le solde du
+  17, soit 7,5 jours ; il en gagne 2,5 le 30, comme les autres.
 * **Les vingt trois fiches contrat ont un matricule.** Sept n'en avaient
   pas. **Le matricule de référence est celui du logiciel de paie**, relevé
   sur le bulletin de salaire : quatre alternants portaient dans le CRM un
