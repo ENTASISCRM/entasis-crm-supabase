@@ -48,6 +48,8 @@ export function buildNavDomains({ isManager, isRhDelegue, canSmartRh }) {
         { tab: 'clients', sub: 'dossiers', label: 'Dossiers du mois' },
         // D6 : le rattrapage des fiches sans prenom, reserve a la direction.
         ...(isManager ? [{ tab: 'clients', sub: 'rattrapage', label: 'Fiches à rattraper' }] : []),
+        // Campagnes ciblees sur les fiches, definies par la direction.
+        ...(isManager ? [{ tab: 'clients', sub: 'campagnes', label: 'Campagnes' }] : []),
         { tab: 'multi-equipement', label: 'Multi-équipement' },
         { tab: 'conformite', label: 'Conformité' },
       ],
