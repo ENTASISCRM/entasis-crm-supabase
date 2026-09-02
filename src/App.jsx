@@ -29,6 +29,7 @@ import InlineSelect from './components/ui/InlineSelect'
 import NotificationsBell from './components/ui/NotificationsBell'
 import ChecklistAccueil from './components/ui/ChecklistAccueil'
 import DossiersStagnants from './components/DossiersStagnants'
+import CampagneEnCours from './components/CampagneEnCours'
 import FichesACompleter from './components/FichesACompleter'
 import CompletudeEquipe from './components/CompletudeEquipe'
 import SequenceRelance from './components/dossiers/SequenceRelance'
@@ -56,6 +57,7 @@ const UcsStructures = lazy(() => import('./components/UcsStructures'))
 const AllocationsTypes = lazy(() => import('./components/AllocationsTypes'))
 const ClientsView = lazy(() => import('./components/clients/ClientsView'))
 const RattrapageFiches = lazy(() => import('./components/clients/RattrapageFiches'))
+const Campagnes = lazy(() => import('./components/Campagnes'))
 const ClientView = lazy(() => import('./components/clients/ClientView'))
 // Conformite embarque jspdf : lazy pour rester hors du bundle de login.
 const Conformite = lazy(() => import('./components/Conformite'))
@@ -1629,6 +1631,8 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab,onQuickP
       {/* Completude : les fiches du conseiller a completer, champs
           manquants saisissables sans ouvrir la fiche. */}
       <FichesACompleter profile={profile} deals={deals} onOpenClient={onOpenClient}/>
+      {/* Les cibles de campagne a contacter, avec les gestes de suivi. */}
+      <CampagneEnCours profile={profile} onOpenClient={onOpenClient}/>
       <div style={{marginTop:28}}>
         <Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded onOuvrirClient={onOpenClient}/></Suspense>
       </div>
@@ -4718,7 +4722,7 @@ export default function App(){
         setActiveTab(tab)
         if (tab === 'clients') {
           if (parts[1] === 'c' && parts[2]) { setSelectedClientId(parts[2]); setClientsVue('annuaire') }
-          else { setSelectedClientId(null); setClientsVue(parts[1] === 'dossiers' ? 'dossiers' : parts[1] === 'rattrapage' ? 'rattrapage' : 'annuaire') }
+          else { setSelectedClientId(null); setClientsVue(parts[1] === 'dossiers' ? 'dossiers' : parts[1] === 'rattrapage' ? 'rattrapage' : parts[1] === 'campagnes' ? 'campagnes' : 'annuaire') }
         }
         if (tab === 'leads') setLeadsVue(parts[1] === 'live' ? 'live' : 'entrants')
       }
@@ -4739,6 +4743,7 @@ export default function App(){
       if (selectedClientId) next = '#/clients/c/' + encodeURIComponent(selectedClientId)
       else if (clientsVue === 'dossiers') next = '#/clients/dossiers'
       else if (clientsVue === 'rattrapage') next = '#/clients/rattrapage'
+      else if (clientsVue === 'campagnes') next = '#/clients/campagnes'
       else next = '#/clients'
     }
     if (activeTab === 'leads') next = leadsVue === 'live' ? '#/leads/live' : '#/leads'
@@ -5446,6 +5451,8 @@ export default function App(){
           {/* D6 : rattrapage des fiches sans prenom, direction seulement ; la
               RLS reste le vrai verrou sur chaque ecriture. */}
           {activeTab==='clients'&&!selectedClientId&&clientsVue==='rattrapage'&&isManager&&<RattrapageFiches profile={profile}/>}
+          {/* Campagnes ciblees : ciblage en direct, lancement, entonnoir. */}
+          {activeTab==='clients'&&!selectedClientId&&clientsVue==='campagnes'&&isManager&&<Campagnes profile={profile} teamProfiles={teamProfiles}/>}
           {activeTab==='clients'&&!selectedClientId&&clientsVue==='dossiers'&&<DealsTable deals={deals} month={month} profile={profile} onEdit={startEdit} onDelete={deleteDeal} onRefresh={loadAll} onQuickPatch={quickPatchDeal} onSelectClient={(clientId) => {
             setSelectedClientId(clientId)
             setClientsVue('annuaire')
