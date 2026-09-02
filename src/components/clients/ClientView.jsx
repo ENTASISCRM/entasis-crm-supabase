@@ -73,9 +73,9 @@ function calculerCompletude(client) {
     total: CHAMPS_REQUIS.length,
     manquants,
     complet: manquants.length === 0,
-    // Recommandee seulement si ni la date ni l age ne sont connus, meme
-    // regle que la jauge de completude.
-    dateNaissanceManquante: !champRempli(client?.date_naissance) && !champRempli(client?.age),
+    // Le badge sert aux anniversaires : un age ne donne pas de jour, seule
+    // la date compte ici (la jauge de completude, elle, accepte l age).
+    dateNaissanceManquante: !champRempli(client?.date_naissance),
   }
 }
 
