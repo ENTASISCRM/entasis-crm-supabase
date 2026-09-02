@@ -92,6 +92,7 @@ const EMPTY_CONTRAT = {
   reste_a_charge_mensuel: '',
   conges_deja_pris: 0,
   conges_report: '',
+  conges_report_au: '',
   palier_pp_mensuel: 0,
   palier_pu_mensuel: 0,
   date_debut: new Date().toISOString().slice(0, 10),
@@ -1340,15 +1341,25 @@ function ContratModal({ contrat, profiles = [], contratsExistants = [], onClose,
               </div>
             </div>
 
-            {/* Période de référence : report figé par la direction au 1er juin */}
+            {/* Solde arrêté à une date : celle d un bulletin de salaire. */}
+            <div className="form-row form-row-2">
+              <div className="form-group">
+                <label className="form-label">Solde de congés figé (jours)</label>
+                <input className="form-input" type="number" step="0.5"
+                       placeholder="vide = report automatique intégral"
+                       value={form.conges_report ?? ''}
+                       onChange={e => handleChange('conges_report', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Solde arrêté au</label>
+                <input className="form-input" type="date"
+                       value={form.conges_report_au ?? ''}
+                       onChange={e => handleChange('conges_report_au', e.target.value)} />
+              </div>
+            </div>
             <div className="form-group">
-              <label className="form-label">Report au 1er juin (jours)</label>
-              <input className="form-input" type="number" step="0.5"
-                     placeholder="vide = report automatique intégral"
-                     value={form.conges_report ?? ''}
-                     onChange={e => handleChange('conges_report', e.target.value)} />
               <div className="form-hint">
-                Solde reporté de la période précédente (les congés se comptent du 1er juin au 31 mai). Vide = tout le solde non pris se reporte automatiquement ; saisis un nombre à la bascule pour le figer ou le plafonner.
+                Recopie le solde du bulletin de salaire et la date à laquelle il est arrêté (le 31 août pour un bulletin d août) : le CRM part de ce point, ajoute l acquisition depuis, et ne décompte que les congés pris après. Sans date, le solde vaut pour le 1er juin et tous les congés de la période sont redécomptés. Un contrat qui succède à un autre reprend le solde arrêté à la veille de sa prise d effet.
               </div>
             </div>
 

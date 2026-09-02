@@ -243,10 +243,10 @@ Ce que l'audit a mis en évidence sans correctif de code :
   celle de Quentin le 1er septembre. Rien à programmer.
 * **Un enchaînement de contrats remet l'acquisition de congés à zéro.**
   `joursAcquis` compte les mois depuis la date de début du contrat de
-  référence : le 18 septembre, le CDI de Nans repart de zéro alors que ses
-  congés pris de l'été restent décomptés. Son `conges_report` a été calé
-  pour que la bascule ne fasse pas sauter son solde, mais le modèle mérite
-  une reprise : l'ancienneté devrait suivre la personne, pas le contrat.
+  référence. Le contournement en place est de poser sur le nouveau contrat
+  le solde arrêté à la veille (`conges_report` et `conges_report_au`), ce
+  qui rend la bascule invisible ; le modèle mériterait tout de même une
+  reprise, l'ancienneté devrait suivre la personne et non le contrat.
 * **Pull request 41** sur ce dépôt, vieux test de design de mai : à
   fermer ou à refaire.
 * **Le compte Pappers rattaché aux outils de Louis n'a plus de crédits**
@@ -306,15 +306,21 @@ demande de Louis :
   utile quand celui ci ne les couvre pas ; l'inverse les réimpute. Sur une
   absence déjà validée le geste demande confirmation, en disant dans quel
   sens le solde du salarié va bouger.
-* **Le solde de congés se cale sur le bulletin de salaire.** Les quatre
-  alternants affichaient un solde faux dans Smart RH. Le champ
-  `conges_report` est prévu pour ça (`src/lib/conges-solde.js`) : il fige le
-  point de départ de la période, le CRM y ajoute l'acquisition et en retire
-  les demandes validées. La valeur à poser est
-  `solde du bulletin + jours pris depuis le 1er juin − acquis de la période`,
-  et non le solde brut : le bulletin ventile les jours pris entre N moins 1
-  et N, le CRM les compte tous sur la période en cours. Les quatre soldes
-  concordent désormais avec leur bulletin d'août.
+* **Le solde de congés se recopie du bulletin de salaire, tel quel.** Une
+  colonne `conges_report_au` dit à quelle date le solde a été arrêté. Le CRM
+  part de ce point, ajoute l'acquisition depuis, et ne décompte que les
+  congés pris après. On saisit donc les deux chiffres du bulletin sans
+  calcul : le solde et sa date.
+  **Sans cette date, le report vaut pour le 1er juin et tous les congés de
+  la période sont redécomptés** ; comme la paie les a déjà imputés, il
+  fallait alors gonfler le report d'une valeur qui ne correspondait à rien,
+  et l'écran affichait « report 31 j » quand le bulletin disait 16.
+  Les quatre alternants sont calés sur leur bulletin d'août, arrêté au
+  31 août.
+  **Un contrat qui succède à un autre reprend le solde arrêté à la veille de
+  sa prise d'effet**, sinon l'acquisition repart de zéro et le solde recule
+  du jour au lendemain. Le CDI qui démarre le 18 septembre porte le solde au
+  17.
 * **Les vingt trois fiches contrat ont un matricule.** Sept n'en avaient
   pas. **Le matricule de référence est celui du logiciel de paie**, relevé
   sur le bulletin de salaire : quatre alternants portaient dans le CRM un

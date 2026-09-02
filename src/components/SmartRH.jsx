@@ -942,7 +942,9 @@ export default function SmartRH({ profile, rhDelegue = false }) {
                             )}
                             <span className="ssub">
                               {solde
-                                ? `période : ${fmtJours(solde.acquisPeriode)} acquis · ${fmtJours(solde.prisPeriode)} pris · report ${fmtJours(solde.report)}`
+                                ? (solde.arreteAu
+                                  ? `solde ${fmtJours(solde.report)} au ${fmt(solde.arreteAu)} · depuis : ${fmtJours(solde.acquisPeriode)} acquis · ${fmtJours(solde.prisPeriode)} pris`
+                                  : `période : ${fmtJours(solde.acquisPeriode)} acquis · ${fmtJours(solde.prisPeriode)} pris · report ${fmtJours(solde.report)}`)
                                 : 'sans compteur de congés payés'}
                             </span>
                           </span>
