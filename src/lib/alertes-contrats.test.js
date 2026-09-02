@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { alertesContrats, joursEntre, JOURS_AVANT_FIN } from './alertes-contrats'
+import { alertesContrats, joursEntre, sortiDesEffectifs, JOURS_AVANT_FIN } from './alertes-contrats'
 
 const LE_24_AOUT = new Date('2026-08-24T10:00:00Z')
 const c = (o) => ({ id: o.id || 'x', actif: true, full_name: 'Test', type_contrat: 'ALTERNANT', profile_id: 'p1', ...o })
@@ -119,5 +119,40 @@ describe('la situation réelle du 24/08/2026', () => {
     const a = alertesContrats(reels, LE_24_AOUT)
     expect(a.some(x => x.contratId === 'gianni')).toBe(false)
     expect(a.some(x => x.contratId === 'louis')).toBe(false)
+  })
+})
+
+describe('sortiDesEffectifs', () => {
+  // Règle Louis du 2 septembre : une personne dont le contrat se termine dans
+  // le mois reste affichée jusqu'au 4 du mois suivant, le temps de la paie et
+  // de la feuille de temps, puis elle sort des listes du quotidien.
+  const partiLe26Aout = { date_fin: '2026-08-26' }
+
+  it('garde la personne jusqu au 4 du mois suivant', () => {
+    expect(sortiDesEffectifs(partiLe26Aout, new Date('2026-08-26'))).toBe(false)
+    expect(sortiDesEffectifs(partiLe26Aout, new Date('2026-09-02'))).toBe(false)
+    expect(sortiDesEffectifs(partiLe26Aout, new Date('2026-09-04'))).toBe(false)
+  })
+
+  it('la retire à partir du 5', () => {
+    expect(sortiDesEffectifs(partiLe26Aout, new Date('2026-09-05'))).toBe(true)
+    expect(sortiDesEffectifs(partiLe26Aout, new Date('2026-12-01'))).toBe(true)
+  })
+
+  it('vaut aussi pour un contrat qui finit le dernier jour du mois', () => {
+    const finDeMois = { date_fin: '2026-08-31' }
+    expect(sortiDesEffectifs(finDeMois, new Date('2026-09-04'))).toBe(false)
+    expect(sortiDesEffectifs(finDeMois, new Date('2026-09-05'))).toBe(true)
+  })
+
+  it('passe l année sans se tromper de mois', () => {
+    const finDecembre = { date_fin: '2026-12-20' }
+    expect(sortiDesEffectifs(finDecembre, new Date('2027-01-04'))).toBe(false)
+    expect(sortiDesEffectifs(finDecembre, new Date('2027-01-05'))).toBe(true)
+  })
+
+  it('ne sort jamais un contrat sans date de fin', () => {
+    expect(sortiDesEffectifs({ date_fin: null }, new Date('2030-01-01'))).toBe(false)
+    expect(sortiDesEffectifs({}, new Date('2030-01-01'))).toBe(false)
   })
 })

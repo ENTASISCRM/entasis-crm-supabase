@@ -17,6 +17,7 @@ import { notifierRH } from '../lib/rh-notify-api'
 import { supabase } from '../lib/supabase'
 import { soldeConges, soldeAuRetour, joursDemande, joursDemandeSimples, joursOuvres, joursOuvresSimples, fmtJours, estFerie } from '../lib/conges-solde'
 import { messageErreur } from '../lib/ui-shared'
+import { sortiDesEffectifs } from '../lib/alertes-contrats'
 
 const TYPES = ['Congé payé', 'RTT', 'Sans solde', 'Maladie', 'Autre']
 // Jours de formation des alternants : ni travailles au cabinet, ni conges.
@@ -190,6 +191,7 @@ export default function SmartRH({ profile, rhDelegue = false }) {
     const vus = new Map()
     for (const k of contrats) {
       if (!k.actif || !k.profile_id) continue
+      if (sortiDesEffectifs(k)) continue
       if (k.profile?.role === 'manager') continue
       if (!['ALTERNANT', 'STAGIAIRE', 'CDI', 'CDD'].includes(k.type_contrat)) continue
       if (!vus.has(k.profile_id)) vus.set(k.profile_id, k)
@@ -889,6 +891,8 @@ export default function SmartRH({ profile, rhDelegue = false }) {
                 const vus = new Map()
                 for (const k of contrats) {
                   if (!k.actif) continue
+                  // Parti le mois dernier et la paie est faite : on l enleve.
+                  if (sortiDesEffectifs(k)) continue
                   if (k.profile?.role === 'manager') continue
                   const cle = k.profile_id || (k.full_name || '').toLowerCase().trim()
                   if (!cle) continue

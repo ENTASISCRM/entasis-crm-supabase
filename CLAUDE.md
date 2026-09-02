@@ -30,7 +30,7 @@ Trois commandes, dans cet ordre. Aucune ne doit régresser :
 
 ```
 npx eslint src/          # un avertissement préexistant, zéro erreur attendue
-npx vitest run           # 622 tests
+npx vitest run           # 627 tests
 npx vite build
 ```
 
@@ -334,6 +334,12 @@ demande de Louis :
   sa prise d'effet**, sinon l'acquisition repart de zéro et le solde recule
   du jour au lendemain. Le CDI qui démarre le 18 septembre porte le solde du
   17, soit 7,5 jours ; il en gagne 2,5 le 30, comme les autres.
+* **Une personne partie sort de Smart RH le 5 du mois suivant.** Un contrat
+  qui se termine dans le mois reste affiché jusqu'au 4 du mois d'après, le
+  temps de la paie et de la feuille de temps, puis il quitte les compteurs de
+  congés et le choix d'un salarié pour une absence (`sortiDesEffectifs` dans
+  `src/lib/alertes-contrats.js`). La feuille de temps d'un mois choisi et
+  Pilotage RH gardent tout le monde, eux en ont besoin.
 * **Les vingt trois fiches contrat ont un matricule.** Sept n'en avaient
   pas. **Le matricule de référence est celui du logiciel de paie**, relevé
   sur le bulletin de salaire : quatre alternants portaient dans le CRM un
