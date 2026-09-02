@@ -1,0 +1,96 @@
+/* Campagnes : les quelques règles propres à l'écran, préfixe cmp-.
+   Tout le reste vient des classes partagées de styles.css (section-header,
+   subtabs, form-group, form-input, search-input, table-wrap, data-table,
+   modal-box, btn). Contrastes au seuil AA : le gris tertiaire (--t3) ne porte
+   jamais de texte utile ici, le secondaire (--t2, 7 pour 1 sur blanc) le
+   remplace, y compris pour la ligne des non évaluables qui est grise mais
+   doit se lire. */
+
+.cmp .section-sub { color: var(--t2); }
+
+/* Puces : les campagnes préconfigurées et les cases à cocher des critères,
+   même dessin que les puces de métier de l'annuaire partenaires. */
+.cmp-puces { display: flex; flex-wrap: wrap; gap: 7px; }
+.cmp-puce {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 30px; padding: 0 12px; border-radius: 15px; cursor: pointer;
+  font-family: inherit; font-size: 12.5px; font-weight: 600; letter-spacing: -0.005em;
+  color: var(--t2); background: var(--card); border: 1px solid var(--bd);
+  transition: background .16s ease, color .16s ease, border-color .16s ease;
+}
+.cmp-puce:hover { border-color: var(--bd-strong); color: var(--t1); }
+.cmp-puce.on { background: var(--navy); border-color: var(--navy); color: #fff; }
+.cmp-puce:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.cmp-puce-sm { height: 26px; padding: 0 10px; font-size: 12px; }
+.cmp-puce-vider { border-style: dashed; }
+
+/* Le formulaire des critères : une grille de blocs, un critère par bloc. */
+.cmp-criteres {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px 28px; margin: 18px 0 6px;
+}
+.cmp-critere { display: flex; flex-direction: column; gap: 7px; }
+.cmp-critere .form-label { color: var(--t2); }
+.cmp-nombres { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--t2); }
+.cmp-nombres .form-input { width: 140px; height: 32px; padding: 0 10px; font-size: 13px; }
+
+/* La ligne la plus importante de l'écran : le compte des cibles, et ce que
+   les fiches vides coûtent. Filet or à gauche pour l'accrocher au regard. */
+.cmp-compteur {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px;
+  padding: 14px 20px; margin: 14px 0 18px;
+  background: var(--card); border: 0.5px solid var(--bd); border-left: 3px solid var(--gold);
+  border-radius: var(--rad-lg); box-shadow: var(--sh-sm);
+}
+.cmp-compteur-n { font-size: 30px; font-weight: 750; color: var(--t1); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.cmp-compteur-l { font-size: 15px; font-weight: 650; color: var(--t1); }
+.cmp-compteur-ne { font-size: 13.5px; color: var(--t2); }
+.cmp-compteur-ne b { color: var(--t1); font-weight: 650; font-variant-numeric: tabular-nums; }
+.cmp-compteur-aide { width: 100%; font-size: 12.5px; color: var(--t2); }
+
+.cmp-outils { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.cmp-outils .search-input { max-width: 420px; }
+.cmp-outils-droite { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Le tableau des cibles : familles en petites étiquettes, inconnu en italique. */
+.cmp-fam { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.cmp-fam span {
+  font-size: 11px; font-weight: 600; color: var(--t2);
+  border: 1px solid var(--bd-strong); border-radius: 5px; padding: 1px 6px; white-space: nowrap;
+}
+.cmp-inconnu { color: var(--t2); font-style: italic; }
+.cmp-plus { display: flex; justify-content: center; padding: 12px; border-top: 0.5px solid var(--bd); }
+
+/* Campagnes en cours : une carte par campagne, l'entonnoir en cinq blocs,
+   puis le détail par conseiller en nombre. */
+.cmp-campagne {
+  background: var(--card); border: 0.5px solid var(--bd); border-radius: var(--rad-lg);
+  padding: 16px 20px; margin-bottom: 14px; box-shadow: var(--sh-sm);
+}
+.cmp-campagne-close { background: var(--bg-subtle); }
+.cmp-campagne-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.cmp-campagne-nom { font-size: 15px; font-weight: 700; color: var(--t1); letter-spacing: -0.01em; }
+.cmp-campagne-meta { font-size: 12.5px; color: var(--t2); margin-top: 3px; line-height: 1.45; }
+.cmp-accroche { margin: 8px 0 0; font-size: 13px; color: var(--t2); line-height: 1.45; }
+.cmp-entonnoir { display: grid; grid-template-columns: repeat(5, minmax(96px, 1fr)); gap: 8px; margin: 14px 0; }
+.cmp-etape { padding: 10px 12px; background: rgba(0,0,0,0.03); border-radius: var(--rad-sm); }
+.cmp-etape-n { font-size: 20px; font-weight: 700; color: var(--t1); font-variant-numeric: tabular-nums; }
+.cmp-etape-l { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--t2); }
+.cmp-etape-s { font-size: 11.5px; color: var(--t2); margin-top: 2px; }
+.cmp-detail .data-table th, .cmp-detail .data-table td { padding: 8px 12px; }
+.cmp-detail .data-table td { color: var(--t1); }
+.cmp-detail .data-table th { color: var(--t2); }
+.cmp-sous-titre {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--t2); margin: 24px 0 10px;
+}
+
+/* Le bloc de l'accueil conseiller : l'accroche sous le titre, à lire une fois. */
+.cmp-accueil-accroche { max-width: 720px; }
+.cmp-accueil-voir { margin-top: 8px; }
+
+@media (max-width: 720px) {
+  .cmp-entonnoir { grid-template-columns: repeat(2, 1fr); }
+  .cmp-outils .search-input { max-width: none; }
+  .cmp-outils-droite { margin-left: 0; }
+}

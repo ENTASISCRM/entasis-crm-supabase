@@ -378,3 +378,26 @@ export async function appliquerSeparations(lignes) {
   }
   return { faites, echecs }
 }
+
+// ─── Ciblage des campagnes ─────────────────────────────────────────────────
+// L ecran Campagnes evalue ses criteres sur les fiches en memoire : il lui
+// faut les colonnes de ciblage (statut, age, revenus, patrimoine, situation,
+// enfants) et les coordonnees pour l export. 500 fiches au plus, par nom :
+// la base en compte 381 au 2 septembre, et la RLS decide de ce que chacun
+// voit.
+
+export const COLONNES_CIBLAGE = [
+  'id', 'nom', 'prenom', 'email', 'telephone', 'date_naissance', 'age',
+  'situation_familiale', 'nb_enfants', 'statut_pro', 'profession',
+  'revenus_annuels', 'patrimoine_estime', 'code_postal', 'advisor_code', 'co_advisor_code',
+].join(', ')
+
+export async function listerPourCiblage() {
+  const { data, error } = await supabase
+    .from('clients')
+    .select(COLONNES_CIBLAGE)
+    .order('nom', { ascending: true })
+    .limit(500)
+  if (error) throw error
+  return data || []
+}
