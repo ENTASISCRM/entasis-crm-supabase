@@ -25,8 +25,12 @@ export function buildNavDomains({ isManager, isRhDelegue, canSmartRh }) {
       views: [{ tab: 'dashboard', label: isManager ? 'Vue cabinet' : 'Mon mois' }],
     },
     {
-      key: 'leads', label: 'Leads Live', icon: 'Leads',
-      views: [{ tab: 'leads', label: 'Leads Live' }],
+      // A6 : les leads se lisent dans le CRM ; la Lead Room reste a un clic.
+      key: 'leads', label: 'Leads', icon: 'Leads',
+      views: [
+        { tab: 'leads', sub: 'entrants', label: 'Leads entrants' },
+        { tab: 'leads', sub: 'live', label: 'Leads Live' },
+      ],
     },
     {
       key: 'activite', label: 'Activité', icon: 'Pipeline',

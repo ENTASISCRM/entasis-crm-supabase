@@ -43,6 +43,7 @@ const OutilsCGP = lazy(() => import('./components/OutilsCGP'))
 const ImmobilierNeuf = lazy(() => import('./components/ImmobilierNeuf'))
 // Annuaire des partenaires : le carnet du cabinet, tous metiers confondus
 const AnnuairePartenaires = lazy(() => import('./components/AnnuairePartenaires'))
+const LeadsEntrants = lazy(() => import('./components/LeadsEntrants'))
 const EditorialHub = lazy(() => import('./components/EditorialHub'))
 const PilotageRH = lazy(() => import('./components/PilotageRH'))
 const Recrutement = lazy(() => import('./components/Recrutement'))
@@ -977,7 +978,7 @@ async function genererFicheParrainage(profile){
 // portent déjà l'identité visuelle de chaque écran.
 // Ecrans ou les actions commerciales de la barre du haut ont un sens
 const ECRANS_COMMERCIAUX = ['dashboard','pipeline','dossiers','clients','multi-equipement','leads','agenda','forecast']
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers','multi-equipement':'Multi-équipement',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers',team:'Équipe',leads:'Leads Live','ucs-structures':'UCS Produits Structurés',allocations:'Allocations types',partenaires:'Partenaires · annuaire',immobilier:'Immobilier · dossiers transmis',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH','recrutement':'Recrutement',conformite:'Conformité',editorial:'Agent éditorial',cockpit:'Cockpit ratios'}
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers','multi-equipement':'Multi-équipement',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers',team:'Équipe',leads:'Leads','ucs-structures':'UCS Produits Structurés',allocations:'Allocations types',partenaires:'Partenaires · annuaire',immobilier:'Immobilier · dossiers transmis',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH','recrutement':'Recrutement',conformite:'Conformité',editorial:'Agent éditorial',cockpit:'Cockpit ratios'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile,onHelp,notifications,notifScope}){
   return (
@@ -4576,6 +4577,7 @@ export default function App(){
   // Sous-vue de l onglet Clients : annuaire (fiches) ou dossiers du mois
   // (l ancien onglet Dossiers, absorbe ici — meme donnees, un chemin de moins).
   const [clientsVue,setClientsVue]=useState('annuaire')
+  const [leadsVue,setLeadsVue]=useState('entrants')
   const [dossiersImmoCount,setDossiersImmoCount]=useState(0)
   const [editorialPending,setEditorialPending]=useState({count:0,nextDeadline:null})
   const [reloadCallback,setReloadCallback]=useState(null) // Callback après sauvegarde deal
@@ -4711,6 +4713,7 @@ export default function App(){
           if (parts[1] === 'c' && parts[2]) { setSelectedClientId(parts[2]); setClientsVue('annuaire') }
           else { setSelectedClientId(null); setClientsVue(parts[1] === 'dossiers' ? 'dossiers' : parts[1] === 'rattrapage' ? 'rattrapage' : 'annuaire') }
         }
+        if (tab === 'leads') setLeadsVue(parts[1] === 'live' ? 'live' : 'entrants')
       }
       // Libéré après le commit du batch : l'effet écrivain (ci-dessous) voit
       // encore le drapeau levé et ne réécrit pas le hash qu'on vient de lire.
@@ -4731,6 +4734,7 @@ export default function App(){
       else if (clientsVue === 'rattrapage') next = '#/clients/rattrapage'
       else next = '#/clients'
     }
+    if (activeTab === 'leads') next = leadsVue === 'live' ? '#/leads/live' : '#/leads'
     if (window.location.hash !== next) {
       // Première écriture en replaceState (pas d'entrée d'historique parasite
       // au chargement) ; ensuite chaque navigation pousse une entrée → le
@@ -4739,7 +4743,7 @@ export default function App(){
       else window.history.replaceState(null, '', next)
     }
     wroteHashOnce.current = true
-  }, [session, profile, activeTab, clientsVue, selectedClientId])
+  }, [session, profile, activeTab, clientsVue, selectedClientId, leadsVue])
 
   // Si l'onglet actif devient inaccessible après coup — contractType arrive
   // en async et peut retirer Smart RH d'un stagiaire, un rôle peut changer —
@@ -5403,10 +5407,12 @@ export default function App(){
             <SubTabs
               ariaLabel={`Vues ${activeDomain.label}`}
               tabs={activeDomain.views.map(v => ({ key: viewId(v), label: v.label, badge: subBadges[v.badgeKey] || 0 }))}
-              active={activeTab === 'clients' ? `clients:${selectedClientId ? 'annuaire' : clientsVue}` : activeTab}
+              active={activeTab === 'clients' ? `clients:${selectedClientId ? 'annuaire' : clientsVue}` : activeTab === 'leads' ? `leads:${leadsVue}` : activeTab}
               onChange={(id) => {
                 if (id.startsWith('clients:')) {
                   setActiveTab('clients'); setSelectedClientId(null); setClientsVue(id.split(':')[1])
+                } else if (id.startsWith('leads:')) {
+                  setActiveTab('leads'); setLeadsVue(id.split(':')[1])
                 } else {
                   setActiveTab(id)
                 }
@@ -5421,7 +5427,11 @@ export default function App(){
               compose ; onOpenClient : les listes de travail ouvrent la
               fiche ; onQuickPatch : les gestes de Ma journée (phase 0). */}
           {activeTab==='dashboard'&&(isManager?<ManagerDashboard deals={deals} objectifs={objectifs} month={month} teamProfiles={teamProfiles} profile={profile} onEdit={startEdit} onQuickPatch={quickPatchDeal} onGoView={(tab,sub)=>{if(sub)setClientsVue(sub);setActiveTab(tab)}} onOpenClient={(id)=>{setSelectedClientId(id);setClientsVue('annuaire');setActiveTab('clients')}}/>:<AdvisorDashboard deals={deals} objectifs={objectifs} month={month} profile={profile} onEdit={startEdit} onGoTab={setActiveTab} onQuickPatch={quickPatchDeal} onGoView={(tab,sub)=>{if(sub)setClientsVue(sub);setActiveTab(tab)}} onOpenClient={(id)=>{setSelectedClientId(id);setClientsVue('annuaire');setActiveTab('clients')}}/>)}
-          {activeTab==='leads'&&<LeadRoomEmbed/>}
+          {/* A6 : les leads entrants se lisent dans le CRM ; la Lead Room en
+              iframe reste la seconde vue. Creer le dossier ouvre la modale
+              preremplie, comme « Nouveau dossier ». */}
+          {activeTab==='leads'&&leadsVue==='live'&&<LeadRoomEmbed/>}
+          {activeTab==='leads'&&leadsVue!=='live'&&<LeadsEntrants profile={profile} onCreerDossier={(d)=>{setEditingDeal(d);setModalOpen(true)}} onOuvrirLeadRoom={()=>setLeadsVue('live')}/>}
           {activeTab==='smart-rh'&&canSmartRh&&<SmartRH profile={profile} rhDelegue={isRhDelegue}/>}
           {activeTab==='pilotage-rh'&&(isManager||isRhDelegue)&&<PilotageRH profile={profile}/>}
           {activeTab==='recrutement'&&(isManager||isRhDelegue)&&<Recrutement/>}

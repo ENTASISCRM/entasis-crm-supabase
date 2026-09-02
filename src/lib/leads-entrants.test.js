@@ -27,6 +27,11 @@ describe('formaterTelephone', () => {
   it('garde l indicatif visible sur un numéro étranger', () => {
     expect(formaterTelephone('41791234567')).toEqual({ affiche: '+41 791 234 567', appel: '+41791234567' })
   })
+
+  it('lit un numero d outre mer comme en metropole', () => {
+    expect(formaterTelephone('262692000000')).toEqual({ affiche: '+262 692 00 00 00', appel: '+262692000000' })
+    expect(formaterTelephone('590690123456').affiche).toBe('+590 690 12 34 56')
+  })
   it('ne compose rien sans numéro', () => {
     expect(formaterTelephone('')).toEqual({ affiche: '', appel: null })
     expect(formaterTelephone(null).appel).toBeNull()

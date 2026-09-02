@@ -46,15 +46,24 @@ export function ageHeures(createdAt, today = new Date()) {
  * « 06 12 34 56 78 » et « +33612345678 ». Étranger : « +41 791 234 567 ».
  * Un préfixe 00, un plus ou des espaces en entrée sont tolérés.
  */
+// Indicatifs des departements et collectivites d outre mer.
+const OUTRE_MER = ['262', '269', '590', '594', '596', '508', '681', '687', '689']
+
 export function formaterTelephone(brut) {
   const chiffres = String(brut ?? '').replace(/\D/g, '').replace(/^00/, '')
   if (!chiffres) return { affiche: '', appel: null }
   let international = chiffres
   if (chiffres.length === 10 && chiffres.startsWith('0')) international = '33' + chiffres.slice(1)
   const francais = international.length === 11 && international.startsWith('33')
+  // Outre mer : indicatif a trois chiffres puis neuf chiffres, le numero
+  // se lit comme en metropole (+262 692 00 00 00). Sans ce cas, un lead de
+  // La Reunion s affichait « +26 269 200 000 0 ».
+  const outreMer = OUTRE_MER.find(code => international.startsWith(code)) && international.length === 12
   const affiche = francais
     ? ('0' + international.slice(2)).replace(/(\d{2})(?=\d)/g, '$1 ')
-    : `+${international.slice(0, 2)} ${international.slice(2).replace(/(\d{3})(?=\d)/g, '$1 ')}`.trim()
+    : outreMer
+      ? `+${international.slice(0, 3)} ${international.slice(3, 6)} ${international.slice(6).replace(/(\d{2})(?=\d)/g, '$1 ')}`
+      : `+${international.slice(0, 2)} ${international.slice(2).replace(/(\d{3})(?=\d)/g, '$1 ')}`.trim()
   return { affiche, appel: `+${international}` }
 }
 
