@@ -129,7 +129,19 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
         co_advisor_code: ''
       })
     }
-  }, [client, profile])
+  // Dependance sur l IDENTITE du client, pas sur l objet.
+  //
+  // `client` et `profile` sont remplaces par des objets NEUFS a chaque
+  // rechargement de l application. Avec [client, profile], cet effet se
+  // relancait alors et REECRIVAIT le formulaire avec les valeurs de la base,
+  // effacant la saisie en cours. Alexis l a signale le 26/08 : il perdait
+  // toute sa fiche en allant chercher une information dans un autre onglet.
+  //
+  // On ne reinitialise donc que si on ouvre un AUTRE client, ou si la modale
+  // vient de s ouvrir. Le rechargement d une donnee identique ne touche plus
+  // a ce que l utilisateur est en train d ecrire.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client?.id, open])
 
   const set = (key, value) => setForm(prev => ({ ...prev, [key]: value }))
 

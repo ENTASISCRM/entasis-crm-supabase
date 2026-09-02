@@ -4549,6 +4549,12 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
 export default function App(){
   const [session,setSession]=useState(null)
   const [profile,setProfile]=useState(null)
+  // Miroirs a jour de session et profile, lisibles depuis le listener
+  // onAuthStateChange dont la closure est figee au premier rendu.
+  const sessionRef = useRef(null)
+  const profileRef = useRef(null)
+  sessionRef.current = session
+  profileRef.current = profile
   const [contractType,setContractType]=useState(null)
   // Type de contrat de l utilisateur (pour reserver Smart RH aux alternants).
   useEffect(()=>{
@@ -4855,9 +4861,20 @@ export default function App(){
         return
       }
       if(event==='SIGNED_IN'&&s?.user){
+        // Retour sur l onglet : Supabase reemet SIGNED_IN alors que rien n a
+        // change (le filet visibilitychange de lib/supabase.js appelle
+        // getSession()). Recharger tout a ce moment la remplace profile,
+        // clients et deals par des objets NEUFS, ce qui relance les useEffect
+        // des modales et REECRIT leurs formulaires avec les valeurs de la
+        // base. C est ce que decrit Alexis le 26/08 : « des que je change
+        // d onglet, toutes les donnees deja saisies disparaissent ».
+        // On ne recharge que sur une vraie nouvelle connexion.
+        const memeUtilisateur = sessionRef.current?.user?.id === s.user.id && !!profileRef.current
         setSession(s)
 
-        // Capturer le token Google Calendar si présent
+        // Capturer le token Google Calendar si présent. AVANT la garde
+        // ci-dessous : une nouvelle autorisation Google renvoie un SIGNED_IN
+        // pour l utilisateur DEJA connecte, et son jeton doit etre saisi.
         if (s?.provider_token && (s?.provider?.includes?.('google') || s?.provider_token)) {
           try {
             localStorage.setItem('entasis_gcal_token', s.provider_token)
@@ -4868,6 +4885,11 @@ export default function App(){
           } catch(e) {
             console.warn('[GCal] Erreur localStorage:', e)
           }
+        }
+
+        if (memeUtilisateur) {
+          logger.debug('[Auth] SIGNED_IN sur session deja chargee, pas de rechargement')
+          return
         }
 
         // Journal de connexions, fire and forget (ne bloque pas loadAll).
