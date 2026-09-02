@@ -334,6 +334,10 @@ demande de Louis :
   sa prise d'effet**, sinon l'acquisition repart de zéro et le solde recule
   du jour au lendemain. Le CDI qui démarre le 18 septembre porte le solde du
   17, soit 7,5 jours ; il en gagne 2,5 le 30, comme les autres.
+* **Qui tient la file ne pose pas ses congés dans Smart RH**, et c'est voulu :
+  la colonne de gauche, solde personnel et formulaire de demande, disparaît
+  dès que l'écran passe en vue direction. Vaut pour la déléguée RH comme pour
+  la direction. Décision de Louis le 2 septembre, ne pas « corriger ».
 * **Un commentaire se joint à chaque décision de congé.** Un champ libre dans
   la ligne de la demande à valider, facultatif, valable pour un accord comme
   pour un refus. Il part au salarié dans le mail de décision et reste affiché
