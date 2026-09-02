@@ -30,7 +30,7 @@ Trois commandes, dans cet ordre. Aucune ne doit régresser :
 
 ```
 npx eslint src/          # un avertissement préexistant, zéro erreur attendue
-npx vitest run           # 627 tests
+npx vitest run           # 661 tests
 npx vite build
 ```
 
@@ -106,7 +106,7 @@ relecture. Tout ce qui suit est en ligne sur main.
   d'une liste figée qui confondait les conseillers.
 * **Le nom d'un profil est mis au propre à sa création** (fonction SQL
   `normaliser_nom_complet`, appelée par `handle_new_user`).
-* **Un contrôle visuel automatique** joue vingt écrans à chaque pull
+* **Un contrôle visuel automatique** joue vingt et un écrans à chaque pull
   request (voir plus bas).
 * La fiche client affiche à nouveau tous ses champs (les sections
   repliables s'appellent `form-pliable`, le nom générique `form-section`
@@ -215,7 +215,7 @@ Ce que l'audit a mis en évidence sans correctif de code :
 ### Ce qui reste ouvert
 
 * **Contrôle visuel automatique** : en place. `npm run test:visuel` joue
-  vingt écrans avec une session simulée et des données fictives
+  vingt et un écrans avec une session simulée et des données fictives
   (`tests/visuel/`), et le workflow `controle-visuel.yml` le rejoue à
   chaque pull request en déposant les captures en artefact. En local, il
   faut un serveur `vite preview` sur le port 4173 et Chromium (variable
@@ -251,6 +251,45 @@ Ce que l'audit a mis en évidence sans correctif de code :
   fermer ou à refaire.
 * **Le compte Pappers rattaché aux outils de Louis n'a plus de crédits**
   (sans rapport avec la clé du Lead Room).
+
+### Le journal des connexions
+
+Onglet **Connexions**, dans le domaine Équipe et RH, pour la direction et la
+déléguée RH. Posé le 2 septembre sur demande de Louis, pour la sécurité.
+
+* **Une ligne par connexion réussie, et rien d'autre.** Date, heure, personne,
+  IP, ville et pays déduits de cette IP, navigateur. **Rien pendant la
+  session** : ni page consultée, ni position, ni durée. « En direct » veut dire
+  que la liste se rafraîchit toute seule toutes les 45 secondes, pas qu'on
+  suit quelqu'un à la trace.
+* **La migration de juin n'avait jamais été appliquée.** `recordLogin()`
+  appelait une fonction absente de la base : l'appel échouait en silence depuis
+  trois mois et aucune connexion n'était tracée. `auth.audit_log_entries` est
+  vide de son côté. L'historique commence donc au 2 septembre.
+* **La localisation ne peut venir que du serveur.** Elle est lue dans les en
+  têtes que Vercel pose sur la requête (`x-vercel-ip-city`, `-country`), par
+  `api/connexion.js` qui vérifie le jeton puis écrit avec la clé de service.
+  Un conseiller qui appellerait la fonction d'écriture à la main ne peut ni
+  changer son identité, ni déclarer un faux lieu. Le repli `record_login()`
+  prend l'IP dans les en têtes PostgREST et n'accepte aucune localisation.
+* **Plus aucun appel sortant.** L'ancienne version demandait l'IP publique à
+  ipify : l'adresse de chaque collaborateur partait chez un tiers alors que
+  notre propre serveur l'a sous les yeux.
+* **Conservation six mois**, la durée que recommande la CNIL pour un journal
+  de connexion. Purge automatique chaque nuit à 3 h 17 (`pg_cron`, tâche
+  `purge-login-audit`). La fonction de purge n'est exécutable que par la clé
+  de service : un conseiller ne doit pas pouvoir vider le journal.
+* **La lecture passe par `journal_connexions()`**, qui vérifie `is_rh()`. La
+  table `login_audit` n'est lisible par personne en direct : RLS active,
+  aucune policy. Un conseiller qui suit `#/connexions` retombe sur l'accueil.
+* **Deux repères sont signalés** dans le journal : une connexion hors de
+  France, et une première connexion depuis une ville jamais vue pour cette
+  personne. Ce sont des repères, pas des verdicts : le lieu situe le
+  fournisseur d'accès, pas la personne.
+* **Reste à faire, côté Louis** : informer l'équipe de l'existence de ce
+  journal, de ce qu'il contient et de sa durée de conservation. C'est une
+  obligation, pas une politesse, et le CSE doit être consulté. Sans cette
+  information, le journal ne serait pas opposable en cas de litige.
 
 ### L'onglet Partenaires
 
