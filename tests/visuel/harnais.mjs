@@ -195,6 +195,17 @@ export const EQUIPE = {
 
 export const CONTRAT = { id: 'k1', profile_id: 'u-demo', type_contrat: 'CDI', date_debut: `${ANNEE}-01-01`, date_fin: null, palier_pp_mensuel: 2500, palier_pu_mensuel: 5000, actif: true }
 
+// Un second contrat, avec un solde de conges arrete a la date d un bulletin
+// et NEGATIF : c est le cas que l ecran doit montrer en evidence, en rouge.
+// La date d arret est la fin du mois dernier, pour que le solde affiche reste
+// celui du bulletin quel que soit le jour ou le controle visuel tourne.
+const finMoisDernier = (() => {
+  const d = new Date()
+  const f = new Date(d.getFullYear(), d.getMonth(), 0)
+  return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`
+})()
+export const CONTRAT_NEGATIF = { id: 'k2', profile_id: 'u-autre', full_name: 'Camille Ferrand', type_contrat: 'ALTERNANT', date_debut: `${ANNEE - 1}-09-01`, date_fin: `${ANNEE + 1}-09-01`, conges_report: -1.5, conges_report_au: finMoisDernier, conges_deja_pris: 0, actif: true }
+
 // Reponse de l API de remuneration, vue conseiller. Ce sont les chiffres du
 // conseiller sur ses propres dossiers, entierement inventes. Aucun agregat
 // cabinet n apparait ici, conformement aux regles du depot.
@@ -277,7 +288,7 @@ export async function pageDemo(browser, { role = 'conseiller' } = {}) {
     client_equipment: EQUIPEMENT,
     product_families: FAMILLES,
     profiles: [profil],
-    conseiller_contrats: [CONTRAT],
+    conseiller_contrats: [CONTRAT, CONTRAT_NEGATIF],
     dossiers_immo: DOSSIERS_IMMO,
     conformite_dossiers: CONFORMITE,
     objectifs: OBJECTIFS,

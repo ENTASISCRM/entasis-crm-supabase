@@ -65,7 +65,7 @@ describe('soldeConges arrêté à la date d un bulletin', () => {
   // redécomptait et il fallait gonfler le report pour retomber juste.
   const alternant = {
     type_contrat: 'ALTERNANT', date_debut: '2024-09-16', date_fin: '2026-09-17',
-    conges_report: 23.5, conges_report_au: '2026-08-31', conges_deja_pris: 0,
+    conges_report: 7.5, conges_report_au: '2026-08-31', conges_deja_pris: 0,
   }
   const ete = [
     { statut: 'valide', type: 'Congé payé', date_debut: '2026-07-27', date_fin: '2026-08-07' },
@@ -74,32 +74,53 @@ describe('soldeConges arrêté à la date d un bulletin', () => {
 
   it('rend le solde du bulletin tel quel, sans recompter ce qui est antérieur', () => {
     const s = soldeConges(alternant, ete, new Date(2026, 8, 2))
-    expect(s.report).toBe(23.5)
+    expect(s.report).toBe(7.5)
     expect(s.prisPeriode).toBe(0)
     expect(s.acquisPeriode).toBe(0)
-    expect(s.restant).toBe(23.5)
+    expect(s.restant).toBe(7.5)
     expect(s.arreteAu).toBe('2026-08-31')
   })
 
-  it('reprend l acquisition au premier anniversaire de contrat qui suit', () => {
-    // Contrat commencé un 16 : le mois suivant tombe le 16 septembre.
-    expect(soldeConges(alternant, ete, new Date(2026, 8, 15)).restant).toBe(23.5)
-    expect(soldeConges(alternant, ete, new Date(2026, 8, 16)).restant).toBe(26)
+  it('reprend l acquisition à la fin du mois calendaire suivant, pas à l anniversaire du contrat', () => {
+    // Le bulletin d août a déjà crédité août. Compter à l anniversaire du
+    // contrat le recréditerait : la prochaine échéance est le 30 septembre.
+    const sansFin = { ...alternant, date_fin: null }
+    expect(soldeConges(sansFin, ete, new Date(2026, 8, 16)).restant).toBe(7.5)
+    expect(soldeConges(sansFin, ete, new Date(2026, 8, 29)).restant).toBe(7.5)
+    expect(soldeConges(sansFin, ete, new Date(2026, 8, 30)).restant).toBe(10)
+    expect(soldeConges(sansFin, ete, new Date(2026, 9, 31)).restant).toBe(12.5)
   })
 
   it('décompte les congés postérieurs à la date d arrêt, jamais les antérieurs', () => {
     const apres = [...ete, { statut: 'valide', type: 'Congé payé', date_debut: '2026-09-14', date_fin: '2026-09-15' }]
     const s = soldeConges(alternant, apres, new Date(2026, 8, 16))
     expect(s.prisPeriode).toBe(2)
-    expect(s.restant).toBe(24)
+    expect(s.restant).toBe(5.5)
   })
 
-  it('accepte un solde négatif et reprend l acquisition par dessus', () => {
+  it('affiche le solde négatif du bulletin, sans le combler dès le lendemain', () => {
     // Bulletin arrêté à moins 1,5 j au 31 août, contrat commencé un 1er :
-    // l anniversaire du 1er septembre crédite 2,5 j, le solde repasse positif.
+    // l ancien calcul créditait 2,5 j le 1er septembre et le solde affiché
+    // passait à 1 j, alors que le bulletin dit moins 1,5.
     const c = { type_contrat: 'ALTERNANT', date_debut: '2025-09-01', conges_report: -1.5, conges_report_au: '2026-08-31', conges_deja_pris: 0 }
     expect(soldeConges(c, [], new Date(2026, 7, 31)).restant).toBe(-1.5)
-    expect(soldeConges(c, [], new Date(2026, 8, 2)).restant).toBe(1)
+    expect(soldeConges(c, [], new Date(2026, 8, 2)).restant).toBe(-1.5)
+    expect(soldeConges(c, [], new Date(2026, 8, 30)).restant).toBe(1)
+  })
+
+  it('un contrat terminé n acquiert plus rien après sa date de fin', () => {
+    // Alternance finie le 12 septembre : le 30 septembre ne crédite pas.
+    const parti = { type_contrat: 'ALTERNANT', date_debut: '2025-09-01', date_fin: '2026-09-12', conges_report: -2.5, conges_report_au: '2026-08-31', conges_deja_pris: 0 }
+    expect(soldeConges(parti, [], new Date(2026, 8, 2)).restant).toBe(-2.5)
+    expect(soldeConges(parti, [], new Date(2026, 9, 15)).restant).toBe(-2.5)
+  })
+
+  it('un solde arrêté en cours de mois est crédité à la fin de ce mois là', () => {
+    // Enchaînement de contrats : le CDI reprend le solde arrêté la veille de
+    // sa prise d effet, et le mois entamé se crédite normalement le 30.
+    const cdi = { type_contrat: 'CDI', date_debut: '2026-09-18', conges_report: 7.5, conges_report_au: '2026-09-17', conges_deja_pris: 0 }
+    expect(soldeConges(cdi, [], new Date(2026, 8, 18)).restant).toBe(7.5)
+    expect(soldeConges(cdi, [], new Date(2026, 8, 30)).restant).toBe(10)
   })
 
   it('sans date d arrêt, le calcul par période de référence ne change pas', () => {

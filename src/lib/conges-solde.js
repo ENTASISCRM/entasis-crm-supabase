@@ -145,6 +145,25 @@ export function joursAcquis(contrat, aujourd = new Date()) {
   return moisComplets(depuis, jusqu) * JOURS_PAR_MOIS
 }
 
+// Nombre d échéances d acquisition tombées après une date. La paie crédite
+// les 2,5 jours à la FIN DE CHAQUE MOIS CALENDAIRE travaillé : un bulletin
+// d août arrête le solde au 31 août, août est donc déjà crédité dedans.
+// Compter à partir de l anniversaire du contrat recréditerait ce même mois
+// dès le 1er septembre pour quiconque a démarré un 1er du mois, et le solde
+// affiché ne serait plus celui du bulletin.
+export function echeancesApres(apresIso, jusqu) {
+  const a = dl(apresIso)
+  const finDuMois = new Date(a.getFullYear(), a.getMonth() + 1, 0)
+  // Solde arrêté en cours de mois : ce mois là n est pas encore crédité,
+  // la première échéance reste sa fin.
+  const premiere = a < finDuMois
+    ? finDuMois
+    : new Date(a.getFullYear(), a.getMonth() + 2, 0)
+  if (jusqu < premiere) return 0
+  return (jusqu.getFullYear() - premiere.getFullYear()) * 12
+    + (jusqu.getMonth() - premiere.getMonth()) + 1
+}
+
 // Jours pris via Smart RH : toutes les demandes validées de type Congé payé
 export function joursPris(congesDeLaPersonne) {
   return (congesDeLaPersonne || [])
@@ -170,8 +189,12 @@ export function soldeConges(contrat, congesDeLaPersonne, aujourd = new Date()) {
   const arreteAu = String(contrat?.conges_report_au || '').slice(0, 10)
   if (arreteAu && contrat?.conges_report != null && contrat.conges_report !== '') {
     const report = Number(contrat.conges_report)
-    const acquisAvant = joursAcquis(contrat, dl(arreteAu)) || 0
-    const acquisPeriode = acquis - acquisAvant
+    let jusqu = aujourd
+    if (contrat.date_fin) {
+      const fin = dl(contrat.date_fin)
+      if (fin < jusqu) jusqu = fin
+    }
+    const acquisPeriode = echeancesApres(arreteAu, jusqu) * JOURS_PAR_MOIS
     const cpApres = (congesDeLaPersonne || []).filter((c) =>
       c.statut === 'valide' && c.type === 'Congé payé' && String(c.date_debut) > arreteAu)
     const prisPeriode = cpApres.reduce((s, c) => s + joursDemande(c), 0)
