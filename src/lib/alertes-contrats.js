@@ -40,6 +40,25 @@ export const joursEntre = (depuis, jusqua) => {
   return Math.round((b - a) / MS_JOUR)
 }
 
+// Jour du mois suivant à partir duquel une personne partie sort des listes
+// du quotidien (compteurs de congés, choix d'un salarié pour une absence).
+// La paie et la feuille de temps du mois de son départ se font au début du
+// mois suivant : jusqu'au 4 elle reste sous les yeux de la direction, le 5
+// elle s'efface. Les écrans qui portent sur un mois choisi, feuille de temps
+// et Pilotage RH, ne s'en servent pas : eux doivent la garder.
+export const JOUR_SORTIE_EFFECTIFS = 5
+
+// Vrai si le contrat est terminé depuis assez longtemps pour ne plus
+// encombrer les listes du quotidien.
+export function sortiDesEffectifs(contrat, aujourdhui = new Date()) {
+  const fin = auJour(contrat?.date_fin)
+  if (fin == null) return false
+  const f = new Date(fin)
+  const seuil = Date.UTC(f.getUTCFullYear(), f.getUTCMonth() + 1, JOUR_SORTIE_EFFECTIFS)
+  const jour = auJour(aujourdhui)
+  return jour != null && jour >= seuil
+}
+
 const nom = (c) => (c?.full_name || c?.profile?.full_name || 'Contrat sans nom').trim()
 
 const fmt = (d) => {
