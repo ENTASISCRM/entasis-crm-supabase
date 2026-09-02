@@ -32,6 +32,11 @@ describe('formaterTelephone', () => {
     expect(formaterTelephone('262692000000')).toEqual({ affiche: '+262 692 00 00 00', appel: '+262692000000' })
     expect(formaterTelephone('590690123456').affiche).toBe('+590 690 12 34 56')
   })
+  it('groupe correctement les indicatifs a un, deux et trois chiffres', () => {
+    expect(formaterTelephone('212612345678').affiche).toBe('+212 612 345 678')
+    expect(formaterTelephone('68987123456').affiche).toBe('+689 871 234 56')
+    expect(formaterTelephone('12125551234').affiche).toBe('+1 212 555 123 4')
+  })
   it('ne compose rien sans numéro', () => {
     expect(formaterTelephone('')).toEqual({ affiche: '', appel: null })
     expect(formaterTelephone(null).appel).toBeNull()
@@ -124,7 +129,7 @@ describe('dossierPourLead', () => {
       client_phone: '06 12 34 56 78',
       client_email: 'camille@exemple.fr',
       source: 'lead_room',
-      lead_id: 'lead-42',
+      lead_id: null,
       product: 'Autre',
       status: 'Prévu',
       advisor_code: 'DEMO',
@@ -137,6 +142,10 @@ describe('dossierPourLead', () => {
     const d = dossierPourLead({ id: 'x', nom: 'Sacha Démo', telephone: null, email: null }, '')
     expect(d.client_phone).toBe('')
     expect(d.client_email).toBe('')
+  })
+  it('ne pose lead_id que si l identifiant Lead Room est fourni', () => {
+    expect(dossierPourLead(lead({ id: 'copie-crm' }), 'DEMO').lead_id).toBeNull()
+    expect(dossierPourLead(lead({ id: 'copie-crm' }), 'DEMO', { leadRoomId: 'lr-7' }).lead_id).toBe('lr-7')
   })
 })
 

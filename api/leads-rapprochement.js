@@ -60,10 +60,11 @@ export default async function handler(req, res) {
   const adminKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!adminKey) return res.status(500).json({ error: 'SUPABASE_SERVICE_ROLE_KEY non configuré côté serveur' })
   const admin = createClient(process.env.SUPABASE_URL, adminKey, sansSession)
+  //    (role ET compte actif, comme la fonction SQL is_manager)
   const { data: prof, error: profErr } = await admin
-    .from('profiles').select('role').eq('id', caller.id).maybeSingle()
+    .from('profiles').select('role, is_active').eq('id', caller.id).maybeSingle()
   if (profErr || !prof) return res.status(403).json({ error: 'Profil appelant introuvable' })
-  if (prof.role !== 'manager') return res.status(403).json({ error: 'Réservé à la direction' })
+  if (prof.role !== 'manager' || prof.is_active !== true) return res.status(403).json({ error: 'Réservé à la direction' })
 
   // 3. Accès à la base de la Lead Room
   const lrUrl = (process.env.LEADROOM_SUPABASE_URL || '').trim()
@@ -91,7 +92,7 @@ export default async function handler(req, res) {
     const ids = leads.map((l) => String(l.id))
     const deals = await parLots(ids, (lot) => admin
       .from('deals')
-      .select('lead_id, status, product, advisor_code, client, client_email, client_phone')
+      .select('id, lead_id, status, product, advisor_code, client, client_email, client_phone')
       .in('lead_id', lot))
 
     // 6. Nommer le conseiller : preneur Lead Room (advisors) puis profil CRM

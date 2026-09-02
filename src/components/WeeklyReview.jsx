@@ -197,7 +197,7 @@ function ObjectiveModal({show, objective, onSave, onClose, weekNumber, year, sug
       <div className="modal-box">
         <div className="modal-head">
           <div className="modal-title">Objectif de la semaine {weekNumber} · {year}</div>
-          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Fermer">✕</button>
         </div>
         <div className="modal-body">
           <div className="form-group">

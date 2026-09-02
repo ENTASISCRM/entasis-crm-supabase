@@ -75,6 +75,9 @@ export function arreterSequence() {
 }
 
 // Numéro d'étape en cours, ou 0 si le dossier n'en porte pas d'exploitable.
+// Un dossier qui porte un gabarit mais aucune étape valable (sauvegarde
+// partielle, ligne posée à la main) n'a pas de séquence en cours : Fait la
+// clôture proprement, et le toast le dit (« arrêtée », pas « terminée »).
 const etapeCourante = (deal) => {
   const n = Number(deal?.sequence_etape)
   return Number.isInteger(n) && n > 0 ? n : 0
@@ -157,5 +160,6 @@ export function messageApresFait(deal, patch) {
   if (patch?.sequence_etape) {
     return `Étape ${patch.sequence_etape} sur ${g.etapes.length} armée pour le ${dateCourte(patch.next_action_date)}`
   }
-  return 'Séquence terminée'
+  const n = etapeCourante(deal)
+  return n > 0 && n <= g.etapes.length ? 'Séquence terminée' : 'Séquence arrêtée, étape inconnue'
 }

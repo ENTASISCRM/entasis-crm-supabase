@@ -36,10 +36,10 @@ import {
   RAISONS_REPORT, ECHEANCES_REPORT, simulationIndicative,
 } from '../config/multiEquipementRules'
 import { genererMail, genererRecommandation, genererRelance, CABINET } from '../config/mailsProduits'
-import { messageErreur } from '../lib/ui-shared'
-
-// Statuts pro (miroir de la fiche client) pour la capture inline.
-const STATUTS_PRO = ['Salarié', 'TNS', 'Chef d entreprise', 'Retraité', 'Profession libérale', 'Autre']
+// STATUTS_PRO : la liste de la fiche client, importee et non recopiee. Une
+// copie locale ecrivait « Chef d entreprise » sans apostrophe, graphie que
+// les campagnes excluaient en silence (audit du 2 septembre).
+import { messageErreur, STATUTS_PRO } from '../lib/ui-shared'
 // Jalons de relance (jours depuis la mise en cours) : cadence de suivi douce.
 function infoRelance(mi) {
   if (mi.statut !== 'en_cours' || !mi.updated_at) return { due: false, jours: 0, etape: 0 }

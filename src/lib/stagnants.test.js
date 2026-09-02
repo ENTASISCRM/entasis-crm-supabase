@@ -58,12 +58,13 @@ describe('dossiersStagnants', () => {
     expect(r).toHaveLength(0)
   })
 
-  it('inclut un dossier dont la relance est passée ou du jour', () => {
+  it('exclut un dossier dont la relance est passée ou du jour : la file du matin le montre déjà', () => {
     const r = dossiersStagnants([
       deal({ id: 'passee', jours: 40, next_action_date: '2026-08-20' }),
       deal({ id: 'jour', jours: 40, next_action_date: TODAY }),
+      deal({ id: 'sans', jours: 40 }),
     ], { advisorCode: 'DEMO', today: TODAY })
-    expect(r.map((d) => d.id).sort()).toEqual(['jour', 'passee'])
+    expect(r.map((d) => d.id)).toEqual(['sans'])
   })
 
   it('ne garde que les dossiers « En cours »', () => {

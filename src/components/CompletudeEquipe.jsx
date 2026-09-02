@@ -66,7 +66,7 @@ export default function CompletudeEquipe() {
   const total = clients?.length || 0
   const completes = lignes.reduce((s, l) => s + l.completes, 0)
   const scoreCabinet = total > 0
-    ? Math.round(lignes.reduce((s, l) => s + l.scoreMoyen * l.fiches, 0) / total)
+    ? Math.round(lignes.reduce((s, l) => s + (l.sommeScores ?? l.scoreMoyen * l.fiches), 0) / total)
     : 0
   const manquantsCabinet = useMemo(() => {
     const cumul = {}

@@ -42,7 +42,7 @@ describe('rapprocherLeads', () => {
     const [l] = rapprocherLeads([leadLr({ id: 'brouillon', email: 'autre@mail.fr' })], deals)
     expect(l.email).toBe('dom@modele.fr')
     expect(l.telephone).toBe('06 98 76 54 32')
-    expect(l.dossier).toEqual({ status: 'Prévu', product: 'Autre', advisor_code: 'DEMO', client: 'Dominique Modèle' })
+    expect(l.dossier).toEqual({ id: null, status: 'Prévu', product: 'Autre', advisor_code: 'DEMO', client: 'Dominique Modèle' })
     expect(l.conseiller).toBe('DEMO')
   })
 

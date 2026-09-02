@@ -8,9 +8,11 @@
 // depuis plus de trois semaines.
 //
 // Ce qu'on appelle « mouvement » : la colonne updated_at de deals, fiable et
-// jamais nulle. Un dossier qui porte une relance datée dans le futur n'est
-// pas stagnant, il attend une échéance connue ; c'est la file du matin qui
-// le rappellera le jour dit.
+// jamais nulle. Un dossier qui porte une relance datée n'est pas stagnant :
+// à venir, il attend une échéance connue ; passée, la file du matin le
+// montre déjà en retard. Attention : une mise à jour de masse (migration)
+// remet updated_at à l'instant de la migration pour tous les dossiers
+// touchés, ce qui les fait sortir du bloc pour 21 jours.
 //
 // Pourquoi une lib pure : le seuil et l'ordre décident de ce que quinze
 // conseillers voient en ouvrant le CRM. Ça se teste sans navigateur.
@@ -43,12 +45,13 @@ export function joursSansMouvement(deal, today = jourISO()) {
   return Math.max(0, Math.round(ms / 86400000))
 }
 
-// Un dossier stagne s'il est en cours, sans relance à venir, et sans
-// mouvement depuis strictement plus de seuilJours jours.
+// Un dossier stagne s'il est en cours, sans aucune relance datée, et sans
+// mouvement depuis strictement plus de seuilJours jours. Une relance en
+// retard est déjà dans la file du matin (« en retard ») : la montrer aussi
+// ici ferait deux fois la même ligne.
 const estStagnant = (deal, today, seuilJours) => {
   if (!deal || deal.status !== 'En cours') return false
-  const relance = jourAction(deal)
-  if (relance && relance > today) return false
+  if (jourAction(deal)) return false
   return joursSansMouvement(deal, today) > seuilJours
 }
 

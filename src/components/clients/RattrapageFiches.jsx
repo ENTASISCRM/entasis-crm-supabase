@@ -2,7 +2,7 @@
 // FICHES À RATTRAPER : separer le prenom du nom, fiche par fiche, sous
 // controle de la direction (item D6 du plan d amelioration).
 //
-// 331 fiches sur 381 ont tout dans le champ nom (« Aurélie Buiret ») et rien
+// 331 fiches sur 381 ont tout dans le champ nom (« Aurélie Exemple ») et rien
 // dans prenom. Cet ecran liste ces fiches, propose une separation par fiche
 // (lib/noms, avec une confiance et une raison), et n ecrit QUE ce qu une
 // personne a coche, relu, eventuellement corrige a la main, puis confirme.
@@ -176,7 +176,7 @@ export default function RattrapageFiches({ profile }) {
         <input
           className="search-input"
           data-global-search
-          placeholder="Rechercher — nom, prénom, email, téléphone, code conseiller"
+          placeholder="Rechercher : nom, prénom, email, téléphone, code conseiller"
           value={recherche}
           onChange={(e) => setRecherche(e.target.value)}
         />

@@ -2,7 +2,7 @@
 // NOMS PROPRES : casse, separation prenom / nom, telephones
 //
 // Constats en base au 1er septembre 2026 : 331 fiches clients sur 381 ont
-// tout dans le champ nom et rien dans prenom (« Aurélie Buiret » dans nom),
+// tout dans le champ nom et rien dans prenom (« Aurélie Exemple » dans nom),
 // les profils conseillers arrivent de Google avec une casse sale
 // (« charlotte Billard »), une fiche contrat est libellee « MOREL Hyppolite »
 // (nom d abord) et une autre « Eliott  Bec » avec deux espaces.
@@ -25,6 +25,20 @@ export const PARTICULES = Object.freeze([
 ])
 
 const APOSTROPHES = /['’]/
+
+// Une civilite, une conjonction ou une parenthese dans le libelle signale un
+// couple (« M et Mme DUPONT ») ou une annotation (« Jean DUPONT (père) ») :
+// aucune heuristique ne sait ou est le prenom, la proposition ne doit jamais
+// etre precochee. Sur les 27 fiches « sures » du 2 septembre, 4 auraient recu
+// « Mme » ou « M et Mme » comme prenom.
+const CIVILITES = new Set(['m', 'm.', 'mr', 'mr.', 'mme', 'mme.', 'mlle', 'mlle.', 'monsieur', 'madame', 'mademoiselle', 'dr', 'dr.', 'me', 'pr', 'pr.'])
+const CONJONCTIONS = new Set(['et', '&', '/', 'ou'])
+export function contientCiviliteOuCouple(liste) {
+  return liste.some((m) => {
+    const bas = m.toLowerCase()
+    return CIVILITES.has(bas) || CONJONCTIONS.has(bas) || /[()]/.test(m)
+  })
+}
 
 // Decoupe en mots sur les blancs, en absorbant les espaces multiples et les
 // espaces insecables (« Eliott  Bec » donne bien deux mots).
@@ -64,13 +78,18 @@ function capitaliser(segment) {
   return premiere + segment.slice(1).toLowerCase()
 }
 
-// Casse d un seul mot. Les tirets internes sont gardes et chaque partie
-// prend sa majuscule (« jean-michel » devient « Jean-Michel »). L apostrophe
-// aussi (« o'brien » devient « O'Brien »), avec le cas particulier du d
-// apostrophe qui reste en minuscule (« d'Artagnan »).
-function casseMot(mot) {
-  if (estToutMajuscule(mot)) return mot
-  if (PARTICULES.includes(mot.toLowerCase())) return mot.toLowerCase()
+// Casse d un seul mot. On ne touche qu a un mot ecrit TOUT en minuscules :
+// il prend sa majuscule (« charlotte » devient « Charlotte »), tiret et
+// apostrophe compris (« jean-michel » devient « Jean-Michel », « o'brien »
+// devient « O'Brien », « d'artagnan » devient « d'Artagnan »). Un mot qui
+// porte deja une majuscule est rendu tel quel : « McCarthy », « LeBlanc »,
+// « O'Neil », « Le Goff » et « MOREL » sont des choix, pas des fautes.
+// Meme regle que la fonction SQL normaliser_nom_complet (profils).
+function casseMot(mot, premier) {
+  if (mot !== mot.toLowerCase()) return mot
+  // Une particule saisie en minuscule reste en minuscule, sauf en tete de
+  // libelle ou elle est le debut du nom (« Le Goff Paul » saisi « le goff »).
+  if (!premier && PARTICULES.includes(mot)) return mot
   return mot
     .split('-')
     .map((partie) => {
@@ -80,7 +99,7 @@ function casseMot(mot) {
         .map((m, i) => {
           if (i % 2 === 1) return m
           const suivi = i + 2 < morceaux.length
-          if (i === 0 && suivi && m.toLowerCase() === 'd') return 'd'
+          if (i === 0 && suivi && m === 'd' && !premier) return 'd'
           return capitaliser(m)
         })
         .join('')
@@ -89,14 +108,16 @@ function casseMot(mot) {
 }
 
 /**
- * Espaces multiples reduits et casse propre pour chaque mot. Ne touche ni
- * aux accents ni aux mots deja tout en majuscules.
+ * Espaces multiples reduits et casse propre pour chaque mot ecrit tout en
+ * minuscules. Ne touche ni aux accents, ni aux mots deja tout en majuscules,
+ * ni a un mot qui porte deja une majuscule quelque part.
  * « charlotte  billard » devient « Charlotte Billard »
  * « MOREL hyppolite » devient « MOREL Hyppolite »
  * « paulin de la fontaine » devient « Paulin de la Fontaine »
+ * « Paul Le Goff », « Sophie McCarthy », « Sean O'Neil » restent tels quels
  */
 export function normaliserNomComplet(texte) {
-  return mots(texte).map(casseMot).join(' ')
+  return mots(texte).map((mot, i) => casseMot(mot, i === 0)).join(' ')
 }
 
 /**
@@ -125,6 +146,15 @@ export function separerNomComplet(texte) {
   }
   if (liste.length === 1) {
     return { prenom: '', nom: liste[0], confiance: 'faible', raison: 'Un seul mot, pas de prénom à extraire' }
+  }
+  if (contientCiviliteOuCouple(liste)) {
+    const majuscules = liste.filter(estToutMajuscule)
+    return {
+      prenom: '',
+      nom: (majuscules.length ? majuscules : liste).join(' '),
+      confiance: 'faible',
+      raison: 'Civilité, couple ou annotation détecté, à séparer à la main',
+    }
   }
 
   // 2. Les mots tout en majuscules forment le nom, sauf si tout est en

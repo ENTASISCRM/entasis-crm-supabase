@@ -3,13 +3,16 @@
 //
 // Item C2 du plan d'amélioration. Un dossier « En cours » sans aucun
 // mouvement depuis plus de trois semaines n'est plus dans la tête de
-// personne : il n'a pas de relance datée (sinon la file du matin s'en
-// chargerait) et personne n'y a touché. Ce bloc le remet sous les yeux du
-// conseiller avec deux gestes, et rien d'autre :
+// personne : il n'a aucune relance datée, passée ou à venir (une relance,
+// même en retard, est déjà dans la file du matin) et personne n'y a touché.
+// Ce bloc le remet sous les yeux du conseiller avec deux gestes :
 //
 //   Relancer    ouvre le dossier (onEdit), le conseiller pose une action
-//   Abandonner  passe le statut à « Annulé » (onQuickPatch), annulable
-//               depuis le toast comme tous les gestes de Ma journée
+//   Abandonner  passe le statut à « Annulé » (onQuickPatch) après
+//               confirmation, comme partout ailleurs ; le toast permet de
+//               revenir en arrière, mais updated_at ayant bougé, le dossier
+//               ne réapparaîtra ici que 21 jours plus tard : d'où la
+//               confirmation avant le geste
 //
 // Traiter une ligne la sort de la liste : ouvrir le dossier et le modifier
 // rafraîchit updated_at, l'abandonner change le statut.
@@ -24,6 +27,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { useMemo } from 'react'
+import { confirmDialog } from './ui/confirm'
 import { jourISO } from '../lib/ma-journee'
 import { getClientName } from '../lib/ui-shared'
 import {
@@ -72,9 +76,19 @@ export default function DossiersStagnants({ deals, profile, onEdit, onQuickPatch
   if (!liste.length) return null
 
   const relancer = (d) => onEdit?.(d)
-  // Écriture optimiste et annulable : quickPatchDeal restaure l'ancien
-  // statut depuis le toast, même filet de sécurité que le kanban.
-  const abandonner = (d) => onQuickPatch?.(d, { status: 'Annulé' }, `Dossier abandonné · ${getClientName(d)}`, { undoable: true })
+  // Confirmation d'abord (le passage en Annulé est confirmé partout
+  // ailleurs), puis écriture optimiste et annulable : quickPatchDeal
+  // restaure l'ancien statut depuis le toast, même filet que le kanban.
+  const abandonner = async (d) => {
+    const ok = await confirmDialog({
+      title: `Abandonner le dossier de ${getClientName(d)} ?`,
+      message: 'Il passera en Annulé et sortira du pipeline.',
+      confirmLabel: 'Abandonner',
+      danger: true,
+    })
+    if (!ok) return
+    onQuickPatch?.(d, { status: 'Annulé' }, `Dossier abandonné · ${getClientName(d)}`, { undoable: true })
+  }
 
   const n = liste.length
   return (

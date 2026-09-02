@@ -62,7 +62,7 @@ export const REGLES = [
     famille_suggeree: 'scpi',
     label: 'Proposer SCPI',
     raison: 'Revenus élevés sans SCPI : diversifier en pierre papier et générer du foncier.',
-    applicable: (c) => Number(c.revenus || 0) > SEUILS.revenusScpi && !c.familles.includes('scpi'),
+    applicable: (c) => Number(c.revenus || 0) >= SEUILS.revenusScpi && !c.familles.includes('scpi'),
   },
 ]
 

@@ -1725,6 +1725,11 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onQ
       {/* C2 : les dossiers En cours sans mouvement depuis 21 jours, avec
           Relancer (ouvre le dossier) et Abandonner (annulable). */}
       <DossiersStagnants deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch}/>
+      {/* La direction a aussi ses propres fiches (57 au 2 septembre) et ses
+          cibles de campagne : memes blocs que le conseiller, filtres sur son
+          code. Sans code conseiller, rien ne s'affiche. */}
+      {profile?.advisor_code&&<FichesACompleter profile={profile} deals={deals} onOpenClient={onOpenClient}/>}
+      {profile?.advisor_code&&<CampagneEnCours profile={profile} onOpenClient={onOpenClient}/>}
       <div className="grid-2 gap-16 mb-24">
         <AreaChart title="PP cabinet annualisée" subtitle="Réalisé + pipeline → objectif" actual={ppS} projected={ppS+ppP} target={ppTarget}/>
         <AreaChart title="PU cabinet" subtitle="Versements uniques consolidés" actual={puS} projected={puS+puP} target={puTarget}/>
@@ -3476,7 +3481,9 @@ function TeamView({deals,objectifs,teamProfiles,month,profile}){
       })}
       {!rows.length&&<div className="card"><div className="table-empty-state"><div className="empty-icon"><Icon.EmptyPeople/></div><div className="empty-title">Aucun conseiller actif</div><div className="empty-sub">Configure les profils dans <span className="code">public.profiles</span></div></div></div>}
       {/* Completude des fiches par conseiller, en nombre, sans montant. */}
-      <CompletudeEquipe/>
+      {/* La completude par conseiller est une vue direction : le delegue RH
+          non manager ne verrait que ses propres fiches sous ce titre. */}
+      {profile?.role==='manager'&&<CompletudeEquipe/>}
     </div>
   )
 }
@@ -4722,7 +4729,17 @@ export default function App(){
         setActiveTab(tab)
         if (tab === 'clients') {
           if (parts[1] === 'c' && parts[2]) { setSelectedClientId(parts[2]); setClientsVue('annuaire') }
-          else { setSelectedClientId(null); setClientsVue(parts[1] === 'dossiers' ? 'dossiers' : parts[1] === 'rattrapage' ? 'rattrapage' : parts[1] === 'campagnes' ? 'campagnes' : 'annuaire') }
+          else {
+            setSelectedClientId(null)
+            // Les sous vues de direction (rattrapage, campagnes) ne se posent
+            // que pour un manager : un conseiller qui suit ce lien retombe
+            // sur l'annuaire au lieu d'un onglet Clients vide.
+            const direction = profile?.role === 'manager'
+            const sousVue = parts[1] === 'dossiers' ? 'dossiers'
+              : (parts[1] === 'rattrapage' || parts[1] === 'campagnes') && direction ? parts[1]
+              : 'annuaire'
+            setClientsVue(sousVue)
+          }
         }
         if (tab === 'leads') setLeadsVue(parts[1] === 'live' ? 'live' : 'entrants')
       }
@@ -4764,7 +4781,9 @@ export default function App(){
   useEffect(() => {
     if (!session || !profile) return
     if (!visibleTabsRef.current.has(activeTab)) setActiveTab('dashboard')
-  }, [session, profile, activeTab, contractType])
+    // Meme garde pour les sous vues de Clients reservees a la direction.
+    if ((clientsVue === 'rattrapage' || clientsVue === 'campagnes') && profile.role !== 'manager') setClientsVue('annuaire')
+  }, [session, profile, activeTab, contractType, clientsVue])
 
   // ── Leads — fetch + Realtime + polling de secours 60s ─────────────────────
   // Le polling est un filet de sécurité au cas où la WebSocket Realtime se
@@ -5169,7 +5188,7 @@ export default function App(){
         {message}
         <button className="btn btn-outline btn-sm" onClick={()=>{
           toast.dismiss(t.id)
-          quickPatchDeal({...deal,...patch},avant,'Déplacement annulé')
+          quickPatchDeal({...deal,...patch},avant,`Geste annulé · ${getClientName(deal)}`)
         }}>Annuler</button>
       </span>
     ),{duration:7000})
@@ -5443,7 +5462,7 @@ export default function App(){
               iframe reste la seconde vue. Creer le dossier ouvre la modale
               preremplie, comme « Nouveau dossier ». */}
           {activeTab==='leads'&&leadsVue==='live'&&<LeadRoomEmbed/>}
-          {activeTab==='leads'&&leadsVue!=='live'&&<LeadsEntrants profile={profile} onCreerDossier={(d)=>{setEditingDeal(d);setModalOpen(true)}} onOuvrirLeadRoom={()=>setLeadsVue('live')}/>}
+          {activeTab==='leads'&&leadsVue!=='live'&&<LeadsEntrants profile={profile} onCreerDossier={(d)=>{setEditingDeal(d);setModalOpen(true)}} onOuvrirDossier={(id)=>{const d=deals.find(x=>x.id===id);if(d)startEdit(d);else toast.error('Ce dossier n’est pas dans la liste chargée, rechargez la page.')}} onOuvrirLeadRoom={()=>setLeadsVue('live')}/>}
           {activeTab==='smart-rh'&&canSmartRh&&<SmartRH profile={profile} rhDelegue={isRhDelegue}/>}
           {activeTab==='pilotage-rh'&&(isManager||isRhDelegue)&&<PilotageRH profile={profile}/>}
           {activeTab==='recrutement'&&(isManager||isRhDelegue)&&<Recrutement/>}

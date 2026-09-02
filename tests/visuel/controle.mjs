@@ -144,11 +144,16 @@ function ecouterConsole(page) {
 // ── Scenarios ────────────────────────────────────────────────────────────────
 // Chaque scenario ouvre une page neuve : pas de fermeture de modale a la main
 // (la garde anti perte bloque Escape sur un dossier saisi), pas d etat herite.
+// `attendu` : un texte qui doit etre a l ecran, sinon un ecran reste sur son
+// squelette ou vide passerait le controle en vert.
 const SCENARIOS = [
-  { nom: 'accueil-conseiller', role: 'conseiller', route: '#/dashboard' },
-  { nom: 'accueil-manager', role: 'manager', route: '#/dashboard' },
-  { nom: 'pipeline', role: 'conseiller', route: '#/pipeline' },
-  { nom: 'clients-annuaire', role: 'conseiller', route: '#/clients' },
+  { nom: 'accueil-conseiller', role: 'conseiller', route: '#/dashboard', attendu: 'Dossiers sans mouvement' },
+  { nom: 'accueil-manager', role: 'manager', route: '#/dashboard', attendu: 'Dossiers sans mouvement' },
+  { nom: 'pipeline', role: 'conseiller', route: '#/pipeline', attendu: 'Pipeline commercial' },
+  { nom: 'clients-annuaire', role: 'conseiller', route: '#/clients', attendu: 'Camille Exemple' },
+  { nom: 'clients-rattrapage', role: 'manager', route: '#/clients/rattrapage', attendu: 'Fiches à rattraper' },
+  { nom: 'clients-campagnes', role: 'manager', route: '#/clients/campagnes', attendu: 'Prévoyance TNS' },
+  { nom: 'leads-entrants', role: 'conseiller', route: '#/leads', attendu: 'Leads entrants' },
   {
     nom: 'modale-client-edition', role: 'conseiller', route: '#/clients',
     actions: async (page) => {
@@ -185,8 +190,8 @@ const SCENARIOS = [
       await page.waitForTimeout(600)
     },
   },
-  { nom: 'partenaires', role: 'conseiller', route: '#/partenaires' },
-  { nom: 'immobilier-dossiers', role: 'conseiller', route: '#/immobilier' },
+  { nom: 'partenaires', role: 'conseiller', route: '#/partenaires', attendu: 'Partenaires · annuaire' },
+  { nom: 'immobilier-dossiers', role: 'conseiller', route: '#/immobilier', attendu: 'Immobilier · dossiers transmis' },
   {
     nom: 'immobilier-mail-referent', role: 'conseiller', route: '#/immobilier',
     actions: async (page) => {
@@ -201,9 +206,9 @@ const SCENARIOS = [
       await attendreRendu(page)
     },
   },
-  { nom: 'remuneration', role: 'conseiller', route: '#/remuneration' },
-  { nom: 'multi-equipement', role: 'conseiller', route: '#/multi-equipement' },
-  { nom: 'conformite', role: 'conseiller', route: '#/conformite' },
+  { nom: 'remuneration', role: 'conseiller', route: '#/remuneration', attendu: 'Rémunération' },
+  { nom: 'multi-equipement', role: 'conseiller', route: '#/multi-equipement', attendu: 'Multi-équipement' },
+  { nom: 'conformite', role: 'conseiller', route: '#/conformite', attendu: 'Recueils et devoirs de conseil' },
 ]
 
 // ── Execution d un scenario ──────────────────────────────────────────────────
@@ -217,6 +222,13 @@ async function jouer(browser, scenario) {
     await page.goto(`${URL_BASE}/${scenario.route}`)
     await attendreRendu(page)
     if (scenario.actions) await scenario.actions(page)
+
+    // Assertion positive : l ecran attendu est bien la.
+    if (scenario.attendu) {
+      const present = await page.evaluate((t) => (document.body.innerText || '').includes(t), scenario.attendu)
+      if (present) resultat.passees++
+      else resultat.echecs.push(`texte attendu absent : « ${scenario.attendu} »`)
+    }
 
     for (const v of VERIFICATIONS) {
       let defaut

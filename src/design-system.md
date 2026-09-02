@@ -267,16 +267,42 @@ input:focus {
 }
 ```
 
+### Champs de saisie : `form-input` et `form-textarea`
+
+`.form-input` fige la hauteur a 38 px : c'est la classe des champs d'une
+ligne et des `select`. Une zone de texte doit porter `.form-textarea`
+(hauteur automatique, 80 px au minimum), sinon elle s'ecrase sur une ligne.
+Le bloc CSS generique ci dessus decrit la couleur et la bordure, pas la
+hauteur.
+
+### Sections de formulaire : `form-section` et `form-pliable`
+
+Deux noms pour deux choses. `.form-section` est une section plate (fond,
+bordure, espacement vertical entre ses enfants). `.form-pliable` est
+l'accordeon de `components/ui/FormSection.jsx`, avec `form-pliable-bouton`,
+`form-pliable-titre`, `form-pliable-resume`, `form-pliable-chevron`,
+`form-pliable-corps` et l'etat `is-open`. Ne jamais poser un `overflow`
+sur `.form-section` : c'est ce qui a rendu deux tiers d'une fiche client
+invisibles le 1er septembre.
+
 ### Modales
 
-Quatre classes, dans cet ordre exact. Ce sont les seuls noms definis dans
+Cinq classes de structure, dans cet ordre exact, plus `.modal-title` et
+`.modal-subtitle` pour l'en tete. Ce sont les seuls noms definis dans
 `styles.css` : `.modal`, `.modal-backdrop`, `.modal-header`, `.modal-footer`
 et `.modal-close` n'existent pas et laissent la boite sans fond ni cadre.
+Le bouton fermer est un `button type="button"` avec un `aria-label`.
 
 ```html
 <div class="modal-overlay">
   <div class="modal-box">
-    <div class="modal-head">…titre + bouton fermer…</div>
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">…titre…</div>
+        <div class="modal-subtitle">…sous titre facultatif…</div>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" aria-label="Fermer">✕</button>
+    </div>
     <div class="modal-body">…contenu…</div>
     <div class="modal-foot">…boutons…</div>
   </div>

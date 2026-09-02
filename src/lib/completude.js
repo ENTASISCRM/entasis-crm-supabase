@@ -144,14 +144,17 @@ const estDuConseiller = (client, code) =>
 //   4  le reste
 function rangDe(dossiers, today) {
   const depuis = jourMoins(today, FENETRE_SIGNE_JOURS)
+  // Seul un rendez vous daté, aujourd'hui ou après, tient le premier rang.
+  // Un « Prévu » sans date restait en tête indéfiniment (cas présent en
+  // base) : il retombe au rang des dossiers en cours, avec sa raison.
   const rdv = dossiers
     .filter((d) => d.status === 'Prévu')
     .map((d) => jourDe(d.date_expected))
-    .filter((j) => !j || j >= today)
-    .sort((a, b) => String(a || '9999').localeCompare(String(b || '9999')))
+    .filter((j) => j && j >= today)
+    .sort((a, b) => a.localeCompare(b))
   if (rdv.length) {
     const j = rdv[0]
-    return { rang: RANG_RDV, cle: j || '9999', raison: j ? `rendez vous le ${dateCourte(j)}` : 'rendez vous à venir' }
+    return { rang: RANG_RDV, cle: j, raison: `rendez vous le ${dateCourte(j)}` }
   }
   const signes = dossiers
     .filter((d) => d.status === 'Signé')
@@ -163,6 +166,9 @@ function rangDe(dossiers, today) {
   }
   if (dossiers.some((d) => d.status === 'En cours')) {
     return { rang: RANG_EN_COURS, cle: '', raison: 'dossier en cours' }
+  }
+  if (dossiers.some((d) => d.status === 'Prévu' && !jourDe(d.date_expected))) {
+    return { rang: RANG_EN_COURS, cle: '', raison: 'rendez vous à dater' }
   }
   return { rang: RANG_AUTRE, cle: '', raison: 'aucun dossier en cours' }
 }
@@ -242,8 +248,10 @@ export function completudeParConseiller(clients) {
     for (const m of manquants) ligne.manquantsParChamp[m.cle] = (ligne.manquantsParChamp[m.cle] || 0) + 1
     parCode.set(code, ligne)
   }
+  // sommeScores reste disponible pour un score cabinet exact, calcule sur les
+  // scores bruts et non sur des moyennes deja arrondies.
   return [...parCode.values()]
-    .map(({ _somme, ...l }) => ({ ...l, scoreMoyen: l.fiches ? Math.round(_somme / l.fiches) : 0 }))
+    .map(({ _somme, ...l }) => ({ ...l, sommeScores: _somme, scoreMoyen: l.fiches ? Math.round(_somme / l.fiches) : 0 }))
     .sort((a, b) => (b.scoreMoyen - a.scoreMoyen)
       || (b.fiches - a.fiches)
       || a.advisorCode.localeCompare(b.advisorCode))

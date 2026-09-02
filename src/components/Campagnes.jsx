@@ -267,7 +267,7 @@ function Ciblage({ clients, equipement, familles, conseillers, chargement, erreu
 
       {/* Zone 3 : la liste, l'export, le lancement. */}
       <div className="cmp-outils">
-        <input className="search-input" data-global-search placeholder="Rechercher dans les cibles — nom, conseiller, statut, famille"
+        <input className="search-input" data-global-search placeholder="Rechercher dans les cibles : nom, conseiller, statut, famille"
           value={recherche} onChange={(e) => setRecherche(e.target.value)} aria-label="Rechercher dans les cibles" />
         <div className="cmp-outils-droite">
           <button type="button" className="btn btn-outline btn-sm" onClick={exporter} disabled={chargement || visibles.length === 0}>Exporter</button>

@@ -134,15 +134,18 @@ export default async function handler(req, res) {
   const admin = createClient(process.env.SUPABASE_URL, adminKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
+  //    Meme regle que la fonction SQL is_manager() : le role ET le compte
+  //    actif. Un manager desactive garde un jeton valide quelques temps, il
+  //    ne doit plus lire les agendas de l equipe.
   const { data: callerProfile, error: callerErr } = await admin
     .from('profiles')
-    .select('role')
+    .select('role, is_active')
     .eq('id', caller.id)
     .single()
   if (callerErr || !callerProfile) {
     return res.status(403).json({ error: 'Profil appelant introuvable' })
   }
-  if (callerProfile.role !== 'manager') {
+  if (callerProfile.role !== 'manager' || callerProfile.is_active !== true) {
     return res.status(403).json({ error: 'Réservé aux managers' })
   }
 

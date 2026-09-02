@@ -29,6 +29,7 @@ const LIMITE = 5
 const GESTES = [
   { statut: 'contacte', label: 'Contacté', title: 'Le client a été joint' },
   { statut: 'rdv', label: 'RDV', title: 'Un rendez vous est pris' },
+  { statut: 'signe', label: 'Signé', title: 'Le client a signé, la cible est convertie' },
   { statut: 'pas_interesse', label: 'Pas intéressé', title: 'Le client ne souhaite pas donner suite' },
 ]
 
@@ -67,13 +68,21 @@ function Ligne({ cible, onOuvrir, onMarquer }) {
 export default function CampagneEnCours({ profile, onOpenClient }) {
   const code = profile?.advisor_code || null
   const [cibles, setCibles] = useState([])
+  const [erreur, setErreur] = useState(null)
   const [deplies, setDeplies] = useState(() => new Set())
 
+  // Une lecture qui échoue se dit (bandeau et toast) au lieu de se confondre
+  // avec « aucune campagne » : un conseiller qui ne voit rien doit savoir si
+  // c'est parce qu'il n'a rien à faire ou parce que la base n'a pas répondu.
   useEffect(() => {
     let vivant = true
     listerMesCibles()
-      .then((liste) => { if (vivant) setCibles(liste) })
-      .catch((e) => { if (vivant) console.warn('[CampagneEnCours] chargement impossible :', messageErreur(e)) })
+      .then((liste) => { if (vivant) { setCibles(liste); setErreur(null) } })
+      .catch((e) => {
+        if (!vivant) return
+        setErreur(messageErreur(e))
+        toast.error('Campagne en cours : ' + messageErreur(e))
+      })
     return () => { vivant = false }
   }, [])
 
@@ -114,6 +123,13 @@ export default function CampagneEnCours({ profile, onOpenClient }) {
 
   const deplier = (id) => setDeplies((prev) => { const n = new Set(prev); n.add(id); return n })
 
+  if (erreur && code) {
+    return (
+      <div style={{ marginTop: 28 }}>
+        <div className="notice notice-error" role="alert">Cibles de campagne indisponibles : {erreur}</div>
+      </div>
+    )
+  }
   if (groupes.length === 0) return null
 
   return (
