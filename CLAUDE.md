@@ -241,6 +241,12 @@ Ce que l'audit a mis en évidence sans correctif de code :
   le 17, le CDI commence le 18 avec le drapeau `actif` à faux. Depuis que
   le contrat se choisit par ses dates, la bascule se fera seule, comme
   celle de Quentin le 1er septembre. Rien à programmer.
+* **Un enchaînement de contrats remet l'acquisition de congés à zéro.**
+  `joursAcquis` compte les mois depuis la date de début du contrat de
+  référence : le 18 septembre, le CDI de Nans repart de zéro alors que ses
+  congés pris de l'été restent décomptés. Son `conges_report` a été calé
+  pour que la bascule ne fasse pas sauter son solde, mais le modèle mérite
+  une reprise : l'ancienneté devrait suivre la personne, pas le contrat.
 * **Pull request 41** sur ce dépôt, vieux test de design de mai : à
   fermer ou à refaire.
 * **Le compte Pappers rattaché aux outils de Louis n'a plus de crédits**
@@ -287,6 +293,15 @@ demande de Louis :
   libellé : les trois voies de rattachement échouaient en même temps et
   son dossier ne remontait pas dans Rémunération. Profil lié, matricule
   `ELIOTT`, libellé nettoyé.
+* **Le solde de congés se cale sur le bulletin de salaire.** Les quatre
+  alternants affichaient un solde faux dans Smart RH. Le champ
+  `conges_report` est prévu pour ça (`src/lib/conges-solde.js`) : il fige le
+  point de départ de la période, le CRM y ajoute l'acquisition et en retire
+  les demandes validées. La valeur à poser est
+  `solde du bulletin + jours pris depuis le 1er juin − acquis de la période`,
+  et non le solde brut : le bulletin ventile les jours pris entre N moins 1
+  et N, le CRM les compte tous sur la période en cours. Les quatre soldes
+  concordent désormais avec leur bulletin d'août.
 * **Les vingt trois fiches contrat ont un matricule.** Sept n'en avaient
   pas. **Le matricule de référence est celui du logiciel de paie**, relevé
   sur le bulletin de salaire : quatre alternants portaient dans le CRM un
