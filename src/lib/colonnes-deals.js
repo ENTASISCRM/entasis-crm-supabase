@@ -16,8 +16,10 @@
 // le reste.
 //
 // Source : information_schema.columns sur deals, projet CRM, 3 septembre
-// 2026. Une colonne ajoutée en base doit être ajoutée ici, sinon sa valeur
-// est écartée en silence à l'écriture ; le service le dit dans la console.
+// 2026 (le SQL versionné du dépôt ne déclare pas toutes les colonnes, seule
+// la base fait foi). Une colonne ajoutée en base doit être ajoutée ici, sinon
+// sa valeur est écartée à l'écriture ; le service l'écrit alors dans la
+// console, en production aussi, comme clé inconnue.
 // ═══════════════════════════════════════════════════════════════════════════
 
 export const COLONNES_DEALS = Object.freeze([

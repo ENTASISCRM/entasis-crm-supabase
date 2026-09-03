@@ -30,7 +30,7 @@ Trois commandes, dans cet ordre. Aucune ne doit régresser :
 
 ```
 npx eslint src/          # un avertissement préexistant, zéro erreur attendue
-npx vitest run           # 677 tests
+npx vitest run           # 695 tests
 npx vite build
 ```
 
@@ -106,7 +106,7 @@ relecture. Tout ce qui suit est en ligne sur main.
   d'une liste figée qui confondait les conseillers.
 * **Le nom d'un profil est mis au propre à sa création** (fonction SQL
   `normaliser_nom_complet`, appelée par `handle_new_user`).
-* **Un contrôle visuel automatique** joue vingt et un écrans à chaque pull
+* **Un contrôle visuel automatique** joue vingt deux écrans à chaque pull
   request (voir plus bas).
 * La fiche client affiche à nouveau tous ses champs (les sections
   repliables s'appellent `form-pliable`, le nom générique `form-section`
@@ -215,7 +215,7 @@ Ce que l'audit a mis en évidence sans correctif de code :
 ### Ce qui reste ouvert
 
 * **Contrôle visuel automatique** : en place. `npm run test:visuel` joue
-  vingt et un écrans avec une session simulée et des données fictives
+  vingt deux écrans avec une session simulée et des données fictives
   (`tests/visuel/`), et le workflow `controle-visuel.yml` le rejoue à
   chaque pull request en déposant les captures en artefact. En local, il
   faut un serveur `vite preview` sur le port 4173 et Chromium (variable

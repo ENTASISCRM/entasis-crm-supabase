@@ -75,7 +75,7 @@ const Ligne = ({ d, seuilJours, avecConseiller, onSigner, onGarderEnCours, onRel
     </div>
     <div style={{ display: 'inline-flex', gap: 2, marginLeft: 6 }}>
       <Geste label="Déjà signé" title="Ouvrir le dossier en Signé pour poser la date de signature (la fiche client doit être complète)" onClick={() => onSigner(d)} />
-      <Geste label="Toujours en cours" title={`Le dossier avance : il reste en cours et ne revient dans ce bloc qu après ${seuilJours} jours sans mouvement`} onClick={() => onGarderEnCours(d)} />
+      <Geste label="Toujours en cours" title={`Le dossier avance : il reste en cours et ne revient dans ce bloc qu'après ${seuilJours} jours sans mouvement`} onClick={() => onGarderEnCours(d)} />
       <Geste label="Relancer" title="Ouvrir le dossier pour poser une relance" onClick={() => onRelancer(d)} />
       <Geste label="Abandonner" title="Passer le dossier en Annulé (annulable)" onClick={() => onAbandonner(d)} />
     </div>
@@ -192,7 +192,7 @@ export default function DossiersStagnants({ deals, profile, onEdit, onQuickPatch
     onQuickPatch?.(
       d,
       { status: 'En cours', updated_at: new Date().toISOString() },
-      `Dossier gardé en cours · ${getClientName(d)} · il ne reviendra ici qu après ${seuilJours} jours sans mouvement`,
+      `Dossier gardé en cours · ${getClientName(d)} · il ne reviendra ici qu'après ${seuilJours} jours sans mouvement`,
     )
   }
   // Confirmation d'abord (le passage en Annulé est confirmé partout

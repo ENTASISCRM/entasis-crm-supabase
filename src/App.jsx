@@ -3691,6 +3691,10 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
     setClientSearch('')
     setClientResults([])
 
+    // La fiche choisie devient la référence : ce qu'elle apporte n'est pas une
+    // saisie et ne doit pas repartir vers elle à l'enregistrement.
+    ficheInitialeRef.current = instantaneFiche(client)
+
     // Mettre à jour les champs du deal
     setDeal(prev => ({
       ...prev,
@@ -5067,14 +5071,21 @@ export default function App(){
       // et retamponnait updated_at et maj_par sans saisie réelle.
       if (clientId) {
         const modifs = cleanDeals[0].client_fiche_modifs
-        await clientsService.updateInfoIfProvided(clientId, modifs !== undefined ? modifs : {
+        const aEcrire = modifs !== undefined ? modifs : {
           email: cleanDeals[0].client_email,
           telephone: cleanDeals[0].client_phone,
           statut_pro: cleanDeals[0].client_statut_pro,
           profession: cleanDeals[0].client_profession,
           revenus_annuels: cleanDeals[0].client_revenus,
           patrimoine_estime: cleanDeals[0].client_patrimoine,
-        });
+        }
+        const ficheEcrite = await clientsService.updateInfoIfProvided(clientId, aEcrire)
+        // Refus silencieux de la RLS (fiche d un autre conseiller, frequent en
+        // co conseil) : le dossier s enregistre quand meme, mais on le dit,
+        // sinon la fiche reste incomplete sans que personne ne le sache.
+        if (ficheEcrite === false && Object.values(aEcrire).some((v) => v != null && String(v).trim() !== '')) {
+          toast.error('La fiche client n a pas été mise à jour : elle appartient à un autre conseiller. Demande lui de la compléter.', { duration: 7000 })
+        }
       }
 
       // Appliquer le même client_id à tous les deals + auto-aligner le month

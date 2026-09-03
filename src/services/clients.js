@@ -37,6 +37,9 @@ export async function searchByQuery(query) {
  * client. Pour un client existant, la fiche restait sans téléphone et le verrou
  * de signature en base bloquait alors que le conseiller avait bien rempli le
  * champ. On les propage donc ici aussi.
+ *
+ * Rend true si la fiche est ecrite (ou s il n y avait rien a ecrire), false si
+ * la RLS a refuse ou si la requete a echoue.
  */
 export async function updateInfoIfProvided(clientId, fields) {
   if (!clientId || !fields) return
@@ -47,10 +50,14 @@ export async function updateInfoIfProvided(clientId, fields) {
   if (fields.profession != null && String(fields.profession).trim() !== '') patch.profession = fields.profession
   if (fields.revenus_annuels != null && String(fields.revenus_annuels).trim() !== '') patch.revenus_annuels = Number(fields.revenus_annuels)
   if (fields.patrimoine_estime != null && String(fields.patrimoine_estime).trim() !== '') patch.patrimoine_estime = Number(fields.patrimoine_estime)
-  if (Object.keys(patch).length === 0) return
+  if (Object.keys(patch).length === 0) return true
   patch.updated_at = new Date().toISOString()
-  const { error } = await supabase.from('clients').update(patch).eq('id', clientId)
-  if (error) console.error('[clients.updateInfoIfProvided] failed:', error.message)
+  // .select('id') : sans lui, une fiche refusee par la RLS (fiche d un autre
+  // conseiller, cas frequent en co conseil) repond sans erreur et sans ligne,
+  // et l appelant croit la fiche completee alors que rien n a bouge.
+  const { data, error } = await supabase.from('clients').update(patch).eq('id', clientId).select('id')
+  if (error) { console.error('[clients.updateInfoIfProvided] failed:', error.message); return false }
+  return Array.isArray(data) && data.length > 0
 }
 
 /**

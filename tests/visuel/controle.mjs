@@ -175,6 +175,16 @@ const SCENARIOS = [
     },
   },
   {
+    // « Déjà signé » depuis le bloc sans mouvement : la modale s ouvre sur un
+    // dossier EXISTANT, en Signé. C est le seul écran qui joue la lecture de
+    // la fiche à l ouverture et le préremplissage des champs client.
+    nom: 'deja-signe', role: 'manager', route: '#/dashboard', attendu: 'Date de signature',
+    actions: async (page) => {
+      await cliquer(page, 'button:has-text("Déjà signé")', 'Déjà signé')
+      await attendreModale(page)
+    },
+  },
+  {
     nom: 'modale-dossier-express', role: 'conseiller', route: '#/clients',
     actions: async (page) => {
       await cliquer(page, 'button:has-text("Nouveau dossier")', 'Nouveau dossier')

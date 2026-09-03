@@ -57,11 +57,16 @@ export function preremplirDepuisFiche(deal, fiche) {
  * Ce qui doit repartir vers la fiche à l'enregistrement d'un dossier
  * EXISTANT : les champs non vides qui diffèrent de l'instantané.
  *
- * Sans instantané (fiche illisible à l'ouverture), on ne renvoie que ce que
- * le conseiller a saisi dans la modale : les quatre champs client_* (qui
- * n'existent pas sur la ligne deals, donc forcément tapés) et l'email ou le
- * téléphone seulement s'ils diffèrent de ceux que portait le dossier à
- * l'ouverture, sinon l'email figé sur le dossier écraserait celui de la fiche.
+ * L'email et le téléphone ont un piège de plus : le dossier en porte sa
+ * propre copie (colonnes deals.client_email et client_phone, posées à la
+ * création) qui peut être périmée. Une valeur restée égale à cette copie
+ * n'est pas une saisie : elle ne doit pas écraser une fiche qui a déjà une
+ * valeur. Elle sert seulement à remplir une fiche qui n'en a pas.
+ *
+ * Sans instantané (fiche non lue : dossier sans client_id, ou fiche d'un
+ * autre conseiller), on renvoie tout ce qui est rempli, comme avant : c'est
+ * ce chemin qui complète la fiche retrouvée par email avec le téléphone du
+ * dossier, sans quoi la base refuse la signature.
  *
  * @param {Object} deal      le dossier tel que la modale l'enregistre
  * @param {Object|null} instantane  résultat de instantaneFiche, ou null
@@ -73,11 +78,12 @@ export function modifsFiche(deal, instantane, initial = {}) {
   for (const [champ, cle] of CHAMPS_FICHE_DOSSIER) {
     const valeur = texte(deal?.[cle])
     if (valeur === '') continue
-    let reference
-    if (instantane) reference = texte(instantane[cle])
-    else if (cle === 'client_email' || cle === 'client_phone') reference = texte(initial?.[cle])
-    else reference = ''
-    if (valeur !== reference) out[champ] = deal[cle]
+    if (!instantane) { out[champ] = deal[cle]; continue }
+    const reference = texte(instantane[cle])
+    if (valeur === reference) continue
+    const copieDuDossier = cle === 'client_email' || cle === 'client_phone'
+    if (copieDuDossier && valeur === texte(initial?.[cle]) && reference !== '') continue
+    out[champ] = deal[cle]
   }
   return out
 }

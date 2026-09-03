@@ -74,9 +74,20 @@ export async function getById(dealId) {
 // sans mouvement, heureRdv de Ma journée…). PostgREST refuse la première
 // inconnue d un 400 et rien ne s écrit. On ne garde que les colonnes de deals,
 // liste tenue dans lib/colonnes-deals.js, testée à part.
+// Cles que les ecrans accrochent au dossier et qu on s attend a ecarter. Une
+// cle hors de cette liste est probablement une colonne ajoutee en base et
+// oubliee dans COLONNES_DEALS : la saisie serait perdue en silence, on le dit
+// dans la console meme en production.
+const CLES_ECRAN = new Set(['clients', 'client_data', 'client_fiche_modifs', '_localId',
+  'client_statut_pro', 'client_profession', 'client_revenus', 'client_patrimoine',
+  'joursSansMouvement', 'heureRdv'])
 function pourEcriture(objet, quoi) {
   const { patch, ecartes } = nettoyerPourEcriture(objet)
-  if (ecartes.length) logger.debug(`[deals] ${quoi} : clés écartées avant écriture`, ecartes)
+  if (ecartes.length) {
+    const inattendues = ecartes.filter((k) => !CLES_ECRAN.has(k))
+    if (inattendues.length) console.warn(`[deals] ${quoi} : clés inconnues écartées, colonne oubliée dans COLONNES_DEALS ?`, inattendues)
+    else logger.debug(`[deals] ${quoi} : clés d écran écartées`, ecartes)
+  }
   return patch
 }
 
