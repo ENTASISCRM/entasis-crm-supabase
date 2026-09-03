@@ -48,6 +48,9 @@ export default async function handler(req, res) {
   try { leadroomHost = new URL(LEADROOM).host } catch { leadroomHost = '' }
   const sameSite = !!leadroomHost && siteOf(leadroomHost) === siteOf(req.headers?.host)
 
+  // Sonde sans lien : l onglet sait s il peut charger un lien dans l iframe
+  // (meme site) sans consommer un jeton pour rien.
+  if (req.query?.probe === '1') return res.status(200).json({ fallback, sameSite })
   if (!secret) return res.status(200).json({ fallback, sameSite, reason: 'bridge_secret_missing' })
   if (!caller?.email) return res.status(200).json({ fallback, sameSite, reason: 'no_email' })
 
@@ -83,7 +86,11 @@ export default async function handler(req, res) {
     if (!upstream.ok || !json?.url) {
       return res.status(200).json({ fallback, sameSite, reason: json?.reason || json?.error || `http_${upstream.status}` })
     }
-    return res.status(200).json({ url: json.url, fallback, sameSite })
+    // Le site du lien reellement renvoye fait foi (LEADROOM_PUBLIC_URL cote
+    // Lead Room peut differer de LEADROOM_URL cote CRM pendant une bascule).
+    let linkSameSite = sameSite
+    try { linkSameSite = siteOf(new URL(json.url).host) === siteOf(req.headers?.host) } catch { /* garde la valeur calculee */ }
+    return res.status(200).json({ url: json.url, fallback, sameSite: linkSameSite })
   } catch (e) {
     return res.status(200).json({ fallback, sameSite, reason: 'leadroom_unreachable', detail: e?.message })
   }

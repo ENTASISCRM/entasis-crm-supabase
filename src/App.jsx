@@ -1095,10 +1095,11 @@ function LeadRoomEmbed(){
   const [fullUrl,setFullUrl] = useState(LEAD_ROOM_URL)
   const asked = useRef(false)
 
-  async function demanderLien(){
+  async function demanderLien(opts={}){
     const { data: { session } } = await supabase.auth.getSession()
     const token = session?.access_token
-    const r = await fetch('/api/leadroom-sso?next=/leadroom', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+    const qs = opts.probe ? '?next=/leadroom&probe=1' : '?next=/leadroom'
+    const r = await fetch('/api/leadroom-sso'+qs, { headers: token ? { Authorization: `Bearer ${token}` } : {}, signal: opts.signal })
     return await r.json().catch(()=>({}))
   }
 
@@ -1108,9 +1109,14 @@ function LeadRoomEmbed(){
     let vivant = true
     ;(async()=>{
       try{
+        // Sonde d abord (aucun jeton emis) : un lien n est demande pour
+        // l iframe que si les deux applis partagent le meme site.
+        const p = await demanderLien({ probe: true })
+        if(!vivant) return
+        if(p?.fallback) setFullUrl(p.fallback)
+        if(!p?.sameSite){ setSrc(p?.fallback || LEAD_ROOM_URL); setShowSplash(true); return }
         const j = await demanderLien()
         if(!vivant) return
-        if(j?.fallback) setFullUrl(j.fallback)
         if(j?.url && j?.sameSite){ setSrc(j.url) }
         else { setSrc(j?.fallback || LEAD_ROOM_URL); setShowSplash(true) }
       }catch{
@@ -1129,10 +1135,13 @@ function LeadRoomEmbed(){
       try{ w.opener = null; w.document.title = 'Lead Room'; w.document.body.innerHTML = '<p style="font-family:system-ui;color:#555;padding:24px">Ouverture de la Lead Room…</p>' }catch{ /* ignore */ }
     }
     let url = fullUrl
+    const ctrl = new AbortController()
+    const timer = setTimeout(()=>ctrl.abort(), 8000)
     try{
-      const j = await Promise.race([demanderLien(), new Promise(res=>setTimeout(()=>res({}), 8000))])
+      const j = await demanderLien({ signal: ctrl.signal })
       url = j?.url || j?.fallback || fullUrl
-    }catch{ /* repli sur l adresse classique */ }
+    }catch{ /* delai ou reseau : repli sur l adresse classique */ }
+    clearTimeout(timer)
     if(w) w.location.href = url; else window.open(url, '_blank', 'noopener')
   }
 
