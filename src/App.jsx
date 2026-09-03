@@ -1085,7 +1085,33 @@ const LEAD_ROOM_URL = 'https://entasis-leadroom.vercel.app/leadroom'
 
 function LeadRoomEmbed(){
   const [embedded,setEmbedded] = useState(true)
-  const [showSplash,setShowSplash] = useState(true)
+  const [showSplash,setShowSplash] = useState(false)
+  // Adresse chargee dans l iframe : d abord un lien de connexion a usage
+  // unique fourni par api/leadroom-sso (session ouverte sans second mot de
+  // passe), sinon l adresse classique. Le splash n apparait que si le lien
+  // signe n a pas pu etre obtenu.
+  const [src,setSrc] = useState(null)
+  const [fullUrl,setFullUrl] = useState(LEAD_ROOM_URL)
+
+  useEffect(()=>{
+    let vivant = true
+    ;(async()=>{
+      try{
+        const { data: { session } } = await supabase.auth.getSession()
+        const token = session?.access_token
+        const r = await fetch('/api/leadroom-sso?next=/leadroom', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+        const j = await r.json().catch(()=>({}))
+        if(!vivant) return
+        if(j?.fallback) setFullUrl(j.fallback)
+        if(j?.url){ setSrc(j.url) }
+        else { setSrc(j?.fallback || LEAD_ROOM_URL); setShowSplash(true) }
+      }catch{
+        if(!vivant) return
+        setSrc(LEAD_ROOM_URL); setShowSplash(true)
+      }
+    })()
+    return ()=>{ vivant = false }
+  },[])
 
   return (
     <div style={{height:'calc(100vh - 120px)',display:'flex',flexDirection:'column'}}>
@@ -1093,7 +1119,7 @@ function LeadRoomEmbed(){
         <div style={{display:'flex',alignItems:'center',gap:10}}>
           <span style={{display:'inline-block',width:8,height:8,borderRadius:'50%',background:'#22c55e',boxShadow:'0 0 8px #22c55e'}} />
           <span style={{color:'#9ca3af',fontSize:13}}>
-            Lead Room temps réel, attribution shotgun et trame IA Modjo + Claude
+            Lead Room, ouverte avec ton compte CRM
           </span>
         </div>
         <div style={{display:'flex',gap:10}}>
@@ -1103,7 +1129,7 @@ function LeadRoomEmbed(){
             {embedded ? 'Masquer l\'aperçu' : 'Afficher l\'aperçu'}
           </button>
           <a
-            href={LEAD_ROOM_URL}
+            href={fullUrl}
             target="_blank"
             rel="noreferrer"
             style={{background:'#C5A55A',color:'#0B1A2E',padding:'6px 14px',borderRadius:8,fontSize:13,fontWeight:600,textDecoration:'none'}}>
@@ -1115,19 +1141,24 @@ function LeadRoomEmbed(){
       {showSplash && (
         <div style={{padding:'14px 16px',background:'rgba(197,165,90,0.08)',borderBottom:'1px solid rgba(197,165,90,0.2)',color:'#fde68a',fontSize:13,display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}>
           <span>
-            La Lead Room est désormais une app dédiée. Si l'aperçu est vide, ouvre la Lead Room en plein écran et logge-toi avec ton email Entasis.
+            La connexion automatique n\'a pas abouti : si l\'aperçu reste sur l\'écran de connexion, ouvre la Lead Room en plein écran et connecte-toi avec ton email Entasis.
           </span>
           <button onClick={()=>setShowSplash(false)} style={{background:'transparent',border:0,color:'#fde68a',cursor:'pointer',fontSize:18,padding:'0 4px'}}>×</button>
         </div>
       )}
 
-      {embedded && (
+      {embedded && src && (
         <iframe
-          src={LEAD_ROOM_URL}
+          src={src}
           title="Lead Room Entasis"
           style={{flex:1,width:'100%',border:0,background:'#fafafa'}}
-          sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+          sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
         />
+      )}
+      {embedded && !src && (
+        <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',background:'#fafafa',color:'#9ca3af',fontSize:13}}>
+          Ouverture de la Lead Room…
+        </div>
       )}
       {!embedded && (
         <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',background:'#0B1A2E',color:'#9ca3af',fontSize:14}}>
