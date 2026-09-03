@@ -30,7 +30,7 @@ Trois commandes, dans cet ordre. Aucune ne doit régresser :
 
 ```
 npx eslint src/          # un avertissement préexistant, zéro erreur attendue
-npx vitest run           # 661 tests
+npx vitest run           # 677 tests
 npx vite build
 ```
 
@@ -290,6 +290,35 @@ déléguée RH. Posé le 2 septembre sur demande de Louis, pour la sécurité.
   journal, de ce qu'il contient et de sa durée de conservation. C'est une
   obligation, pas une politesse, et le CSE doit être consulté. Sans cette
   information, le journal ne serait pas opposable en cas de litige.
+
+### Signés, fiche à finir
+
+Demande de Louis du 2 septembre au soir : « Dossiers sans mouvement » porte
+aussi les dossiers **signés** dont la fiche client n'est pas finie. Un
+dossier signé n'a plus rien à relancer, mais il laisse une obligation, la
+fiche. Mesure ce jour là : 114 fiches de dossiers signés incomplètes, 100
+sans mouvement depuis plus de 21 jours, 42 en co conseil.
+
+* **Le mouvement d'un dossier signé, c'est la signature puis chaque saisie
+  sur la fiche** (`clients.updated_at`, posé par déclencheur). L'`updated_at`
+  du dossier n'entre pas dans le calcul : la migration du 25 août l'a remis à
+  neuf sur 159 dossiers et il ne dit rien de la fiche. Une fiche complète ne
+  remonte jamais, quel que soit son âge. Logique dans
+  `fichesSigneesSansMouvement` (`src/lib/stagnants.js`).
+* **Une ligne par client, pas par dossier.** Un client multi équipé a
+  plusieurs dossiers signés et une seule fiche à finir. Le geste est
+  « Compléter la fiche », il ouvre la fiche client. Pas d'Abandonner sur un
+  dossier signé.
+* **Huit fiches visibles, les autres repliées** derrière « Voir les N
+  autres » : cent fiches d'un coup sur un accueil ne se lisent pas.
+* **Qui a saisi la fiche en dernier.** Colonne `clients.maj_par`, posée par
+  le déclencheur `trg_clients_maj_par` depuis `current_advisor_code()`,
+  jamais par le navigateur. Sur une fiche partagée, la ligne dit « avec
+  VICTOR · VICTOR a saisi le 28/08 » (ou « vous avez saisi le ») dans les
+  deux blocs, Dossiers sans mouvement et Compléter ces fiches : le second
+  conseiller voit si le premier s'en est occupé. La colonne se remplit au
+  fil des saisies, l'historique d'avant le 3 septembre n'a pas de nom.
+  Migration `20260903061444_clients_maj_par_le_dernier_conseiller_qui_a_saisi.sql`.
 
 ### L'onglet Partenaires
 
