@@ -50,7 +50,15 @@ export default function ClientLeadRoomCard({ client }) {
         })
         const j = await r.json().catch(() => ({}))
         if (!vivant) return
-        if (j?.trouve) { setData(j); setEtat('pret') } else { setEtat('vide') }
+        // Distinguer « inconnue de la Lead Room » (cas normal, majoritaire)
+        // d une panne du pont : sinon une brique morte reste invisible des
+        // semaines, personne ne remonte de bug puisque l absence de carte est
+        // le comportement attendu.
+        const panne = ['pont_non_configure', 'leadroom_injoignable'].includes(j?.raison)
+          || String(j?.raison || '').startsWith('http_')
+        if (j?.trouve) { setData(j); setEtat('pret') }
+        else if (panne) { setEtat('panne') }
+        else { setEtat('vide') }
       } catch {
         if (vivant) setEtat('erreur')
       }
@@ -62,7 +70,13 @@ export default function ClientLeadRoomCard({ client }) {
   // Personne inconnue de la Lead Room : on n affiche rien plutot qu une carte
   // vide. La majorite des clients viennent de la téléprospection ou du réseau.
   if (etat === 'vide') return null
-  if (etat === 'erreur') return null
+  if (etat === 'erreur' || etat === 'panne') {
+    return (
+      <div style={{ marginTop: 16, fontSize: 12, color: '#9ca3af' }}>
+        Origine Lead Room indisponible pour le moment.
+      </div>
+    )
+  }
 
   const lead = data?.lead
   const appels = data?.appels || []
