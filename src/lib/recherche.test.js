@@ -115,6 +115,16 @@ describe('correspond', () => {
     expect(correspond('Cédric Cadet · CCAD · cedric@x.fr', 'ccad')).toBe(true)
     expect(correspond('Cédric Cadet', 'manioc')).toBe(false)
   })
+
+  // Le seul point ou correspond s ecarte de `includes` : "abc".includes('')
+  // vaut true, une requete vide n a ici aucun jeton donc aucune
+  // correspondance. C est voulu pour le classement, mais tout filtre de liste
+  // doit neutraliser la requete vide lui meme. Regression « Dossiers du mois »
+  // du 28/08 au 03/09 : la liste entiere disparaissait barre de recherche vide.
+  it('renvoie false sur une requête vide, au filtre appelant de la neutraliser', () => {
+    expect(correspond('Cédric Cadet', '')).toBe(false)
+    expect(correspond('Cédric Cadet', '   ')).toBe(false)
+  })
 })
 
 describe('chercher', () => {
