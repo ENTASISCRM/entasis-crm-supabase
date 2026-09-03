@@ -2307,7 +2307,7 @@ function DealsTable({deals,month,profile,onEdit,onDelete,onRefresh,onSelectClien
   const [expandedGroups,setExpandedGroups]=useState(new Set())
   // La recherche couvre aussi téléphone et email : retrouver un dossier en
   // tapant les derniers chiffres du numéro qui appelle.
-  const filtered=useMemo(()=>deals.filter(d=>allMonths||dealDuMois(d,month)).filter(d=>statusF==='Tous'||d.status===statusF).filter(d=>productF==='Tous'||d.product===productF).filter(d=>priorityF==='Tous'||d.priority===priorityF).filter(d=>correspond(`${getClientName(d)} ${d.product} ${d.company} ${d.advisor_code} ${d.co_advisor_code||''} ${d.client_email||''} ${d.client_phone||''} ${String(d.client_phone||'').replace(/\D/g,'')}`,search)),[deals,month,allMonths,search,statusF,productF,priorityF])
+  const filtered=useMemo(()=>deals.filter(d=>allMonths||dealDuMois(d,month)).filter(d=>statusF==='Tous'||d.status===statusF).filter(d=>productF==='Tous'||d.product===productF).filter(d=>priorityF==='Tous'||d.priority===priorityF).filter(d=>!search.trim()||correspond(`${getClientName(d)} ${d.product} ${d.company} ${d.advisor_code} ${d.co_advisor_code||''} ${d.client_email||''} ${d.client_phone||''} ${String(d.client_phone||'').replace(/\D/g,'')}`,search)),[deals,month,allMonths,search,statusF,productF,priorityF])
 
   // Fonction helper pour générer clé de regroupement
   const groupKey = (deal) => {
