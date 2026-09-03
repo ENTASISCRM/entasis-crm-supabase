@@ -504,3 +504,19 @@ export async function fusionner(gardeId, absorbeId) {
   if (error) throw error
   return data
 }
+
+/**
+ * La fiche telle que la modale dossier en a besoin, lue a l instant : les six
+ * champs que le verrou de signature controle. Null si la fiche n est pas
+ * lisible (RLS) ou n existe pas ; la modale se comporte alors comme avant.
+ */
+export async function ficheDossier(clientId) {
+  if (!clientId) return null
+  const { data, error } = await supabase
+    .from('clients')
+    .select('id, email, telephone, statut_pro, profession, revenus_annuels, patrimoine_estime')
+    .eq('id', clientId)
+    .maybeSingle()
+  if (error) return null
+  return data || null
+}

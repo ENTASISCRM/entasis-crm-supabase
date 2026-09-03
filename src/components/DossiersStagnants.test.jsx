@@ -43,12 +43,14 @@ describe('DossiersStagnants (fumée)', () => {
     // Les deux gestes de plus, à gauche de Relancer.
     expect(html.indexOf('Déjà signé')).toBeLessThan(html.indexOf('Toujours en cours'))
     expect(html.indexOf('Toujours en cours')).toBeLessThan(html.indexOf('Relancer'))
-    expect(html).toContain('sort de cette liste pour 21 jours')
+    expect(html).toContain('après 21 jours sans mouvement')
   })
 
   it('manager : répartition en puces puis tout le cabinet', () => {
     const html = renderToStaticMarkup(<DossiersStagnants deals={deals} clients={[]} profile={{ advisor_code: 'LH', role: 'manager' }} />)
     expect(html).toContain('2 dossiers en cours depuis plus de 21 jours · 2 conseillers')
+    expect(html).toContain('Déjà signé')
+    expect(html).toContain('Toujours en cours')
     expect(html).toContain('badge badge-normal')
     expect(html).toContain('AUTRE · ')
     expect(html).toContain('DEMO · ')

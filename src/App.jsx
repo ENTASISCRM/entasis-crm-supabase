@@ -8,6 +8,7 @@ import { santeFlux, resumeSante } from './lib/sante-flux'
 import { chargerSanteFlux } from './services/santeFlux'
 import { insererDeal, majDeal, retirerDeal, completerDeal } from './lib/deals-realtime'
 import { recordLogin } from './lib/record-login'
+import { instantaneFiche, preremplirDepuisFiche, modifsFiche } from './lib/fiche-dossier'
 import * as dealsService from './services/deals'
 import * as clientsService from './services/clients'
 import * as profilesService from './services/profiles'
@@ -3511,6 +3512,11 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
   // En édition, formulaire complet d'office (sections repliables).
   const [fullForm,setFullForm]=useState(!!initialDeal?.created_at)
   // B3 — garde anti-perte : fermer demande confirmation si un champ a bougé.
+  // Instantané de la fiche lue à l'ouverture (clés client_*), et le dossier
+  // ouvert, pour ignorer une lecture arrivée après un changement de dossier.
+  const ficheInitialeRef = useRef(null)
+  const initialDealRef = useRef(initialDeal)
+  initialDealRef.current = initialDeal
   const dirtyRef=useRef(false)
 
   // Multi-produits pour création de nouveaux deals
@@ -3602,21 +3608,23 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
     if (!enriched.advisor_code && profile?.advisor_code) {
       enriched.advisor_code = profile.advisor_code
     }
-    // Dossier existant rattaché à une fiche : la data structurée de la fiche
-    // préremplit les champs client (éditables). Sans cela, passer un dossier
-    // en Signé depuis le kanban ou depuis « Déjà signé » butait sur le verrou
-    // de signature qui réclamait statut, profession, revenus et patrimoine
-    // déjà renseignés sur la fiche. On ne touche qu'aux champs vides.
-    const fiche = initialDeal.created_at ? initialDeal.clients : null
-    if (fiche) {
-      if (!enriched.client_email && fiche.email) enriched.client_email = fiche.email
-      if (!enriched.client_phone && fiche.telephone) enriched.client_phone = fiche.telephone
-      if (enriched.client_statut_pro == null) enriched.client_statut_pro = fiche.statut_pro || ''
-      if (enriched.client_profession == null) enriched.client_profession = fiche.profession || ''
-      if (enriched.client_revenus == null) enriched.client_revenus = fiche.revenus_annuels ?? ''
-      if (enriched.client_patrimoine == null) enriched.client_patrimoine = fiche.patrimoine_estime ?? ''
-    }
     setDeal(enriched)
+    // Dossier existant rattaché à une fiche : on lit la fiche EN BASE, à
+    // l'instant, et on préremplit les champs client vides (éditables). Sans
+    // cela, passer un dossier en Signé depuis le kanban ou « Déjà signé »
+    // butait sur le verrou qui réclamait statut, profession, revenus et
+    // patrimoine déjà renseignés. Pas la jointure chargée à la connexion :
+    // elle n'est jamais rafraîchie et aurait remis de vieilles valeurs. On
+    // garde un instantané pour ne renvoyer à la fiche que ce qui change.
+    ficheInitialeRef.current = null
+    if (initialDeal.created_at && initialDeal.client_id) {
+      const clientId = initialDeal.client_id
+      clientsService.ficheDossier(clientId).then((fiche) => {
+        if (!fiche || initialDealRef.current !== initialDeal) return
+        ficheInitialeRef.current = instantaneFiche(fiche)
+        setDeal((prev) => (prev && prev.client_id === clientId ? preremplirDepuisFiche(prev, fiche) : prev))
+      })
+    }
     // B3 — réouverture : repartir propre. Saisie non modifiée, mode express
     // pour une création / complet en édition, et produits réinitialisés
     // depuis le deal ouvert (avant ce reset, les produits d'une création
@@ -3853,7 +3861,10 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
         toast.error(err)
         return
       }
-      await onSave(normalized);
+      // Dossier existant : la fiche ne reçoit que ce qui a changé depuis sa
+      // lecture à l'ouverture (lib/fiche-dossier). Un dossier neuf garde le
+      // chemin d'avant : tout ce qui est rempli va sur la fiche créée.
+      await onSave(isNew ? normalized : { ...normalized, client_fiche_modifs: modifsFiche(deal, ficheInitialeRef.current, initialDeal) });
     }
   }
 
@@ -5050,8 +5061,13 @@ export default function App(){
       // email et telephone sont indispensables ici : sans eux, la fiche d'un
       // client EXISTANT restait vide et le verrou de signature bloquait alors
       // que le conseiller avait bien rempli la modale.
+      // Un dossier existant apporte client_fiche_modifs (lib/fiche-dossier) :
+      // seuls les champs modifiés par rapport à la fiche lue à l'ouverture,
+      // sinon chaque Enregistrer réécrivait la fiche avec de vieilles valeurs
+      // et retamponnait updated_at et maj_par sans saisie réelle.
       if (clientId) {
-        await clientsService.updateInfoIfProvided(clientId, {
+        const modifs = cleanDeals[0].client_fiche_modifs
+        await clientsService.updateInfoIfProvided(clientId, modifs !== undefined ? modifs : {
           email: cleanDeals[0].client_email,
           telephone: cleanDeals[0].client_phone,
           statut_pro: cleanDeals[0].client_statut_pro,
