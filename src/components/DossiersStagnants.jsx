@@ -17,6 +17,14 @@
 // Traiter une ligne la sort de la liste : ouvrir le dossier et le modifier
 // rafraîchit updated_at, l'abandonner change le statut.
 //
+// Depuis le 2 septembre, à la demande de Louis, le bloc porte une seconde
+// liste : les dossiers SIGNÉS dont la fiche client n'est pas finie. Un
+// dossier signé n'a plus rien à relancer, mais il laisse une obligation, la
+// fiche. Elle entre ici quand ni la signature ni la fiche n'ont bougé depuis
+// 21 jours, un seul geste : Compléter la fiche (onOpenClient). Sur une fiche
+// partagée, la ligne dit qui a saisi en dernier et quand, pour que le second
+// conseiller ne refasse pas ce que le premier a fait.
+//
 // Chez le manager, le même bloc, précédé du compte par conseiller en petites
 // puces, puis la liste de tout le cabinet. Aucun montant nulle part : on
 // compte des dossiers et des jours, jamais de la rémunération.
@@ -26,13 +34,20 @@
 // calcul vit dans lib/stagnants.js, testé à part.
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { confirmDialog } from './ui/confirm'
 import { jourISO } from '../lib/ma-journee'
-import { getClientName } from '../lib/ui-shared'
+import { getClientName, nomClient } from '../lib/ui-shared'
+import { dateCourte } from '../lib/completude'
+import { listerPourCompletude } from '../services/clients'
 import {
-  dossiersStagnants, dossiersStagnantsCabinet, stagnantsParConseiller, SEUIL_STAGNATION_JOURS,
+  dossiersStagnants, dossiersStagnantsCabinet, stagnantsParConseiller,
+  fichesSigneesSansMouvement, fichesSigneesParConseiller, SEUIL_STAGNATION_JOURS,
 } from '../lib/stagnants'
+
+// Au delà, la liste des fiches se replie : cent fiches d'un coup sur un
+// accueil ne se lisent pas, huit se traitent.
+const FICHES_VISIBLES = 8
 
 const Geste = ({ label, title, onClick }) => (
   <button className="btn btn-ghost btn-sm" title={title} style={{ padding: '2px 8px', fontSize: 11, flexShrink: 0 }}
@@ -58,10 +73,69 @@ const Ligne = ({ d, seuilJours, avecConseiller, onRelancer, onAbandonner }) => (
   </div>
 )
 
-export default function DossiersStagnants({ deals, profile, onEdit, onQuickPatch, seuilJours = SEUIL_STAGNATION_JOURS }) {
+// Qui a saisi la fiche en dernier, vu par la personne qui regarde. « Vous »
+// si c'est elle, le code du collègue sinon : c'est ce qui évite au second
+// conseiller de refaire ce que le premier a fait.
+const derniereSaisie = (f, code) => {
+  if (!f.majLe) return null
+  const quand = dateCourte(f.majLe)
+  if (!f.majPar) return `fiche modifiée le ${quand}`
+  if (code && f.majPar === code) return `vous avez saisi le ${quand}`
+  return `${f.majPar} a saisi le ${quand}`
+}
+
+// Une fiche de dossier signé à finir : client, conseiller, produit, date de
+// signature, complétude, et le co conseiller quand il y en a un.
+const LigneFiche = ({ f, seuilJours, avecConseiller, code, onCompleter }) => {
+  const autre = [f.deal.advisor_code, f.coConseiller].filter((c) => c && c !== code)
+  const partage = f.coConseiller
+    ? (avecConseiller ? `avec ${f.coConseiller}` : (autre[0] ? `avec ${autre[0]}` : null))
+    : null
+  const saisie = derniereSaisie(f, code)
+  const n = f.manquants.length
+  return (
+    <div className="priority-item" style={{ cursor: 'pointer' }} onClick={() => onCompleter(f)} title="Ouvrir la fiche client">
+      <div className={`priority-item-dot ${f.joursSansMouvement > seuilJours * 2 ? 'urgent' : 'high'}`} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="priority-item-client truncate">{nomClient(f.client)}</div>
+        <div className="priority-item-detail">
+          {avecConseiller && f.deal.advisor_code ? `${f.deal.advisor_code} · ` : ''}
+          {f.deal.product || 'Produit non renseigné'}
+          {f.nbDossiers > 1 ? ` (+${f.nbDossiers - 1})` : ''}
+          {f.signeLe ? ` · signé le ${dateCourte(f.signeLe)}` : ''}
+          {` · fiche à ${f.score} %, ${n} champ${n > 1 ? 's' : ''} manquant${n > 1 ? 's' : ''}`}
+          {` · ${f.joursSansMouvement} jours sans mouvement`}
+          {partage ? ` · ${partage}` : ''}
+          {saisie ? ` · ${saisie}` : ''}
+        </div>
+      </div>
+      <div style={{ display: 'inline-flex', gap: 2, marginLeft: 6 }}>
+        <Geste label="Compléter la fiche" title="Ouvrir la fiche client pour renseigner les champs manquants" onClick={() => onCompleter(f)} />
+      </div>
+    </div>
+  )
+}
+
+export default function DossiersStagnants({ deals, profile, onEdit, onQuickPatch, onOpenClient, clients: clientsFournis, seuilJours = SEUIL_STAGNATION_JOURS }) {
   const today = jourISO()
   const isManager = profile?.role === 'manager'
   const code = profile?.advisor_code
+
+  // Les fiches viennent du même service que le bloc « Compléter ces
+  // fiches » : la RLS rend au conseiller les siennes, à la direction toutes.
+  // Un appelant (test, harnais) peut les fournir directement.
+  const [clientsCharges, setClientsCharges] = useState([])
+  useEffect(() => {
+    if (clientsFournis) return undefined
+    let actif = true
+    listerPourCompletude()
+      .then((fiches) => { if (actif) setClientsCharges(fiches) })
+      // Sans fiches, la première liste s'affiche quand même : on ne bloque
+      // pas les dossiers en cours sur une panne de lecture des fiches.
+      .catch(() => {})
+    return () => { actif = false }
+  }, [clientsFournis])
+  const clients = clientsFournis || clientsCharges
 
   const liste = useMemo(() => (isManager
     ? dossiersStagnantsCabinet(deals, { today, seuilJours })
@@ -73,7 +147,18 @@ export default function DossiersStagnants({ deals, profile, onEdit, onQuickPatch
     : []),
   [deals, isManager, today, seuilJours])
 
-  if (!liste.length) return null
+  const fiches = useMemo(() => fichesSigneesSansMouvement(deals, clients, {
+    advisorCode: isManager ? null : code, today, seuilJours,
+  }), [deals, clients, isManager, code, today, seuilJours])
+
+  const repartitionFiches = useMemo(() => (isManager
+    ? fichesSigneesParConseiller(deals, clients, { today, seuilJours })
+    : []),
+  [deals, clients, isManager, today, seuilJours])
+
+  const [toutesLesFiches, setToutesLesFiches] = useState(false)
+
+  if (!liste.length && !fiches.length) return null
 
   const relancer = (d) => onEdit?.(d)
   // Confirmation d'abord (le passage en Annulé est confirmé partout
@@ -89,8 +174,13 @@ export default function DossiersStagnants({ deals, profile, onEdit, onQuickPatch
     if (!ok) return
     onQuickPatch?.(d, { status: 'Annulé' }, `Dossier abandonné · ${getClientName(d)}`, { undoable: true })
   }
+  const completer = (f) => onOpenClient?.(f.client.id)
 
   const n = liste.length
+  const nf = fiches.length
+  const fichesAffichees = toutesLesFiches ? fiches : fiches.slice(0, FICHES_VISIBLES)
+  const enCoConseil = fiches.filter((f) => f.coConseiller).length
+
   return (
     <div style={{ marginTop: 28 }}>
       <div className="section-header">
@@ -98,11 +188,15 @@ export default function DossiersStagnants({ deals, profile, onEdit, onQuickPatch
           <div className="section-kicker">{isManager ? 'Vue direction · à relancer ou à clore' : 'À relancer ou à clore'}</div>
           <div className="section-title">Dossiers sans mouvement</div>
           <div className="section-sub">
-            {n} dossier{n > 1 ? 's' : ''} depuis plus de {seuilJours} jours
-            {isManager && repartition.length > 0 ? ` · ${repartition.length} conseiller${repartition.length > 1 ? 's' : ''}` : ''}
+            {n > 0
+              ? <>{n} dossier{n > 1 ? 's' : ''} en cours depuis plus de {seuilJours} jours
+                {isManager && repartition.length > 0 ? ` · ${repartition.length} conseiller${repartition.length > 1 ? 's' : ''}` : ''}</>
+              : <>Aucun dossier en cours sans mouvement</>}
+            {nf > 0 ? ` · ${nf} fiche${nf > 1 ? 's' : ''} de dossier${nf > 1 ? 's' : ''} signé${nf > 1 ? 's' : ''} à compléter` : ''}
           </div>
         </div>
       </div>
+
       {isManager && repartition.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
           {repartition.map((r) => (
@@ -112,12 +206,50 @@ export default function DossiersStagnants({ deals, profile, onEdit, onQuickPatch
           ))}
         </div>
       )}
-      <div className="priorities-list">
-        {liste.map((d) => (
-          <Ligne key={d.id} d={d} seuilJours={seuilJours} avecConseiller={isManager}
-            onRelancer={relancer} onAbandonner={abandonner} />
-        ))}
-      </div>
+      {n > 0 && (
+        <div className="priorities-list">
+          {liste.map((d) => (
+            <Ligne key={d.id} d={d} seuilJours={seuilJours} avecConseiller={isManager}
+              onRelancer={relancer} onAbandonner={abandonner} />
+          ))}
+        </div>
+      )}
+
+      {nf > 0 && (
+        <div style={{ marginTop: n > 0 ? 18 : 0 }}>
+          <div className="section-header" style={{ marginBottom: 8 }}>
+            <div>
+              <div className="section-kicker">{isManager ? 'Vue direction · signés, fiche à finir' : 'Signés, fiche à finir'}</div>
+              <div className="section-sub">
+                {nf} fiche{nf > 1 ? 's' : ''} de dossier{nf > 1 ? 's' : ''} signé{nf > 1 ? 's' : ''} incomplète{nf > 1 ? 's' : ''}, sans saisie depuis plus de {seuilJours} jours
+                {enCoConseil > 0 ? ` · ${enCoConseil} en co conseil` : ''}
+                {isManager && repartitionFiches.length > 0 ? ` · ${repartitionFiches.length} conseiller${repartitionFiches.length > 1 ? 's' : ''}` : ''}
+              </div>
+            </div>
+          </div>
+          {isManager && repartitionFiches.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+              {repartitionFiches.map((r) => (
+                <span key={r.advisorCode} className="badge badge-normal" title={`La plus ancienne : ${r.plusAncienJours} jours sans mouvement`}>
+                  {r.advisorCode} · <span className="tnum">{r.nombre}</span>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="priorities-list">
+            {fichesAffichees.map((f) => (
+              <LigneFiche key={f.client.id} f={f} seuilJours={seuilJours} avecConseiller={isManager} code={code}
+                onCompleter={completer} />
+            ))}
+          </div>
+          {nf > FICHES_VISIBLES && (
+            <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 8 }}
+              onClick={() => setToutesLesFiches((v) => !v)}>
+              {toutesLesFiches ? `Replier, ne garder que les ${FICHES_VISIBLES} plus anciennes` : `Voir les ${nf - FICHES_VISIBLES} autres`}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }

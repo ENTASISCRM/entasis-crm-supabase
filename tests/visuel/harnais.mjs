@@ -34,8 +34,13 @@ export const CLIENTS = NOMS.map((n, i) => ({
   statut_pro: i === 5 ? 'TNS' : null, profession: null,
   revenus_annuels: null, patrimoine_estime: null, objectifs: null, notes: null,
   adresse: null, code_postal: null, ville: null,
-  advisor_code: i % 2 === 0 ? 'DEMO' : 'TEMO', co_advisor_code: null,
+  advisor_code: i % 2 === 0 ? 'DEMO' : 'TEMO',
+  // La fiche 1 est partagee et le co conseiller l a retouchee il y a 25
+  // jours : le bloc des dossiers signes doit le dire a l autre.
+  co_advisor_code: i === 1 ? 'DEMO' : null,
+  maj_par: i === 1 ? 'TEMO' : null,
   created_at: dateDuMois(0, 15),
+  updated_at: i === 1 ? new Date(Date.now() - 25 * 86400000).toISOString() : null,
 }))
 
 // Colonnes du join clients(...) que le service deals ramene avec chaque dossier

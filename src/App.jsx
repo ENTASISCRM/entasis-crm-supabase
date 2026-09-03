@@ -1628,8 +1628,9 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab,onQuickP
       {/* D3 : ce qui doit être fait aujourd'hui passe AVANT le reste. */}
       <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch}/>
       {/* C2 : les dossiers En cours sans mouvement depuis 21 jours, avec
-          Relancer (ouvre le dossier) et Abandonner (annulable). */}
-      <DossiersStagnants deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch}/>
+          Relancer (ouvre le dossier) et Abandonner (annulable). Et les
+          dossiers signes dont la fiche n est pas finie, a completer. */}
+      <DossiersStagnants deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch} onOpenClient={onOpenClient}/>
       {/* Completude : les fiches du conseiller a completer, champs
           manquants saisissables sans ouvrir la fiche. */}
       <FichesACompleter profile={profile} deals={deals} onOpenClient={onOpenClient}/>
@@ -1725,8 +1726,9 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onQ
       <div style={{marginBottom:24}}><Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded onOuvrirClient={onOpenClient}/></Suspense></div>
       <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch}/>
       {/* C2 : les dossiers En cours sans mouvement depuis 21 jours, avec
-          Relancer (ouvre le dossier) et Abandonner (annulable). */}
-      <DossiersStagnants deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch}/>
+          Relancer (ouvre le dossier) et Abandonner (annulable). Et les
+          dossiers signes dont la fiche n est pas finie, tout le cabinet. */}
+      <DossiersStagnants deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch} onOpenClient={onOpenClient}/>
       {/* La direction a aussi ses propres fiches (57 au 2 septembre) et ses
           cibles de campagne : memes blocs que le conseiller, filtres sur son
           code. Sans code conseiller, rien ne s'affiche. */}

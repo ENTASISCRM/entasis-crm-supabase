@@ -23,8 +23,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { jourISO } from '../lib/ma-journee'
-import { nomClient, messageErreur, STATUTS_PRO } from '../lib/ui-shared'
-import { prioriserFichesACompleter, scoreCompletude, SITUATIONS_FAMILIALES } from '../lib/completude'
+import { nomClient, messageErreur, STATUTS_PRO, jourDe } from '../lib/ui-shared'
+import { prioriserFichesACompleter, scoreCompletude, dateCourte, SITUATIONS_FAMILIALES } from '../lib/completude'
 import { listerPourCompletude, completerFiche } from '../services/clients'
 import JaugeCompletude from './clients/JaugeCompletude'
 import './clients/completude.css'
@@ -45,6 +45,20 @@ const SAISIES = {
 
 const EMAIL_PLAUSIBLE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const majuscule = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '')
+
+// Sur une fiche partagée, dire avec qui, et qui a saisi en dernier : le
+// second conseiller voit d'un coup d'oeil si le premier s'en est occupé.
+// maj_par est posé par déclencheur en base, updated_at aussi ; une fiche
+// jamais retouchée depuis sa création ne dit rien.
+const partageAvec = (f, code) => [f.advisor_code, f.co_advisor_code].find((c) => c && c !== code) || null
+const derniereSaisie = (f, code) => {
+  const saisieLe = jourDe(f.updated_at)
+  if (!saisieLe || saisieLe <= jourDe(f.created_at)) return null
+  const quand = dateCourte(saisieLe)
+  if (!f.maj_par) return `modifiée le ${quand}`
+  if (f.maj_par === code) return `vous avez saisi le ${quand}`
+  return `${f.maj_par} a saisi le ${quand}`
+}
 const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`
 
 function Champ({ cle, ficheId, valeur, onChange }) {
@@ -162,6 +176,8 @@ export default function FichesACompleter({ profile, deals, onOpenClient, limite 
                 <div className="priority-item-client truncate">{nomClient(f)}</div>
                 <div className="priority-item-detail">
                   {majuscule(f.raison)} · {pluriel(f.manquants.length, 'champ')} à renseigner
+                  {f.co_advisor_code && partageAvec(f, code) ? ` · avec ${partageAvec(f, code)}` : ''}
+                  {derniereSaisie(f, code) ? ` · ${derniereSaisie(f, code)}` : ''}
                 </div>
               </div>
               <JaugeCompletude client={f} compact />

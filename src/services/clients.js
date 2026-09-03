@@ -398,7 +398,7 @@ export async function listerPourCompletude() {
     // ordre indetermine et une fiche pouvait manquer ou apparaitre deux fois.
     const { data, error } = await supabase
       .from('clients')
-      .select('id, nom, prenom, email, telephone, date_naissance, age, situation_familiale, statut_pro, profession, revenus_annuels, patrimoine_estime, advisor_code, co_advisor_code, created_at')
+      .select('id, nom, prenom, email, telephone, date_naissance, age, situation_familiale, statut_pro, profession, revenus_annuels, patrimoine_estime, advisor_code, co_advisor_code, created_at, updated_at, maj_par')
       .order('nom', { ascending: true })
       .order('id', { ascending: true })
       .range(depart, depart + PAGE_COMPLETUDE - 1)

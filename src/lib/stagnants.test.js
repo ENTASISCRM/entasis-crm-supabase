@@ -147,3 +147,127 @@ describe('stagnantsParConseiller', () => {
     expect(stagnantsParConseiller(null, { today: TODAY })).toEqual([])
   })
 })
+
+// ─── Dossiers signés dont la fiche n'est pas finie ───────────────────────────
+import { fichesSigneesSansMouvement, fichesSigneesParConseiller } from './stagnants'
+
+const jourMoins = (jours) => {
+  const d = new Date(TODAY + 'T12:00:00+02:00')
+  d.setUTCDate(d.getUTCDate() - jours)
+  return d.toISOString().slice(0, 10)
+}
+// Une fiche incomplète (il manque revenus, patrimoine, date de naissance…),
+// créée il y a longtemps et jamais retouchée sauf indication contraire.
+const fiche = ({ id = 'c1', ...reste } = {}) => ({
+  id, nom: 'Camille Exemple', email: 'c@exemple.fr', telephone: '06 00 00 00 00',
+  statut_pro: 'TNS', profession: 'Architecte', advisor_code: 'DEMO', co_advisor_code: null,
+  created_at: jourMoins(400) + 'T09:00:00Z', updated_at: jourMoins(400) + 'T09:00:00Z', maj_par: null,
+  ...reste,
+})
+const complete = (o = {}) => fiche({
+  revenus_annuels: 50000, patrimoine_estime: 200000, date_naissance: '1980-01-01', situation_familiale: 'Marié', ...o,
+})
+const signe = ({ id = 's1', clientId = 'c1', jours = 40, ...reste } = {}) => ({
+  id, status: 'Signé', client_id: clientId, advisor_code: 'DEMO', co_advisor_code: null,
+  product: 'PER Individuel', date_signed: jourMoins(jours), updated_at: jourMoins(1) + 'T10:00:00Z', ...reste,
+})
+
+describe('fichesSigneesSansMouvement', () => {
+  it('remonte un dossier signé depuis longtemps dont la fiche est incomplète', () => {
+    const r = fichesSigneesSansMouvement([signe({ jours: 40 })], [fiche()], { today: TODAY })
+    expect(r).toHaveLength(1)
+    expect(r[0].joursSansMouvement).toBe(40)
+    expect(r[0].score).toBeLessThan(100)
+    expect(r[0].signeLe).toBe(jourMoins(40))
+    expect(r[0].deal.product).toBe('PER Individuel')
+  })
+
+  it('écarte une fiche complète, quel que soit son âge', () => {
+    expect(fichesSigneesSansMouvement([signe({ jours: 400 })], [complete()], { today: TODAY })).toHaveLength(0)
+  })
+
+  it('laisse 21 jours après la signature avant de réclamer la fiche', () => {
+    expect(fichesSigneesSansMouvement([signe({ jours: 21 })], [fiche()], { today: TODAY })).toHaveLength(0)
+    expect(fichesSigneesSansMouvement([signe({ jours: 22 })], [fiche()], { today: TODAY })).toHaveLength(1)
+  })
+
+  it('une saisie récente sur la fiche est un mouvement, même si la signature est vieille', () => {
+    const f = fiche({ updated_at: jourMoins(5) + 'T09:00:00Z' })
+    expect(fichesSigneesSansMouvement([signe({ jours: 90 })], [f], { today: TODAY })).toHaveLength(0)
+  })
+
+  it('ignore l updated_at du dossier : la migration du 25 août l a remis à neuf partout', () => {
+    const d = signe({ jours: 60, updated_at: jourMoins(0) + 'T10:00:00Z' })
+    expect(fichesSigneesSansMouvement([d], [fiche()], { today: TODAY })).toHaveLength(1)
+  })
+
+  it('n inclut ni les dossiers en cours, ni les annulés, ni ceux sans fiche', () => {
+    const deals = [
+      signe({ id: 'e', status: 'En cours' }),
+      signe({ id: 'a', status: 'Annulé' }),
+      signe({ id: 'x', clientId: 'inconnu' }),
+    ]
+    expect(fichesSigneesSansMouvement(deals, [fiche()], { today: TODAY })).toHaveLength(0)
+  })
+
+  it('une ligne par client : deux dossiers signés, une seule fiche, le plus récent porte le produit', () => {
+    const deals = [
+      signe({ id: 'ancien', jours: 200, product: 'SCPI' }),
+      signe({ id: 'recent', jours: 40, product: 'Assurance Vie Française' }),
+    ]
+    const r = fichesSigneesSansMouvement(deals, [fiche()], { today: TODAY })
+    expect(r).toHaveLength(1)
+    expect(r[0].nbDossiers).toBe(2)
+    expect(r[0].deal.id).toBe('recent')
+    expect(r[0].joursSansMouvement).toBe(40)
+  })
+
+  it('filtre sur le conseiller : principal, co conseiller du dossier ou de la fiche', () => {
+    const deals = [signe({ id: 'p', clientId: 'c1' }), signe({ id: 'co', clientId: 'c2', advisor_code: 'AUTRE', co_advisor_code: 'DEMO' }), signe({ id: 'n', clientId: 'c3', advisor_code: 'AUTRE' })]
+    const fiches = [fiche({ id: 'c1' }), fiche({ id: 'c2', advisor_code: 'AUTRE' }), fiche({ id: 'c3', advisor_code: 'AUTRE' })]
+    const ids = fichesSigneesSansMouvement(deals, fiches, { advisorCode: 'DEMO', today: TODAY }).map((f) => f.client.id)
+    expect(ids.sort()).toEqual(['c1', 'c2'])
+    const viaFiche = fichesSigneesSansMouvement([signe({ id: 'n', clientId: 'c3', advisor_code: 'AUTRE' })], [fiche({ id: 'c3', advisor_code: 'AUTRE', co_advisor_code: 'DEMO' })], { advisorCode: 'DEMO', today: TODAY })
+    expect(viaFiche).toHaveLength(1)
+  })
+
+  it('dit qui a saisi la fiche en dernier, et quand, seulement si elle a bougé depuis sa création', () => {
+    const jamaisTouchee = fichesSigneesSansMouvement([signe({ jours: 40 })], [fiche({ maj_par: 'DEMO' })], { today: TODAY })
+    expect(jamaisTouchee[0].majLe).toBeNull()
+    expect(jamaisTouchee[0].majPar).toBe('DEMO')
+
+    const touchee = fichesSigneesSansMouvement(
+      [signe({ jours: 60, co_advisor_code: 'VICTOR' })],
+      [fiche({ updated_at: jourMoins(30) + 'T09:00:00Z', maj_par: 'VICTOR' })],
+      { today: TODAY },
+    )
+    expect(touchee[0].majLe).toBe(jourMoins(30))
+    expect(touchee[0].majPar).toBe('VICTOR')
+    expect(touchee[0].coConseiller).toBe('VICTOR')
+    // Le mouvement le plus récent est la saisie de VICTOR, pas la signature.
+    expect(touchee[0].joursSansMouvement).toBe(30)
+  })
+
+  it('classe du plus ancien mouvement au plus récent, puis la fiche la plus vide d abord', () => {
+    const deals = [signe({ id: 'a', clientId: 'c1', jours: 30 }), signe({ id: 'b', clientId: 'c2', jours: 90 }), signe({ id: 'c', clientId: 'c3', jours: 30 })]
+    const fiches = [fiche({ id: 'c1' }), fiche({ id: 'c2' }), fiche({ id: 'c3', email: null, telephone: null })]
+    const ids = fichesSigneesSansMouvement(deals, fiches, { today: TODAY }).map((f) => f.client.id)
+    expect(ids).toEqual(['c2', 'c3', 'c1'])
+  })
+})
+
+describe('fichesSigneesParConseiller', () => {
+  it('compte une fiche pour le conseiller principal de son dossier', () => {
+    const deals = [
+      signe({ id: 'a', clientId: 'c1', advisor_code: 'DEMO', co_advisor_code: 'AUTRE' }),
+      signe({ id: 'b', clientId: 'c2', advisor_code: 'AUTRE', jours: 80 }),
+      signe({ id: 'c', clientId: 'c3', advisor_code: 'AUTRE' }),
+    ]
+    const fiches = [fiche({ id: 'c1' }), fiche({ id: 'c2' }), fiche({ id: 'c3' })]
+    const r = fichesSigneesParConseiller(deals, fiches, { today: TODAY })
+    expect(r).toEqual([
+      { advisorCode: 'AUTRE', nombre: 2, plusAncienJours: 80 },
+      { advisorCode: 'DEMO', nombre: 1, plusAncienJours: 40 },
+    ])
+  })
+})

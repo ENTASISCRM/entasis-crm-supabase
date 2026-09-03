@@ -27,6 +27,7 @@
 import { jourDe } from './ui-shared'
 import { dealMatchesAdvisor } from './metrics'
 import { jourISO } from './ma-journee'
+import { scoreCompletude } from './completude'
 
 export const SEUIL_STAGNATION_JOURS = 21
 
@@ -105,6 +106,105 @@ export function stagnantsParConseiller(deals, { today = jourISO(), seuilJours = 
     const ligne = parCode.get(code) || { advisorCode: code, nombre: 0, plusAncienJours: 0 }
     ligne.nombre += 1
     ligne.plusAncienJours = Math.max(ligne.plusAncienJours, d.joursSansMouvement)
+    parCode.set(code, ligne)
+  }
+  return [...parCode.values()].sort((a, b) => (b.nombre - a.nombre)
+    || (b.plusAncienJours - a.plusAncienJours)
+    || a.advisorCode.localeCompare(b.advisorCode))
+}
+
+// ─── Dossiers signés dont la fiche n'est pas finie ───────────────────────────
+// Demande de Louis du 2 septembre : un dossier signé n'a plus rien à relancer,
+// mais il laisse une obligation, la fiche client. Ce jour là, 114 fiches de
+// dossiers signés étaient incomplètes, 100 sans mouvement depuis plus de
+// 21 jours, 42 en co conseil où chacun pouvait croire l'autre dessus.
+//
+// Ce qui compte comme mouvement pour un dossier signé : la signature elle
+// même, puis chaque modification de la fiche (clients.updated_at, posé par
+// déclencheur). L'updated_at du dossier n'entre pas dans le calcul : la
+// migration du 25 août l'a remis à neuf sur 159 dossiers, et il ne dit rien
+// de la fiche. Une fiche complète ne sort jamais ici, quel que soit son âge.
+//
+// Une ligne par CLIENT, pas par dossier : un client multi équipé a plusieurs
+// dossiers signés et une seule fiche à finir. Le dossier le plus récent porte
+// le produit et le conseiller.
+
+const joursDepuis = (jour, today) => {
+  if (!jour) return 0
+  const ms = new Date(today + 'T00:00:00') - new Date(jour + 'T00:00:00')
+  if (Number.isNaN(ms)) return 0
+  return Math.max(0, Math.round(ms / 86400000))
+}
+
+const ficheDuConseiller = (deal, client, code) =>
+  dealMatchesAdvisor(deal, code) || client?.advisor_code === code || client?.co_advisor_code === code
+
+/**
+ * Les fiches de dossiers signés qui restent à compléter, sans mouvement
+ * depuis plus de seuilJours (ni signature, ni saisie sur la fiche).
+ *
+ * @param {Array}  deals    tous les dossiers visibles
+ * @param {Array}  clients  les fiches (listerPourCompletude), avec updated_at, created_at, maj_par
+ * @param {Object} opts     { advisorCode (null = tout le cabinet), today, seuilJours }
+ * @returns {Array<{client, deal, nbDossiers, joursSansMouvement, score, manquants, signeLe, coConseiller, majPar, majLe}>}
+ *   du plus ancien mouvement au plus récent, puis la fiche la plus vide d'abord
+ */
+export function fichesSigneesSansMouvement(deals, clients, { advisorCode = null, today = jourISO(), seuilJours = SEUIL_STAGNATION_JOURS } = {}) {
+  const parId = new Map((Array.isArray(clients) ? clients : []).filter((c) => c && c.id).map((c) => [c.id, c]))
+  if (!parId.size) return []
+
+  const parClient = new Map()
+  for (const d of (Array.isArray(deals) ? deals : [])) {
+    if (!d || d.status !== 'Signé' || !d.client_id || !parId.has(d.client_id)) continue
+    const liste = parClient.get(d.client_id) || []
+    liste.push(d)
+    parClient.set(d.client_id, liste)
+  }
+
+  const out = []
+  for (const [clientId, dossiers] of parClient) {
+    const client = parId.get(clientId)
+    const { score, manquants } = scoreCompletude(client)
+    if (score >= 100) continue
+
+    dossiers.sort((a, b) => String(jourDe(b.date_signed)).localeCompare(String(jourDe(a.date_signed))))
+    const deal = dossiers[0]
+    if (advisorCode && !ficheDuConseiller(deal, client, advisorCode)) continue
+
+    const signeLe = jourDe(deal.date_signed) || null
+    const creeLe = jourDe(client.created_at)
+    const saisieLe = jourDe(client.updated_at)
+    // La fiche n'a « bougé » que si elle a été modifiée après sa création.
+    const majLe = saisieLe && saisieLe > creeLe ? saisieLe : null
+    const dernierMouvement = [signeLe, majLe].filter(Boolean).sort().pop() || saisieLe || creeLe
+    const jours = joursDepuis(dernierMouvement, today)
+    if (jours <= seuilJours) continue
+
+    out.push({
+      client, deal, nbDossiers: dossiers.length,
+      joursSansMouvement: jours, score, manquants, signeLe,
+      coConseiller: String(deal.co_advisor_code || client.co_advisor_code || '').trim() || null,
+      majPar: String(client.maj_par || '').trim() || null,
+      majLe,
+    })
+  }
+
+  return out.sort((a, b) => (b.joursSansMouvement - a.joursSansMouvement)
+    || (a.score - b.score)
+    || String(a.client.nom || '').localeCompare(String(b.client.nom || ''), 'fr'))
+}
+
+/**
+ * Répartition par conseiller principal du dossier, pour la direction. Même
+ * règle que stagnantsParConseiller : une fiche compte une fois.
+ */
+export function fichesSigneesParConseiller(deals, clients, { today = jourISO(), seuilJours = SEUIL_STAGNATION_JOURS } = {}) {
+  const parCode = new Map()
+  for (const f of fichesSigneesSansMouvement(deals, clients, { today, seuilJours })) {
+    const code = String(f.deal.advisor_code || '').trim() || 'Sans code'
+    const ligne = parCode.get(code) || { advisorCode: code, nombre: 0, plusAncienJours: 0 }
+    ligne.nombre += 1
+    ligne.plusAncienJours = Math.max(ligne.plusAncienJours, f.joursSansMouvement)
     parCode.set(code, ligne)
   }
   return [...parCode.values()].sort((a, b) => (b.nombre - a.nombre)
