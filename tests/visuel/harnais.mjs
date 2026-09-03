@@ -47,7 +47,7 @@ export const CLIENTS = NOMS.map((n, i) => ({
 const jointureClient = (c) => ({
   id: c.id, nom: c.nom, prenom: c.prenom, email: c.email, telephone: c.telephone,
   age: c.age, situation_familiale: c.situation_familiale, nb_enfants: c.nb_enfants,
-  profession: c.profession, revenus_annuels: c.revenus_annuels,
+  profession: c.profession, statut_pro: c.statut_pro, revenus_annuels: c.revenus_annuels,
   patrimoine_estime: c.patrimoine_estime, objectifs: c.objectifs, notes: c.notes,
   advisor_code: c.advisor_code, co_advisor_code: c.co_advisor_code,
 })
@@ -197,6 +197,15 @@ export const EQUIPE = {
   manager: [PROFIL_MANAGER, { ...PROFIL_CONSEILLER, id: 'u-conseiller', email: 'conseiller@exemple.fr' }, AUTRE_CONSEILLER],
   rh: [PROFIL_RH, { ...PROFIL_CONSEILLER, id: 'u-conseiller', email: 'conseiller@exemple.fr' }, AUTRE_CONSEILLER],
 }
+
+// La fiche 3 est complete : c est celle du premier dossier sans mouvement de
+// la vue direction, ouvert par « Deja signe ». La capture doit montrer la
+// modale prete a signer, statut, profession, revenus et patrimoine precharges
+// depuis la fiche, et non quatre champs vides.
+Object.assign(CLIENTS[3], {
+  email: 'exemple3@demo.fr', statut_pro: 'Salarié', profession: 'Ingénieure',
+  revenus_annuels: 62000, patrimoine_estime: 180000,
+})
 
 export const CONTRAT = { id: 'k1', profile_id: 'u-demo', type_contrat: 'CDI', date_debut: `${ANNEE}-01-01`, date_fin: null, palier_pp_mensuel: 2500, palier_pu_mensuel: 5000, actif: true }
 

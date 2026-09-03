@@ -7,12 +7,14 @@
 
 import { supabase } from '../lib/supabase'
 import { verifierEcriture, MOTIF_PROPRIETE } from '../lib/ecriture-verifiee'
+import { nettoyerPourEcriture } from '../lib/colonnes-deals'
+import { logger } from '../lib/logger'
 
 // Colonnes du client à charger en join sur tous les SELECT de deals.
 // Centralisé ici pour éviter le drift entre call-sites.
 const CLIENT_JOIN_COLS = `
   id, nom, prenom, email, telephone, age,
-  situation_familiale, nb_enfants, profession,
+  situation_familiale, nb_enfants, profession, statut_pro,
   revenus_annuels, patrimoine_estime, objectifs,
   notes, advisor_code, co_advisor_code
 `
@@ -67,22 +69,33 @@ export async function getById(dealId) {
 /**
  * Met à jour un deal existant. Le caller passe l'objet complet.
  */
-// Champs UI transitoires portés par l'objet deal pour saisir/compléter la fiche
-// CLIENT (statut, profession, revenus, patrimoine). Ils ne sont PAS des colonnes
-// de `deals` : on les retire avant tout write pour éviter un 400 PostgREST. La
-// persistance de ces infos se fait sur la table `clients` (updateInfoIfProvided).
-const CLIENT_UI_ONLY = ['client_statut_pro', 'client_profession', 'client_revenus', 'client_patrimoine']
-function stripClientUiOnly(obj) {
-  const out = { ...obj }
-  for (const k of CLIENT_UI_ONLY) delete out[k]
-  return out
+// Un dossier circule à l'écran enrichi de clés qui ne sont pas des colonnes
+// (jointure clients, champs client_* de la modale, joursSansMouvement du bloc
+// sans mouvement, heureRdv de Ma journée…). PostgREST refuse la première
+// inconnue d un 400 et rien ne s écrit. On ne garde que les colonnes de deals,
+// liste tenue dans lib/colonnes-deals.js, testée à part.
+// Cles que les ecrans accrochent au dossier et qu on s attend a ecarter. Une
+// cle hors de cette liste est probablement une colonne ajoutee en base et
+// oubliee dans COLONNES_DEALS : la saisie serait perdue en silence, on le dit
+// dans la console meme en production.
+const CLES_ECRAN = new Set(['clients', 'client_data', 'client_fiche_modifs', '_localId',
+  'client_statut_pro', 'client_profession', 'client_revenus', 'client_patrimoine',
+  'joursSansMouvement', 'heureRdv'])
+function pourEcriture(objet, quoi) {
+  const { patch, ecartes } = nettoyerPourEcriture(objet)
+  if (ecartes.length) {
+    const inattendues = ecartes.filter((k) => !CLES_ECRAN.has(k))
+    if (inattendues.length) console.warn(`[deals] ${quoi} : clés inconnues écartées, colonne oubliée dans COLONNES_DEALS ?`, inattendues)
+    else logger.debug(`[deals] ${quoi} : clés d écran écartées`, ecartes)
+  }
+  return patch
 }
 
 export async function update(dealId, patch) {
   // .select('id') obligatoire : sans lui, une ligne refusee par la RLS
   // (dossier d un autre conseiller) repond 204 sans erreur et l ecran
   // affiche « Dossier mis a jour » alors que rien n a bouge.
-  const reponse = await supabase.from('deals').update(stripClientUiOnly(patch)).eq('id', dealId).select('id')
+  const reponse = await supabase.from('deals').update(pourEcriture(patch, 'mise à jour')).eq('id', dealId).select('id')
   verifierEcriture(reponse, 'Enregistrement du dossier', MOTIF_PROPRIETE)
 }
 
@@ -91,7 +104,7 @@ export async function update(dealId, patch) {
  */
 export async function create(deal) {
   const newId = deal.id || `D-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-  const { error } = await supabase.from('deals').insert({ ...stripClientUiOnly(deal), id: newId })
+  const { error } = await supabase.from('deals').insert({ ...pourEcriture(deal, 'création'), id: newId })
   if (error) throw error
   return newId
 }

@@ -30,7 +30,7 @@ Trois commandes, dans cet ordre. Aucune ne doit régresser :
 
 ```
 npx eslint src/          # un avertissement préexistant, zéro erreur attendue
-npx vitest run           # 677 tests
+npx vitest run           # 695 tests
 npx vite build
 ```
 
@@ -106,7 +106,7 @@ relecture. Tout ce qui suit est en ligne sur main.
   d'une liste figée qui confondait les conseillers.
 * **Le nom d'un profil est mis au propre à sa création** (fonction SQL
   `normaliser_nom_complet`, appelée par `handle_new_user`).
-* **Un contrôle visuel automatique** joue vingt et un écrans à chaque pull
+* **Un contrôle visuel automatique** joue vingt deux écrans à chaque pull
   request (voir plus bas).
 * La fiche client affiche à nouveau tous ses champs (les sections
   repliables s'appellent `form-pliable`, le nom générique `form-section`
@@ -215,7 +215,7 @@ Ce que l'audit a mis en évidence sans correctif de code :
 ### Ce qui reste ouvert
 
 * **Contrôle visuel automatique** : en place. `npm run test:visuel` joue
-  vingt et un écrans avec une session simulée et des données fictives
+  vingt deux écrans avec une session simulée et des données fictives
   (`tests/visuel/`), et le workflow `controle-visuel.yml` le rejoue à
   chaque pull request en déposant les captures en artefact. En local, il
   faut un serveur `vite preview` sur le port 4173 et Chromium (variable
@@ -311,6 +311,31 @@ sans mouvement depuis plus de 21 jours, 42 en co conseil.
   dossier signé.
 * **Huit fiches visibles, les autres repliées** derrière « Voir les N
   autres » : cent fiches d'un coup sur un accueil ne se lisent pas.
+* **Deux gestes de plus sur un dossier en cours**, à gauche de Relancer et
+  Abandonner. « Déjà signé » ouvre le dossier en Signé, même chemin que le
+  kanban : la modale exige la date et la fiche complète, jamais de passage
+  en Signé d'un clic. « Toujours en cours » marque le dossier vu : il reste
+  en cours, sort de la liste et n'y revient qu'après 21 jours sans mouvement
+  (la règle est « plus de 21 », donc le 22e jour). La direction a les mêmes
+  gestes sur tout le cabinet ; sur le dossier d'un autre, « Toujours en
+  cours » demande confirmation, car il sort aussi le dossier de l'accueil du
+  conseiller titulaire.
+* **Une écriture sur `deals` ne porte que des colonnes de `deals`.**
+  `dealsService.update` et `create` passent par `nettoyerPourEcriture`
+  (`src/lib/colonnes-deals.js`), une liste blanche des colonnes. Avant, un
+  dossier enrichi par un écran (`joursSansMouvement` du bloc sans mouvement,
+  `heureRdv` de Ma journée) partait tel quel dans le PATCH et PostgREST le
+  refusait (400 PGRST204) : Relancer depuis le bloc ne pouvait pas
+  enregistrer. Une colonne ajoutée en base doit être ajoutée à la liste.
+* **La modale dossier lit la fiche à l'ouverture, et ne réécrit sur la
+  fiche que ce qui a changé.** Sur un dossier existant, elle va chercher la
+  fiche en base (pas la jointure chargée à la connexion, qui peut être
+  périmée) pour préremplir email, téléphone, statut, profession, revenus et
+  patrimoine quand ils sont vides ; à l'enregistrement, seuls les champs
+  modifiés par rapport à cette lecture repartent vers la fiche
+  (`modifsFiche`, `src/lib/fiche-dossier.js`). Sans cela, chaque
+  Enregistrer réécrivait la fiche avec de vieilles valeurs et retamponnait
+  `updated_at` et `maj_par` sans saisie réelle.
 * **Qui a saisi la fiche en dernier.** Colonne `clients.maj_par`, posée par
   le déclencheur `trg_clients_maj_par` depuis `current_advisor_code()`,
   jamais par le navigateur. Sur une fiche partagée, la ligne dit « avec

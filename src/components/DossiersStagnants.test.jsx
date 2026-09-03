@@ -40,11 +40,17 @@ describe('DossiersStagnants (fumée)', () => {
     expect(html).toContain('Relancer')
     expect(html).toContain('Abandonner')
     expect(html).not.toContain('fiche à finir')
+    // Les deux gestes de plus, à gauche de Relancer.
+    expect(html.indexOf('Déjà signé')).toBeLessThan(html.indexOf('Toujours en cours'))
+    expect(html.indexOf('Toujours en cours')).toBeLessThan(html.indexOf('Relancer'))
+    expect(html).toContain('après 21 jours sans mouvement')
   })
 
   it('manager : répartition en puces puis tout le cabinet', () => {
     const html = renderToStaticMarkup(<DossiersStagnants deals={deals} clients={[]} profile={{ advisor_code: 'LH', role: 'manager' }} />)
     expect(html).toContain('2 dossiers en cours depuis plus de 21 jours · 2 conseillers')
+    expect(html).toContain('Déjà signé')
+    expect(html).toContain('Toujours en cours')
     expect(html).toContain('badge badge-normal')
     expect(html).toContain('AUTRE · ')
     expect(html).toContain('DEMO · ')
@@ -67,6 +73,8 @@ describe('DossiersStagnants (fumée)', () => {
     expect(html).toContain('VICTOR a saisi le')
     expect(html).toContain('Compléter la fiche')
     expect(html).not.toContain('Abandonner')
+    expect(html).not.toContain('Déjà signé')
+    expect(html).not.toContain('Toujours en cours')
     expect(html).toContain('Aucun dossier en cours sans mouvement')
   })
 
