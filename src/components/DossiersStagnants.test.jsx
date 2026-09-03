@@ -40,6 +40,10 @@ describe('DossiersStagnants (fumée)', () => {
     expect(html).toContain('Relancer')
     expect(html).toContain('Abandonner')
     expect(html).not.toContain('fiche à finir')
+    // Les deux gestes de plus, à gauche de Relancer.
+    expect(html.indexOf('Déjà signé')).toBeLessThan(html.indexOf('Toujours en cours'))
+    expect(html.indexOf('Toujours en cours')).toBeLessThan(html.indexOf('Relancer'))
+    expect(html).toContain('sort de cette liste pour 21 jours')
   })
 
   it('manager : répartition en puces puis tout le cabinet', () => {
@@ -67,6 +71,8 @@ describe('DossiersStagnants (fumée)', () => {
     expect(html).toContain('VICTOR a saisi le')
     expect(html).toContain('Compléter la fiche')
     expect(html).not.toContain('Abandonner')
+    expect(html).not.toContain('Déjà signé')
+    expect(html).not.toContain('Toujours en cours')
     expect(html).toContain('Aucun dossier en cours sans mouvement')
   })
 

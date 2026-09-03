@@ -7,12 +7,18 @@
 // même en retard, est déjà dans la file du matin) et personne n'y a touché.
 // Ce bloc le remet sous les yeux du conseiller avec deux gestes :
 //
-//   Relancer    ouvre le dossier (onEdit), le conseiller pose une action
-//   Abandonner  passe le statut à « Annulé » (onQuickPatch) après
-//               confirmation, comme partout ailleurs ; le toast permet de
-//               revenir en arrière, mais updated_at ayant bougé, le dossier
-//               ne réapparaîtra ici que 21 jours plus tard : d'où la
-//               confirmation avant le geste
+//   Déjà signé         ouvre le dossier en Signé (onEdit), même chemin que le
+//                      kanban : la modale exige la date de signature et la
+//                      fiche client complète (verrou du 13 juillet). Jamais
+//                      de passage en Signé d'un clic.
+//   Toujours en cours  le dossier avance, rien à poser : on le marque vu, il
+//                      sort de la liste et n'y revient que 21 jours plus tard
+//   Relancer           ouvre le dossier (onEdit), le conseiller pose une action
+//   Abandonner         passe le statut à « Annulé » (onQuickPatch) après
+//                      confirmation, comme partout ailleurs ; le toast permet
+//                      de revenir en arrière, mais updated_at ayant bougé, le
+//                      dossier ne réapparaîtra ici que 21 jours plus tard :
+//                      d'où la confirmation avant le geste
 //
 // Traiter une ligne la sort de la liste : ouvrir le dossier et le modifier
 // rafraîchit updated_at, l'abandonner change le statut.
@@ -56,7 +62,7 @@ const Geste = ({ label, title, onClick }) => (
 
 // Une ligne : client, produit, ancienneté, deux gestes. Le point passe en
 // rouge au double du seuil, le dossier est alors vraiment perdu de vue.
-const Ligne = ({ d, seuilJours, avecConseiller, onRelancer, onAbandonner }) => (
+const Ligne = ({ d, seuilJours, avecConseiller, onSigner, onGarderEnCours, onRelancer, onAbandonner }) => (
   <div className="priority-item" style={{ cursor: 'pointer' }} onClick={() => onRelancer(d)} title="Ouvrir le dossier">
     <div className={`priority-item-dot ${d.joursSansMouvement > seuilJours * 2 ? 'urgent' : 'high'}`} />
     <div style={{ flex: 1, minWidth: 0 }}>
@@ -67,6 +73,8 @@ const Ligne = ({ d, seuilJours, avecConseiller, onRelancer, onAbandonner }) => (
       </div>
     </div>
     <div style={{ display: 'inline-flex', gap: 2, marginLeft: 6 }}>
+      <Geste label="Déjà signé" title="Le dossier est signé : l ouvre en Signé pour poser la date de signature (la fiche client doit être complète)" onClick={() => onSigner(d)} />
+      <Geste label="Toujours en cours" title={`Le dossier avance : il reste en cours et sort de cette liste pour ${seuilJours} jours`} onClick={() => onGarderEnCours(d)} />
       <Geste label="Relancer" title="Ouvrir le dossier pour poser une relance" onClick={() => onRelancer(d)} />
       <Geste label="Abandonner" title="Passer le dossier en Annulé (annulable)" onClick={() => onAbandonner(d)} />
     </div>
@@ -161,6 +169,19 @@ export default function DossiersStagnants({ deals, profile, onEdit, onQuickPatch
   if (!liste.length && !fiches.length) return null
 
   const relancer = (d) => onEdit?.(d)
+  // Même chemin que le kanban quand on glisse un dossier en Signé : la modale
+  // s'ouvre en Signé, elle exige la date de signature et la fiche client
+  // complète. C'est elle qui tient le verrou, pas ce bloc.
+  const signer = (d) => onEdit?.({ ...d, status: 'Signé' })
+  // Le dossier avance mais rien n'est à poser : on le marque vu. En base, le
+  // déclencheur remet updated_at à l'instant de l'écriture ; on le pose aussi
+  // en local pour que la ligne sorte tout de suite, sans rechargement. Pas
+  // d'annulation : la seule conséquence est un retour ici dans 21 jours.
+  const garderEnCours = (d) => onQuickPatch?.(
+    d,
+    { status: 'En cours', updated_at: new Date().toISOString() },
+    `Dossier gardé en cours · ${getClientName(d)} · il reviendra ici sans mouvement dans ${seuilJours} jours`,
+  )
   // Confirmation d'abord (le passage en Annulé est confirmé partout
   // ailleurs), puis écriture optimiste et annulable : quickPatchDeal
   // restaure l'ancien statut depuis le toast, même filet que le kanban.
@@ -210,7 +231,7 @@ export default function DossiersStagnants({ deals, profile, onEdit, onQuickPatch
         <div className="priorities-list">
           {liste.map((d) => (
             <Ligne key={d.id} d={d} seuilJours={seuilJours} avecConseiller={isManager}
-              onRelancer={relancer} onAbandonner={abandonner} />
+              onSigner={signer} onGarderEnCours={garderEnCours} onRelancer={relancer} onAbandonner={abandonner} />
           ))}
         </div>
       )}

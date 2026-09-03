@@ -311,6 +311,11 @@ sans mouvement depuis plus de 21 jours, 42 en co conseil.
   dossier signé.
 * **Huit fiches visibles, les autres repliées** derrière « Voir les N
   autres » : cent fiches d'un coup sur un accueil ne se lisent pas.
+* **Deux gestes de plus sur un dossier en cours**, à gauche de Relancer et
+  Abandonner. « Déjà signé » ouvre le dossier en Signé, même chemin que le
+  kanban : la modale exige la date et la fiche complète, jamais de passage
+  en Signé d'un clic. « Toujours en cours » marque le dossier vu : il reste
+  en cours, sort de la liste et n'y revient que 21 jours plus tard.
 * **Qui a saisi la fiche en dernier.** Colonne `clients.maj_par`, posée par
   le déclencheur `trg_clients_maj_par` depuis `current_advisor_code()`,
   jamais par le navigateur. Sur une fiche partagée, la ligne dit « avec

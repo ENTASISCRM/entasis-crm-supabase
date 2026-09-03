@@ -3602,6 +3602,20 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
     if (!enriched.advisor_code && profile?.advisor_code) {
       enriched.advisor_code = profile.advisor_code
     }
+    // Dossier existant rattaché à une fiche : la data structurée de la fiche
+    // préremplit les champs client (éditables). Sans cela, passer un dossier
+    // en Signé depuis le kanban ou depuis « Déjà signé » butait sur le verrou
+    // de signature qui réclamait statut, profession, revenus et patrimoine
+    // déjà renseignés sur la fiche. On ne touche qu'aux champs vides.
+    const fiche = initialDeal.created_at ? initialDeal.clients : null
+    if (fiche) {
+      if (!enriched.client_email && fiche.email) enriched.client_email = fiche.email
+      if (!enriched.client_phone && fiche.telephone) enriched.client_phone = fiche.telephone
+      if (enriched.client_statut_pro == null) enriched.client_statut_pro = fiche.statut_pro || ''
+      if (enriched.client_profession == null) enriched.client_profession = fiche.profession || ''
+      if (enriched.client_revenus == null) enriched.client_revenus = fiche.revenus_annuels ?? ''
+      if (enriched.client_patrimoine == null) enriched.client_patrimoine = fiche.patrimoine_estime ?? ''
+    }
     setDeal(enriched)
     // B3 — réouverture : repartir propre. Saisie non modifiée, mode express
     // pour une création / complet en édition, et produits réinitialisés

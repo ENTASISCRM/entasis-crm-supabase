@@ -12,7 +12,7 @@ import { verifierEcriture, MOTIF_PROPRIETE } from '../lib/ecriture-verifiee'
 // Centralisé ici pour éviter le drift entre call-sites.
 const CLIENT_JOIN_COLS = `
   id, nom, prenom, email, telephone, age,
-  situation_familiale, nb_enfants, profession,
+  situation_familiale, nb_enfants, profession, statut_pro,
   revenus_annuels, patrimoine_estime, objectifs,
   notes, advisor_code, co_advisor_code
 `

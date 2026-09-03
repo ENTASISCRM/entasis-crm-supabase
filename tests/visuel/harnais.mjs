@@ -47,7 +47,7 @@ export const CLIENTS = NOMS.map((n, i) => ({
 const jointureClient = (c) => ({
   id: c.id, nom: c.nom, prenom: c.prenom, email: c.email, telephone: c.telephone,
   age: c.age, situation_familiale: c.situation_familiale, nb_enfants: c.nb_enfants,
-  profession: c.profession, revenus_annuels: c.revenus_annuels,
+  profession: c.profession, statut_pro: c.statut_pro, revenus_annuels: c.revenus_annuels,
   patrimoine_estime: c.patrimoine_estime, objectifs: c.objectifs, notes: c.notes,
   advisor_code: c.advisor_code, co_advisor_code: c.co_advisor_code,
 })
