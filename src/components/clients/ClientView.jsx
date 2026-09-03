@@ -10,6 +10,7 @@ import ClientModal from './ClientModal.jsx'
 import ClientEquipementCard from './ClientEquipementCard.jsx'
 import ClientContratsCard from './ClientContratsCard.jsx'
 import ClientEspaceCard from './ClientEspaceCard.jsx'
+import ClientLeadRoomCard from './ClientLeadRoomCard.jsx'
 import ClientTimeline from './ClientTimeline.jsx'
 import { partenaireDe, etapeDe } from '../../config/partenairesImmo'
 import { origineClient } from '../../lib/origine-client'
@@ -761,6 +762,10 @@ export default function ClientView({ clientId, onBack, supabase, profile, onEdit
 
       {/* Section Equipement : familles detenues, absences et suggestion */}
       <ClientEquipementCard clientId={client.id} client={client} supabase={supabase} />
+
+      {/* Section Origine : d ou vient la personne cote Lead Room et ce qui a
+          ete tente avant la signature. Ne s affiche que si elle y est connue. */}
+      <ClientLeadRoomCard client={client} />
       </>)}
 
       {/* Section Espace client : acces portail + documents partages */}
