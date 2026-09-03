@@ -1085,7 +1085,65 @@ const LEAD_ROOM_URL = 'https://entasis-leadroom.vercel.app/leadroom'
 
 function LeadRoomEmbed(){
   const [embedded,setEmbedded] = useState(true)
-  const [showSplash,setShowSplash] = useState(true)
+  const [showSplash,setShowSplash] = useState(false)
+  // Adresse chargee dans l iframe. Un lien signe n est utilise dans l iframe
+  // que si le CRM et la Lead Room partagent le meme site (sinon le navigateur
+  // rejette le cookie de session et le lien serait consomme pour rien) ; dans
+  // ce cas le lien est reserve au bouton plein ecran. Un seul appel par
+  // montage : un lien ne sert qu une fois.
+  const [src,setSrc] = useState(null)
+  const [fullUrl,setFullUrl] = useState(LEAD_ROOM_URL)
+  const asked = useRef(false)
+
+  async function demanderLien(opts={}){
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    const qs = opts.probe ? '?next=/leadroom&probe=1' : '?next=/leadroom'
+    const r = await fetch('/api/leadroom-sso'+qs, { headers: token ? { Authorization: `Bearer ${token}` } : {}, signal: opts.signal })
+    return await r.json().catch(()=>({}))
+  }
+
+  useEffect(()=>{
+    if(asked.current) return
+    asked.current = true
+    let vivant = true
+    ;(async()=>{
+      try{
+        // Sonde d abord (aucun jeton emis) : un lien n est demande pour
+        // l iframe que si les deux applis partagent le meme site.
+        const p = await demanderLien({ probe: true })
+        if(!vivant) return
+        if(p?.fallback) setFullUrl(p.fallback)
+        if(!p?.sameSite){ setSrc(p?.fallback || LEAD_ROOM_URL); setShowSplash(true); return }
+        const j = await demanderLien()
+        if(!vivant) return
+        if(j?.url && j?.sameSite){ setSrc(j.url) }
+        else { setSrc(j?.fallback || LEAD_ROOM_URL); setShowSplash(true) }
+      }catch{
+        if(!vivant) return
+        setSrc(LEAD_ROOM_URL); setShowSplash(true)
+      }
+    })()
+    return ()=>{ vivant = false }
+  },[])
+
+  async function ouvrirPleinEcran(){
+    // La fenetre est ouverte AVANT l attente reseau (geste utilisateur), avec
+    // un contenu d attente ; le lien signe est demande a la volee.
+    const w = window.open('', '_blank')
+    if(w){
+      try{ w.opener = null; w.document.title = 'Lead Room'; w.document.body.innerHTML = '<p style="font-family:system-ui;color:#555;padding:24px">Ouverture de la Lead Room…</p>' }catch{ /* ignore */ }
+    }
+    let url = fullUrl
+    const ctrl = new AbortController()
+    const timer = setTimeout(()=>ctrl.abort(), 8000)
+    try{
+      const j = await demanderLien({ signal: ctrl.signal })
+      url = j?.url || j?.fallback || fullUrl
+    }catch{ /* delai ou reseau : repli sur l adresse classique */ }
+    clearTimeout(timer)
+    if(w) w.location.href = url; else window.open(url, '_blank', 'noopener')
+  }
 
   return (
     <div style={{height:'calc(100vh - 120px)',display:'flex',flexDirection:'column'}}>
@@ -1093,7 +1151,7 @@ function LeadRoomEmbed(){
         <div style={{display:'flex',alignItems:'center',gap:10}}>
           <span style={{display:'inline-block',width:8,height:8,borderRadius:'50%',background:'#22c55e',boxShadow:'0 0 8px #22c55e'}} />
           <span style={{color:'#9ca3af',fontSize:13}}>
-            Lead Room temps réel, attribution shotgun et trame IA Modjo + Claude
+            Lead Room
           </span>
         </div>
         <div style={{display:'flex',gap:10}}>
@@ -1102,32 +1160,35 @@ function LeadRoomEmbed(){
             style={{background:'transparent',border:'1px solid rgba(255,255,255,0.15)',color:'#9ca3af',padding:'6px 12px',borderRadius:8,fontSize:12,cursor:'pointer'}}>
             {embedded ? 'Masquer l\'aperçu' : 'Afficher l\'aperçu'}
           </button>
-          <a
-            href={LEAD_ROOM_URL}
-            target="_blank"
-            rel="noreferrer"
-            style={{background:'#C5A55A',color:'#0B1A2E',padding:'6px 14px',borderRadius:8,fontSize:13,fontWeight:600,textDecoration:'none'}}>
+          <button
+            onClick={ouvrirPleinEcran}
+            style={{background:'#C5A55A',color:'#0B1A2E',padding:'6px 14px',borderRadius:8,fontSize:13,fontWeight:600,border:0,cursor:'pointer'}}>
             Ouvrir en plein écran ↗
-          </a>
+          </button>
         </div>
       </div>
 
       {showSplash && (
         <div style={{padding:'14px 16px',background:'rgba(197,165,90,0.08)',borderBottom:'1px solid rgba(197,165,90,0.2)',color:'#fde68a',fontSize:13,display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}>
           <span>
-            La Lead Room est désormais une app dédiée. Si l'aperçu est vide, ouvre la Lead Room en plein écran et logge-toi avec ton email Entasis.
+            Clique « Ouvrir en plein écran » : la Lead Room s\'ouvre déjà connectée avec ton compte. L\'aperçu ci-dessous peut demander un mot de passe tant que les deux applis ne sont pas sur le même domaine.
           </span>
           <button onClick={()=>setShowSplash(false)} style={{background:'transparent',border:0,color:'#fde68a',cursor:'pointer',fontSize:18,padding:'0 4px'}}>×</button>
         </div>
       )}
 
-      {embedded && (
+      {embedded && src && (
         <iframe
-          src={LEAD_ROOM_URL}
+          src={src}
           title="Lead Room Entasis"
           style={{flex:1,width:'100%',border:0,background:'#fafafa'}}
-          sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+          sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
         />
+      )}
+      {embedded && !src && (
+        <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',background:'#fafafa',color:'#9ca3af',fontSize:13}}>
+          Ouverture de la Lead Room…
+        </div>
       )}
       {!embedded && (
         <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',background:'#0B1A2E',color:'#9ca3af',fontSize:14}}>
