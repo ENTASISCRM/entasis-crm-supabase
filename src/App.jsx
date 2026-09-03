@@ -3859,6 +3859,13 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
       await onSave(deals); // Passer le tableau de deals
     } else {
       // Mode classique : un seul deal
+      // Un dossier ne se signe pas sans produit : la rémunération et le multi
+      // équipement en dépendent. Avant, le sélecteur affichait « PER
+      // Individuel » sur un produit vide et on pouvait signer du vide.
+      if (deal.status === 'Signé' && !String(deal.product || '').trim()) {
+        toast.error('Choisis le produit du dossier avant de le signer.')
+        return
+      }
       const normalized = normalizeDeal(deal)
       const err = validateDealDates(normalized)
       if (err) {
@@ -4285,7 +4292,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
               <div>
                 <div className="form-section-title mb-16">Dossier</div>
                 <div className="form-row form-row-2">
-                  <div className="form-group"><label className="form-label">Produit</label><select className="form-select" value={deal.product} onChange={e=>set('product',e.target.value)}>{PRODUCTS.map(p=><option key={p}>{p}</option>)}</select></div>
+                  <div className="form-group"><label className="form-label">Produit</label><select className="form-select" value={deal.product||''} onChange={e=>set('product',e.target.value)}><option value="">— Choisir un produit —</option>{PRODUCTS.map(p=><option key={p} value={p}>{p}</option>)}</select></div>
                   <div className="form-group"><label className="form-label">Compagnie</label><select className="form-select" value={deal.company||''} onChange={e=>set('company',e.target.value)}><option value="">— Choisir une compagnie —</option>{COMPANIES.map(c=><option key={c} value={c}>{c}</option>)}</select></div>
                 </div>
                 <div className="form-row form-row-3 mt-16">
