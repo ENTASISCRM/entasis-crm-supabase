@@ -320,6 +320,10 @@ sans mouvement depuis plus de 21 jours, 42 en co conseil.
   gestes sur tout le cabinet ; sur le dossier d'un autre, « Toujours en
   cours » demande confirmation, car il sort aussi le dossier de l'accueil du
   conseiller titulaire.
+* **Le sélecteur de produit de la modale a une option vide.** Sans elle, un
+  dossier sans produit affichait « PER Individuel » alors que rien n'était
+  choisi, et on pouvait signer du vide. Un dossier ne se signe plus sans
+  produit. Aucun dossier en base n'a de produit vide au 3 septembre.
 * **Une écriture sur `deals` ne porte que des colonnes de `deals`.**
   `dealsService.update` et `create` passent par `nettoyerPourEcriture`
   (`src/lib/colonnes-deals.js`), une liste blanche des colonnes. Avant, un
