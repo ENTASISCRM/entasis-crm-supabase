@@ -1086,24 +1086,32 @@ const LEAD_ROOM_URL = 'https://entasis-leadroom.vercel.app/leadroom'
 function LeadRoomEmbed(){
   const [embedded,setEmbedded] = useState(true)
   const [showSplash,setShowSplash] = useState(false)
-  // Adresse chargee dans l iframe : d abord un lien de connexion a usage
-  // unique fourni par api/leadroom-sso (session ouverte sans second mot de
-  // passe), sinon l adresse classique. Le splash n apparait que si le lien
-  // signe n a pas pu etre obtenu.
+  // Adresse chargee dans l iframe. Un lien signe n est utilise dans l iframe
+  // que si le CRM et la Lead Room partagent le meme site (sinon le navigateur
+  // rejette le cookie de session et le lien serait consomme pour rien) ; dans
+  // ce cas le lien est reserve au bouton plein ecran. Un seul appel par
+  // montage : un lien ne sert qu une fois.
   const [src,setSrc] = useState(null)
   const [fullUrl,setFullUrl] = useState(LEAD_ROOM_URL)
+  const asked = useRef(false)
+
+  async function demanderLien(){
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    const r = await fetch('/api/leadroom-sso?next=/leadroom', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+    return await r.json().catch(()=>({}))
+  }
 
   useEffect(()=>{
+    if(asked.current) return
+    asked.current = true
     let vivant = true
     ;(async()=>{
       try{
-        const { data: { session } } = await supabase.auth.getSession()
-        const token = session?.access_token
-        const r = await fetch('/api/leadroom-sso?next=/leadroom', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-        const j = await r.json().catch(()=>({}))
+        const j = await demanderLien()
         if(!vivant) return
         if(j?.fallback) setFullUrl(j.fallback)
-        if(j?.url){ setSrc(j.url) }
+        if(j?.url && j?.sameSite){ setSrc(j.url) }
         else { setSrc(j?.fallback || LEAD_ROOM_URL); setShowSplash(true) }
       }catch{
         if(!vivant) return
@@ -1113,13 +1121,28 @@ function LeadRoomEmbed(){
     return ()=>{ vivant = false }
   },[])
 
+  async function ouvrirPleinEcran(){
+    // La fenetre est ouverte AVANT l attente reseau (geste utilisateur), avec
+    // un contenu d attente ; le lien signe est demande a la volee.
+    const w = window.open('', '_blank')
+    if(w){
+      try{ w.opener = null; w.document.title = 'Lead Room'; w.document.body.innerHTML = '<p style="font-family:system-ui;color:#555;padding:24px">Ouverture de la Lead Room…</p>' }catch{ /* ignore */ }
+    }
+    let url = fullUrl
+    try{
+      const j = await Promise.race([demanderLien(), new Promise(res=>setTimeout(()=>res({}), 8000))])
+      url = j?.url || j?.fallback || fullUrl
+    }catch{ /* repli sur l adresse classique */ }
+    if(w) w.location.href = url; else window.open(url, '_blank', 'noopener')
+  }
+
   return (
     <div style={{height:'calc(100vh - 120px)',display:'flex',flexDirection:'column'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 16px',borderBottom:'1px solid rgba(255,255,255,0.08)',gap:12}}>
         <div style={{display:'flex',alignItems:'center',gap:10}}>
           <span style={{display:'inline-block',width:8,height:8,borderRadius:'50%',background:'#22c55e',boxShadow:'0 0 8px #22c55e'}} />
           <span style={{color:'#9ca3af',fontSize:13}}>
-            Lead Room, ouverte avec ton compte CRM
+            Lead Room
           </span>
         </div>
         <div style={{display:'flex',gap:10}}>
@@ -1129,22 +1152,7 @@ function LeadRoomEmbed(){
             {embedded ? 'Masquer l\'aperçu' : 'Afficher l\'aperçu'}
           </button>
           <button
-            onClick={async()=>{
-              // Un lien signe ne sert qu une fois : on en demande un neuf pour
-              // l ouverture en plein ecran (la fenetre est ouverte AVANT
-              // l attente reseau pour rester dans le geste utilisateur).
-              const w = window.open('', '_blank')
-              try{
-                const { data: { session } } = await supabase.auth.getSession()
-                const token = session?.access_token
-                const r = await fetch('/api/leadroom-sso?next=/leadroom', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-                const j = await r.json().catch(()=>({}))
-                const url = j?.url || j?.fallback || fullUrl
-                if(w) w.location.href = url; else window.open(url, '_blank', 'noopener')
-              }catch{
-                if(w) w.location.href = fullUrl; else window.open(fullUrl, '_blank', 'noopener')
-              }
-            }}
+            onClick={ouvrirPleinEcran}
             style={{background:'#C5A55A',color:'#0B1A2E',padding:'6px 14px',borderRadius:8,fontSize:13,fontWeight:600,border:0,cursor:'pointer'}}>
             Ouvrir en plein écran ↗
           </button>
@@ -1154,7 +1162,7 @@ function LeadRoomEmbed(){
       {showSplash && (
         <div style={{padding:'14px 16px',background:'rgba(197,165,90,0.08)',borderBottom:'1px solid rgba(197,165,90,0.2)',color:'#fde68a',fontSize:13,display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}>
           <span>
-            La connexion automatique n\'a pas abouti : si l\'aperçu reste sur l\'écran de connexion, ouvre la Lead Room en plein écran et connecte-toi avec ton email Entasis.
+            Clique « Ouvrir en plein écran » : la Lead Room s\'ouvre déjà connectée avec ton compte. L\'aperçu ci-dessous peut demander un mot de passe tant que les deux applis ne sont pas sur le même domaine.
           </span>
           <button onClick={()=>setShowSplash(false)} style={{background:'transparent',border:0,color:'#fde68a',cursor:'pointer',fontSize:18,padding:'0 4px'}}>×</button>
         </div>
