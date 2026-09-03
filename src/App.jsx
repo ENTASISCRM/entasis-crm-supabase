@@ -1128,13 +1128,26 @@ function LeadRoomEmbed(){
             style={{background:'transparent',border:'1px solid rgba(255,255,255,0.15)',color:'#9ca3af',padding:'6px 12px',borderRadius:8,fontSize:12,cursor:'pointer'}}>
             {embedded ? 'Masquer l\'aperçu' : 'Afficher l\'aperçu'}
           </button>
-          <a
-            href={fullUrl}
-            target="_blank"
-            rel="noreferrer"
-            style={{background:'#C5A55A',color:'#0B1A2E',padding:'6px 14px',borderRadius:8,fontSize:13,fontWeight:600,textDecoration:'none'}}>
+          <button
+            onClick={async()=>{
+              // Un lien signe ne sert qu une fois : on en demande un neuf pour
+              // l ouverture en plein ecran (la fenetre est ouverte AVANT
+              // l attente reseau pour rester dans le geste utilisateur).
+              const w = window.open('', '_blank')
+              try{
+                const { data: { session } } = await supabase.auth.getSession()
+                const token = session?.access_token
+                const r = await fetch('/api/leadroom-sso?next=/leadroom', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+                const j = await r.json().catch(()=>({}))
+                const url = j?.url || j?.fallback || fullUrl
+                if(w) w.location.href = url; else window.open(url, '_blank', 'noopener')
+              }catch{
+                if(w) w.location.href = fullUrl; else window.open(fullUrl, '_blank', 'noopener')
+              }
+            }}
+            style={{background:'#C5A55A',color:'#0B1A2E',padding:'6px 14px',borderRadius:8,fontSize:13,fontWeight:600,border:0,cursor:'pointer'}}>
             Ouvrir en plein écran ↗
-          </a>
+          </button>
         </div>
       </div>
 
