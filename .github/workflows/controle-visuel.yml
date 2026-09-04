@@ -48,7 +48,13 @@ jobs:
       # avant de lancer le navigateur.
       - name: Serveur de preview
         run: |
-          npx vite preview --port 4173 --strictPort &
+          # --host 127.0.0.1 : sans lui, vite preview n ecoute que sur
+          # localhost, qui resout en IPv6 sur les machines GitHub, pendant que
+          # curl interroge 127.0.0.1 en IPv4. Le serveur demarrait bien et la
+          # verification echouait quand meme (code 7, connexion refusee) : ce
+          # controle etait rouge sur CHAQUE proposition de fusion, ce qui
+          # apprend a ignorer les voyants rouges.
+          npx vite preview --host 127.0.0.1 --port 4173 --strictPort &
           for i in $(seq 1 30); do
             if curl -sf http://127.0.0.1:4173/ > /dev/null; then break; fi
             sleep 1
