@@ -127,6 +127,18 @@ export function proposerInflexions({ poleId, lignes, regime, univers } = {}) {
     const support = parIsin?.get?.(ligne?.isin)
     if (!support) continue
 
+    // Verrou 2, écrit ici et pas seulement déduit de la famille. Il ne tenait
+    // jusqu’ici que par chance : aucun des 18 fonds d’attente des deux listes
+    // ne tombe dans une famille que la note du 04/09/2026 incline, si bien que
+    // la seule famille monetaire_attente suffisait à les écarter tous. Cette
+    // chance s’arrête le jour où un assureur range un monétaire dans une
+    // catégorie inclinée, ou celui où une note incline les obligations
+    // courtes, famille où tombent les cinq supports « Court terme » SwissLife.
+    // On relit donc estFondsDAttente comme le fait candidatsRemplacement, et
+    // sur les deux lectures : le support de la liste de l’assureur, et la
+    // ligne recopiée d’une proposition papier, qui ne porte qu’un nom.
+    if (estFondsDAttente(support) || estFondsDAttente(ligne)) continue
+
     const famille = familleDuSupport(support)
     if (!famille || estIntouchable(famille)) continue
 
@@ -361,7 +373,10 @@ export function candidatsRemplacement(univers, famille, { exclureIsins, limite }
     if (exclus.has(support.isin)) return false
     // Le verrou « jamais de fonds d attente » est ecrit a deux endroits : la
     // famille monetaire_attente ici, et estFondsDAttente cote univers, qui
-    // regarde aussi le nom du support. Les deux ne sont pas d accord partout
+    // regarde aussi le nom du support. Les deux fonctions qui proposent le
+    // lisent de la meme facon depuis le 04/09/2026 : proposerInflexions relit
+    // lui aussi estFondsDAttente, il ne s en remettait qu a la famille.
+    // Les deux lectures ne sont pas d accord partout
     // (un fonds a capital protege, aujourd hui) et c est voulu : sur une regle
     // que la direction a posee en « jamais », on retient l union des deux
     // lectures. Un support ecarte a tort se rattrape a la main ; un fonds

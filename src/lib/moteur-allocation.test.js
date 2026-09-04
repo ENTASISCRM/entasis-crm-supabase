@@ -14,6 +14,7 @@ import {
   VERROUS,
   familleDuSupport,
 } from '../config/conjoncture'
+import { estFondsDAttente } from '../config/univers-uc'
 
 // ────────────────────────────────────────────────────────────────────────────
 // Univers de test. Les supports sont repris des deux listes d’assureurs avec
@@ -225,6 +226,74 @@ describe('proposerInflexions, ce qui ne bouge pas', () => {
   it('tolère une allocation vide ou un appel sans argument', () => {
     expect(proposerInflexions()).toEqual([])
     expect(proposerInflexions({ poleId: 'sl-offensif-diversifie', lignes: [], univers })).toEqual([])
+  })
+})
+
+describe('proposerInflexions, verrou 2 tenu par construction', () => {
+  // Jusqu’au 04/09/2026 le verrou « jamais de fonds d’attente » ne tenait, du
+  // côté des propositions, que par la famille monetaire_attente. Ça marchait
+  // par chance : aucun fonds d’attente des deux listes de l’assureur ne tombe
+  // dans une famille que la note incline. Ces trois cas là sont ceux que la
+  // chance ne couvre pas, et ils doivent tenir sans elle.
+
+  // Un monétaire que l’assureur range dans une catégorie inclinée. La famille
+  // se lit sur la catégorie, donc métaux précieux, que la note renforce.
+  const ATTENTE_DEGUISE = {
+    isin: 'FR0000000042',
+    nom: 'SLF Trésorerie Euro P',
+    categorie: 'Secteur Métaux Précieux',
+    sri: 1,
+    fraisGestionMax: 0.5,
+  }
+  // Le même support, au nom qui ne dit plus rien : il sert de témoin, sinon un
+  // test vert ne prouverait que l’absence d’inclinaison sur cette famille.
+  const TEMOIN = { ...ATTENTE_DEGUISE, isin: 'FR0000000043', nom: 'Un fonds de mineurs P' }
+
+  const universDeguise = faireUnivers([...SUPPORTS_SWISSLIFE, ATTENTE_DEGUISE, TEMOIN])
+  const surLeDeguise = (isin) => proposerInflexions({
+    poleId: 'sl-offensif-diversifie',
+    lignes: [{ fonds: 'peu importe', isin, poids: 10 }],
+    univers: universDeguise,
+  })
+
+  it('ne propose rien sur un fonds d’attente rangé dans une famille inclinée', () => {
+    expect(estFondsDAttente(ATTENTE_DEGUISE)).toBe(true)
+    expect(familleDuSupport(ATTENTE_DEGUISE)).toBe('metaux_precieux')
+    expect(surLeDeguise('FR0000000042')).toEqual([])
+  })
+
+  it('et la même ligne, sans le nom d’attente, reçoit bien une proposition', () => {
+    // Le témoin : c’est le verrou qui écarte le premier, pas l’absence
+    // d’inclinaison sur les métaux précieux.
+    expect(surLeDeguise('FR0000000043')).toHaveLength(1)
+    expect(surLeDeguise('FR0000000043')[0]).toMatchObject({ famille: 'metaux_precieux', sens: 'renforcer' })
+  })
+
+  it('ne propose rien quand c’est la ligne recopiée qui dit le fonds d’attente', () => {
+    // Une ligne venue d’une proposition papier ne porte qu’un nom. Si ce nom
+    // dit monétaire alors que la liste de l’assureur classe l’ISIN ailleurs, on
+    // retient l’union des deux lectures : sur un « jamais » de la direction, un
+    // support écarté à tort se rattrape à la main, un fonds d’attente proposé
+    // au client, non.
+    expect(proposerInflexions({
+      poleId: 'sl-offensif-diversifie',
+      lignes: [{ fonds: 'SLF (F) ESG Money Market Euro P', isin: 'LU0171305526', poids: 5 }],
+      univers,
+    })).toEqual([])
+  })
+
+  it('aucune proposition ne porte un fonds d’attente, sur aucun des contextes de test', () => {
+    const contextes = [
+      { poleId: 'sl-offensif-diversifie', lignes: LIGNES, univers },
+      { poleId: 'sl-equilibre-dynamique', lignes: LIGNES, univers: universDeguise },
+      { poleId: 'ab-dynamique', lignes: LIGNES, univers: universAbeille },
+    ]
+    for (const contexte of contextes) {
+      for (const p of proposerInflexions(contexte)) {
+        expect(estFondsDAttente(contexte.univers.parIsin.get(p.isin)), p.fonds).toBe(false)
+        expect(estFondsDAttente(p), p.fonds).toBe(false)
+      }
+    }
   })
 })
 

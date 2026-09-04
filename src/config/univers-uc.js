@@ -76,16 +76,25 @@ export const CLASSES_ATTENTE = [
   'fonds en euro',
   'fonds euro',
   'n ayant pas vocation a etre souscrit',
-  // Arbitres par la direction le 04/09/2026, apres coup d oeil sur la donnee
-  // reelle. « court terme » ne prend aujourd hui que les cinq supports de la
-  // categorie « Obligations Diversifiés EUR - Court terme » chez SwissLife :
-  // ce sont des fonds d attente en pratique, meme si l assureur ne les nomme
-  // pas ainsi. Les fonds de credit a duree courte, eux, ne sont pas vises et
-  // ne portent pas ce libelle : « short duration » reste hors liste.
+  // Arbitres par la direction le 04/09/2026. L arbitrage porte sur la
+  // CATEGORIE, pas sur une facon de gerer : sont vises les cinq supports que
+  // SwissLife range en « Court terme » dans sa categorie Obligations
+  // Diversifiés EUR, et eux seuls. Recompte sur les deux fichiers de
+  // public/data : cinq supports, tous pris par leur categorie, aucun par son
+  // nom, aucun chez Abeille.
+  //
+  // Deux de ces cinq sont bien des fonds de credit a duree courte, donc des
+  // placements ordinaires pour la direction. Ils sont ecartes quand meme,
+  // parce que c est l assureur lui meme qui les met dans la categorie
+  // arbitree : on ne defait pas son classement au cas par cas depuis ici.
+  // C est aussi pourquoi « short duration » reste hors liste, un fonds de
+  // duree courte range ailleurs restant proposable.
   'court terme',
-  // Un seul support concerne, HSBC Clic Euro 85 G. Un capital protege n est
-  // pas un placement que le cabinet propose depuis cet ecran : la protection
-  // se paie sur la performance, et le moteur ne doit pas l offrir de lui meme.
+  // Un seul support concerne, HSBC Clic Euro 85 G, et par sa categorie
+  // « Fonds à Capital Protégé » : aucun nom de support des deux listes ne
+  // porte l expression. Un capital protege n est pas un placement que le
+  // cabinet propose depuis cet ecran : la protection se paie sur la
+  // performance, et le moteur ne doit pas l offrir de lui meme.
   'capital protege',
 ]
 

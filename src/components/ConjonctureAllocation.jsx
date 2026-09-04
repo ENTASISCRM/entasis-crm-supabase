@@ -45,6 +45,10 @@ const pct = (n) => `${String(Math.round(Number(n) * 10) / 10).replace('.', ',')}
 
 const nomFamille = (cle) => FAMILLES.find((f) => f.cle === cle)?.nom || cle
 
+// La même liste vide à chaque rendu, pour que « rien de retenu » ne se
+// distingue pas de lui même d'un rendu à l'autre et ne relance pas les calculs.
+const AUCUN_RETENU = []
+
 const TON_SENS = { renforcer: 'badge-signed', alleger: 'badge-progress', maintenir: 'badge-normal' }
 const LIBELLE_SENS = { renforcer: 'Renforcer', alleger: 'Alléger', maintenir: 'Maintenir' }
 
@@ -212,7 +216,12 @@ export default function ConjonctureAllocation({
   onRetenues,
   onAllerAuCran,
 }) {
-  const [retenus, setRetenus] = useState([])
+  // Ce qui est coché à l'écran et ce que la copie emporte doivent être la même
+  // chose à chaque rendu, pas seulement une fois les effets passés. Les cases
+  // retiennent donc la clé du contexte dans lequel elles ont été cochées :
+  // dès que ce contexte change, elles ne comptent plus, sans attendre l'effet
+  // qui les efface. Incident du 04/09/2026, plus bas.
+  const [retenus, setRetenus] = useState({ cle: '', isins: [] })
 
   const regime = useMemo(
     () => REGIMES.find((r) => r.cle === REGIME_COURANT.cle) || null,
@@ -264,17 +273,27 @@ export default function ConjonctureAllocation({
     return compte
   }, [propositions])
 
-  // Changer de pôle, de partenaire ou de cran change le jeu de propositions :
-  // ce qui avait été retenu ne veut plus rien dire, on repart de zéro.
-  const cleContexte = `${poleAffiche?.id || ''}|${propositions.map((p) => p.isin).join(',')}`
+  // Changer de pôle, de partenaire, de cran ou de poids change le jeu de
+  // propositions : ce qui avait été retenu ne veut plus rien dire, on repart de
+  // zéro.
+  //
+  // Les poids font partie de la clé, et c'est tout l'objet du correctif du
+  // 04/09/2026. « Ramener à 100 % » ne change ni le pôle ni la liste des
+  // supports, seulement leurs poids : la clé ne bougeait pas, les cases
+  // restaient cochées et l'écran continuait d'annoncer deux inflexions
+  // retenues, pendant que l'écran du dessus avait déjà vidé les siennes. Le
+  // conseiller collait au client une allocation sans les inflexions qu'il
+  // croyait emporter.
+  const cleContexte = `${poleAffiche?.id || ''}|${propositions.map((p) => `${p.isin}:${p.poids}>${p.poidsPropose}`).join(',')}`
+  const retenusIci = retenus.cle === cleContexte ? retenus.isins : AUCUN_RETENU
   useEffect(() => {
-    setRetenus([])
+    setRetenus({ cle: cleContexte, isins: [] })
     onRetenues([])
   }, [cleContexte, onRetenues])
 
   const propositionsRetenues = useMemo(
-    () => propositions.filter((p) => retenus.includes(p.isin)),
-    [propositions, retenus],
+    () => propositions.filter((p) => retenusIci.includes(p.isin)),
+    [propositions, retenusIci],
   )
 
   // Le total se recalcule sous les yeux du conseiller, et il reste ce qu'il
@@ -288,10 +307,12 @@ export default function ConjonctureAllocation({
   )
 
   function basculer(isin) {
-    const suivant = retenus.includes(isin)
-      ? retenus.filter((i) => i !== isin)
-      : [...retenus, isin]
-    setRetenus(suivant)
+    const suivant = retenusIci.includes(isin)
+      ? retenusIci.filter((i) => i !== isin)
+      : [...retenusIci, isin]
+    // La coche est datée du contexte où elle a été faite : c'est ce qui permet
+    // de la retirer du rendu dès que ce contexte change.
+    setRetenus({ cle: cleContexte, isins: suivant })
     onRetenues(propositions.filter((p) => suivant.includes(p.isin)))
   }
 
@@ -504,7 +525,7 @@ export default function ConjonctureAllocation({
                   </thead>
                   <tbody>
                     {propositions.map((p) => {
-                      const coche = retenus.includes(p.isin)
+                      const coche = retenusIci.includes(p.isin)
                       return (
                         <tr key={p.isin}>
                           <td>
@@ -551,8 +572,12 @@ export default function ConjonctureAllocation({
                     ? `Aucune inflexion retenue · total d'origine ${pct(totalAvant)}`
                     : `${propositionsRetenues.length} inflexion${propositionsRetenues.length > 1 ? 's' : ''} retenue${propositionsRetenues.length > 1 ? 's' : ''} · total d'origine ${pct(totalAvant)}`}
                 </span>
-                {retenus.length > 0 && (
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setRetenus([]); onRetenues([]) }}>
+                {retenusIci.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => { setRetenus({ cle: cleContexte, isins: [] }); onRetenues([]) }}
+                  >
                     Tout refuser
                   </button>
                 )}

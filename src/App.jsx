@@ -3670,14 +3670,37 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
     }]
   })
 
-  // Changer de produit change l univers des compagnies. Sans ce nettoyage,
+  // La compagnie deja enregistree sur le dossier, celle lue en base a
+  // l ouverture. C est une donnee, pas une saisie en cours : le nettoyage n a
+  // pas le droit de l effacer.
+  const compagnieEnregistree = initialDeal?.company || ''
+
+  // Changer de produit change l univers des compagnies. Sans nettoyage,
   // « SCPI · Wemo One » repasse en PER Individuel en gardant Wemo One :
   // compagniesPour remet la valeur en tete de liste, le select l affiche
   // toujours selectionnee, et le dossier part chez un partenaire SCPI.
+  //
+  // Mais le nettoyage ne detruit pas une compagnie deja enregistree. Il
+  // existe deux dossiers SCPI chez SwissLife, dont un signe : toucher au
+  // select Produit, meme pour revenir au meme produit, effacait SwissLife
+  // sans un mot, et Enregistrer ecrivait ensuite une compagnie vide, sur un
+  // dossier signe compris (rien n exige la compagnie a l enregistrement).
+  // On previent dans ce cas, et on n efface que ce que le conseiller vient de
+  // choisir dans cette session.
+  //
+  // Renvoie true si la compagnie doit etre effacee.
+  function compagnieAEffacer(produit, compagnie) {
+    if (!compagnie || compagniesPour(produit, '').includes(compagnie)) return false
+    if (compagnie === compagnieEnregistree) {
+      toast(`« ${compagnie} » n est pas une compagnie ${produit || 'de ce produit'} : la compagnie enregistrée sur le dossier est gardée. Change la toi même si le dossier a changé de maison.`, { icon: 'ℹ️', duration: 6000 })
+      return false
+    }
+    return true
+  }
+
   function choisirProduit(index, produit) {
     setProductField(index, 'product', produit)
-    const compagnie = products[index]?.company
-    if (compagnie && !compagniesPour(produit, '').includes(compagnie)) setProductField(index, 'company', '')
+    if (compagnieAEffacer(produit, products[index]?.company)) setProductField(index, 'company', '')
   }
 
   function setProductField(index, field, value) {
@@ -4400,7 +4423,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
               <div>
                 <div className="form-section-title mb-16">Dossier</div>
                 <div className="form-row form-row-2">
-                  <div className="form-group"><label className="form-label">Produit</label><select className="form-select" value={deal.product||''} onChange={e=>{const v=e.target.value;set('product',v);if(deal.company&&!compagniesPour(v,'').includes(deal.company))set('company','')}}><option value="">— Choisir un produit —</option>{PRODUCTS.map(p=><option key={p} value={p}>{p}</option>)}</select></div>
+                  <div className="form-group"><label className="form-label">Produit</label><select className="form-select" value={deal.product||''} onChange={e=>{const v=e.target.value;set('product',v);if(compagnieAEffacer(v,deal.company))set('company','')}}><option value="">— Choisir un produit —</option>{PRODUCTS.map(p=><option key={p} value={p}>{p}</option>)}</select></div>
                   <div className="form-group"><label className="form-label">Compagnie</label><select className="form-select" value={deal.company||''} onChange={e=>set('company',e.target.value)}><option value="">— Choisir une compagnie —</option>{compagniesPour(deal.product, deal.company).map(c=><option key={c} value={c}>{c}</option>)}</select></div>
                 </div>
                 <div className="form-row form-row-3 mt-16">
@@ -5175,45 +5198,8 @@ export default function App(){
         }, user.id)
       }
 
-      // Le co conseiller doit voir la FICHE du client, pas seulement le
-      // dossier : c est aussi son client. La RLS clients ne l ouvre qu au
-      // porteur de advisor_code ou co_advisor_code, que l enregistrement ne
-      // renseignait jamais (72 dossiers sur 98 dans ce cas au 04/09/2026).
-      if (clientId && cleanDeals[0].co_advisor_code) {
-        const pose = await clientsService.assurerCoConseiller(clientId, cleanDeals[0].co_advisor_code)
-        if (pose === 'conflit') {
-          toast.error('La fiche client porte deja un autre co conseiller : elle n a pas ete changée. Ton co-conseiller verra le dossier mais pas la fiche.', { duration: 7000 })
-        }
-      }
-
-      // Enregistre / complète la data structurée sur la fiche CLIENT (email,
-      // téléphone, statut, profession, revenus, patrimoine), pour un nouveau
-      // comme pour un client existant. Ne touche que les champs renseignés.
-      // email et telephone sont indispensables ici : sans eux, la fiche d'un
-      // client EXISTANT restait vide et le verrou de signature bloquait alors
-      // que le conseiller avait bien rempli la modale.
-      // Un dossier existant apporte client_fiche_modifs (lib/fiche-dossier) :
-      // seuls les champs modifiés par rapport à la fiche lue à l'ouverture,
-      // sinon chaque Enregistrer réécrivait la fiche avec de vieilles valeurs
-      // et retamponnait updated_at et maj_par sans saisie réelle.
-      if (clientId) {
-        const modifs = cleanDeals[0].client_fiche_modifs
-        const aEcrire = modifs !== undefined ? modifs : {
-          email: cleanDeals[0].client_email,
-          telephone: cleanDeals[0].client_phone,
-          statut_pro: cleanDeals[0].client_statut_pro,
-          profession: cleanDeals[0].client_profession,
-          revenus_annuels: cleanDeals[0].client_revenus,
-          patrimoine_estime: cleanDeals[0].client_patrimoine,
-        }
-        const ficheEcrite = await clientsService.updateInfoIfProvided(clientId, aEcrire)
-        // Refus silencieux de la RLS (fiche d un autre conseiller, frequent en
-        // co conseil) : le dossier s enregistre quand meme, mais on le dit,
-        // sinon la fiche reste incomplete sans que personne ne le sache.
-        if (ficheEcrite === false && Object.values(aEcrire).some((v) => v != null && String(v).trim() !== '')) {
-          toast.error('La fiche client n a pas été mise à jour : elle appartient à un autre conseiller. Demande lui de la compléter.', { duration: 7000 })
-        }
-      }
+      // Les ecritures sur la FICHE du client attendent que les dossiers
+      // soient enregistres : voir plus bas, apres la boucle d ecriture.
 
       // Appliquer le même client_id à tous les deals + auto-aligner le month
       // sur date_signed pour les deals signés (cf alignedMonthForDeal dans
@@ -5328,6 +5314,84 @@ export default function App(){
         } catch (e) {
           toast.error(messageErreur(e))
           return
+        }
+      }
+
+      // ─── La fiche client, une fois les dossiers ecrits ────────────────────
+      // Ces trois ecritures tenaient AVANT la boucle : un enregistrement qui
+      // echouait ensuite laissait la fiche ouverte au nom d un dossier qui
+      // n existait pas. Elles sont donc passees ici, apres l ecriture reussie,
+      // et dans cet ordre : rendre d abord, poser ensuite, completer enfin
+      // (rendre libere la place, sinon un co remplace par un autre butait sur
+      // le conflit).
+
+      // Un co retire d un dossier gardait la fiche pour toujours : trois
+      // fiches portent un co qu aucun dossier ne justifie (releve du
+      // 04/09/2026). On ne rend l acces que si plus aucun dossier du client ne
+      // porte ce co, et seulement quand la lecture des dossiers est complete,
+      // c est a dire pour la direction (voir clients.libererCoConseiller).
+      if (clientId) {
+        const cosRetires = new Set()
+        for (const d of dealsWithClientId) {
+          // Le dossier tel qu il etait avant cet enregistrement. Un dossier
+          // neuf n a pas d id : il n a jamais eu de co a rendre.
+          const avant = d.id ? deals.find(x => x.id === d.id) : null
+          const ancien = avant?.co_advisor_code
+          if (ancien && ancien !== d.co_advisor_code) cosRetires.add(ancien)
+        }
+        for (const ancien of cosRetires) {
+          await clientsService.libererCoConseiller(clientId, ancien, {
+            lectureComplete: profile?.role === 'manager',
+          })
+        }
+      }
+
+      // Le co conseiller doit voir la FICHE du client, pas seulement le
+      // dossier : c est aussi son client. La RLS clients ne l ouvre qu au
+      // porteur de advisor_code ou co_advisor_code, que l enregistrement ne
+      // renseignait jamais (72 dossiers sur 98 dans ce cas au 04/09/2026).
+      if (clientId && cleanDeals[0].co_advisor_code) {
+        const pose = await clientsService.assurerCoConseiller(clientId, cleanDeals[0].co_advisor_code)
+        // Une fiche n accueille qu un co, et seule la direction change
+        // l attribution d une fiche (section Attribution de la fiche client).
+        // Le conseiller recevait ici un rouge de sept secondes sur lequel il
+        // ne pouvait rien : on dit ce qui est fait et qui peut le changer.
+        if (pose === 'conflit') {
+          toast(
+            profile?.role === 'manager'
+              ? 'Dossier enregistré. La fiche client est déjà partagée avec un autre conseiller : ouvre la fiche, section Attribution, pour changer son co conseiller.'
+              : 'Dossier enregistré. La fiche client est déjà partagée avec un autre conseiller, et elle n en accueille qu un : ton co conseiller voit le dossier, pas la fiche. La direction peut changer le co de la fiche.',
+            { icon: 'ℹ️', duration: 6000 },
+          )
+        }
+      }
+
+      // Enregistre / complète la data structurée sur la fiche CLIENT (email,
+      // téléphone, statut, profession, revenus, patrimoine), pour un nouveau
+      // comme pour un client existant. Ne touche que les champs renseignés.
+      // email et telephone sont indispensables ici : sans eux, la fiche d'un
+      // client EXISTANT restait vide et le verrou de signature bloquait alors
+      // que le conseiller avait bien rempli la modale.
+      // Un dossier existant apporte client_fiche_modifs (lib/fiche-dossier) :
+      // seuls les champs modifiés par rapport à la fiche lue à l'ouverture,
+      // sinon chaque Enregistrer réécrivait la fiche avec de vieilles valeurs
+      // et retamponnait updated_at et maj_par sans saisie réelle.
+      if (clientId) {
+        const modifs = cleanDeals[0].client_fiche_modifs
+        const aEcrire = modifs !== undefined ? modifs : {
+          email: cleanDeals[0].client_email,
+          telephone: cleanDeals[0].client_phone,
+          statut_pro: cleanDeals[0].client_statut_pro,
+          profession: cleanDeals[0].client_profession,
+          revenus_annuels: cleanDeals[0].client_revenus,
+          patrimoine_estime: cleanDeals[0].client_patrimoine,
+        }
+        const ficheEcrite = await clientsService.updateInfoIfProvided(clientId, aEcrire)
+        // Refus silencieux de la RLS (fiche d un autre conseiller, frequent en
+        // co conseil) : le dossier s enregistre quand meme, mais on le dit,
+        // sinon la fiche reste incomplete sans que personne ne le sache.
+        if (ficheEcrite === false && Object.values(aEcrire).some((v) => v != null && String(v).trim() !== '')) {
+          toast.error('La fiche client n a pas été mise à jour : elle appartient à un autre conseiller. Demande lui de la compléter.', { duration: 7000 })
         }
       }
 

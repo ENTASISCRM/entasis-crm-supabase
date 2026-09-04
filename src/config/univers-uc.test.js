@@ -429,6 +429,33 @@ describe('extraction des univers réels', () => {
     expect(compter('abeille')).toBe(2)
   })
 
+  it('les motifs arbitrés le 04/09/2026 ne prennent rien par le nom d un fonds', () => {
+    // Le compte ci dessus dit combien de supports tombent, celui ci dit par où.
+    // « court terme » et « capital protégé » sont des expressions assez
+    // courantes pour qu'une republication de l'assureur les fasse un jour
+    // apparaître dans le LIBELLÉ d'un fonds ordinaire, un crédit à duration
+    // courte par exemple, que la direction n'a pas exclu : ce jour là, ce test
+    // tombe avant que le support ne disparaisse en silence des propositions.
+    for (const cle of ['swisslife', 'abeille']) {
+      const attrapes = lireFichier(cle).supports.filter(estFondsDAttente)
+      const parLeNomSeul = attrapes.filter((s) => !estFondsDAttente({ categorie: s.categorie }))
+      expect(parLeNomSeul.map((s) => s.nom), cle).toEqual([])
+    }
+
+    // Et par quatre catégories connues, pas une de plus : les trois monétaires
+    // et les deux arbitrées le 04/09/2026, dont une seule chez Abeille.
+    const categories = (cle) =>
+      [...new Set(lireFichier(cle).supports.filter(estFondsDAttente).map((s) => s.categorie))].sort()
+
+    expect(categories('swisslife')).toEqual([
+      "Fonds monétaire n'ayant pas vocation à être souscrit",
+      'Fonds à Capital Protégé',
+      'Monétaire EUR',
+      'Obligations Diversifiés EUR - Court terme',
+    ])
+    expect(categories('abeille')).toEqual(['Monétaire'])
+  })
+
   it('les catégories Abeille restent les cinq du panorama', () => {
     const vues = new Set(lireFichier('abeille').supports.map((s) => s.categorie))
     expect([...vues].sort()).toEqual(['Actions', 'Mixtes', 'Monétaire', 'Obligations', 'Spéculatifs'])
