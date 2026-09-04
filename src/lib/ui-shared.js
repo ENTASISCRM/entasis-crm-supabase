@@ -34,12 +34,15 @@ export const estProduitHonoraires = (produit) => PRODUITS_HONORAIRES.includes(pr
 // Pilote les regles de cross-sell du module Multi-equipement (ex. TNS ou
 // profession liberale sans prevoyance = opportunite).
 export const STATUTS_PRO = ['Salarié','TNS','Chef d\'entreprise','Retraité','Profession libérale','Autre'];
-export const COMPANIES = ['SwissLife','Abeille Assurances','Generali','Cardif (BNP Paribas)','Spirica','Autre'];
+export const COMPANIES = ['SwissLife','Abeille Assurances','Generali','Cardif (BNP Paribas)','Spirica','April','Autre'];
 // La compagnie depend du produit : une SCPI ne se souscrit pas chez un
 // assureur vie. Les partenaires SCPI du cabinet sont Wemo One et MNK, et eux
 // seuls doivent apparaitre quand le conseiller choisit SCPI.
 export const COMPANIES_PAR_PRODUIT = {
-  'SCPI': ['Wemo One', 'MNK', 'Autre'],
+  // Les trois maisons de l annuaire partenaires : Wemo Reim, MNK et Log In.
+  // Le cabinet ne place les SCPI qu en direct, jamais dans un contrat
+  // d assurance vie : aucun assureur n a sa place ici.
+  'SCPI': ['Wemo One', 'MNK', 'Log In', 'Autre'],
 };
 // Options du select « Compagnie » pour un produit donne. La valeur deja
 // enregistree est toujours proposee, meme hors liste : sinon un dossier

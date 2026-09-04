@@ -5171,7 +5171,19 @@ export default function App(){
           telephone: cleanDeals[0].client_phone || null,
           age: cleanDeals[0].client_age || null,
           advisor_code: profile?.role === 'manager' ? cleanDeals[0].advisor_code : (profile?.advisor_code || cleanDeals[0].advisor_code),
+          co_advisor_code: cleanDeals[0].co_advisor_code || null,
         }, user.id)
+      }
+
+      // Le co conseiller doit voir la FICHE du client, pas seulement le
+      // dossier : c est aussi son client. La RLS clients ne l ouvre qu au
+      // porteur de advisor_code ou co_advisor_code, que l enregistrement ne
+      // renseignait jamais (72 dossiers sur 98 dans ce cas au 04/09/2026).
+      if (clientId && cleanDeals[0].co_advisor_code) {
+        const pose = await clientsService.assurerCoConseiller(clientId, cleanDeals[0].co_advisor_code)
+        if (pose === 'conflit') {
+          toast.error('La fiche client porte deja un autre co conseiller : elle n a pas ete changée. Ton co-conseiller verra le dossier mais pas la fiche.', { duration: 7000 })
+        }
       }
 
       // Enregistre / complète la data structurée sur la fiche CLIENT (email,
