@@ -76,6 +76,17 @@ export const CLASSES_ATTENTE = [
   'fonds en euro',
   'fonds euro',
   'n ayant pas vocation a etre souscrit',
+  // Arbitres par la direction le 04/09/2026, apres coup d oeil sur la donnee
+  // reelle. « court terme » ne prend aujourd hui que les cinq supports de la
+  // categorie « Obligations Diversifiés EUR - Court terme » chez SwissLife :
+  // ce sont des fonds d attente en pratique, meme si l assureur ne les nomme
+  // pas ainsi. Les fonds de credit a duree courte, eux, ne sont pas vises et
+  // ne portent pas ce libelle : « short duration » reste hors liste.
+  'court terme',
+  // Un seul support concerne, HSBC Clic Euro 85 G. Un capital protege n est
+  // pas un placement que le cabinet propose depuis cet ecran : la protection
+  // se paie sur la performance, et le moteur ne doit pas l offrir de lui meme.
+  'capital protege',
 ]
 
 /**

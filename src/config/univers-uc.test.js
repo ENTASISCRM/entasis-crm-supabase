@@ -327,9 +327,20 @@ describe('estFondsDAttente', () => {
   })
 
   it('laisse passer ce qui n est pas un fonds d attente', () => {
-    expect(estFondsDAttente(support({ categorie: 'Obligations Diversifiés EUR - Court terme' }))).toBe(false)
     expect(estFondsDAttente(support({ categorie: 'Actions US Grandes Capitalisations Croissance' }))).toBe(false)
     expect(estFondsDAttente(support({ categorie: 'Obligations Flexibles EUR' }))).toBe(false)
+    // Le credit a duree courte reste proposable : ce n est pas un fonds
+    // d attente, et la direction n a exclu que la categorie « Court terme ».
+    expect(estFondsDAttente(support({ nom: 'Tikehau Short Duration R EUR Acc', categorie: 'Obligations Autres' }))).toBe(false)
+  })
+
+  it('écarte les deux catégories arbitrées par la direction le 04/09/2026', () => {
+    // « Obligations Diversifiés EUR - Court terme » : des fonds d attente en
+    // pratique, meme si l assureur ne les nomme pas ainsi. « Fonds à Capital
+    // Protégé » : la protection se paie sur la performance, le moteur ne doit
+    // pas la proposer de lui meme.
+    expect(estFondsDAttente(support({ categorie: 'Obligations Diversifiés EUR - Court terme' }))).toBe(true)
+    expect(estFondsDAttente(support({ categorie: 'Fonds à Capital Protégé' }))).toBe(true)
   })
 
   it('rend faux sur une entrée vide, sans lever', () => {
@@ -408,10 +419,13 @@ describe('extraction des univers réels', () => {
   }
 
   it('reconnaît les fonds d attente des deux listes, et rien d autre', () => {
-    // 10 monétaires sur 829 chez SwissLife (dont les 6 que l assureur dit lui
-    // même n avoir pas vocation à être souscrits), 2 sur 165 chez Abeille.
+    // 16 sur 829 chez SwissLife : 10 monétaires (dont les 6 que l assureur dit
+    // lui même n avoir pas vocation à être souscrits), les 5 de la catégorie
+    // « Obligations Diversifiés EUR - Court terme » et l unique fonds à
+    // capital protégé, ces deux dernières familles écartées par la direction
+    // le 04/09/2026. 2 sur 165 chez Abeille, les deux monétaires.
     const compter = (cle) => lireFichier(cle).supports.filter(estFondsDAttente).length
-    expect(compter('swisslife')).toBe(10)
+    expect(compter('swisslife')).toBe(16)
     expect(compter('abeille')).toBe(2)
   })
 
