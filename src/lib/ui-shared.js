@@ -35,6 +35,20 @@ export const estProduitHonoraires = (produit) => PRODUITS_HONORAIRES.includes(pr
 // profession liberale sans prevoyance = opportunite).
 export const STATUTS_PRO = ['Salarié','TNS','Chef d\'entreprise','Retraité','Profession libérale','Autre'];
 export const COMPANIES = ['SwissLife','Abeille Assurances','Generali','Cardif (BNP Paribas)','Spirica','Autre'];
+// La compagnie depend du produit : une SCPI ne se souscrit pas chez un
+// assureur vie. Les partenaires SCPI du cabinet sont Wemo One et MNK, et eux
+// seuls doivent apparaitre quand le conseiller choisit SCPI.
+export const COMPANIES_PAR_PRODUIT = {
+  'SCPI': ['Wemo One', 'MNK', 'Autre'],
+};
+// Options du select « Compagnie » pour un produit donne. La valeur deja
+// enregistree est toujours proposee, meme hors liste : sinon un dossier
+// existant afficherait un select vide et la premiere sauvegarde effacerait sa
+// compagnie (meme piege que « lead_room » cote sources).
+export const compagniesPour = (produit, valeurActuelle) => {
+  const base = COMPANIES_PAR_PRODUIT[produit] || COMPANIES;
+  return (valeurActuelle && !base.includes(valeurActuelle)) ? [valeurActuelle, ...base] : base;
+};
 // « lead_room » est la valeur ecrite par la Lead Room elle meme sur les
 // brouillons de RDV. Elle ne figurait pas dans cette liste : le select
 // s affichait vide sur 210 dossiers, et la moindre sauvegarde la remplacait
