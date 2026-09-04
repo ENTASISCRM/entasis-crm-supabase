@@ -1,0 +1,1144 @@
+{
+"partenaire": "abeille",
+"sourceFichier": "LISTE UC ABEILLE (1) (6).pdf",
+"publie": "2024-12",
+"extraitLe": "2026-09-04",
+"supports": [
+{
+"isin": "FR001400KPY6",
+"nom": "Ofi Invest ESG Liquidités A (ex Ofi Invest ISR Monétaire A)",
+"categorie": "Monétaire",
+"sri": 1,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0000293714",
+"nom": "Ostrum SRI Cash Plus R (C) EUR",
+"categorie": "Monétaire",
+"sri": 1,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0010230490",
+"nom": "Lazard Funds - Lazard Credit Opportunities RC EUR",
+"categorie": "Obligations",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1670720033",
+"nom": "M&G (Lux) Investment Funds 1 - M&G (Lux) Global Macro Bond Fund B EUR",
+"categorie": "Obligations"
+},
+{
+"isin": "LU0157931550",
+"nom": "Candriam Bonds - Candriam Bonds Global Government C EUR Cap",
+"categorie": "Obligations",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1670724373",
+"nom": "M&G (Lux) Investment Funds 1 - M&G (Lux) Optimal Income Fund A EUR Acc",
+"categorie": "Obligations",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0000014276",
+"nom": "Ofi Invest Obliréa Euro",
+"categorie": "Obligations",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0000097503",
+"nom": "Ofi Invest Rendement Europe",
+"categorie": "Obligations",
+"sri": 3,
+"sfdr": "Art. 6"
+},
+{
+"isin": "FR0013305208",
+"nom": "Ofi Invest ESG Alpha Yield C",
+"categorie": "Obligations",
+"sri": 2,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0330917963",
+"nom": "BlackRock Global Funds - US Dollar High Yield Bonds A2",
+"categorie": "Obligations",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1644441120",
+"nom": "Candriam Sustainable - Bond Global High Yield C EUR Acc",
+"categorie": "Obligations",
+"sri": 3,
+"sfdr": "Art. 9"
+},
+{
+"isin": "IE0005315449",
+"nom": "Muzinich EuropeYield Fd A Eur",
+"categorie": "Obligations",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR00140095P9",
+"nom": "Ofi Invest ISR High Yield Euro A",
+"categorie": "Obligations",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0000097495",
+"nom": "Ofi Invest Oblig International",
+"categorie": "Obligations",
+"sri": 3,
+"sfdr": "Art. 6"
+},
+{
+"isin": "FR0010697532",
+"nom": "Keren Corporate C",
+"categorie": "Obligations",
+"sri": 2,
+"sfdr": "Art. 8"
+},
+{
+"isin": "IE00BD5CTX77",
+"nom": "BNY Mellon Global Funds PLC - BNY Mellon Global Short-Dated High Yield FR0011034495 Edmond de Rothschild Fund - Financial Bonds A EUR",
+"categorie": "Obligations",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1486845537",
+"nom": "SICAV ODDO BHF - ODDO BHF Euro Credit Short Duration CR-EUR",
+"categorie": "Obligations",
+"sri": 2,
+"sfdr": "Art. 9"
+},
+{
+"isin": "LU0503630153",
+"nom": "Pictet Gb Sustainable Cred HP",
+"categorie": "Obligations",
+"sri": 3,
+"sfdr": "Art. 9"
+},
+{
+"isin": "LU1313770452",
+"nom": "Candriam Sustainable - Bond Euro Corporate C EUR Cap ISR/Towards Obligations convertibles",
+"categorie": "Obligations"
+},
+{
+"isin": "FR0000014292",
+"nom": "Ofi Invest Convertibles Monde",
+"categorie": "Obligations",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0013392057",
+"nom": "Ofi Invest ISR Crédit Bonds Euro A",
+"categorie": "Obligations",
+"sri": 2,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0352160062",
+"nom": "UBAM MT US Corp Bd AHC EUR Cap",
+"categorie": "Obligations",
+"sri": 2,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0010986315",
+"nom": "DNCA Sérénité Plus C",
+"categorie": "Obligations",
+"sri": 2,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0013521226",
+"nom": "Ofi Invest ISR Crédit Bonds Euro 1-3 AC",
+"categorie": "Obligations",
+"sri": 2,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1880401101",
+"nom": "Amundi Funds - Pioneer US Bond A EUR (C)",
+"categorie": "Obligations",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1880401366",
+"nom": "Amundi Funds - Pioneer US Bond A EUR Hgd (C)",
+"categorie": "Obligations",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR001400M5Z5",
+"nom": "Ofi Invest High Yield 2029 A",
+"categorie": "Obligations",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR001400EQJ8",
+"nom": "Ofi Invest High Yield 2027 A",
+"categorie": "Obligations",
+"sri": 2,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR001400BU49",
+"nom": "R-co 2 - R-co Target 2028 IG C EUR (n'est plus commercialisé depuis le",
+"categorie": "Obligations"
+},
+{
+"isin": "FR001400KAL5",
+"nom": "R-co 2 - R-co Target 2029 IG C EUR",
+"categorie": "Obligations",
+"sri": 2,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0007051040",
+"nom": "Eurose C",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0243957239",
+"nom": "Invesco Funds - Invesco Pan European High Income Fund A Accumulation FR0010541557 R-co Conviction Club C EUR",
+"categorie": "Mixtes",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "IE00BF2N0348",
+"nom": "SEI Global Assets Fund plc - The SEI Euro Balanced Fund Euro Wealth C",
+"categorie": "Mixtes"
+},
+{
+"isin": "FR0000980427",
+"nom": "Keren Patrimoine C",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "IE00BF2MZZ81",
+"nom": "SEI Global Assets Fund plc - The SEI Euro Moderate Fund Euro Wealth C LU0599946893 DWS Concept Kaldemorgen EUR LC",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0012902302",
+"nom": "Florinvest Equilibré C (ex Azur Patrimoine)",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 6"
+},
+{
+"isin": "FR0012902328",
+"nom": "Florinvest Plénitude C",
+"categorie": "Mixtes",
+"sri": 2,
+"sfdr": "Art. 6"
+},
+{
+"isin": "FR0013220431",
+"nom": "Gambetta Patrimoine R",
+"categorie": "Mixtes",
+"sri": 2,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1514035655",
+"nom": "Lombard Odier Funds - All Roads Conservative (EUR) PA",
+"categorie": "Mixtes",
+"sri": 2,
+"sfdr": "Art. 8"
+},
+{
+"isin": "DE000A2JJ1W5",
+"nom": "ODDO BHF Polaris Moderate CR-EUR",
+"categorie": "Mixtes",
+"sri": 2,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0007032743",
+"nom": "Ofi Invest ISR Patrimoine Monde",
+"categorie": "Mixtes",
+"sri": 2,
+"sfdr": "Art. 8"
+},
+{
+"isin": "IE00BF2MZX67",
+"nom": "SEI Global Assets Fund plc - The SEI Euro Conservative Fund Euro Wealth C FR0007032719 Ofi Invest Equilibre Monde",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 6"
+},
+{
+"isin": "FR0010564351",
+"nom": "Ofi Invest ESG MultiTrack R",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0010746776",
+"nom": "Ofi Invest ISR Croissance Durable A",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR001400AR03",
+"nom": "R-co Étoile",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "IE00BF2N0124",
+"nom": "SEI Global Assets Fund plc - The SEI Euro Core Fund Euro Wealth C",
+"categorie": "Mixtes"
+},
+{
+"isin": "FR0013516283",
+"nom": "Trianon Investissement C EUR",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "IE00BK0VJM79",
+"nom": "BNY Mellon Global Funds PLC - BNY Mellon Sustainable Global Real Return",
+"categorie": "Mixtes"
+},
+{
+"isin": "FR0010611293",
+"nom": "Echiquier - Echiquier Arty SRI A",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0564184074",
+"nom": "Ethna-AKTIV R-T",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0012355139",
+"nom": "Lazard Multi Assets - Lazard Patrimoine SRI RC EUR",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0007078589",
+"nom": "Sycomore Allocation Patrimoine R",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU2147879543",
+"nom": "Tikehau Fund - Tikehau International Cross Assets R-Acc-EUR",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0010097667",
+"nom": "CPR Croissance Défensive P",
+"categorie": "Mixtes",
+"sri": 2,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0013333838",
+"nom": "Dorval Global Conservative RC",
+"categorie": "Mixtes",
+"sri": 2,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0013364924",
+"nom": "Ofi Invest Flexible Monde A",
+"categorie": "Mixtes",
+"sri": 2,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0010557967",
+"nom": "Dorval Convictions R",
+"categorie": "Mixtes",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0013284346",
+"nom": "Abeille Perspective 2036-2040",
+"categorie": "Mixtes",
+"sri": 4,
+"sfdr": "Art. 6"
+},
+{
+"isin": "FR0013284320",
+"nom": "Abeille Perspective 2026-2030",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 6"
+},
+{
+"isin": "IE00BF2N0785",
+"nom": "c",
+"categorie": "Mixtes"
+},
+{
+"isin": "IE00BF2N0561",
+"nom": "SEI Global Assets Fund plc - The SEI Euro Growth Fund Euro Wealth C",
+"categorie": "Mixtes"
+},
+{
+"isin": "FR0007032735",
+"nom": "Ofi Invest Dynamique Monde",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 6"
+},
+{
+"isin": "LU2661119755",
+"nom": "DNCA Invest - Evolutif C",
+"categorie": "Mixtes",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0011253624",
+"nom": "R-co Valor C EUR",
+"categorie": "Mixtes",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1874836890",
+"nom": "ODDO BHF Polaris Flexible CR",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0010298596",
+"nom": "Moneta Multi Caps C",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0007385000",
+"nom": "Ofi Invest France Opportunités",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 6"
+},
+{
+"isin": "FR0000284689",
+"nom": "Comgest Monde C",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1261432659",
+"nom": "Fidelity Funds - World Fund A-Acc-EUR",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1670710075",
+"nom": "M&G (Lux) Investment Funds 1 - M&G (Lux) Global Dividend Fund A EUR",
+"categorie": "Actions"
+},
+{
+"isin": "FR0014005FO3",
+"nom": "PRIMERUS Actions Monde SR",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 6"
+},
+{
+"isin": "IE0004766675",
+"nom": "Comgest Growth Plc - Comgest Growth Europe EUR Acc",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0010361667",
+"nom": "Flornoy Convictions R",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 6"
+},
+{
+"isin": "LU1670707527",
+"nom": "M&G (Lux) Investment Funds 1 - M&G (Lux) European Strategic Value",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0935229400",
+"nom": "Natixis AM Funds - Seeyond SRI Europe MinVol R/A (EUR)",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0007473798",
+"nom": "Ofi Invest ISR Actions Europe",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1255011097",
+"nom": "JPMorgan Funds - China A-Share Opportunities Fund A (acc) EUR",
+"categorie": "Actions",
+"sri": 5,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0010149302",
+"nom": "Carmignac Emergents A EUR Acc",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 9"
+},
+{
+"isin": "LU1103293855",
+"nom": "Edmond de Rothschild Fund - Strategic Emerging A EUR",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1097728288",
+"nom": "Fidelity Funds - Emerging Markets Fund A-Acc-EUR (hedged)",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0708055453",
+"nom": "HSBC Global Investment Funds - Frontier Markets ECEUR",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 6"
+},
+{
+"isin": "LU0318933487",
+"nom": "JPMorgan Funds - Emerging Markets Small Cap Fund D (acc) (perf) EUR",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1670618187",
+"nom": "M&G (Lux) Investment Funds 1 - M&G (Lux) Asian Fund A EUR Acc",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1883854272",
+"nom": "Amundi Fds US Eq Fd Grw A EUR",
+"categorie": "Actions",
+"sri": 5,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0582533245",
+"nom": "Robeco QI Em Cons Equities",
+"categorie": "Actions",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1883854199",
+"nom": "Amundi Fds US Eq Fdm Gwth A",
+"categorie": "Actions",
+"sri": 5,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0251806666",
+"nom": "BNP Paribas Funds - US Small Cap Classic H EUR Acc",
+"categorie": "Actions",
+"sri": 5,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0185495495",
+"nom": "Global Platform - Ofi Invest ESG US Equity R EUR",
+"categorie": "Actions",
+"sri": 5,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0157178582",
+"nom": "JPM Global Select Equity A (acc) EUR",
+"categorie": "Actions",
+"sri": 5,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0159042083",
+"nom": "JPMorgan Amer Eq Fd A Eur Hd",
+"categorie": "Actions",
+"sri": 5,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0007017488",
+"nom": "Ofi Invest Actions Amérique I",
+"categorie": "Actions",
+"sri": 5,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0474363974",
+"nom": "Robeco Capital Growth Funds - Robeco BP US Large Cap Equities D-EUR",
+"categorie": "Actions",
+"sri": 5,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0007022108",
+"nom": "Ofi Invest ISR Actions Euro A",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0510167264",
+"nom": "Robeco Capital Growth Funds - Robeco BP US Large Cap Equities DH-EUR",
+"categorie": "Actions",
+"sri": 5,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0217390227",
+"nom": "JPMorgan - America Equity Fd",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0476876676",
+"nom": "Moneta Multi Caps C",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0013392073",
+"nom": "Ofi Invest France Opportunités",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 6"
+},
+{
+"isin": "FR0011891506",
+"nom": "DNCA Actions Euro PME R",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0010821462",
+"nom": "Ofi Invest ISR Small&Mid Caps Euro A",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0489687243",
+"nom": "Mandarine Funds - Mandarine Unique Small & Mid Caps Europe R",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1832174962",
+"nom": "Ind AM Exp Europe Small AC EUR",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1303940784",
+"nom": "Mandarine Funds - Mandarine Europe Microcap R",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0280435388",
+"nom": "Pictet - Clean Energy Transition P EUR",
+"categorie": "Actions",
+"sri": 5,
+"sfdr": "Art. 9"
+},
+{
+"isin": "LU0340559557",
+"nom": "Pictet - Timber P EUR",
+"categorie": "Actions",
+"sri": 5,
+"sfdr": "Art. 9"
+},
+{
+"isin": "FR0010668145",
+"nom": "BNP Paribas Aqua Classic",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 9"
+},
+{
+"isin": "LU2389405080",
+"nom": "CPR Invest - Hydrogen A EUR Acc",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU2702915468",
+"nom": "Global Fund - Ofi Invest Biodiversity Global Equity R-C EUR",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU2257980289",
+"nom": "Mandarine Funds - Mandarine Global Transition R",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 9"
+},
+{
+"isin": "LU0104884860",
+"nom": "Pictet - Water P EUR",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 9"
+},
+{
+"isin": "LU1985004537",
+"nom": "Single Select Platform - Ofi Invest ESG Transition Climat Europe A EUR",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0217139020",
+"nom": "Pictet - Premium Brands P",
+"categorie": "Actions",
+"sri": 5,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0011586544",
+"nom": "Ofi Invest ISR Grandes Marques A",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0014008M99",
+"nom": "R-co Thematic Blockch Gl Eq C",
+"categorie": "Actions",
+"sri": 6,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0171310443",
+"nom": "BlackRock Global Funds - World Technology Fund A2",
+"categorie": "Actions",
+"sri": 5,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1863263346",
+"nom": "DWS Invest - DWS Invest Artificial Intelligence LC",
+"categorie": "Actions",
+"sri": 5,
+"sfdr": "Art. 9"
+},
+{
+"isin": "LU1213836080",
+"nom": "Fidelity Funds - Global Technology Fund A-Acc-EUR",
+"categorie": "Actions",
+"sri": 5,
+"sfdr": "Art. 9"
+},
+{
+"isin": "LU1279334210",
+"nom": "Pictet - Robotics P",
+"categorie": "Actions",
+"sri": 5,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1530899142",
+"nom": "CPR Invest - Global Disruptive Opportunities A EUR Acc",
+"categorie": "Actions",
+"sri": 5,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0122379950",
+"nom": "BlackRock Global Funds - World Healthscience A2",
+"categorie": "Actions",
+"sri": 5,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1864481624",
+"nom": "Candriam Equities L - Oncology Impact CH EUR Cap",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 9"
+},
+{
+"isin": "LU1160356009",
+"nom": "Edmond de Rothschild Fund - Healthcare A EUR",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0010836163",
+"nom": "CPR Silver Age P",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0014009IH3",
+"nom": "Ofi Invest Révolution Démographique Monde A",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0000095465",
+"nom": "Ofi Invest Actions Immo Euro A",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 6"
+},
+{
+"isin": "LU1165137149",
+"nom": "BNP Paribas Funds - Smart Food Classic Acc",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 9"
+},
+{
+"isin": "FR0011208297",
+"nom": "Flornoy Fund - Flornoy Valeurs Familiales R",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 6"
+},
+{
+"isin": "LU1209226023",
+"nom": "Global Fund - Ofi Invest Act4 Positive Economy R C EUR",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 9"
+},
+{
+"isin": "LU1665237704",
+"nom": "M&G (Lux) Investment Funds 1 - M&G (Lux) Global Listed Infrastructure Fund A EUR",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0000299356",
+"nom": "Norden SRI",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0010174144",
+"nom": "BDL Rempart C",
+"categorie": "Spéculatifs",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1112771503",
+"nom": "Helium Fund - Helium Selection B-EUR",
+"categorie": "Spéculatifs",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0010400762",
+"nom": "Moneta Long Short A",
+"categorie": "Spéculatifs",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU2358392376",
+"nom": "Varenne UCITS - Varenne Valeur A-EUR",
+"categorie": "Spéculatifs",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0641745921",
+"nom": "DNCA Invest - Miuri A EUR",
+"categorie": "Spéculatifs",
+"sri": 2,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1331971769",
+"nom": "Eleva UCITS Fund - Eleva Absolute Return Europe Fund A1 (EUR) acc",
+"categorie": "Spéculatifs",
+"sri": 2,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0505784883",
+"nom": "abrdn SICAV I - Japanese Sustainable Equity Fund S Acc Hedged EUR",
+"categorie": "Actions",
+"sri": 5,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0010286013",
+"nom": "Sextant Grand Large A",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0012336683",
+"nom": "Amundi Actions Or P-C",
+"categorie": "Actions",
+"sri": 5,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0171288334",
+"nom": "BlackRock Global Funds - Systematic Sustainable Global SmallCap Fund",
+"categorie": "Actions"
+},
+{
+"isin": "FR0013284338",
+"nom": "BNP Paribas Aqua Classic",
+"categorie": "Mixtes",
+"sri": 4,
+"sfdr": "Art. 9"
+},
+{
+"isin": "FR0010135103",
+"nom": "Carmignac Patrimoine A EUR Acc",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0010097683",
+"nom": "CPR Croissance Réactive P",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1694789535",
+"nom": "DNCA Invest - Alpha Bonds B EUR",
+"categorie": "Obligations",
+"sri": 2,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0599946893",
+"nom": "DWS Concept Kaldemorgen EUR LC",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0011034495",
+"nom": "Edmond de Rothschild Fund - Financial Bonds A EUR",
+"categorie": "Obligations",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1161527038",
+"nom": "Edmond de Rothschild Fund - Bond Allocation A EUR Acc",
+"categorie": "Obligations",
+"sri": 2,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1616921158",
+"nom": "Eleva UCITS Fund - Eleva Euroland Selection Fund A2 (EUR) acc.",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0010268227",
+"nom": "Florinvest Equilibré SR C (ex Danjou Equilibre)",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 6"
+},
+{
+"isin": "LU0119195963",
+"nom": "GS Patrimonial Balanced P EURC",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1165644672",
+"nom": "IVO Fixed Income R Acc",
+"categorie": "Obligations",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0010689141",
+"nom": "Norden SRI",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0010568683",
+"nom": "MAM Global Strategies (Ex Lanrezac Patrimoine)",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 6"
+},
+{
+"isin": "FR0013408473",
+"nom": "Abeille La Fabrique Impact ISR R C",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 9"
+},
+{
+"isin": "LU1951204046",
+"nom": "Natixis AM Funds - Seeyond SRI Europe MinVol R/A (EUR)",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU0227384020",
+"nom": "Nordea 1, SICAV - Stable Return Fund BP EUR",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1849527939",
+"nom": "ODDO BHF Polaris Moderate CR-EUR",
+"categorie": "Mixtes",
+"sri": 2,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0014008NN3",
+"nom": "Global Fund - Ofi Invest Act4 Social Impact R-C EUR",
+"categorie": "Actions",
+"sri": 4,
+"sfdr": "Art. 9"
+},
+{
+"isin": "FR0011035864",
+"nom": "Ofi Invest ISR Grandes Marques A",
+"categorie": "Mixtes",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0007032719",
+"nom": "Ofi Invest ISR Small&Mid Caps Euro A",
+"categorie": "Mixtes",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "LU1209226700",
+"nom": "Ofi Invest ISR Crédit Bonds Euro 1-3 AC",
+"categorie": "Actions",
+"sri": 2,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0014009K74",
+"nom": "Ofi Invest ESG MultiTrack R",
+"categorie": "Obligations",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0010541557",
+"nom": "R-co Valor C EUR",
+"categorie": "Mixtes",
+"sri": 4,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0013513132",
+"nom": "R-co 2 - R-co Target 2028 IG C EUR (n'est plus commercialisé depuis le",
+"categorie": "Obligations",
+"sri": 2,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0010363366",
+"nom": "Sycomore Allocation Patrimoine R",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 8"
+},
+{
+"isin": "FR0010738120",
+"nom": "Sycomore Opportunities R",
+"categorie": "Mixtes",
+"sri": 3,
+"sfdr": "Art. 8"
+}
+],
+"sorties": []
+}
