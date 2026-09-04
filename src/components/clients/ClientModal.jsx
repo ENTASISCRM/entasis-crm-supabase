@@ -217,9 +217,13 @@ export default function ClientModal({ open, client, onClose, onSave, supabase, p
         patrimoine_estime: form.patrimoine_estime ? Number(form.patrimoine_estime) : null,
         objectifs: form.objectifs || [],
         notes: form.notes?.trim() || null,
+        // Le conseiller de la fiche ne change QUE si un manager le decide.
+        // Avant, un conseiller qui ouvrait la fiche d un collegue et
+        // enregistrait, meme sans rien modifier, se l attribuait : trois
+        // clients avaient deja change de main de cette facon.
         advisor_code: profile?.role === 'manager'
-          ? (form.advisor_code?.trim() || profile?.advisor_code)
-          : profile?.advisor_code,
+          ? (form.advisor_code?.trim() || client?.advisor_code || profile?.advisor_code)
+          : (client?.id ? (client.advisor_code || null) : profile?.advisor_code),
         co_advisor_code: form.co_advisor_code?.trim() || null,
       }
 
