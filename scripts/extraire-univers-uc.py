@@ -124,9 +124,31 @@ def abeille_universe(chemin):
     for page, m in ordre:
         classe = normaliser_classe(m.group(1).strip().rstrip('¹').strip()) if m else None
         for ligne in page.split('\n'):
+            # La mise en page a deux colonnes colle parfois deux supports sur la
+            # meme ligne de texte : « <isin A> <nom A> <isin B> <nom B> ». Sans
+            # cette coupe, le nom de A emportait l ISIN de B et B disparaissait.
+            # Quatre supports du panorama Abeille etaient dans ce cas, avec un
+            # ISIN affiche a cote du mauvais fonds (audit du 04/09/2026).
+            for morceau in couper_par_isin(ligne):
+                traiter_morceau(morceau, classe, classe_par_isin, vus, supports)
+        continue
+
+    return supports
+
+
+def couper_par_isin(ligne):
+    """Decoupe une ligne en autant de morceaux que d ISIN qu elle porte."""
+    debuts = [m.start() for m in ISIN.finditer(ligne)]
+    if len(debuts) <= 1:
+        return [ligne]
+    bornes = debuts + [len(ligne)]
+    return [ligne[bornes[i]:bornes[i + 1]] for i in range(len(debuts))]
+
+
+def traiter_morceau(ligne, classe, classe_par_isin, vus, supports):
             m2 = ISIN.search(ligne)
             if not m2:
-                continue
+                return
             code = m2.group(1)
             reste = ligne[m2.end():].strip()
             # « … <nom> <SRI> <SFDR> <label> » : le SRI est un chiffre isole de
@@ -140,13 +162,12 @@ def abeille_universe(chemin):
                 nom = re.sub(r'\s+(Art\.|Article)\s*\d.*$', '', reste).strip()
             nom = re.sub(r'\s{2,}', ' ', nom).strip()
             if not nom or code in vus:
-                continue
+                return
             vus.add(code)
             supports.append(nettoyer({
                 'isin': code, 'nom': nom, 'categorie': classe_par_isin.get(code) or classe, 'sri': sri,
                 'sfdr': 'Art. 9' if 'Art. 9' in reste else 'Art. 8' if 'Art. 8' in reste else 'Art. 6' if 'Art. 6' in reste else None,
             }))
-    return supports
 
 
 def texte(v):
