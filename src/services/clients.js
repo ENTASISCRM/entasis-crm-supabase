@@ -93,6 +93,64 @@ export async function assurerCoConseiller(clientId, code) {
 }
 
 /**
+ * Rend l acces a la fiche quand plus aucun dossier du client ne le justifie.
+ *
+ * Pourquoi : poser le co conseiller n avait pas de geste inverse. Retirer le
+ * co d un dossier laissait `clients.co_advisor_code` en place, et l ancien co
+ * gardait la fiche pour toujours. Releve du 04/09/2026 : trois fiches portent
+ * un co qu aucun dossier ne justifie.
+ *
+ * Retirer un acces est une decision de securite, donc deux verrous.
+ *
+ * 1. On ne retire que sur une lecture COMPLETE des dossiers du client. La RLS
+ *    `deals` ne montre a un conseiller que les dossiers dont il est titulaire
+ *    ou co : un dossier d un autre titulaire portant le meme co lui est
+ *    invisible. Ce n est pas theorique, treize fiches a co ont des dossiers
+ *    de plusieurs titulaires, et deux tiennent leur co d un dossier qui n est
+ *    pas celui du titulaire de la fiche : sur une lecture partielle on
+ *    couperait un co legitime. Seule la direction voit tous les dossiers,
+ *    pour les autres on s abstient et la fiche garde son co.
+ * 2. L ecriture reporte la condition cote serveur (`eq co_advisor_code`) et
+ *    se verifie par `.select('id')` : la RLS `clients` refuse d ailleurs
+ *    cette ecriture au co lui meme, puisque la fiche cesserait d etre la
+ *    sienne. Seuls le conseiller principal de la fiche et la direction
+ *    peuvent rendre l acces, ce qui est bien la regle voulue.
+ *
+ * Renvoie 'rendu', 'garde' (un dossier porte encore ce co), 'inutile' (la
+ * fiche ne porte pas ce co), 'incertain' (lecture partielle, on s abstient)
+ * ou 'refus' (la RLS n a pas laisse ecrire).
+ */
+export async function libererCoConseiller(clientId, code, { lectureComplete = false } = {}) {
+  if (!clientId || !code) return 'inutile'
+  if (!lectureComplete) return 'incertain'
+  try {
+    const { data: fiche, error } = await supabase
+      .from('clients').select('co_advisor_code').eq('id', clientId).maybeSingle()
+    if (error || !fiche) return 'refus'
+    if (fiche.co_advisor_code !== code) return 'inutile'
+    // Un dossier annule ou en cours justifie l acces autant qu un dossier
+    // signe : c est le dossier qui donne l acces, pas son issue.
+    const { data: restants, error: e2 } = await supabase
+      .from('deals').select('id').eq('client_id', clientId).eq('co_advisor_code', code).limit(1)
+    // Une lecture en erreur n est pas une absence de dossier : dans le doute
+    // on garde l acces.
+    if (e2) { console.error('[clients.libererCoConseiller] lecture dossiers:', e2.message); return 'garde' }
+    if ((restants || []).length > 0) return 'garde'
+    const { data, error: e3 } = await supabase
+      .from('clients')
+      .update({ co_advisor_code: null, updated_at: new Date().toISOString() })
+      .eq('id', clientId).eq('co_advisor_code', code).select('id')
+    if (e3) { console.error('[clients.libererCoConseiller] failed:', e3.message); return 'refus' }
+    return (Array.isArray(data) && data.length > 0) ? 'rendu' : 'refus'
+  } catch (e) {
+    // Jamais d exception vers l appelant : cet appel vit dans le try de
+    // saveDeal, dont le catch deconnecte la session.
+    console.error('[clients.libererCoConseiller] failed:', e?.message || e)
+    return 'refus'
+  }
+}
+
+/**
  * Recherche un client existant par nom + advisor_code (unicité métier).
  * @returns le client { id } ou null si non trouvé.
  */

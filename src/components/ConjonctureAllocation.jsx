@@ -17,6 +17,13 @@
 //   • le pôle prudent Abeille ne bouge jamais ;
 //   • aucun monétaire, fonds euro ou fonds d'attente n'est proposé ;
 //   • le total ne se normalise jamais tout seul.
+//
+// Une inclinaison peut aussi ne rien trouver à viser. Les deux entrées les
+// mieux sourcées de la note du 04/09/2026 visent la duration souveraine, et
+// aucune catégorie des deux assureurs ne nomme un émetteur souverain : elles
+// s'affichaient avec leur argument et rien en face. La colonne « Sur ce pôle »
+// dit ce silence et sa raison, parce qu'un argument documenté sans réponse se
+// lit comme une panne du moteur.
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { useEffect, useMemo, useState } from 'react'
@@ -30,12 +37,17 @@ import {
   estVerrouille,
   proposerInflexions,
   appliquerPropositions,
+  inclinaisonsSansCible,
 } from '../lib/moteur-allocation'
 import { totalPoids } from '../config/allocations'
 
 const pct = (n) => `${String(Math.round(Number(n) * 10) / 10).replace('.', ',')} %`
 
 const nomFamille = (cle) => FAMILLES.find((f) => f.cle === cle)?.nom || cle
+
+// La même liste vide à chaque rendu, pour que « rien de retenu » ne se
+// distingue pas de lui même d'un rendu à l'autre et ne relance pas les calculs.
+const AUCUN_RETENU = []
 
 const TON_SENS = { renforcer: 'badge-signed', alleger: 'badge-progress', maintenir: 'badge-normal' }
 const LIBELLE_SENS = { renforcer: 'Renforcer', alleger: 'Alléger', maintenir: 'Maintenir' }
@@ -113,6 +125,83 @@ function Sources({ sources, id }) {
   )
 }
 
+// Ce que le moteur a trouvé, ou pas, en face d'une inclinaison, sur le pôle
+// affiché. Les quatre silences ne se rattrapent pas de la même façon, ils ne se
+// disent donc pas de la même façon :
+//   une famille que la liste de l'assureur ne nomme pas est une limite de la
+//   donnée, elle ne se corrige pas en arbitrant le portefeuille ;
+//   une famille qu'aucune ligne du pôle ne porte est une information sur le
+//   portefeuille, elle se regarde ;
+//   un pôle verrouillé est une décision de la direction ;
+//   une famille portée par le pôle et laissée immobile est un fait rendu tel
+//   quel, sans lui inventer une cause.
+//
+// Un maintenir ne produit rien par construction : il ne s'affiche donc pas
+// comme un manque, ce n'en est pas un.
+function SurLePole({ inclinaison, entree, nbPropositions, nomPole, nomPartenaire }) {
+  const doux = { fontSize: 12, color: 'var(--t3)' }
+
+  if (inclinaison.sens === 'maintenir') {
+    return (
+      <div style={doux}>
+        {inclinaison.famille
+          ? 'Un maintenir ne déplace aucune ligne : rien n\'est attendu ici.'
+          : "Cette entrée vise le calendrier d'exécution, pas une classe d'actifs."}
+      </div>
+    )
+  }
+
+  if (!entree) {
+    // Servie : la réponse est dans le tableau des propositions, plus bas.
+    if (!nbPropositions) return null
+    return (
+      <div style={doux}>
+        {nbPropositions > 1
+          ? `${nbPropositions} propositions ci dessous.`
+          : 'Une proposition ci dessous.'}
+      </div>
+    )
+  }
+
+  if (entree.cause === 'pole_verrouille') {
+    return <div style={doux}>Ce pôle ne bouge pas : décision de la direction.</div>
+  }
+
+  if (entree.cause === 'famille_absente_des_listes') {
+    return (
+      <div style={{ ...doux, color: 'var(--forecast)' }}>
+        Rien à proposer ici, et le portefeuille n'y est pour rien : aucun support de
+        la liste {nomPartenaire} ne se classe en « {nomFamille(entree.famille)} ».
+        Ce que vise la note ne se lit pas dans les catégories de l'assureur, et
+        aucun arbitrage sur ce pôle n'y changera quoi que ce soit.
+      </div>
+    )
+  }
+
+  if (entree.cause === 'aucune_ligne_du_pole') {
+    // La phrase se dit de ce que le moteur sait lire : une ligne que la liste
+    // du partenaire ne reconnaît pas ne dit rien de sa famille, et la réserve
+    // s'écrit plutôt que de se taire.
+    const inconnues = entree.lignesNonClassees || 0
+    const reserve = inconnues > 0
+      ? ` ${inconnues} ligne${inconnues > 1 ? 's' : ''} du pôle ${inconnues > 1 ? 'ne sont rattachées' : "n'est rattachée"} à aucune famille : la phrase ne ${inconnues > 1 ? 'les' : 'la'} compte pas.`
+      : ''
+    return (
+      <div style={doux}>
+        Rien à proposer ici : aucune ligne de {nomPole} n'appartient à la famille
+        « {nomFamille(entree.famille)} ».{reserve}
+      </div>
+    )
+  }
+
+  return (
+    <div style={doux}>
+      Le pôle porte bien cette famille, et le moteur ne propose aucun mouvement
+      dessus.
+    </div>
+  )
+}
+
 export default function ConjonctureAllocation({
   partenaire,
   poleAffiche,
@@ -127,7 +216,12 @@ export default function ConjonctureAllocation({
   onRetenues,
   onAllerAuCran,
 }) {
-  const [retenus, setRetenus] = useState([])
+  // Ce qui est coché à l'écran et ce que la copie emporte doivent être la même
+  // chose à chaque rendu, pas seulement une fois les effets passés. Les cases
+  // retiennent donc la clé du contexte dans lequel elles ont été cochées :
+  // dès que ce contexte change, elles ne comptent plus, sans attendre l'effet
+  // qui les efface. Incident du 04/09/2026, plus bas.
+  const [retenus, setRetenus] = useState({ cle: '', isins: [] })
 
   const regime = useMemo(
     () => REGIMES.find((r) => r.cle === REGIME_COURANT.cle) || null,
@@ -150,17 +244,56 @@ export default function ConjonctureAllocation({
     }) || []
   }, [poleAffiche, verrouille, univers, lignes])
 
-  // Changer de pôle, de partenaire ou de cran change le jeu de propositions :
-  // ce qui avait été retenu ne veut plus rien dire, on repart de zéro.
-  const cleContexte = `${poleAffiche?.id || ''}|${propositions.map((p) => p.isin).join(',')}`
+  // Les inclinaisons qui ne trouvent rien à viser, et pourquoi. Le moteur ne
+  // sait le dire qu'avec la liste des supports sous les yeux, sauf sur un pôle
+  // verrouillé où la réponse est la décision elle même : hors de ces deux cas
+  // la colonne ne s'affiche pas, plutôt que d'afficher un diagnostic à blanc.
+  const colonneSurLePole = !!poleAffiche && (verrouille || statutUnivers === 'pret')
+
+  const sansCible = useMemo(() => {
+    if (!colonneSurLePole) return []
+    return inclinaisonsSansCible({
+      poleId: poleAffiche.id,
+      lignes,
+      regime: REGIME_COURANT.cle,
+      univers,
+    }) || []
+  }, [colonneSurLePole, poleAffiche, lignes, univers])
+
+  // Le rang, et pas la famille : deux entrées de la note visent les souverains,
+  // elles doivent se lire chacune en face de son propre argument.
+  const sansCibleParRang = useMemo(
+    () => new Map(sansCible.map((e) => [e.rang, e])),
+    [sansCible],
+  )
+
+  const propositionsParFamille = useMemo(() => {
+    const compte = new Map()
+    for (const p of propositions) compte.set(p.famille, (compte.get(p.famille) || 0) + 1)
+    return compte
+  }, [propositions])
+
+  // Changer de pôle, de partenaire, de cran ou de poids change le jeu de
+  // propositions : ce qui avait été retenu ne veut plus rien dire, on repart de
+  // zéro.
+  //
+  // Les poids font partie de la clé, et c'est tout l'objet du correctif du
+  // 04/09/2026. « Ramener à 100 % » ne change ni le pôle ni la liste des
+  // supports, seulement leurs poids : la clé ne bougeait pas, les cases
+  // restaient cochées et l'écran continuait d'annoncer deux inflexions
+  // retenues, pendant que l'écran du dessus avait déjà vidé les siennes. Le
+  // conseiller collait au client une allocation sans les inflexions qu'il
+  // croyait emporter.
+  const cleContexte = `${poleAffiche?.id || ''}|${propositions.map((p) => `${p.isin}:${p.poids}>${p.poidsPropose}`).join(',')}`
+  const retenusIci = retenus.cle === cleContexte ? retenus.isins : AUCUN_RETENU
   useEffect(() => {
-    setRetenus([])
+    setRetenus({ cle: cleContexte, isins: [] })
     onRetenues([])
   }, [cleContexte, onRetenues])
 
   const propositionsRetenues = useMemo(
-    () => propositions.filter((p) => retenus.includes(p.isin)),
-    [propositions, retenus],
+    () => propositions.filter((p) => retenusIci.includes(p.isin)),
+    [propositions, retenusIci],
   )
 
   // Le total se recalcule sous les yeux du conseiller, et il reste ce qu'il
@@ -174,10 +307,12 @@ export default function ConjonctureAllocation({
   )
 
   function basculer(isin) {
-    const suivant = retenus.includes(isin)
-      ? retenus.filter((i) => i !== isin)
-      : [...retenus, isin]
-    setRetenus(suivant)
+    const suivant = retenusIci.includes(isin)
+      ? retenusIci.filter((i) => i !== isin)
+      : [...retenusIci, isin]
+    // La coche est datée du contexte où elle a été faite : c'est ce qui permet
+    // de la retirer du rendu dès que ce contexte change.
+    setRetenus({ cle: cleContexte, isins: suivant })
     onRetenues(propositions.filter((p) => suivant.includes(p.isin)))
   }
 
@@ -247,6 +382,7 @@ export default function ConjonctureAllocation({
                 <th>Ce que le régime vise</th>
                 <th>Sens</th>
                 <th>Ampleur</th>
+                {colonneSurLePole && <th>Sur ce pôle</th>}
                 <th>Pourquoi</th>
               </tr>
             </thead>
@@ -266,6 +402,17 @@ export default function ConjonctureAllocation({
                     </span>
                   </td>
                   <td>{i.ampleur}</td>
+                  {colonneSurLePole && (
+                    <td>
+                      <SurLePole
+                        inclinaison={i}
+                        entree={sansCibleParRang.get(rang)}
+                        nbPropositions={propositionsParFamille.get(i.famille) || 0}
+                        nomPole={poleAffiche.nom}
+                        nomPartenaire={partenaire.nom}
+                      />
+                    </td>
+                  )}
                   <td><Pourquoi texte={i.pourquoi} sources={i.sources} /></td>
                 </tr>
               ))}
@@ -279,6 +426,10 @@ export default function ConjonctureAllocation({
         Propositions du moteur
       </div>
 
+      {/* Arbitre par la direction le 04/09/2026 : sur un cran intermediaire, on
+          ne propose rien plutot que de proposer sans source. Le melange des
+          deux poles est une composition sur mesure, aucun document ne le
+          porte, et une inflexion sans source n a pas sa place dans cet ecran. */}
       {!poleAffiche && (
         <>
           <div className="form-hint" style={{ marginTop: 8 }}>
@@ -352,7 +503,9 @@ export default function ConjonctureAllocation({
 
           {statutUnivers === 'pret' && propositions.length === 0 && (
             <div className="form-hint" style={{ marginTop: 10 }}>
-              Le régime en cours ne déplace aucune ligne de ce pôle.
+              Le régime en cours ne déplace aucune ligne de ce pôle. La colonne
+              « Sur ce pôle » du tableau ci dessus dit, inclinaison par inclinaison,
+              ce qui n'a rien trouvé à viser et pourquoi.
             </div>
           )}
 
@@ -372,7 +525,7 @@ export default function ConjonctureAllocation({
                   </thead>
                   <tbody>
                     {propositions.map((p) => {
-                      const coche = retenus.includes(p.isin)
+                      const coche = retenusIci.includes(p.isin)
                       return (
                         <tr key={p.isin}>
                           <td>
@@ -419,8 +572,12 @@ export default function ConjonctureAllocation({
                     ? `Aucune inflexion retenue · total d'origine ${pct(totalAvant)}`
                     : `${propositionsRetenues.length} inflexion${propositionsRetenues.length > 1 ? 's' : ''} retenue${propositionsRetenues.length > 1 ? 's' : ''} · total d'origine ${pct(totalAvant)}`}
                 </span>
-                {retenus.length > 0 && (
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setRetenus([]); onRetenues([]) }}>
+                {retenusIci.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => { setRetenus({ cle: cleContexte, isins: [] }); onRetenues([]) }}
+                  >
                     Tout refuser
                   </button>
                 )}

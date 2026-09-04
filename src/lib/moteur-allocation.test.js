@@ -4,6 +4,7 @@ import {
   proposerInflexions,
   appliquerPropositions,
   candidatsRemplacement,
+  inclinaisonsSansCible,
 } from './moteur-allocation'
 import {
   FAMILLES,
@@ -13,6 +14,7 @@ import {
   VERROUS,
   familleDuSupport,
 } from '../config/conjoncture'
+import { estFondsDAttente } from '../config/univers-uc'
 
 // ────────────────────────────────────────────────────────────────────────────
 // Univers de test. Les supports sont repris des deux listes d’assureurs avec
@@ -227,6 +229,74 @@ describe('proposerInflexions, ce qui ne bouge pas', () => {
   })
 })
 
+describe('proposerInflexions, verrou 2 tenu par construction', () => {
+  // Jusqu’au 04/09/2026 le verrou « jamais de fonds d’attente » ne tenait, du
+  // côté des propositions, que par la famille monetaire_attente. Ça marchait
+  // par chance : aucun fonds d’attente des deux listes de l’assureur ne tombe
+  // dans une famille que la note incline. Ces trois cas là sont ceux que la
+  // chance ne couvre pas, et ils doivent tenir sans elle.
+
+  // Un monétaire que l’assureur range dans une catégorie inclinée. La famille
+  // se lit sur la catégorie, donc métaux précieux, que la note renforce.
+  const ATTENTE_DEGUISE = {
+    isin: 'FR0000000042',
+    nom: 'SLF Trésorerie Euro P',
+    categorie: 'Secteur Métaux Précieux',
+    sri: 1,
+    fraisGestionMax: 0.5,
+  }
+  // Le même support, au nom qui ne dit plus rien : il sert de témoin, sinon un
+  // test vert ne prouverait que l’absence d’inclinaison sur cette famille.
+  const TEMOIN = { ...ATTENTE_DEGUISE, isin: 'FR0000000043', nom: 'Un fonds de mineurs P' }
+
+  const universDeguise = faireUnivers([...SUPPORTS_SWISSLIFE, ATTENTE_DEGUISE, TEMOIN])
+  const surLeDeguise = (isin) => proposerInflexions({
+    poleId: 'sl-offensif-diversifie',
+    lignes: [{ fonds: 'peu importe', isin, poids: 10 }],
+    univers: universDeguise,
+  })
+
+  it('ne propose rien sur un fonds d’attente rangé dans une famille inclinée', () => {
+    expect(estFondsDAttente(ATTENTE_DEGUISE)).toBe(true)
+    expect(familleDuSupport(ATTENTE_DEGUISE)).toBe('metaux_precieux')
+    expect(surLeDeguise('FR0000000042')).toEqual([])
+  })
+
+  it('et la même ligne, sans le nom d’attente, reçoit bien une proposition', () => {
+    // Le témoin : c’est le verrou qui écarte le premier, pas l’absence
+    // d’inclinaison sur les métaux précieux.
+    expect(surLeDeguise('FR0000000043')).toHaveLength(1)
+    expect(surLeDeguise('FR0000000043')[0]).toMatchObject({ famille: 'metaux_precieux', sens: 'renforcer' })
+  })
+
+  it('ne propose rien quand c’est la ligne recopiée qui dit le fonds d’attente', () => {
+    // Une ligne venue d’une proposition papier ne porte qu’un nom. Si ce nom
+    // dit monétaire alors que la liste de l’assureur classe l’ISIN ailleurs, on
+    // retient l’union des deux lectures : sur un « jamais » de la direction, un
+    // support écarté à tort se rattrape à la main, un fonds d’attente proposé
+    // au client, non.
+    expect(proposerInflexions({
+      poleId: 'sl-offensif-diversifie',
+      lignes: [{ fonds: 'SLF (F) ESG Money Market Euro P', isin: 'LU0171305526', poids: 5 }],
+      univers,
+    })).toEqual([])
+  })
+
+  it('aucune proposition ne porte un fonds d’attente, sur aucun des contextes de test', () => {
+    const contextes = [
+      { poleId: 'sl-offensif-diversifie', lignes: LIGNES, univers },
+      { poleId: 'sl-equilibre-dynamique', lignes: LIGNES, univers: universDeguise },
+      { poleId: 'ab-dynamique', lignes: LIGNES, univers: universAbeille },
+    ]
+    for (const contexte of contextes) {
+      for (const p of proposerInflexions(contexte)) {
+        expect(estFondsDAttente(contexte.univers.parIsin.get(p.isin)), p.fonds).toBe(false)
+        expect(estFondsDAttente(p), p.fonds).toBe(false)
+      }
+    }
+  })
+})
+
 describe('proposerInflexions, le plancher à zéro', () => {
   const propositions = proposerInflexions({ poleId: 'sl-offensif-diversifie', lignes: LIGNES, univers })
   const proposition = parIsin(propositions)
@@ -268,6 +338,204 @@ describe('proposerInflexions, deux inclinaisons sur la même famille', () => {
     const surLeSouverain = propositions.filter((p) => p.famille === 'oblig_souverain')
     expect(surLeSouverain.length).toBe(1)
     expect(surLeSouverain[0]).toMatchObject({ poids: 6, delta: -2, poidsPropose: 4 })
+  })
+})
+
+describe('inclinaisonsSansCible', () => {
+  const TOUTES = INCLINAISONS[REGIME_COURANT.cle]
+  const RANGS_QUI_BOUGENT = TOUTES
+    .map((i, rang) => ({ i, rang }))
+    .filter(({ i }) => i.famille && VERROUS.sensQuiBougent.includes(i.sens))
+    .map(({ rang }) => rang)
+
+  // Les deux entrées souveraines de la note, celles que l’écran affichait sans
+  // rien en face : c’est le cas qui a motivé la fonction.
+  const RANGS_SOUVERAINS = TOUTES
+    .map((i, rang) => ({ i, rang }))
+    .filter(({ i }) => i.famille === 'oblig_souverain')
+    .map(({ rang }) => rang)
+
+  const cause = (entrees, rang) => entrees.find((e) => e.rang === rang)?.cause
+
+  // Un pôle Abeille de test : cinq catégories larges, aucune obligation, aucune
+  // protection inflation, aucun métal stratégique. C’est la liste de l’assureur
+  // qui est courte, pas le portefeuille qui est mal construit.
+  const LIGNES_ABEILLE = [
+    { fonds: 'DWS Invest Artificial Intelligence LC', isin: 'LU1863263346', poids: 20 },
+    { fonds: 'Amundi Actions Or P-C', isin: 'FR0012336683', poids: 10 },
+    { fonds: 'Ofi Invest ESG Liquidités A', isin: 'FR001400KPY6', poids: 30 },
+    { fonds: 'Comgest Monde C', isin: 'FR0000284689', poids: 40 },
+  ]
+
+  // Un pôle SwissLife sans ligne obligataire ni ligne indexée, alors que la
+  // liste de juin 2026 sait nommer les deux.
+  const LIGNES_SANS_OBLIGATIONS = [
+    { fonds: 'SLF (France) Eq ESG USA Low Carb P', isin: 'FR001400SR03', poids: 10 },
+    { fonds: 'Athymis Industrie 4.0 P', isin: 'FR0013358793', poids: 12.5 },
+    { fonds: 'BSO Bio Santé C', isin: 'FR0007005764', poids: 6 },
+    { fonds: 'BGF World Gold A2', isin: 'LU0171305526', poids: 5 },
+  ]
+
+  it('nomme la famille que la liste de l’assureur ne sait pas nommer', () => {
+    // Aucune des cinq catégories Abeille ne déclare un émetteur souverain, ni
+    // une duration, ni une indexation à l’inflation : les deux inclinaisons les
+    // mieux sourcées de la note n’ont aucune ligne à viser, et ce n’est pas le
+    // portefeuille qu’il faut regarder.
+    const entrees = inclinaisonsSansCible({
+      poleId: 'ab-dynamique',
+      lignes: LIGNES_ABEILLE,
+      univers: universAbeille,
+    })
+
+    for (const rang of RANGS_SOUVERAINS) {
+      expect(cause(entrees, rang)).toBe('famille_absente_des_listes')
+    }
+    expect(entrees.filter((e) => e.famille === 'oblig_souverain')).toHaveLength(2)
+
+    // Le pôle porte bien de la technologie et des métaux précieux : ces deux
+    // familles là reçoivent des propositions, elles ne sont pas un manque.
+    expect(entrees.map((e) => e.famille)).not.toContain('technologie')
+    expect(entrees.map((e) => e.famille)).not.toContain('metaux_precieux')
+  })
+
+  it('distingue les deux causes dans un même univers', () => {
+    // La liste SwissLife de test nomme un souverain et un indexé inflation :
+    // s’ils manquent, c’est le pôle qui ne les porte pas. Elle ne nomme en
+    // revanche ni transition énergétique ni métaux stratégiques : là, c’est la
+    // donnée de l’assureur qui s’arrête, et aucun arbitrage ne le changera.
+    const entrees = inclinaisonsSansCible({
+      poleId: 'sl-offensif-diversifie',
+      lignes: LIGNES_SANS_OBLIGATIONS,
+      univers,
+    })
+    const parFamille = new Map(entrees.map((e) => [e.famille, e.cause]))
+
+    expect(parFamille.get('oblig_souverain')).toBe('aucune_ligne_du_pole')
+    expect(parFamille.get('inflation')).toBe('aucune_ligne_du_pole')
+    expect(parFamille.get('actions_france')).toBe('aucune_ligne_du_pole')
+    expect(parFamille.get('transition_energetique')).toBe('famille_absente_des_listes')
+    expect(parFamille.get('metaux_strategiques')).toBe('famille_absente_des_listes')
+  })
+
+  it('compte les lignes du pôle qu’il ne sait pas rattacher, la réserve de la phrase', () => {
+    // « Aucune ligne de cette famille » se dit de ce que le moteur sait lire.
+    // Une ligne absente de la liste du partenaire ne dit rien de sa famille :
+    // elle est comptée à part plutôt que passée sous silence.
+    const entrees = inclinaisonsSansCible({
+      poleId: 'sl-offensif-diversifie',
+      lignes: LIGNES,
+      univers,
+    })
+    expect(entrees.length).toBeGreaterThan(0)
+    for (const e of entrees) expect(e.lignesNonClassees).toBe(1)
+
+    const sansInconnue = inclinaisonsSansCible({
+      poleId: 'sl-offensif-diversifie',
+      lignes: LIGNES_SANS_OBLIGATIONS,
+      univers,
+    })
+    for (const e of sansInconnue) expect(e.lignesNonClassees).toBe(0)
+  })
+
+  it('sur le pôle verrouillé Abeille, ce n’est ni un manque ni une limite, c’est une décision', () => {
+    const entrees = inclinaisonsSansCible({ poleId: 'ab-prudent', lignes: LIGNES, univers })
+
+    expect(entrees.map((e) => e.rang)).toEqual(RANGS_QUI_BOUGENT)
+    for (const e of entrees) {
+      expect(e.cause).toBe('pole_verrouille')
+      // On n’a pas regardé les lignes d’un pôle verrouillé : on n’en compte
+      // donc aucune, plutôt que d’annoncer un zéro qui n’a pas été mesuré.
+      expect(e.lignesNonClassees).toBe(null)
+    }
+
+    // Verrou 1 avant tout calcul : la réponse ne dépend même pas de l’univers.
+    expect(inclinaisonsSansCible({ poleId: 'ab-prudent', lignes: LIGNES })).toEqual(entrees)
+  })
+
+  it('ne fait jamais passer un maintenir pour un manque', () => {
+    const contextes = [
+      inclinaisonsSansCible({ poleId: 'sl-offensif-diversifie', lignes: LIGNES, univers }),
+      inclinaisonsSansCible({ poleId: 'ab-dynamique', lignes: LIGNES_ABEILLE, univers: universAbeille }),
+      inclinaisonsSansCible({ poleId: 'ab-prudent', lignes: LIGNES, univers }),
+    ]
+    for (const entrees of contextes) {
+      for (const e of entrees) {
+        expect(TOUTES[e.rang].sens).not.toBe('maintenir')
+        expect(e.sens).not.toBe('maintenir')
+        // L’entrée « calendrier d’exécution » ne vise pas une classe d’actifs :
+        // elle n’a rien à viser dans aucun pôle, et ce n’est pas un manque.
+        expect(e.famille).toBeTruthy()
+      }
+    }
+    // L’énergie est un maintenir de la note et n’apparaît nulle part.
+    for (const entrees of contextes) expect(entrees.map((e) => e.famille)).not.toContain('energie')
+  })
+
+  it('dit qu’une famille bien présente dans le pôle n’a reçu aucun mouvement', () => {
+    // Valfrance pèse zéro et la France s’allège : il n’y a rien à proposer, et
+    // pourtant le pôle porte bien cette famille. Ni un manque de ligne ni une
+    // limite de la donnée : le fait est rendu tel quel.
+    const entrees = inclinaisonsSansCible({
+      poleId: 'sl-offensif-diversifie',
+      lignes: [{ fonds: 'Valfrance P', isin: 'FR0000973711', poids: 0 }],
+      univers,
+    })
+    const surLaFrance = entrees.find((e) => e.famille === 'actions_france')
+    expect(surLaFrance).toMatchObject({ cause: 'aucun_mouvement_sur_les_lignes', sens: 'alleger' })
+  })
+
+  it('ne contredit jamais les propositions affichées à côté', () => {
+    const contextes = [
+      { poleId: 'sl-offensif-diversifie', lignes: LIGNES, univers },
+      { poleId: 'sl-equilibre-dynamique', lignes: LIGNES_SANS_OBLIGATIONS, univers },
+      { poleId: 'ab-dynamique', lignes: LIGNES_ABEILLE, univers: universAbeille },
+    ]
+    for (const contexte of contextes) {
+      const propositions = proposerInflexions(contexte)
+      const entrees = inclinaisonsSansCible(contexte)
+      const servies = new Set(propositions.map((p) => p.famille))
+
+      // Une famille est servie ou nommée sans cible, jamais les deux.
+      for (const e of entrees) expect(servies.has(e.famille)).toBe(false)
+
+      // Et jamais ni l’un ni l’autre : toute inclinaison qui bouge trouve sa
+      // réponse quelque part à l’écran, une proposition ou une raison.
+      for (const rang of RANGS_QUI_BOUGENT) {
+        const traitee = servies.has(TOUTES[rang].famille) || entrees.some((e) => e.rang === rang)
+        expect(traitee).toBe(true)
+      }
+    }
+  })
+
+  it('se tait plutôt que de tout déclarer absent quand la liste n’est pas chargée', () => {
+    // Sans supports, déclarer toutes les familles absentes accuserait
+    // l’assureur d’un trou qui n’est qu’un chargement manquant.
+    expect(inclinaisonsSansCible()).toEqual([])
+    expect(inclinaisonsSansCible({ poleId: 'sl-offensif-diversifie', lignes: LIGNES })).toEqual([])
+    expect(inclinaisonsSansCible({ poleId: 'sl-offensif-diversifie', lignes: LIGNES, univers: {} })).toEqual([])
+    expect(inclinaisonsSansCible({
+      poleId: 'sl-offensif-diversifie',
+      lignes: LIGNES,
+      univers: { supports: [], parIsin: new Map() },
+    })).toEqual([])
+  })
+
+  it('ne dit rien pour un régime sans inclinaison documentée', () => {
+    for (const cle of ['expansion', 'ralentissement', 'stress', 'reprise']) {
+      expect(inclinaisonsSansCible({
+        poleId: 'sl-offensif-diversifie', lignes: LIGNES, regime: cle, univers,
+      })).toEqual([])
+    }
+  })
+
+  it('ne change rien à proposerInflexions', () => {
+    // La fonction lit le moteur, elle ne le déplace pas : mêmes propositions
+    // avant et après un diagnostic, sur les mêmes lignes non modifiées.
+    const avant = proposerInflexions({ poleId: 'sl-offensif-diversifie', lignes: LIGNES, univers })
+    inclinaisonsSansCible({ poleId: 'sl-offensif-diversifie', lignes: LIGNES, univers })
+    const apres = proposerInflexions({ poleId: 'sl-offensif-diversifie', lignes: LIGNES, univers })
+    expect(apres).toEqual(avant)
+    expect(total(LIGNES)).toBe(85.5)
   })
 })
 

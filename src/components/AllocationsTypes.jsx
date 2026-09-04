@@ -105,32 +105,45 @@ export default function AllocationsTypes() {
   // relit à chaque changement de partenaire, c'est un autre contrat.
   const [universDemande, setUniversDemande] = useState(false)
   const [tentative, setTentative] = useState(0)
-  const [univers, setUnivers] = useState(null)
-  const [statutUnivers, setStatutUnivers] = useState('inactif')
-  const [erreurUnivers, setErreurUnivers] = useState('')
+  // La liste chargée porte le nom du partenaire d'où elle vient, et c'est le
+  // correctif du 04/09/2026 : le rendu qui suivait un changement d'onglet
+  // servait au pôle analyse les allocations du nouvel assureur avec la liste
+  // de l'ancien, le temps que l'effet de chargement s'exécute. Des propositions
+  // fausses clignotaient, et elles étaient cochables. L'accord se lit
+  // maintenant pendant le rendu, pas après.
+  const [charge, setCharge] = useState({ cle: null, statut: 'inactif', univers: null, erreur: '' })
 
   useEffect(() => {
     if (!universDemande) return undefined
     let annule = false
-    setUnivers(null)
-    setErreurUnivers('')
-    setStatutUnivers('chargement')
+    setCharge({ cle: partenaireCle, statut: 'chargement', univers: null, erreur: '' })
     chargerUnivers(partenaireCle)
       .then((u) => {
         if (annule) return
-        setUnivers(u)
-        setStatutUnivers('pret')
+        setCharge({ cle: partenaireCle, statut: 'pret', univers: u, erreur: '' })
       })
       .catch((e) => {
         if (annule) return
         // Une liste à moitié lue vaut moins que pas de liste du tout : on
         // n'affiche rien et on le dit, l'appelant gère l'échec.
         logger.warn('[Allocations] univers illisible', e)
-        setErreurUnivers(e?.message || 'fichier illisible')
-        setStatutUnivers('erreur')
+        setCharge({
+          cle: partenaireCle,
+          statut: 'erreur',
+          univers: null,
+          erreur: e?.message || 'fichier illisible',
+        })
       })
     return () => { annule = true }
   }, [partenaireCle, universDemande, tentative])
+
+  // Tant que la liste chargée n'est pas celle de l'onglet affiché, il n'y a pas
+  // de liste : le statut annonce le chargement qui vient d'être demandé plutôt
+  // que de garder le « prêt » de l'assureur précédent.
+  const accorde = charge.cle === partenaireCle
+  const univers = accorde ? charge.univers : null
+  const statutUnivers = accorde ? charge.statut : (universDemande ? 'chargement' : 'inactif')
+  const erreurUnivers = accorde ? charge.erreur : ''
 
   const demanderUnivers = useCallback(() => setUniversDemande(true), [])
   const reessayerUnivers = useCallback(() => {
@@ -147,6 +160,12 @@ export default function AllocationsTypes() {
   }, [])
   // Changer de partenaire, bouger la molette ou ramener à 100 % change
   // l'allocation : ce qui avait été retenu ne s'y applique plus.
+  //
+  // Cet oubli a un jumeau, la clé de contexte de ConjonctureAllocation, et les
+  // deux doivent tomber ensemble. Le 04/09/2026 ils ne tombaient pas : « Ramener
+  // à 100 % » vidait les inflexions ici pendant que les cases restaient cochées
+  // là bas, et la copie partait chez le client sans les inflexions que l'écran
+  // annonçait emporter. Ne dégager celui ci qu'après avoir relu l'autre.
   useEffect(() => { majInflexions([]) }, [partenaireCle, curseur, ramene, majInflexions])
 
   const lignesInflechies = useMemo(
