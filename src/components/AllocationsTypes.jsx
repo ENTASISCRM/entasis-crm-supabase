@@ -16,12 +16,28 @@
 //   • chaque ligne correspond-elle à un fonds du référentiel Marchés, et avec
 //     le même ISIN.
 // Les écarts sont signalés, jamais corrigés en silence.
+//
+// Deux blocs ont été ajoutés dessous, sous la même règle :
+//   • « Conjoncture » rappelle le régime de marché retenu par la direction,
+//     ses inclinaisons avec leur source, et laisse le moteur PROPOSER des
+//     inflexions de poids sur un pôle documenté, à accepter une par une ;
+//   • « Univers disponible » lit à la demande la liste des supports du
+//     partenaire et signale les lignes qui ont quitté le contrat.
+// La molette, le tableau et le rapprochement au référentiel Marchés ne
+// changent pas. Une inflexion retenue ne touche ni l'écran ni la base : elle
+// ne sort que par le bouton « Copier l'allocation ».
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import SubTabs from './ui/SubTabs'
+import ConjonctureAllocation from './ConjonctureAllocation'
+import UniversUC from './UniversUC'
+import { logger } from '../lib/logger'
 import { FONDS_PAR_ISIN } from '../config/fonds'
+import { chargerUnivers } from '../config/univers-uc'
+import { REGIMES, REGIME_COURANT } from '../config/conjoncture'
+import { appliquerPropositions } from '../lib/moteur-allocation'
 import {
   ALLOCATIONS,
   PARTENAIRES,
@@ -52,6 +68,12 @@ function rapprocher(ligne) {
 const pct = (n) => `${String(n).replace('.', ',')} %`
 const parId = (id) => ALLOCATIONS.find((a) => a.id === id) || null
 
+// Une date ISO recopiée telle quelle dans un mail ne dit rien à personne.
+const dateCourte = (v) => {
+  const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})/)
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : String(v || '')
+}
+
 export default function AllocationsTypes() {
   const [partenaireCle, setPartenaireCle] = useState(PARTENAIRES[0].cle)
   // Un curseur par partenaire : passer de SwissLife à Abeille ne doit pas
@@ -77,6 +99,66 @@ export default function AllocationsTypes() {
   )
   const rapprochements = useMemo(() => lignes.map(rapprocher), [lignes])
 
+  // ── Univers du partenaire, lu à la demande ────────────────────────────
+  // 829 supports côté SwissLife : la liste ne se télécharge que si un des
+  // deux blocs du bas la réclame, jamais au montage de l'écran. Elle se
+  // relit à chaque changement de partenaire, c'est un autre contrat.
+  const [universDemande, setUniversDemande] = useState(false)
+  const [tentative, setTentative] = useState(0)
+  const [univers, setUnivers] = useState(null)
+  const [statutUnivers, setStatutUnivers] = useState('inactif')
+  const [erreurUnivers, setErreurUnivers] = useState('')
+
+  useEffect(() => {
+    if (!universDemande) return undefined
+    let annule = false
+    setUnivers(null)
+    setErreurUnivers('')
+    setStatutUnivers('chargement')
+    chargerUnivers(partenaireCle)
+      .then((u) => {
+        if (annule) return
+        setUnivers(u)
+        setStatutUnivers('pret')
+      })
+      .catch((e) => {
+        if (annule) return
+        // Une liste à moitié lue vaut moins que pas de liste du tout : on
+        // n'affiche rien et on le dit, l'appelant gère l'échec.
+        logger.warn('[Allocations] univers illisible', e)
+        setErreurUnivers(e?.message || 'fichier illisible')
+        setStatutUnivers('erreur')
+      })
+    return () => { annule = true }
+  }, [partenaireCle, universDemande, tentative])
+
+  const demanderUnivers = useCallback(() => setUniversDemande(true), [])
+  const reessayerUnivers = useCallback(() => {
+    setUniversDemande(true)
+    setTentative((n) => n + 1)
+  }, [])
+
+  // ── Inflexions de conjoncture retenues ────────────────────────────────
+  // Elles ne modifient ni le tableau du dessous ni la base : elles ne sortent
+  // que par la copie, et seulement celles que le conseiller a cochées.
+  const [inflexions, setInflexions] = useState([])
+  const majInflexions = useCallback((liste) => {
+    setInflexions((prec) => (prec.length === 0 && liste.length === 0 ? prec : liste))
+  }, [])
+  // Changer de partenaire, bouger la molette ou ramener à 100 % change
+  // l'allocation : ce qui avait été retenu ne s'y applique plus.
+  useEffect(() => { majInflexions([]) }, [partenaireCle, curseur, ramene, majInflexions])
+
+  const lignesInflechies = useMemo(
+    () => (inflexions.length ? appliquerPropositions(lignes, inflexions) : lignes),
+    [lignes, inflexions],
+  )
+
+  // Le moteur ne propose que sur un pôle documenté. Sur un cran intermédiaire
+  // l'allocation affichée est un mélange sur mesure : elle ne sort d'aucun
+  // document, donc elle ne porte aucune source.
+  const poleAffiche = curseur === 0 ? poleBas : curseur === 100 ? poleHaut : null
+
   const total = totalPoids(lignes)
   const sommeJuste = total === 100
   const nbDivergents = rapprochements.filter((r) => r.etat === 'isin-divergent').length
@@ -98,10 +180,31 @@ export default function AllocationsTypes() {
     setRamene(false)
   }
 
+  // La copie emporte ce que le conseiller a validé : l'allocation des
+  // documents source, et les seules inflexions de conjoncture qu'il a
+  // cochées, chacune avec sa raison. Rien n'est normalisé au passage.
   function copier() {
     const entete = `${cran ? cran.libelle : 'Sur mesure'} · ${partenaire.nom}`
-    const corps = lignes.map((l) => `${l.fonds} (${l.isin}) — ${pct(l.poids)}`)
-    navigator.clipboard?.writeText([entete, libelleMix, '', ...corps, '', `Total ${pct(total)}`].join('\n'))
+    const lignesCopiees = inflexions.length ? lignesInflechies : lignes
+    const corps = lignesCopiees.map((l) => `${l.fonds} (${l.isin}) — ${pct(l.poids)}`)
+    const nomRegime = REGIMES.find((r) => r.cle === REGIME_COURANT.cle)?.nom || REGIME_COURANT.cle
+    const conjoncture = inflexions.length
+      ? [
+        '',
+        `Inflexions de conjoncture retenues · régime ${nomRegime}, retenu le ${dateCourte(REGIME_COURANT.retenuLe)}`,
+        ...inflexions.map((p) => `${p.fonds} (${p.isin}) : ${pct(p.poids)} vers ${pct(p.poidsPropose)} · ${p.sens} · ${p.pourquoi}`),
+        "Propositions du moteur, acceptées une par une. Rien n'a été appliqué ni enregistré.",
+      ]
+      : []
+    navigator.clipboard?.writeText([
+      entete,
+      libelleMix,
+      '',
+      ...corps,
+      '',
+      `Total ${pct(totalPoids(lignesCopiees))}`,
+      ...conjoncture,
+    ].join('\n'))
       .then(() => toast.success('Allocation copiée'))
       .catch(() => toast.error('Copie impossible'))
   }
@@ -171,6 +274,12 @@ export default function AllocationsTypes() {
                 <button className="btn btn-outline btn-sm" onClick={copier}>
                   Copier l&apos;allocation
                 </button>
+                {inflexions.length > 0 && (
+                  <span className="form-hint" style={{ margin: 0 }}>
+                    La copie emporte {inflexions.length} inflexion
+                    {inflexions.length > 1 ? 's' : ''} de conjoncture.
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -285,6 +394,33 @@ export default function AllocationsTypes() {
           </>
         )}
       </div>
+
+      {complet && (
+        <ConjonctureAllocation
+          partenaire={partenaire}
+          poleAffiche={poleAffiche}
+          poleBas={poleBas}
+          poleHaut={poleHaut}
+          lignes={lignes}
+          univers={univers}
+          statutUnivers={statutUnivers}
+          erreurUnivers={erreurUnivers}
+          onDemanderUnivers={demanderUnivers}
+          onReessayerUnivers={reessayerUnivers}
+          onRetenues={majInflexions}
+          onAllerAuCran={deplacer}
+        />
+      )}
+
+      <UniversUC
+        partenaire={partenaire}
+        lignes={lignes}
+        univers={univers}
+        statut={statutUnivers}
+        erreur={erreurUnivers}
+        onDemander={demanderUnivers}
+        onReessayer={reessayerUnivers}
+      />
     </div>
   )
 }
