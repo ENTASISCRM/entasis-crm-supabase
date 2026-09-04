@@ -1,0 +1,21 @@
+# Les 696 tests de ce depot n etaient joues par aucun automatisme : une
+# proposition de fusion qui les cassait tous passait au vert. Ils tournent
+# maintenant a chaque fois.
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  tester:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npm test
