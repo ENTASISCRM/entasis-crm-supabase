@@ -2785,16 +2785,38 @@ function MarketView(){
     s.async=true
     s.innerHTML=JSON.stringify({
       symbols:[
-        {proName:'INDEX:NKY',       title:'Nikkei 225'},
-        {proName:'TVC:GOLD',        title:'Or (XAU/USD)'},
+        // Le CAC 40 en tete : c est l indice de reference du cabinet, il etait
+        // sixieme derriere le Nikkei et l or, donc invisible sans derouler.
+        {proName:'INDEX:CAC40',     title:'CAC 40'},
         {proName:'FOREXCOM:SPXUSD', title:'S&P 500'},
         {proName:'NASDAQ:QQQ',      title:'Nasdaq QQQ'},
+        {proName:'INDEX:NKY',       title:'Nikkei 225'},
         {proName:'TVC:MSEI',        title:'Ém. Marchés'},
-        {proName:'INDEX:CAC40',     title:'CAC 40'},
+        {proName:'TVC:GOLD',        title:'Or (XAU/USD)'},
         {proName:'AMEX:ICLN',       title:'Clean Energy'},
         {proName:'FX_IDC:EURUSD',   title:'EUR/USD'},
       ],
       colorTheme:'light',isTransparent:false,showSymbolLogo:true,locale:'fr'
+    })
+    el.appendChild(s)
+  },[])
+
+  // Le CAC 40 a sa propre carte, sous la bande : niveau, variation du jour et
+  // courbe. Dans la bande il defile avec sept autres lignes ; les allocations
+  // clients se lisent contre lui, il merite d etre lisible d un coup d oeil.
+  useEffect(()=>{
+    const el=document.getElementById('tv-cac40')
+    if(!el||el.querySelector('script'))return
+    const s=document.createElement('script')
+    s.type='text/javascript'
+    s.src='https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js'
+    s.async=true
+    s.innerHTML=JSON.stringify({
+      symbol:'INDEX:CAC40',width:'100%',height:150,
+      locale:'fr',dateRange:'12M',colorTheme:'light',
+      trendLineColor:'#C9A961',underLineColor:'rgba(201,169,97,0.14)',
+      underLineBottomColor:'rgba(201,169,97,0)',
+      isTransparent:false,autosize:false,largeChartUrl:'',
     })
     el.appendChild(s)
   },[])
@@ -2840,6 +2862,13 @@ function MarketView(){
       {/* Ticker bande */}
       <div style={{marginBottom:20,borderRadius:'var(--rad-lg)',overflow:'hidden',border:'1px solid var(--bd)'}}>
         <div className="tradingview-widget-container" id="tv-mkt-ticker">
+          <div className="tradingview-widget-container__widget"></div>
+        </div>
+      </div>
+
+      {/* CAC 40, l'indice de référence du cabinet, lisible sans dérouler */}
+      <div style={{marginBottom:20,borderRadius:'var(--rad-lg)',overflow:'hidden',border:'1px solid var(--bd)',background:'#fff'}}>
+        <div className="tradingview-widget-container" id="tv-cac40">
           <div className="tradingview-widget-container__widget"></div>
         </div>
       </div>

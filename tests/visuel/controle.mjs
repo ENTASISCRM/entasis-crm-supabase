@@ -200,6 +200,7 @@ const SCENARIOS = [
       await page.waitForTimeout(600)
     },
   },
+  { nom: 'marches', role: 'conseiller', route: '#/market', attendu: 'Suivi allocations clients' },
   { nom: 'partenaires', role: 'conseiller', route: '#/partenaires', attendu: 'Partenaires · annuaire' },
   { nom: 'immobilier-dossiers', role: 'conseiller', route: '#/immobilier', attendu: 'Immobilier · dossiers transmis' },
   {
