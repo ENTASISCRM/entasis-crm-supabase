@@ -42,13 +42,18 @@ export default async function handler(req, res) {
   // 3. Vérifier que l'appelant est manager
   const { data: callerProfile, error: callerErr } = await admin
     .from('profiles')
-    .select('id, email, full_name, role')
+    .select('id, email, full_name, role, is_active')
     .eq('id', caller.id)
     .single()
 
   if (callerErr || !callerProfile) {
     console.error('[impersonate] caller profile lookup', callerErr, 'caller.id=', caller.id)
     return res.status(403).json({ error: 'Profil appelant introuvable' })
+  }
+  // Un profil desactive (offboarding) garde son mot de passe : verifier le
+  // role ne suffit pas, il faut aussi qu il soit encore en poste.
+  if (callerProfile.is_active === false) {
+    return res.status(403).json({ error: 'Compte désactivé' })
   }
   if (callerProfile.role !== 'manager') {
     return res.status(403).json({ error: 'Réservé aux managers' })
