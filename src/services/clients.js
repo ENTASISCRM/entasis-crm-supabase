@@ -61,6 +61,38 @@ export async function updateInfoIfProvided(clientId, fields) {
 }
 
 /**
+ * Ouvre la fiche client au co conseiller du dossier.
+ *
+ * Pourquoi : la RLS `clients` ne rend la fiche qu au porteur de `advisor_code`
+ * ou de `co_advisor_code`, que l enregistrement d un dossier ne renseignait
+ * jamais. Le co conseiller voyait donc le dossier (la RLS `deals`, elle,
+ * l accepte) mais pas le client, alors que c est aussi son client. Constate
+ * sur 72 des 98 dossiers portant un co conseiller, arbitre par la direction le
+ * 04/09/2026.
+ *
+ * On ne pose le code que sur une fiche qui n en porte pas deja un autre :
+ * ecraser reviendrait a retirer l acces a quelqu un. Le `.is(null)` de la
+ * mise a jour tient la meme regle cote serveur, entre la lecture et l ecriture.
+ *
+ * Renvoie 'pose', 'deja' (rien a faire), 'conflit' (un autre co en place) ou
+ * 'refus' (la RLS n a pas laisse ecrire).
+ */
+export async function assurerCoConseiller(clientId, code) {
+  if (!clientId || !code) return 'deja'
+  const { data: fiche, error } = await supabase
+    .from('clients').select('advisor_code, co_advisor_code').eq('id', clientId).maybeSingle()
+  if (error || !fiche) return 'refus'
+  if (fiche.advisor_code === code || fiche.co_advisor_code === code) return 'deja'
+  if (fiche.co_advisor_code) return 'conflit'
+  const { data, error: e2 } = await supabase
+    .from('clients')
+    .update({ co_advisor_code: code, updated_at: new Date().toISOString() })
+    .eq('id', clientId).is('co_advisor_code', null).select('id')
+  if (e2) { console.error('[clients.assurerCoConseiller] failed:', e2.message); return 'refus' }
+  return (Array.isArray(data) && data.length > 0) ? 'pose' : 'refus'
+}
+
+/**
  * Recherche un client existant par nom + advisor_code (unicité métier).
  * @returns le client { id } ou null si non trouvé.
  */
@@ -276,6 +308,9 @@ export async function create(clientData, userId) {
       telephone: clientData.telephone ?? null,
       age: clientData.age ?? null,
       advisor_code: clientData.advisor_code ?? null,
+      // Le co conseiller du dossier est porte des la creation de la fiche :
+      // sans lui la RLS clients lui refuse le client de son propre dossier.
+      co_advisor_code: clientData.co_advisor_code ?? null,
       created_by: userId ?? null,
     })
     .select('id')
@@ -317,6 +352,7 @@ export async function findOrCreate(clientData, userId) {
         telephone,
         age: clientData.age || clientData.client_age,
         advisor_code: clientData.advisor_code,
+        co_advisor_code: clientData.co_advisor_code,
       },
       userId
     )

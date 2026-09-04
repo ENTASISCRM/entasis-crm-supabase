@@ -90,7 +90,7 @@ import {
   STATUS_OPTIONS,
   PRIORITY_OPTIONS,
   PRODUCTS,
-  COMPANIES,
+  compagniesPour,
   STATUS_CLASS,
   statusLabel, sourceLabel, sourcesPour,
   PRIORITY_CLASS,
@@ -3670,6 +3670,16 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
     }]
   })
 
+  // Changer de produit change l univers des compagnies. Sans ce nettoyage,
+  // « SCPI · Wemo One » repasse en PER Individuel en gardant Wemo One :
+  // compagniesPour remet la valeur en tete de liste, le select l affiche
+  // toujours selectionnee, et le dossier part chez un partenaire SCPI.
+  function choisirProduit(index, produit) {
+    setProductField(index, 'product', produit)
+    const compagnie = products[index]?.company
+    if (compagnie && !compagniesPour(produit, '').includes(compagnie)) setProductField(index, 'company', '')
+  }
+
   function setProductField(index, field, value) {
     dirtyRef.current = true
     setProducts(prev => prev.map((p, i) =>
@@ -3931,6 +3941,14 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
           // valeur héritée à l'init). On reprend la valeur niveau dossier.
           date_signed: prod.date_signed || deal.date_signed || '',
           date_expected: prod.date_expected || deal.date_expected || '',
+          // Meme piege que les dates, pour deux champs qui ne se saisissent
+          // qu au niveau dossier : la Priorite (section « Équipe & suivi »)
+          // et les Notes. Aucune carte produit ne les expose, donc « ...prod »
+          // les remettait a la valeur figee a l ouverture de la modale et
+          // effacait la saisie. Visible depuis que la section s ouvre des la
+          // creation : un dossier mis en Urgente repartait en Normale.
+          priority: deal.priority || prod.priority || 'Normale',
+          notes: deal.notes || '',
           id: undefined,
           created_at: undefined
         };
@@ -4260,7 +4278,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                         <select
                           className="form-select"
                           value={prod.product}
-                          onChange={e => setProductField(index, 'product', e.target.value)}
+                          onChange={e => choisirProduit(index, e.target.value)}
                           required={index === 0}
                         >
                           <option value="">-- Choisir --</option>
@@ -4277,7 +4295,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                           onChange={e => setProductField(index, 'company', e.target.value)}
                         >
                           <option value="">-- Choisir --</option>
-                          {COMPANIES.map(c => (
+                          {compagniesPour(prod.product, prod.company).map(c => (
                             <option key={c} value={c}>{c}</option>
                           ))}
                         </select>
@@ -4382,23 +4400,14 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
               <div>
                 <div className="form-section-title mb-16">Dossier</div>
                 <div className="form-row form-row-2">
-                  <div className="form-group"><label className="form-label">Produit</label><select className="form-select" value={deal.product||''} onChange={e=>set('product',e.target.value)}><option value="">— Choisir un produit —</option>{PRODUCTS.map(p=><option key={p} value={p}>{p}</option>)}</select></div>
-                  <div className="form-group"><label className="form-label">Compagnie</label><select className="form-select" value={deal.company||''} onChange={e=>set('company',e.target.value)}><option value="">— Choisir une compagnie —</option>{COMPANIES.map(c=><option key={c} value={c}>{c}</option>)}</select></div>
+                  <div className="form-group"><label className="form-label">Produit</label><select className="form-select" value={deal.product||''} onChange={e=>{const v=e.target.value;set('product',v);if(deal.company&&!compagniesPour(v,'').includes(deal.company))set('company','')}}><option value="">— Choisir un produit —</option>{PRODUCTS.map(p=><option key={p} value={p}>{p}</option>)}</select></div>
+                  <div className="form-group"><label className="form-label">Compagnie</label><select className="form-select" value={deal.company||''} onChange={e=>set('company',e.target.value)}><option value="">— Choisir une compagnie —</option>{compagniesPour(deal.product, deal.company).map(c=><option key={c} value={c}>{c}</option>)}</select></div>
                 </div>
                 <div className="form-row form-row-3 mt-16">
                   <div className="form-group"><label className="form-label">PP mensuelle (€)</label><input className="form-input" type="number" min="0" value={deal.pp_m === 0 ? '' : deal.pp_m} onChange={e=>set('pp_m', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()}/><div className="form-hint">{estProduitHonoraires(deal.product) ? <>Suivi uniquement — <strong>la prime mensuelle n&apos;est pas commissionnée</strong>.</> : <>→ PP annualisée : <strong>{euro(annualize(deal.pp_m))}</strong></>}</div></div>
                   <div className="form-group"><label className="form-label">{LIBELLE_MONTANT_HONORAIRES[deal.product]?.champ ?? 'PU (€)'}</label><input className="form-input" type="number" min="0" value={deal.pu === 0 ? '' : deal.pu} onChange={e=>set('pu', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()}/>{estProduitHonoraires(deal.product) && <div className="form-hint">{LIBELLE_MONTANT_HONORAIRES[deal.product]?.aide} C&apos;est la seule base de rémunération du dossier.</div>}</div>
                   <div className="form-group"><label className="form-label">Statut</label><select className="form-select" value={deal.status} onChange={e=>set('status',e.target.value)}>{STATUS_OPTIONS.map(s=><option key={s} value={s}>{statusLabel(s)}</option>)}</select></div>
                 </div>
-              </div>
-            )}
-            {/* Mode express : l'attribution du dossier reste visible même si
-                la section Équipe & suivi est masquée — un manager qui crée
-                pour quelqu'un d'autre doit voir qu'il faut la changer. */}
-            {expressMode && (
-              <div className="form-hint" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-                <span>Dossier attribué à <strong>{(teamProfiles||[]).find(t=>t.advisor_code===deal.advisor_code)?.full_name || deal.advisor_code || '—'}</strong></span>
-                <button type="button" className="btn btn-ghost btn-sm" style={{height:22,padding:'0 8px',fontSize:11}} onClick={()=>setFullForm(true)}>changer</button>
               </div>
             )}
             {/* Frais d entree au niveau du dossier : uniquement a la reouverture
@@ -4542,7 +4551,9 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                 />
               </div>
             </div>
-            {!expressMode && (
+            {/* Visible des la creation, mode express compris : les dossiers se
+                font souvent a deux, et le co-conseiller se choisit au moment
+                ou l on cree le dossier, pas apres. */}
             <FormSection
               title="Équipe & suivi"
               hint={[deal.advisor_code, deal.co_advisor_code && `co ${deal.co_advisor_code}`, deal.source].filter(Boolean).join(' · ') || 'conseiller, co-conseiller, priorité, source'}
@@ -4554,7 +4565,15 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
                   <select
                     className="form-select"
                     value={deal.advisor_code || ''}
-                    onChange={e => set('advisor_code', e.target.value || null)}
+                    onChange={e => {
+                      const code = e.target.value || null
+                      set('advisor_code', code)
+                      // Choisir comme principal celui qui etait co : le select
+                      // co filtre alors sa propre valeur et s affiche vide,
+                      // mais elle reste en etat. Le dossier partait avec une
+                      // commission divisee par deux alors qu il est fait seul.
+                      if (code && deal.co_advisor_code === code) set('co_advisor_code', null)
+                    }}
                     required={isManager}
                     disabled={!isManager}
                     title={!isManager ? 'Tu es le conseiller principal. Pour partager, sélectionne un co-conseiller à droite.' : ''}
@@ -4609,7 +4628,6 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
               </div>
               <div className="form-group mt-16"><label className="form-label">Source</label><select className="form-select" value={deal.source||''} onChange={e=>set('source',e.target.value)}>{sourcesPour(deal.source).map(s=><option key={s} value={s} disabled={s==='lead_room'}>{sourceLabel(s)}</option>)}</select></div>
             </FormSection>
-            )}
             {/* D3 — prochaine action : la discipline des CRM de vente, aucun
                 dossier vivant sans étape suivante datée. Alimente la liste
                 « Mes actions du jour » de l'accueil. */}
@@ -4637,7 +4655,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
             <div>
               {expressMode && (
                 <button type="button" className="btn btn-outline btn-sm" onClick={() => setFullForm(true)}>
-                  Tout renseigner (équipe, source, notes…)
+                  Tout renseigner (relances, notes…)
                 </button>
               )}
               {!isNew && onDelete && (
@@ -5153,7 +5171,19 @@ export default function App(){
           telephone: cleanDeals[0].client_phone || null,
           age: cleanDeals[0].client_age || null,
           advisor_code: profile?.role === 'manager' ? cleanDeals[0].advisor_code : (profile?.advisor_code || cleanDeals[0].advisor_code),
+          co_advisor_code: cleanDeals[0].co_advisor_code || null,
         }, user.id)
+      }
+
+      // Le co conseiller doit voir la FICHE du client, pas seulement le
+      // dossier : c est aussi son client. La RLS clients ne l ouvre qu au
+      // porteur de advisor_code ou co_advisor_code, que l enregistrement ne
+      // renseignait jamais (72 dossiers sur 98 dans ce cas au 04/09/2026).
+      if (clientId && cleanDeals[0].co_advisor_code) {
+        const pose = await clientsService.assurerCoConseiller(clientId, cleanDeals[0].co_advisor_code)
+        if (pose === 'conflit') {
+          toast.error('La fiche client porte deja un autre co conseiller : elle n a pas ete changée. Ton co-conseiller verra le dossier mais pas la fiche.', { duration: 7000 })
+        }
       }
 
       // Enregistre / complète la data structurée sur la fiche CLIENT (email,

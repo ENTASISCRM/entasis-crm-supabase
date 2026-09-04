@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
+  COMPANIES,
+  compagniesPour,
   jourDe,
   heureDe,
   avecHeureConservee,
@@ -200,5 +202,35 @@ describe('dates de rendez-vous Lead Room', () => {
 
   it('vide le champ si le conseiller efface la date', () => {
     expect(avecHeureConservee('', RDV_SEPTEMBRE)).toBe('')
+  })
+})
+
+describe('compagniesPour', () => {
+  it('propose les partenaires SCPI quand le produit est une SCPI', () => {
+    expect(compagniesPour('SCPI', '')).toEqual(['Wemo One', 'MNK', 'Log In', 'Autre'])
+  })
+
+  it('garde la liste assurance pour les autres produits', () => {
+    expect(compagniesPour('PER Individuel', '')).toEqual(COMPANIES)
+    expect(compagniesPour('', '')).toEqual(COMPANIES)
+    expect(compagniesPour(undefined, undefined)).toEqual(COMPANIES)
+  })
+
+  it('propose toujours la compagnie deja enregistree, meme hors liste', () => {
+    // Deux dossiers SCPI en base portent « SwissLife ». Sans cette regle leur
+    // select s afficherait vide et la premiere sauvegarde effacerait la
+    // compagnie.
+    expect(compagniesPour('SCPI', 'SwissLife')).toEqual(['SwissLife', 'Wemo One', 'MNK', 'Log In', 'Autre'])
+  })
+
+  it('propose April pour la protection sociale, sur tous les produits hors SCPI', () => {
+    expect(compagniesPour('Mutuelle Santé', '')).toContain('April')
+    expect(compagniesPour('Prévoyance TNS', '')).toContain('April')
+    expect(compagniesPour('SCPI', '')).not.toContain('April')
+  })
+
+  it('ne duplique pas une compagnie deja dans la liste', () => {
+    expect(compagniesPour('SCPI', 'MNK')).toEqual(['Wemo One', 'MNK', 'Log In', 'Autre'])
+    expect(compagniesPour('PER Individuel', 'Generali')).toEqual(COMPANIES)
   })
 })
