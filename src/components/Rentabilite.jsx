@@ -231,10 +231,10 @@ function TableauPersonnes({ lignes, titre, sousTitre }) {
               <tr key={l.profile_id || l.nom}>
                 <td>
                   <div className="cell-primary">{l.nom || 'Sans nom'}</div>
-                  <div className="cell-sub">
-                    {l.advisor_code || 'code absent'}
-                    {Number(l.contrats_signes) ? ` · ${l.contrats_signes} contrats` : ''}
-                  </div>
+                  {/* Le nombre de contrats vient du grand livre, qui est agrege
+                      par mois tant que le detail des bordereaux n est pas importe :
+                      l afficher ferait croire a un compte de dossiers. */}
+                  <div className="cell-sub">{l.advisor_code || 'code absent'}</div>
                 </td>
                 <td><span className="badge badge-normal">{l.type_contrat}</span></td>
                 <td style={{ textAlign: 'right' }}>{fmtMois(l.mois_actifs)}</td>
