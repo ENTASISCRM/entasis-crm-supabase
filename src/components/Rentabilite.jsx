@@ -17,7 +17,7 @@
 // confort, pas la couche de securite.
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { messageErreur } from '../lib/ui-shared'
 import { SkeletonCards } from './ui/Skeleton'
@@ -27,12 +27,24 @@ import {
 import {
   MOIS_COURTS, equipe, associes, totaux, compteDeResultat,
   pointDeBascule, cumulerParMois, fmtEur, fmtRatio, fmtMois,
+  recetteMensuelleMoyenne, ceQuiManque, chargesParCategorie, aArbitrer, nonEngage,
 } from '../lib/pnl-calculs'
 
 const VUES = [
   { cle: 'cabinet', label: 'Le cabinet' },
   { cle: 'personnes', label: 'Par personne' },
+  { cle: 'charges', label: 'Les charges' },
 ]
+
+const LIBELLE_CATEGORIE = {
+  LOCAUX: 'Locaux', OUTILS: 'Outils et abonnements', STRUCTURE: 'Structure',
+  ACQUISITION: 'Acquisition', VEHICULE: 'Véhicule', SOCIAL: 'Protection sociale',
+  AUTRE: 'Autre',
+}
+
+const LIBELLE_PERIODICITE = {
+  MENSUEL: 'par mois', TRIMESTRIEL: 'par trimestre', ANNUEL: 'par an', PONCTUEL: 'ponctuel',
+}
 
 const anneesDispo = () => {
   const a = new Date().getFullYear()
@@ -143,7 +155,9 @@ function CompteDeResultat({ cr }) {
       aide: 'Part reversée à celui qui a signé' },
     { label: 'Salaires et charges', valeur: cr.salairesCharges, signe: -1,
       aide: 'Équipe salariée, alternants et stagiaires' },
-    { label: 'Écoles et autres coûts', valeur: cr.autresEquipe, signe: -1 },
+    { label: 'Autres coûts d équipe', valeur: cr.autresEquipe, signe: -1 },
+    { label: 'Aides perçues', valeur: cr.aides, signe: 1,
+      aide: 'Aides a l alternance, en déduction du coût' },
     { label: 'Structure', valeur: cr.structure, signe: -1,
       aide: 'Locaux, outils, comptabilité, assurances, banque, publicité' },
     { label: 'Rémunération des associés', valeur: cr.remunerationAssocies, signe: -1,
@@ -224,11 +238,12 @@ function TableauPersonnes({ lignes, titre, sousTitre }) {
                 </td>
                 <td style={{ textAlign: 'right' }}
                   title={[
-                    `Salaire chargé ${fmtEur(l.cout_fixe)}`,
-                    `écoles et autres ${fmtEur(l.cout_ecole)}`,
+                    `Salaire chargé et école ${fmtEur(l.cout_fixe)}`,
+                    `autres coûts ${fmtEur(l.cout_annexe)}`,
                     `rétrocession ${fmtEur(l.cout_retrocession)}`,
                     `part de structure ${fmtEur(l.cout_frais_fixes)}`,
-                  ].join(' · ')}>
+                    Number(l.aide_percue) ? `moins ${fmtEur(l.aide_percue)} d aides` : null,
+                  ].filter(Boolean).join(' · ')}>
                   {fmtEur(l.cout_total)}
                 </td>
                 <td style={{
@@ -242,6 +257,148 @@ function TableauPersonnes({ lignes, titre, sousTitre }) {
             ))}
           </tbody>
         </table>
+      </div>
+    </>
+  )
+}
+
+// ─── Les charges fixes, poste par poste ───────────────────────────────────
+// Un total agrege que personne ne peut ouvrir redevient une hypothese au bout
+// de trois mois. Chaque euro porte donc son fournisseur, sa periodicite, sa
+// fiabilite et sa source.
+function VueCharges({ charges, courant }) {
+  const parCat = chargesParCategorie(charges)
+  const arbitrages = aArbitrer(charges)
+  const attente = nonEngage(charges)
+  const total = parCat.reduce((s, c) => s + c.montant, 0)
+
+  const Fiabilite = ({ v }) => {
+    const couleur = { FACTURE: 'var(--signed)', MOYENNE: 'var(--forecast)' }[v] || 'var(--t3)'
+    return <span style={{ fontSize: 10.5, fontWeight: 700, color: couleur, letterSpacing: '0.04em' }}>{v || ''}</span>
+  }
+
+  return (
+    <>
+      <div className="kpi-grid mb-24">
+        <Carte label="Charges fixes mensuelles" valeur={fmtEur(total)}
+          aide={`${charges.filter((c) => c.actif !== false).length} postes engagés`} accent="var(--gold)" />
+        <Carte label="En attente d arbitrage" valeur={fmtEur(courant?.frais_fixes_a_arbitrer)}
+          aide={`${arbitrages.length} postes à trancher`} accent="var(--cancelled)" />
+        <Carte label="Pas encore engagé" valeur={fmtEur(courant?.non_engage)}
+          aide={`${attente.length} postes à venir`} accent="var(--forecast)" />
+      </div>
+
+      {arbitrages.length > 0 && (
+        <div className="card card-p mb-24" style={{ borderLeft: '3px solid var(--cancelled)' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)', marginBottom: 8 }}>
+            À trancher, du plus cher au moins cher
+          </div>
+          {arbitrages.map((c) => (
+            <div key={c.libelle + c.fournisseur} style={{
+              display: 'flex', justifyContent: 'space-between', gap: 12,
+              padding: '6px 0', borderTop: '1px solid var(--line)',
+            }}>
+              <div style={{ fontSize: 12.5, color: 'var(--t2)', flex: 1 }}>
+                <strong style={{ color: 'var(--t1)' }}>{c.libelle}</strong>
+                {c.fournisseur ? ` · ${c.fournisseur}` : ''}
+                {c.notes && <div style={{ fontSize: 11.5, color: 'var(--t3)', marginTop: 2 }}>{c.notes}</div>}
+              </div>
+              <div style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
+                {fmtEur(c.montant_mensuel)}
+                <div style={{ fontSize: 11, color: 'var(--t3)', fontWeight: 500, textAlign: 'right' }}>
+                  {fmtEur(Number(c.montant_mensuel || 0) * 12)} par an
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="table-wrap">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Poste</th>
+              <th>Fournisseur</th>
+              <th style={{ textAlign: 'right' }}>Montant</th>
+              <th>Périodicité</th>
+              <th style={{ textAlign: 'right' }}>Par mois</th>
+              <th>Fiabilité</th>
+            </tr>
+          </thead>
+          <tbody>
+            {parCat.map((cat) => (
+              <Fragment key={cat.categorie}>
+                <tr>
+                  <td colSpan={6} style={{
+                    background: 'var(--gold-subtle)', fontWeight: 700, fontSize: 12,
+                    color: 'var(--t1)',
+                  }}>
+                    {LIBELLE_CATEGORIE[cat.categorie] || cat.categorie}
+                    <span style={{ fontWeight: 500, color: 'var(--t3)' }}>
+                      {' '}· {fmtEur(cat.montant)} par mois · {cat.postes} postes
+                    </span>
+                  </td>
+                </tr>
+                {charges
+                  .filter((c) => c.actif !== false && c.categorie === cat.categorie)
+                  .map((c) => (
+                    <tr key={c.libelle + c.fournisseur}>
+                      <td>
+                        <div className="cell-primary">
+                          {c.libelle}
+                          {c.a_arbitrer && <span style={{ color: 'var(--cancelled)' }}> ●</span>}
+                        </div>
+                        {c.source && <div className="cell-sub">{c.source}</div>}
+                      </td>
+                      <td style={{ fontSize: 12.5, color: 'var(--t2)' }}>{c.fournisseur || ''}</td>
+                      <td style={{ textAlign: 'right' }}>{fmtEur(c.montant)}</td>
+                      <td style={{ fontSize: 12, color: 'var(--t3)' }}>
+                        {LIBELLE_PERIODICITE[c.periodicite] || c.periodicite}
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmtEur(c.montant_mensuel)}</td>
+                      <td><Fiabilite v={c.fiabilite} /></td>
+                    </tr>
+                  ))}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {attente.length > 0 && (
+        <>
+          <div style={{ margin: '20px 0 8px' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>Pas encore engagé</div>
+            <div style={{ fontSize: 12, color: 'var(--t3)' }}>
+              Enregistré pour mémoire, non compté dans le coût tant que ce n est pas signé
+            </div>
+          </div>
+          <div className="table-wrap">
+            <table className="data-table">
+              <tbody>
+                {attente.map((c) => (
+                  <tr key={c.libelle + c.fournisseur}>
+                    <td>
+                      <div className="cell-primary">{c.libelle}</div>
+                      {c.notes && <div className="cell-sub">{c.notes}</div>}
+                    </td>
+                    <td style={{ textAlign: 'right', color: 'var(--t3)', whiteSpace: 'nowrap' }}>
+                      {fmtEur(c.montant_mensuel)} par mois
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      <div className="card card-p" style={{ marginTop: 16, borderLeft: '3px solid var(--gold)' }}>
+        <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--t2)' }}>
+          Tous les montants sont en TTC. Entasis n est pas assujettie à la TVA et ne la
+          récupère pas : raisonner en HT ferait disparaître vingt pour cent du coût réel.
+        </div>
       </div>
     </>
   )
@@ -300,6 +457,13 @@ export default function Rentabilite({ profile }) {
     [lignes, donnees],
   )
   const tEquipe = useMemo(() => totaux(lEquipe), [lEquipe])
+  const courant = donnees?.cabinet?.courant || null
+  const charges = useMemo(() => donnees?.cabinet?.charges || [], [donnees])
+  const recette = useMemo(() => recetteMensuelleMoyenne(donnees?.parMois || []), [donnees])
+  const manque = useMemo(
+    () => ceQuiManque(Number(courant?.cout_complet || 0), recette?.moyenne || 0),
+    [courant, recette],
+  )
 
   // Le cout complet du cabinet, celui qui sert au mensuel et a la bascule :
   // tout ce qui separe l encaisse du resultat.
@@ -317,7 +481,6 @@ export default function Rentabilite({ profile }) {
 
   const minutes = Math.floor(restant / 60000)
   const secondes = Math.floor((restant % 60000) / 1000)
-  const ratio = coutCabinet > 0 ? cr.encaisse / coutCabinet : null
 
   return (
     <div>
@@ -356,22 +519,74 @@ export default function Rentabilite({ profile }) {
 
       {!chargement && vue === 'cabinet' && (
         <>
+          {/* La question utile n est pas « combien ca coute » mais « combien il
+              manque chaque mois, et qui le comble ». C est donc elle qui est en
+              haut de la page. */}
           <div className="kpi-grid mb-24">
-            <Carte label="Commissions encaissées" valeur={fmtEur(cr.encaisse)}
-              aide={cr.attendu ? `${fmtEur(cr.attendu)} attendus en plus` : 'Argent réellement perçu'}
+            {manque ? (
+              <Carte
+                label={manque.couvert ? 'Excédent mensuel' : 'Il manque chaque mois'}
+                valeur={fmtEur(Math.abs(manque.manque))}
+                aide={manque.couvert
+                  ? 'Le cabinet couvre ses coûts'
+                  : `Il faut encaisser ${fmtEur(manque.cout)} par mois pour être à l équilibre`}
+                accent={manque.couvert ? 'var(--signed)' : 'var(--cancelled)'} />
+            ) : (
+              <Carte label="Coût complet mensuel" valeur={fmtEur(courant?.cout_complet)}
+                aide="Recette inconnue, le manque ne peut pas être calculé" accent="var(--cancelled)" />
+            )}
+            <Carte label="Coût complet mensuel" valeur={fmtEur(courant?.cout_complet)}
+              aide={courant
+                ? `Équipe ${fmtEur(courant.cout_equipe)} · associés ${fmtEur(courant.cout_associes)} · structure ${fmtEur(courant.frais_fixes)}`
+                : null} />
+            <Carte label="Recette mensuelle" valeur={recette ? fmtEur(recette.moyenne) : 'inconnue'}
+              aide={recette
+                ? `Moyenne sur ${recette.moisComptes} mois encaissés`
+                : 'Aucune commission enregistrée'}
               accent="var(--gold)" />
-            <Carte label="Résultat" valeur={fmtEur(cr.resultat)}
-              aide={cr.resultat >= 0 ? 'Après tout, associés compris' : 'Le cabinet perd de l argent'}
-              accent={cr.resultat >= 0 ? 'var(--signed)' : 'var(--cancelled)'} />
-            <Carte label="Ratio de couverture" valeur={fmtRatio(ratio)}
+            <Carte label="Ratio de couverture" valeur={fmtRatio(manque?.ratio ?? null)}
               aide="Euros encaissés pour un euro dépensé" accent="var(--forecast)" />
-            <Carte label="Point de bascule"
-              valeur={bascule ? MOIS_COURTS[bascule - 1] : 'non atteint'}
-              aide={bascule ? 'Mois où le cumul dépasse les coûts' : 'Pas atteint sur l année'} />
+            <Carte label="À couvrir sur l année"
+              valeur={fmtEur(Number(courant?.cout_complet || 0) * 12)}
+              aide="Commissions encaissées nécessaires pour l équilibre" />
           </div>
+
+          {!recette && (
+            <div className="card card-p mb-24" style={{ borderLeft: '3px solid var(--cancelled)' }}>
+              <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--t2)' }}>
+                <strong style={{ color: 'var(--t1)' }}>Aucune commission encaissée n est enregistrée
+                pour {annee}.</strong>{' '}
+                Les coûts ci dessous sont réels, la recette ne l est pas encore. Elle doit
+                venir des bordereaux réellement payés par les compagnies, pas du CA MOIS
+                interne qui compte la production signée : ce sont deux grandeurs
+                différentes, décalées d un à trois mois.
+              </div>
+            </div>
+          )}
+
+          {courant && Number(courant.non_engage) > 0 && (
+            <div className="card card-p mb-24" style={{ borderLeft: '3px solid var(--forecast)' }}>
+              <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--t2)' }}>
+                <strong style={{ color: 'var(--t1)' }}>{fmtEur(courant.non_engage)} par mois
+                ne sont pas encore comptés.</strong>{' '}
+                Véhicule, mutuelle, médecine du travail et contrat incendie sont enregistrés
+                mais désactivés tant qu ils ne sont pas engagés. Le coût complet cible est
+                donc de {fmtEur(Number(courant.cout_complet) + Number(courant.non_engage))} par mois.
+                Voir l onglet Les charges.
+              </div>
+            </div>
+          )}
 
           <CompteDeResultat cr={cr} />
 
+          <div style={{ margin: '20px 0 8px', display: 'flex', alignItems: 'baseline', gap: 10 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>Mois par mois</div>
+            <div style={{ fontSize: 12, color: 'var(--t3)' }}>
+              {bascule
+                ? `Point de bascule en ${MOIS_COURTS[bascule - 1]}, le cumul encaissé passe devant le cumul des coûts`
+                : 'Point de bascule non atteint sur l année'}
+            </div>
+          </div>
           <div className="table-wrap">
             <table className="data-table">
               <thead>
@@ -420,6 +635,10 @@ export default function Rentabilite({ profile }) {
             </div>
           </div>
         </>
+      )}
+
+      {!chargement && vue === 'charges' && (
+        <VueCharges charges={charges} courant={courant} />
       )}
 
       {!chargement && vue === 'personnes' && (

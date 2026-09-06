@@ -5,6 +5,7 @@ import { describe, it, expect } from 'vitest'
 import {
   estGerant, estMandataire, equipe, associes, salaries, mandataires,
   totaux, compteDeResultat, pointDeBascule, cumulerParMois, fmtRatio, fmtMois,
+  recetteMensuelleMoyenne, ceQuiManque, chargesParCategorie, aArbitrer, nonEngage,
 } from './pnl-calculs'
 
 const ligne = (o = {}) => ({
@@ -13,14 +14,15 @@ const ligne = (o = {}) => ({
   commission_encaissee: o.com ?? 0,
   commission_attendue: o.attendu ?? 0,
   cout_fixe: o.salaire ?? 0,
-  cout_ecole: o.ecole ?? 0,
+  cout_annexe: o.annexe ?? 0,
   cout_outils: o.outils ?? 0,
   cout_frais_fixes: o.structure ?? 0,
   cout_retrocession: o.retro ?? 0,
-  cout_total: (o.salaire ?? 0) + (o.ecole ?? 0) + (o.outils ?? 0)
-    + (o.structure ?? 0) + (o.retro ?? 0),
-  marge: (o.com ?? 0) - ((o.salaire ?? 0) + (o.ecole ?? 0) + (o.outils ?? 0)
-    + (o.structure ?? 0) + (o.retro ?? 0)),
+  aide_percue: o.aide ?? 0,
+  cout_total: (o.salaire ?? 0) + (o.annexe ?? 0) + (o.outils ?? 0)
+    + (o.structure ?? 0) + (o.retro ?? 0) - (o.aide ?? 0),
+  marge: (o.com ?? 0) - ((o.salaire ?? 0) + (o.annexe ?? 0) + (o.outils ?? 0)
+    + (o.structure ?? 0) + (o.retro ?? 0) - (o.aide ?? 0)),
   contrats_signes: o.contrats ?? 0,
   clients_uniques: o.clients ?? 0,
 })
@@ -52,7 +54,7 @@ describe('separation des populations', () => {
   })
 
   it('ne compte jamais un gerant dans les salaries', () => {
-    const l = [ligne({ type: 'GERANT', gerant: true, ecole: 64200 })]
+    const l = [ligne({ type: 'GERANT', gerant: true, annexe: 64200 })]
     expect(salaries(l)).toHaveLength(0)
     expect(mandataires(l)).toHaveLength(0)
   })
@@ -107,7 +109,7 @@ describe('totaux', () => {
 
 describe('compte de resultat du cabinet', () => {
   const jeu = (structureParTete) => [
-    ligne({ type: 'GERANT', gerant: true, com: 40000, ecole: 64200 }),
+    ligne({ type: 'GERANT', gerant: true, com: 40000, annexe: 64200 }),
     ligne({ type: 'CDI', com: 30000, salaire: 24000, structure: structureParTete }),
     ligne({ type: 'MANDATAIRE', com: 20000, retro: 8000, structure: structureParTete }),
   ]
@@ -187,6 +189,88 @@ describe('cumul mensuel', () => {
     const c = cumulerParMois([{ mois: 1, commission: 900 }], 0)
     expect(c[0].margeMois).toBe(900)
     expect(Number.isNaN(c[0].cumulCout)).toBe(false)
+  })
+})
+
+describe('aide a l alternance', () => {
+  it('vient en deduction du cout, jamais en recette', () => {
+    const t = totaux([ligne({ type: 'ALTERNANT', com: 5000, salaire: 12000, aide: 2000 })])
+    expect(t.encaisse).toBe(5000)
+    expect(t.aides).toBe(2000)
+    expect(t.cout).toBe(10000)
+    expect(t.marge).toBe(-5000)
+  })
+
+  it('ameliore le resultat du cabinet sans gonfler la recette', () => {
+    const sans = compteDeResultat([ligne({ type: 'ALTERNANT', com: 5000, salaire: 12000 })], 0)
+    const avec = compteDeResultat([ligne({ type: 'ALTERNANT', com: 5000, salaire: 12000, aide: 2000 })], 0)
+    expect(avec.encaisse).toBe(sans.encaisse)
+    expect(avec.resultat - sans.resultat).toBe(2000)
+  })
+})
+
+describe('recette mensuelle moyenne', () => {
+  it('ne divise que par les mois qui portent une recette', () => {
+    // Trois mois a 3 000 et neuf mois vides : la moyenne est 3 000, pas 750.
+    const parMois = Array.from({ length: 12 }, (_, i) => ({ mois: i + 1, commission: i < 3 ? 3000 : 0 }))
+    const r = recetteMensuelleMoyenne(parMois)
+    expect(r.moyenne).toBe(3000)
+    expect(r.moisComptes).toBe(3)
+    expect(r.total).toBe(9000)
+  })
+
+  it('rend null quand rien n est encaisse, plutot que zero', () => {
+    expect(recetteMensuelleMoyenne([{ mois: 1, commission: 0 }])).toBeNull()
+    expect(recetteMensuelleMoyenne([])).toBeNull()
+  })
+})
+
+describe('ce qui manque chaque mois', () => {
+  it('dit combien il manque quand la recette ne couvre pas', () => {
+    const m = ceQuiManque(28097, 26554)
+    expect(m.manque).toBe(1543)
+    expect(m.couvert).toBe(false)
+    expect(m.ratio).toBeCloseTo(0.945, 3)
+  })
+
+  it('rend un manque negatif quand le cabinet couvre ses couts', () => {
+    const m = ceQuiManque(28097, 31000)
+    expect(m.manque).toBe(-2903)
+    expect(m.couvert).toBe(true)
+  })
+
+  it('rend null sans cout connu, plutot qu une division par zero', () => {
+    expect(ceQuiManque(0, 5000)).toBeNull()
+    expect(ceQuiManque(null, 5000)).toBeNull()
+  })
+})
+
+describe('charges fixes', () => {
+  const charges = [
+    { categorie: 'LOCAUX', libelle: 'Loyer', montant_mensuel: 2034, actif: true, a_arbitrer: false },
+    { categorie: 'OUTILS', libelle: 'Aircall', montant_mensuel: 778.8, actif: true, a_arbitrer: true },
+    { categorie: 'OUTILS', libelle: 'Harvest', montant_mensuel: 324, actif: true, a_arbitrer: true },
+    { categorie: 'VEHICULE', libelle: 'LOA', montant_mensuel: 1350, actif: false, a_arbitrer: true },
+  ]
+
+  it('regroupe par categorie, la plus lourde en premier', () => {
+    const g = chargesParCategorie(charges)
+    expect(g[0].categorie).toBe('LOCAUX')
+    expect(g[1].categorie).toBe('OUTILS')
+    expect(g[1].montant).toBeCloseTo(1102.8, 2)
+    expect(g[1].aArbitrer).toBeCloseTo(1102.8, 2)
+  })
+
+  it('ne compte jamais une charge non engagee dans le total', () => {
+    const g = chargesParCategorie(charges)
+    expect(g.find((c) => c.categorie === 'VEHICULE')).toBeUndefined()
+    expect(nonEngage(charges)).toHaveLength(1)
+    expect(nonEngage(charges)[0].libelle).toBe('LOA')
+  })
+
+  it('classe les arbitrages du plus cher au moins cher', () => {
+    const a = aArbitrer(charges)
+    expect(a.map((c) => c.libelle)).toEqual(['Aircall', 'Harvest'])
   })
 })
 

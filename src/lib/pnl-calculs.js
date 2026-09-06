@@ -34,7 +34,8 @@ export function totaux(lignes) {
     salaires: somme(l, 'cout_fixe'),
     retrocessions: somme(l, 'cout_retrocession'),
     structure: somme(l, 'cout_frais_fixes'),
-    autres: somme(l, 'cout_ecole') + somme(l, 'cout_outils'),
+    autres: somme(l, 'cout_annexe') + somme(l, 'cout_outils'),
+    aides: somme(l, 'aide_percue'),
     marge: encaisse - cout,
     // Ratio de couverture : combien d euros encaisses pour un euro depense.
     // Au dela de 1, le cabinet gagne de l argent sur la personne.
@@ -61,8 +62,10 @@ export function compteDeResultat(lignes, structureAnnuelle = 0) {
   const encaisse = somme(tous, 'commission_encaissee')
   const retrocessions = somme(tous, 'cout_retrocession')
   const salairesCharges = somme(eq, 'cout_fixe')
-  const autresEquipe = somme(eq, 'cout_ecole') + somme(eq, 'cout_outils')
-  const remunerationAssocies = somme(asso, 'cout_ecole') + somme(asso, 'cout_fixe')
+  const autresEquipe = somme(eq, 'cout_annexe') + somme(eq, 'cout_outils')
+  const remunerationAssocies = somme(asso, 'cout_annexe') + somme(asso, 'cout_fixe')
+  // Les aides percues viennent en DEDUCTION du cout, jamais en recette.
+  const aides = somme(tous, 'aide_percue')
 
   return {
     encaisse,
@@ -70,6 +73,7 @@ export function compteDeResultat(lignes, structureAnnuelle = 0) {
     retrocessions,
     salairesCharges,
     autresEquipe,
+    aides,
     structure,
     structureAllouee,
     // Ce que personne ne porte : des mois de bureau, d outils et de loyer non
@@ -77,9 +81,59 @@ export function compteDeResultat(lignes, structureAnnuelle = 0) {
     structureNonAbsorbee: structure - structureAllouee,
     remunerationAssocies,
     resultat: encaisse - retrocessions - salairesCharges - autresEquipe
-      - structure - remunerationAssocies,
+      - structure - remunerationAssocies + aides,
   }
 }
+
+// La recette mensuelle reellement constatee. On ne divise QUE par les mois qui
+// portent quelque chose : diviser par douze au mois de mars ferait croire que
+// le cabinet encaisse trois fois moins qu il n encaisse.
+export function recetteMensuelleMoyenne(parMois) {
+  const avecRecette = (parMois || []).filter((m) => Number(m.commission || 0) > 0)
+  if (!avecRecette.length) return null
+  const total = avecRecette.reduce((s, m) => s + Number(m.commission || 0), 0)
+  return { moyenne: total / avecRecette.length, moisComptes: avecRecette.length, total }
+}
+
+// La question utile n est pas « combien ca coute » mais « combien il manque
+// chaque mois ». Un nombre negatif veut dire que le cabinet couvre ses couts.
+export function ceQuiManque(coutMensuelComplet, recetteMensuelle) {
+  const cout = Number(coutMensuelComplet || 0)
+  if (!(cout > 0)) return null
+  const recette = Number(recetteMensuelle || 0)
+  return {
+    cout,
+    recette,
+    manque: cout - recette,
+    couvert: recette >= cout,
+    ratio: cout > 0 ? recette / cout : null,
+  }
+}
+
+// Les charges fixes regroupees par categorie, la plus lourde en premier, avec
+// ce qui attend un arbitrage. Un total agrege que personne ne peut ouvrir
+// redevient une hypothese au bout de trois mois.
+export function chargesParCategorie(charges) {
+  const actives = (charges || []).filter((c) => c.actif !== false)
+  const parCat = new Map()
+  for (const c of actives) {
+    const cat = c.categorie || 'AUTRE'
+    const e = parCat.get(cat) || { categorie: cat, montant: 0, postes: 0, aArbitrer: 0 }
+    e.montant += Number(c.montant_mensuel || 0)
+    e.postes += 1
+    if (c.a_arbitrer) e.aArbitrer += Number(c.montant_mensuel || 0)
+    parCat.set(cat, e)
+  }
+  return [...parCat.values()].sort((a, b) => b.montant - a.montant)
+}
+
+export const aArbitrer = (charges) => (charges || [])
+  .filter((c) => c.actif !== false && c.a_arbitrer)
+  .sort((a, b) => Number(b.montant_mensuel || 0) - Number(a.montant_mensuel || 0))
+
+export const nonEngage = (charges) => (charges || [])
+  .filter((c) => c.actif === false)
+  .sort((a, b) => Number(b.montant_mensuel || 0) - Number(a.montant_mensuel || 0))
 
 // Le mois ou le cumul des commissions passe devant le cumul des couts. Le
 // cout annuel est reparti sur les mois de l annee, faute d un cout mensuel

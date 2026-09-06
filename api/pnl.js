@@ -107,18 +107,36 @@ export default async function handler(req, res) {
       m.contrats += 1
     }
 
-    // ── La structure, pour son montant annuel entier ──────────────────────
-    // Un bureau vide se paye quand meme : le cabinet porte les douze mois,
-    // que les postes aient ete occupes ou non.
+    // ── Le cout mensuel COURANT ───────────────────────────────────────────
+    // L annuel dit combien ca a coute. Celui ci dit combien ca coute en ce
+    // moment, et c est la seule base pour repondre a « combien il manque ».
+    const { data: courantLignes } = await admin.rpc('pnl_cout_mensuel_courant', {})
+    const courant = Array.isArray(courantLignes) ? courantLignes[0] : courantLignes
+
+    // ── Les charges fixes, poste par poste ────────────────────────────────
+    // On envoie le detail : un chiffre agrege que personne ne peut ouvrir
+    // redevient une hypothese au bout de trois mois.
+    const { data: charges } = await admin
+      .from('charges_fixes')
+      .select('categorie, libelle, fournisseur, montant, periodicite, montant_mensuel, actif, fiabilite, source, a_arbitrer, notes')
+      .order('categorie').order('montant_mensuel', { ascending: false })
+
     const { data: prm } = await admin
       .from('pnl_parametres')
-      .select('frais_fixes_mensuels, repartir_frais_fixes')
+      .select('frais_fixes_mensuels, repartir_frais_fixes, mutuelle_mensuelle')
       .eq('id', true).maybeSingle()
 
+    // La structure est prise pour son montant annuel entier : un bureau vide
+    // se paye quand meme, que le poste ait ete occupe ou non.
+    const structureMensuelle = Number(courant?.frais_fixes ?? prm?.frais_fixes_mensuels ?? 0)
+
     const cabinet = {
-      structure_mensuelle: Number(prm?.frais_fixes_mensuels || 0),
-      structure_annuelle: Number(prm?.frais_fixes_mensuels || 0) * 12,
+      structure_mensuelle: structureMensuelle,
+      structure_annuelle: structureMensuelle * 12,
       repartir: repartir == null ? Boolean(prm?.repartir_frais_fixes) : repartir,
+      mutuelle_en_place: Number(prm?.mutuelle_mensuelle || 0) > 0,
+      courant: courant || null,
+      charges: charges || [],
     }
 
     await journaliser(admin, { req, user, action: 'lecture', detail: `annee ${annee}, vue ${vue}` })
