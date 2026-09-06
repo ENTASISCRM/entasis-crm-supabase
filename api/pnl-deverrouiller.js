@@ -13,8 +13,8 @@
 // session authentique, indistinguable au niveau du jeton. Mais Supabase
 // enregistre la methode d authentification dans auth.mfa_amr_claims : un magic
 // link vaut « otp », une vraie connexion vaut « password » ou « oauth ». On lit
-// cette table avec la cle de service, cote serveur : le navigateur ne peut pas
-// mentir dessus.
+// cette table avec la cle de service, cote serveur, via la fonction
+// pnl_methodes_session : le navigateur ne peut pas mentir dessus.
 //
 // Tout passe au journal pnl_acces_log, y compris et surtout les refus.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -57,13 +57,12 @@ async function journaliser(admin, { req, user, action, detail }) {
 // enregistree cote Supabase.
 async function sessionUsurpee(admin, sessionId) {
   if (!sessionId) return { usurpee: true, motif: 'session non identifiable' }
-  const { data, error } = await admin
-    .schema('auth')
-    .from('mfa_amr_claims')
-    .select('authentication_method')
-    .eq('session_id', sessionId)
+  // Le schema auth n est jamais expose par PostgREST : le lire en direct
+  // echoue toujours. On passe par pnl_methodes_session, fonction security
+  // definer que seule la cle de service peut appeler.
+  const { data, error } = await admin.rpc('pnl_methodes_session', { p_session: sessionId })
   if (error) return { usurpee: true, motif: 'methode d authentification illisible' }
-  const methodes = (data || []).map((l) => l.authentication_method)
+  const methodes = Array.isArray(data) ? data : []
   if (methodes.length === 0) return { usurpee: true, motif: 'aucune methode enregistree' }
   // otp = magic link = usurpation possible. On exige une connexion directe.
   if (methodes.includes('otp')) return { usurpee: true, motif: 'session issue d un lien magique' }
