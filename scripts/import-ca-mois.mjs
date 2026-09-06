@@ -99,7 +99,7 @@ for (const nomFeuille of feuilles) {
   const iNom = col('NOM'), iDate = col('DATE SIGNATURE'), iProd = col('PRODUIT')
   const iPp = col('VOLUME PP'), iPu = col('VOLUME PU'), iCie = col('COMPAGNIE')
   const iProv = col('PROVENANCE'), iCom = col('COM'), iTouche = col('TOUCHÉ')
-  const iSign = col('SIGNATAIRE')
+  const iSign = col('SIGNATAIRE'), iRetro = col('COM SIGNATAIRE')
 
   for (let n = 1; n < brut.length; n += 1) {
     const r = brut[n]
@@ -147,6 +147,9 @@ for (const nomFeuille of feuilles) {
       provenance: String(r[iProv] || '').trim() || null,
       commission_encaissee: attendue ? 0 : montant,
       commission_attendue: attendue ? montant : 0,
+      // COM SIGNATAIRE : ce qu on reverse a celui qui a signe. C est le seul
+      // cout d un mandataire, sans elle il parait infiniment rentable.
+      retrocession: iRetro >= 0 ? nombre(r[iRetro]) : 0,
       advisor_code: code,
       source: 'CA MOIS',
       import_lot: `${annee}-${new Date().toISOString().slice(0, 10)}`,
@@ -157,6 +160,7 @@ for (const nomFeuille of feuilles) {
 const euros = (v) => Math.round(v).toLocaleString('fr-FR')
 const encaisse = lignes.reduce((s, l) => s + l.commission_encaissee, 0)
 const attendu = lignes.reduce((s, l) => s + l.commission_attendue, 0)
+const retro = lignes.reduce((s, l) => s + l.retrocession, 0)
 const clients = new Set(lignes.map((l) => l.client_nom.toUpperCase())).size
 
 console.log(`\n=== CA MOIS ${annee}, ${feuilles.length} feuilles lues ===`)
@@ -165,6 +169,8 @@ console.log(`  clients uniques        ${clients}`)
 console.log(`  commission encaissee   ${euros(encaisse)} EUR`)
 console.log(`  commission attendue    ${euros(attendu)} EUR`)
 console.log(`  total                  ${euros(encaisse + attendu)} EUR`)
+console.log(`  retrocede aux signataires ${euros(retro)} EUR`)
+console.log(`  reste au cabinet          ${euros(encaisse - retro)} EUR`)
 
 const parCode = {}
 for (const l of lignes) parCode[l.advisor_code] = (parCode[l.advisor_code] || 0) + 1
@@ -185,10 +191,25 @@ if (!ecrire) {
   exit(0)
 }
 
-const url = env.SUPABASE_URL
-const cle = env.SUPABASE_SERVICE_ROLE_KEY
-if (!url || !cle) {
-  console.error('\nSUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY sont necessaires pour ecrire.')
+// La cle de service est volontairement absente de .env.local et illisible
+// depuis Vercel. Plutot que d abandonner, on la demande une seule fois : elle
+// n est ni affichee, ni enregistree, ni ecrite nulle part.
+const url = env.SUPABASE_URL || env.VITE_SUPABASE_URL
+let cle = env.SUPABASE_SERVICE_ROLE_KEY
+if (!url) {
+  console.error('\nSUPABASE_URL est necessaire pour ecrire.')
+  exit(1)
+}
+if (!cle) {
+  const { createInterface } = await import('node:readline/promises')
+  const { stdin, stdout } = await import('node:process')
+  const rl = createInterface({ input: stdin, output: stdout })
+  console.log('\nCle de service Supabase (Project Settings, API, service_role).')
+  cle = (await rl.question('Colle la ici : ')).trim()
+  rl.close()
+}
+if (!cle) {
+  console.error('\nSans cle de service, rien ne peut etre ecrit.')
   exit(1)
 }
 const sb = createClient(url, cle, { auth: { persistSession: false } })

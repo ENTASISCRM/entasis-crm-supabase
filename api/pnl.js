@@ -75,20 +75,26 @@ export default async function handler(req, res) {
 
   const annee = Number(req.body?.annee) || new Date().getFullYear()
   const vue = String(req.body?.vue || 'tout')
+  // L ecran peut demander la vue avec ou sans la part de frais fixes. Ce
+  // choix ne deplace que des couts entre les personnes : le resultat du
+  // cabinet, lui, prend toujours la structure pour son montant annuel entier.
+  const repartir = typeof req.body?.repartir === 'boolean' ? req.body.repartir : null
 
   try {
     // ── Les lignes par personne, calculees en base ────────────────────────
-    const { data: lignes, error } = await admin.rpc('pnl_conseiller_annuel', { p_annee: annee })
+    const { data: lignes, error } = await admin.rpc('pnl_conseiller_annuel', {
+      p_annee: annee, p_repartir: repartir,
+    })
     if (error) throw error
 
     // ── Le mensuel, lu directement du grand livre ─────────────────────────
     const { data: mensuel } = await admin
       .from('production_encaissee')
-      .select('mois, volume_pp, volume_pu, commission_encaissee')
+      .select('mois, volume_pp, volume_pu, commission_encaissee, commission_attendue, retrocession')
       .eq('annee', annee)
 
     const parMois = Array.from({ length: 12 }, (_, i) => ({
-      mois: i + 1, pp: 0, pu: 0, commission: 0, contrats: 0,
+      mois: i + 1, pp: 0, pu: 0, commission: 0, attendue: 0, retrocession: 0, contrats: 0,
     }))
     for (const l of mensuel || []) {
       const m = parMois[(l.mois || 1) - 1]
@@ -96,12 +102,28 @@ export default async function handler(req, res) {
       m.pp += Number(l.volume_pp || 0)
       m.pu += Number(l.volume_pu || 0)
       m.commission += Number(l.commission_encaissee || 0)
+      m.attendue += Number(l.commission_attendue || 0)
+      m.retrocession += Number(l.retrocession || 0)
       m.contrats += 1
+    }
+
+    // ── La structure, pour son montant annuel entier ──────────────────────
+    // Un bureau vide se paye quand meme : le cabinet porte les douze mois,
+    // que les postes aient ete occupes ou non.
+    const { data: prm } = await admin
+      .from('pnl_parametres')
+      .select('frais_fixes_mensuels, repartir_frais_fixes')
+      .eq('id', true).maybeSingle()
+
+    const cabinet = {
+      structure_mensuelle: Number(prm?.frais_fixes_mensuels || 0),
+      structure_annuelle: Number(prm?.frais_fixes_mensuels || 0) * 12,
+      repartir: repartir == null ? Boolean(prm?.repartir_frais_fixes) : repartir,
     }
 
     await journaliser(admin, { req, user, action: 'lecture', detail: `annee ${annee}, vue ${vue}` })
 
-    return res.status(200).json({ annee, lignes: lignes || [], parMois })
+    return res.status(200).json({ annee, lignes: lignes || [], parMois, cabinet })
   } catch (e) {
     await journaliser(admin, { req, user, action: 'refus', detail: `erreur : ${e.message}` })
     return res.status(500).json({ error: 'Calcul impossible' })

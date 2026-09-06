@@ -57,7 +57,7 @@ export async function deverrouiller(code) {
   return true
 }
 
-export async function chargerRentabilite(annee) {
+export async function chargerRentabilite(annee, repartir) {
   if (!estDeverrouille()) throw new Error('Espace verrouille')
   const r = await fetch('/api/pnl', {
     method: 'POST',
@@ -66,7 +66,9 @@ export async function chargerRentabilite(annee) {
       Authorization: `Bearer ${await jetonSupabase()}`,
       'x-pnl-jeton': jetonEnMemoire,
     },
-    body: JSON.stringify({ annee }),
+    body: JSON.stringify(
+      typeof repartir === 'boolean' ? { annee, repartir } : { annee },
+    ),
   })
   if (r.status === 403) { verrouiller(); throw new Error('Espace verrouille') }
   const j = await r.json().catch(() => ({}))

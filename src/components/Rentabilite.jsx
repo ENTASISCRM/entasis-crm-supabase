@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// ESPACE RENTABILITE. Reserve, verrouille par un code, quatre vues.
+// ESPACE RENTABILITE. Reserve, verrouille par un code, deux vues.
 //
 // SECURITE, ce qui vaut d etre repete ici parce que le composant est la partie
 // la plus visible et la moins protegee de la chaine :
@@ -25,15 +25,13 @@ import {
   deverrouiller, chargerRentabilite, verrouiller, estDeverrouille, tempsRestantMs,
 } from '../lib/pnl-api'
 import {
-  MOIS_COURTS, salaries, mandataires, totaux, pointDeBascule, cumulerParMois,
-  fmtEur, fmtRatio,
+  MOIS_COURTS, equipe, associes, totaux, compteDeResultat,
+  pointDeBascule, cumulerParMois, fmtEur, fmtRatio, fmtMois,
 } from '../lib/pnl-calculs'
 
 const VUES = [
-  { cle: 'cabinet', label: 'Synthèse cabinet' },
-  { cle: 'salaries', label: 'Salariés' },
-  { cle: 'mandataires', label: 'Mandataires' },
-  { cle: 'mensuel', label: 'CA mensuel' },
+  { cle: 'cabinet', label: 'Le cabinet' },
+  { cle: 'personnes', label: 'Par personne' },
 ]
 
 const anneesDispo = () => {
@@ -133,66 +131,119 @@ const PastilleMarge = ({ marge }) => {
   )
 }
 
-// ─── Tableau commun aux vues 2 et 3 ───────────────────────────────────────
-function TableauPersonnes({ lignes, avecCouts }) {
-  if (!lignes.length) {
-    return (
-      <div className="table-empty-state">
-        <div className="empty-title">Aucune ligne</div>
-        <div className="empty-sub">Rien à afficher pour cette année.</div>
-      </div>
-    )
-  }
+// ─── Le compte de resultat ────────────────────────────────────────────────
+// Six lignes, chacune retrouvable dans le grand livre ou dans la paie. C est
+// la reponse a la seule question qui compte : est ce que le cabinet gagne de
+// l argent, et sur quoi.
+function CompteDeResultat({ cr }) {
+  const lignes = [
+    { label: 'Commissions encaissées', valeur: cr.encaisse, signe: 1,
+      aide: cr.attendu ? `${fmtEur(cr.attendu)} encore attendus, non comptés ici` : null },
+    { label: 'Rétrocessions aux signataires', valeur: cr.retrocessions, signe: -1,
+      aide: 'Part reversée à celui qui a signé' },
+    { label: 'Salaires et charges', valeur: cr.salairesCharges, signe: -1,
+      aide: 'Équipe salariée, alternants et stagiaires' },
+    { label: 'Écoles et autres coûts', valeur: cr.autresEquipe, signe: -1 },
+    { label: 'Structure', valeur: cr.structure, signe: -1,
+      aide: 'Locaux, outils, comptabilité, assurances, banque, publicité' },
+    { label: 'Rémunération des associés', valeur: cr.remunerationAssocies, signe: -1,
+      aide: 'Geniopus et Decampius, flux bancaires' },
+  ].filter((l) => Number(l.valeur || 0) !== 0)
+
   return (
-    <div className="table-wrap">
+    <div className="table-wrap mb-24">
       <table className="data-table">
-        <thead>
-          <tr>
-            <th>Personne</th>
-            <th>Contrat</th>
-            {avecCouts && <th style={{ textAlign: 'right' }}>Mois</th>}
-            {avecCouts && <th style={{ textAlign: 'right' }}>Coût complet</th>}
-            <th style={{ textAlign: 'right' }}>Contrats</th>
-            <th style={{ textAlign: 'right' }}>Clients</th>
-            <th style={{ textAlign: 'right' }}>PP annualisée</th>
-            <th style={{ textAlign: 'right' }}>PU collectée</th>
-            <th style={{ textAlign: 'right' }}>Commission</th>
-            <th style={{ textAlign: 'right' }}>Marge</th>
-            <th />
-          </tr>
-        </thead>
         <tbody>
           {lignes.map((l) => (
-            <tr key={l.profile_id || l.nom}>
+            <tr key={l.label}>
               <td>
-                <div className="cell-primary">{l.nom || '—'}</div>
-                <div className="cell-sub">{l.advisor_code || '—'}</div>
+                <div className="cell-primary">{l.label}</div>
+                {l.aide && <div className="cell-sub">{l.aide}</div>}
               </td>
-              <td><span className="badge badge-normal">{l.type_contrat}</span></td>
-              {avecCouts && <td style={{ textAlign: 'right' }}>{l.mois_actifs}</td>}
-              {avecCouts && (
-                <td style={{ textAlign: 'right' }}
-                  title={`Salaire chargé ${fmtEur(l.cout_fixe)} · école ${fmtEur(l.cout_ecole)} · outils ${fmtEur(l.cout_outils)}${Number(l.cout_frais_fixes) ? ` · frais fixes ${fmtEur(l.cout_frais_fixes)}` : ''}`}>
-                  {fmtEur(l.cout_total)}
-                </td>
-              )}
-              <td style={{ textAlign: 'right' }}>{l.contrats_signes}</td>
-              <td style={{ textAlign: 'right' }}>{l.clients_uniques}</td>
-              <td style={{ textAlign: 'right' }}>{fmtEur(l.pp_annualisee)}</td>
-              <td style={{ textAlign: 'right' }}>{fmtEur(l.pu_collectee)}</td>
-              <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmtEur(l.commission_encaissee)}</td>
               <td style={{
-                textAlign: 'right', fontWeight: 700,
-                color: Number(l.marge) < 0 ? 'var(--cancelled)' : 'var(--signed)',
+                textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap',
+                color: l.signe < 0 ? 'var(--t2)' : 'var(--t1)',
               }}>
-                {fmtEur(l.marge)}
+                {l.signe < 0 ? `moins ${fmtEur(l.valeur)}` : fmtEur(l.valeur)}
               </td>
-              <td><PastilleMarge marge={l.marge} /></td>
             </tr>
           ))}
+          <tr style={{ borderTop: '2px solid var(--line)' }}>
+            <td><div className="cell-primary" style={{ fontWeight: 700 }}>Résultat</div></td>
+            <td style={{
+              textAlign: 'right', fontWeight: 800, fontSize: 15, whiteSpace: 'nowrap',
+              color: cr.resultat < 0 ? 'var(--cancelled)' : 'var(--signed)',
+            }}>
+              {fmtEur(cr.resultat)}
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
+  )
+}
+
+// ─── Le tableau des personnes ─────────────────────────────────────────────
+function TableauPersonnes({ lignes, titre, sousTitre }) {
+  if (!lignes.length) return null
+  return (
+    <>
+      <div style={{ margin: '20px 0 8px' }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>{titre}</div>
+        {sousTitre && <div style={{ fontSize: 12, color: 'var(--t3)' }}>{sousTitre}</div>}
+      </div>
+      <div className="table-wrap">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Personne</th>
+              <th>Contrat</th>
+              <th style={{ textAlign: 'right' }}>Mois</th>
+              <th style={{ textAlign: 'right' }}>Encaissé</th>
+              <th style={{ textAlign: 'right' }}>Attendu</th>
+              <th style={{ textAlign: 'right' }}>Coût</th>
+              <th style={{ textAlign: 'right' }}>Résultat</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {lignes.map((l) => (
+              <tr key={l.profile_id || l.nom}>
+                <td>
+                  <div className="cell-primary">{l.nom || 'Sans nom'}</div>
+                  <div className="cell-sub">
+                    {l.advisor_code || 'code absent'}
+                    {Number(l.contrats_signes) ? ` · ${l.contrats_signes} contrats` : ''}
+                  </div>
+                </td>
+                <td><span className="badge badge-normal">{l.type_contrat}</span></td>
+                <td style={{ textAlign: 'right' }}>{fmtMois(l.mois_actifs)}</td>
+                <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmtEur(l.commission_encaissee)}</td>
+                <td style={{ textAlign: 'right', color: 'var(--t3)' }}>
+                  {Number(l.commission_attendue) ? fmtEur(l.commission_attendue) : ''}
+                </td>
+                <td style={{ textAlign: 'right' }}
+                  title={[
+                    `Salaire chargé ${fmtEur(l.cout_fixe)}`,
+                    `écoles et autres ${fmtEur(l.cout_ecole)}`,
+                    `rétrocession ${fmtEur(l.cout_retrocession)}`,
+                    `part de structure ${fmtEur(l.cout_frais_fixes)}`,
+                  ].join(' · ')}>
+                  {fmtEur(l.cout_total)}
+                </td>
+                <td style={{
+                  textAlign: 'right', fontWeight: 700,
+                  color: Number(l.marge) < 0 ? 'var(--cancelled)' : 'var(--signed)',
+                }}>
+                  {fmtEur(l.marge)}
+                </td>
+                <td><PastilleMarge marge={l.marge} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   )
 }
 
@@ -201,6 +252,7 @@ export default function Rentabilite({ profile }) {
   const [ouvert, setOuvert] = useState(estDeverrouille())
   const [annee, setAnnee] = useState(new Date().getFullYear())
   const [vue, setVue] = useState('cabinet')
+  const [repartir, setRepartir] = useState(true)
   const [donnees, setDonnees] = useState(null)
   const [chargement, setChargement] = useState(false)
   const [restant, setRestant] = useState(tempsRestantMs())
@@ -215,10 +267,10 @@ export default function Rentabilite({ profile }) {
     if (message) toast(message, { icon: '🔒' })
   }, [])
 
-  const charger = useCallback(async (a) => {
+  const charger = useCallback(async (a, r) => {
     setChargement(true)
     try {
-      setDonnees(await chargerRentabilite(a))
+      setDonnees(await chargerRentabilite(a, r))
     } catch (e) {
       if (String(e.message).includes('verrouille')) fermer('Session expirée, espace reverrouillé')
       else toast.error(messageErreur(e))
@@ -227,7 +279,7 @@ export default function Rentabilite({ profile }) {
     }
   }, [fermer])
 
-  useEffect(() => { if (ouvert) charger(annee) }, [ouvert, annee, charger])
+  useEffect(() => { if (ouvert) charger(annee, repartir) }, [ouvert, annee, repartir, charger])
 
   // Compte a rebours : l espace se ferme tout seul au bout de quinze minutes.
   useEffect(() => {
@@ -241,24 +293,31 @@ export default function Rentabilite({ profile }) {
   }, [ouvert, fermer])
 
   const lignes = useMemo(() => donnees?.lignes || [], [donnees])
-  const lSalaries = useMemo(() => salaries(lignes), [lignes])
-  const lMandataires = useMemo(() => mandataires(lignes), [lignes])
-  const tCabinet = useMemo(() => totaux(lignes), [lignes])
-  const tSalaries = useMemo(() => totaux(lSalaries), [lSalaries])
-  const tMandataires = useMemo(() => totaux(lMandataires), [lMandataires])
+  const lEquipe = useMemo(() => equipe(lignes), [lignes])
+  const lAssocies = useMemo(() => associes(lignes), [lignes])
+  const cr = useMemo(
+    () => compteDeResultat(lignes, donnees?.cabinet?.structure_annuelle || 0),
+    [lignes, donnees],
+  )
+  const tEquipe = useMemo(() => totaux(lEquipe), [lEquipe])
+
+  // Le cout complet du cabinet, celui qui sert au mensuel et a la bascule :
+  // tout ce qui separe l encaisse du resultat.
+  const coutCabinet = cr.encaisse - cr.resultat
   const mensuel = useMemo(
-    () => cumulerParMois(donnees?.parMois || [], tCabinet.cout),
-    [donnees, tCabinet.cout],
+    () => cumulerParMois(donnees?.parMois || [], coutCabinet),
+    [donnees, coutCabinet],
   )
   const bascule = useMemo(
-    () => pointDeBascule(donnees?.parMois || [], tCabinet.cout),
-    [donnees, tCabinet.cout],
+    () => pointDeBascule(donnees?.parMois || [], coutCabinet),
+    [donnees, coutCabinet],
   )
 
   if (!ouvert) return <Verrou onOuvert={() => setOuvert(true)} />
 
   const minutes = Math.floor(restant / 60000)
   const secondes = Math.floor((restant % 60000) / 1000)
+  const ratio = coutCabinet > 0 ? cr.encaisse / coutCabinet : null
 
   return (
     <div>
@@ -298,98 +357,107 @@ export default function Rentabilite({ profile }) {
       {!chargement && vue === 'cabinet' && (
         <>
           <div className="kpi-grid mb-24">
-            <Carte label="Commissions encaissées" valeur={fmtEur(tCabinet.commission)}
-              aide={`${tCabinet.contrats} contrats · ${tCabinet.clients} clients`} accent="var(--gold)" />
-            <Carte label="Coût des équipes" valeur={fmtEur(tCabinet.cout)}
-              aide={`${tSalaries.personnes} personnes sous contrat`} accent="var(--progress)" />
-            <Carte label="Marge" valeur={fmtEur(tCabinet.marge)}
-              aide={tCabinet.marge >= 0 ? 'Le cabinet gagne de l argent' : 'Le cabinet perd de l argent'}
-              accent={tCabinet.marge >= 0 ? 'var(--signed)' : 'var(--cancelled)'} />
-            <Carte label="Ratio de couverture" valeur={fmtRatio(tCabinet.ratio)}
+            <Carte label="Commissions encaissées" valeur={fmtEur(cr.encaisse)}
+              aide={cr.attendu ? `${fmtEur(cr.attendu)} attendus en plus` : 'Argent réellement perçu'}
+              accent="var(--gold)" />
+            <Carte label="Résultat" valeur={fmtEur(cr.resultat)}
+              aide={cr.resultat >= 0 ? 'Après tout, associés compris' : 'Le cabinet perd de l argent'}
+              accent={cr.resultat >= 0 ? 'var(--signed)' : 'var(--cancelled)'} />
+            <Carte label="Ratio de couverture" valeur={fmtRatio(ratio)}
               aide="Euros encaissés pour un euro dépensé" accent="var(--forecast)" />
             <Carte label="Point de bascule"
-              valeur={bascule ? MOIS_COURTS[bascule - 1] : '—'}
+              valeur={bascule ? MOIS_COURTS[bascule - 1] : 'non atteint'}
               aide={bascule ? 'Mois où le cumul dépasse les coûts' : 'Pas atteint sur l année'} />
           </div>
-          <div className="card card-p" style={{ borderLeft: '3px solid var(--gold)' }}>
-            <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--t2)' }}>
-              <strong style={{ color: 'var(--t1)' }}>Les coûts sont des hypothèses.</strong>{' '}
-              Charges patronales, mutuelle et outils viennent des paramètres, pas de la
-              comptabilité. Le coût mensuel est le coût annuel divisé par douze, faute
-              d un relevé mois par mois. À lire comme un ordre de grandeur, pas comme un bilan.
-            </div>
-          </div>
-        </>
-      )}
 
-      {!chargement && vue === 'salaries' && (
-        <>
-          <div className="kpi-grid mb-24">
-            <Carte label="Coût total" valeur={fmtEur(tSalaries.cout)} aide={`${tSalaries.personnes} personnes`} />
-            <Carte label="Commissions" valeur={fmtEur(tSalaries.commission)} />
-            <Carte label="Marge" valeur={fmtEur(tSalaries.marge)}
-              accent={tSalaries.marge >= 0 ? 'var(--signed)' : 'var(--cancelled)'} />
-            <Carte label="En perte" valeur={tSalaries.enPerte}
-              aide={tSalaries.enPerte ? 'À regarder en premier' : 'Personne'} />
-          </div>
-          <TableauPersonnes lignes={lSalaries} avecCouts />
-        </>
-      )}
+          <CompteDeResultat cr={cr} />
 
-      {!chargement && vue === 'mandataires' && (
-        <>
-          <div className="kpi-grid mb-24">
-            <Carte label="Production apportée" valeur={fmtEur(tMandataires.commission)}
-              aide={`${tMandataires.contrats} contrats · ${tMandataires.personnes} mandataires`} />
-            <Carte label="Ce qui reste au cabinet" valeur={fmtEur(tMandataires.marge)} accent="var(--signed)" />
-          </div>
-          <div className="card card-p mb-16" style={{ borderLeft: '3px solid var(--gold)' }}>
-            <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--t2)' }}>
-              Un mandataire sans coût fixe n est pas gratuit. La commission qui lui est
-              reversée est calculée par le barème, côté serveur, et déduite ici.
-            </div>
-          </div>
-          <TableauPersonnes lignes={lMandataires} avecCouts={false} />
-        </>
-      )}
-
-      {!chargement && vue === 'mensuel' && (
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Mois</th>
-                <th style={{ textAlign: 'right' }}>Contrats</th>
-                <th style={{ textAlign: 'right' }}>PP</th>
-                <th style={{ textAlign: 'right' }}>PU</th>
-                <th style={{ textAlign: 'right' }}>Commission</th>
-                <th style={{ textAlign: 'right' }}>Coût estimé</th>
-                <th style={{ textAlign: 'right' }}>Marge du mois</th>
-                <th style={{ textAlign: 'right' }}>Cumul</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mensuel.map((m) => (
-                <tr key={m.mois}>
-                  <td className="cell-primary">{MOIS_COURTS[m.mois - 1]}</td>
-                  <td style={{ textAlign: 'right' }}>{m.contrats}</td>
-                  <td style={{ textAlign: 'right' }}>{fmtEur(m.pp)}</td>
-                  <td style={{ textAlign: 'right' }}>{fmtEur(m.pu)}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmtEur(m.commission)}</td>
-                  <td style={{ textAlign: 'right', color: 'var(--t3)' }}>{fmtEur(m.coutMois)}</td>
-                  <td style={{
-                    textAlign: 'right', fontWeight: 600,
-                    color: m.margeMois < 0 ? 'var(--cancelled)' : 'var(--signed)',
-                  }}>{fmtEur(m.margeMois)}</td>
-                  <td style={{
-                    textAlign: 'right', fontWeight: 700,
-                    color: m.cumulMarge < 0 ? 'var(--cancelled)' : 'var(--signed)',
-                  }}>{fmtEur(m.cumulMarge)}</td>
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Mois</th>
+                  <th style={{ textAlign: 'right' }}>Contrats</th>
+                  <th style={{ textAlign: 'right' }}>Encaissé</th>
+                  <th style={{ textAlign: 'right' }}>Attendu</th>
+                  <th style={{ textAlign: 'right' }}>Coût du mois</th>
+                  <th style={{ textAlign: 'right' }}>Marge du mois</th>
+                  <th style={{ textAlign: 'right' }}>Cumul</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {mensuel.map((m) => (
+                  <tr key={m.mois}>
+                    <td className="cell-primary">{MOIS_COURTS[m.mois - 1]}</td>
+                    <td style={{ textAlign: 'right' }}>{m.contrats || ''}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmtEur(m.commission)}</td>
+                    <td style={{ textAlign: 'right', color: 'var(--t3)' }}>
+                      {Number(m.attendue) ? fmtEur(m.attendue) : ''}
+                    </td>
+                    <td style={{ textAlign: 'right', color: 'var(--t3)' }}>{fmtEur(m.coutMois)}</td>
+                    <td style={{
+                      textAlign: 'right', fontWeight: 600,
+                      color: m.margeMois < 0 ? 'var(--cancelled)' : 'var(--signed)',
+                    }}>{fmtEur(m.margeMois)}</td>
+                    <td style={{
+                      textAlign: 'right', fontWeight: 700,
+                      color: m.cumulMarge < 0 ? 'var(--cancelled)' : 'var(--signed)',
+                    }}>{fmtEur(m.cumulMarge)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="card card-p" style={{ marginTop: 16, borderLeft: '3px solid var(--gold)' }}>
+            <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--t2)' }}>
+              <strong style={{ color: 'var(--t1)' }}>D où viennent ces chiffres.</strong>{' '}
+              Les commissions viennent du grand livre, ligne par ligne. Les salaires
+              viennent des contrats du CRM, au prorata des jours de présence. La
+              structure et la rémunération des associés viennent de la comptabilité.
+              Les charges patronales restent un taux, pas un relevé de paie : c est la
+              seule hypothèse qui reste dans ce tableau.
+            </div>
+          </div>
+        </>
+      )}
+
+      {!chargement && vue === 'personnes' && (
+        <>
+          <div className="kpi-grid mb-24">
+            <Carte label="Équipe" valeur={fmtEur(tEquipe.marge)}
+              aide={`${tEquipe.personnes} personnes, ${fmtEur(tEquipe.encaisse)} encaissés`}
+              accent={tEquipe.marge >= 0 ? 'var(--signed)' : 'var(--cancelled)'} />
+            <Carte label="Coût de l équipe" valeur={fmtEur(tEquipe.cout)}
+              aide={`dont ${fmtEur(tEquipe.retrocessions)} de rétrocessions`} />
+            <Carte label="En perte" valeur={tEquipe.enPerte}
+              aide={tEquipe.enPerte ? 'À regarder en premier' : 'Personne'} />
+            <Carte label="Structure non absorbée" valeur={fmtEur(cr.structureNonAbsorbee)}
+              aide="Postes payés toute l année, occupés une partie seulement" />
+          </div>
+
+          <label style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+            fontSize: 12.5, color: 'var(--t2)',
+          }}>
+            <input type="checkbox" checked={repartir} onChange={(e) => setRepartir(e.target.checked)} />
+            Inclure la part de structure dans le coût de chacun
+          </label>
+
+          <TableauPersonnes lignes={lEquipe} titre="L équipe"
+            sousTitre="Salariés, alternants, stagiaires et mandataires" />
+          <TableauPersonnes lignes={lAssocies} titre="Les associés"
+            sousTitre="Rémunération prise sur le résultat, pas un coût d équipe" />
+
+          <div className="card card-p" style={{ marginTop: 16, borderLeft: '3px solid var(--gold)' }}>
+            <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--t2)' }}>
+              La somme des résultats individuels ne fait pas le résultat du cabinet :
+              il manque {fmtEur(cr.structureNonAbsorbee)} de structure que personne ne
+              porte. Cocher ou décocher la case déplace des coûts entre les personnes,
+              cela ne change jamais le résultat du cabinet.
+            </div>
+          </div>
+        </>
       )}
     </div>
   )
