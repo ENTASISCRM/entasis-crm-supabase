@@ -92,6 +92,7 @@ export default async function handler(req, res) {
       .from('production_encaissee')
       .select('mois, volume_pp, volume_pu, commission_encaissee, commission_attendue, retrocession')
       .eq('annee', annee)
+      .eq('source', 'BORDEREAU')
 
     const parMois = Array.from({ length: 12 }, (_, i) => ({
       mois: i + 1, pp: 0, pu: 0, commission: 0, attendue: 0, retrocession: 0, contrats: 0,
@@ -121,6 +122,12 @@ export default async function handler(req, res) {
       .select('categorie, libelle, fournisseur, montant, periodicite, montant_mensuel, actif, fiabilite, source, a_arbitrer, notes')
       .order('categorie').order('montant_mensuel', { ascending: false })
 
+    // Ce que le grand livre contient, par source. Le module ne compte QUE les
+    // bordereaux reellement payes : le CA MOIS mesure la production signee,
+    // pas l encaissement, et les deux sont decales d un a trois mois.
+    const { data: sources } = await admin
+      .from('v_production_par_source').select('*').eq('annee', annee)
+
     const { data: prm } = await admin
       .from('pnl_parametres')
       .select('frais_fixes_mensuels, repartir_frais_fixes, mutuelle_mensuelle')
@@ -137,6 +144,7 @@ export default async function handler(req, res) {
       mutuelle_en_place: Number(prm?.mutuelle_mensuelle || 0) > 0,
       courant: courant || null,
       charges: charges || [],
+      sources: sources || [],
     }
 
     await journaliser(admin, { req, user, action: 'lecture', detail: `annee ${annee}, vue ${vue}` })

@@ -460,6 +460,12 @@ export default function Rentabilite({ profile }) {
   const courant = donnees?.cabinet?.courant || null
   const charges = useMemo(() => donnees?.cabinet?.charges || [], [donnees])
   const recette = useMemo(() => recetteMensuelleMoyenne(donnees?.parMois || []), [donnees])
+  // Ce que le grand livre contient et que la page ne compte PAS : seul un
+  // bordereau reellement paye vaut comme encaissement.
+  const autresSources = useMemo(
+    () => (donnees?.cabinet?.sources || []).filter((s) => s.source !== 'BORDEREAU'),
+    [donnees],
+  )
   const manque = useMemo(
     () => ceQuiManque(Number(courant?.cout_complet || 0), recette?.moyenne || 0),
     [courant, recette],
@@ -560,6 +566,13 @@ export default function Rentabilite({ profile }) {
                 venir des bordereaux réellement payés par les compagnies, pas du CA MOIS
                 interne qui compte la production signée : ce sont deux grandeurs
                 différentes, décalées d un à trois mois.
+                {autresSources.length > 0 && (
+                  <>
+                    {' '}Le grand livre contient{' '}
+                    {autresSources.map((s) => `${s.lignes} lignes ${s.source}`).join(', ')},
+                    volontairement non comptées ici pour cette raison.
+                  </>
+                )}
               </div>
             </div>
           )}
