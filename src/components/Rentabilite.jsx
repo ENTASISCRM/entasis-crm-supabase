@@ -483,7 +483,8 @@ function VueCharges({ charges, courant }) {
         <Carte label="Charges fixes mensuelles" valeur={fmtEur(total)}
           aide={`${charges.filter((c) => c.actif !== false).length} postes engagés`} accent="var(--gold)" />
         <Carte label="En attente d arbitrage" valeur={fmtEur(courant?.frais_fixes_a_arbitrer)}
-          aide={`${arbitrages.length} postes à trancher`} accent="var(--cancelled)" />
+          aide={`${arbitrages.length} postes à trancher, déjà comptés ci-contre`}
+          accent="var(--cancelled)" />
         <Carte label="Pas encore engagé" valeur={fmtEur(courant?.non_engage)}
           aide={`${attente.length} postes à venir`} accent="var(--forecast)" />
       </div>
@@ -503,10 +504,12 @@ function VueCharges({ charges, courant }) {
                 {c.fournisseur ? ` · ${c.fournisseur}` : ''}
                 {c.notes && <div style={{ fontSize: 11.5, color: 'var(--t3)', marginTop: 2 }}>{c.notes}</div>}
               </div>
-              <div style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
-                {fmtEur(c.montant_mensuel)}
-                <div style={{ fontSize: 11, color: 'var(--t3)', fontWeight: 500, textAlign: 'right' }}>
-                  {fmtEur(Number(c.montant_mensuel || 0) * 12)} par an
+              <div style={{ fontWeight: 700, whiteSpace: 'nowrap', textAlign: 'right' }}>
+                {Number(c.montant_mensuel || 0) > 0 ? fmtEur(c.montant_mensuel) : fmtEur(c.montant)}
+                <div style={{ fontSize: 11, color: 'var(--t3)', fontWeight: 500 }}>
+                  {Number(c.montant_mensuel || 0) > 0
+                    ? `${fmtEur(Number(c.montant_mensuel) * 12)} par an`
+                    : `${LIBELLE_PERIODICITE[c.periodicite] || c.periodicite || ''}, hors charges mensuelles`}
                 </div>
               </div>
             </div>
