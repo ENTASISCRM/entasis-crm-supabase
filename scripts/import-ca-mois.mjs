@@ -45,9 +45,14 @@ const MOIS_FEUILLE = {
 const [, , chemin, anneeArg, ...options] = argv
 const annee = Number(anneeArg)
 const ecrire = options.includes('--ecrire')
+// Par defaut une seule ligne douteuse bloque tout : mieux vaut corriger le
+// fichier que d ecrire un chiffre faux. Cet interrupteur permet d enregistrer
+// quand meme les lignes propres, en listant a chaque fois celles qu on laisse
+// de cote pour qu elles ne soient jamais oubliees en silence.
+const sansLesRefus = options.includes('--sans-les-refus')
 
 if (!chemin || !Number.isInteger(annee)) {
-  console.error('Usage : node scripts/import-ca-mois.mjs "<fichier.xlsx>" <annee> [--ecrire]')
+  console.error('Usage : node scripts/import-ca-mois.mjs "<fichier.xlsx>" <annee> [--ecrire] [--sans-les-refus]')
   exit(1)
 }
 if (!existsSync(chemin)) {
@@ -182,8 +187,12 @@ for (const [c, n] of Object.entries(parCode).sort((a, b) => b[1] - a[1])) {
 if (refus.length) {
   console.log(`\n=== ${refus.length} LIGNES REFUSEES, a corriger dans le fichier ===`)
   for (const r of refus) console.log(`  ${r.ou.padEnd(26)} ${r.motif}`)
-  console.log('\nRien n a ete ecrit. Corrigez le fichier, puis relancez.')
-  exit(2)
+  if (!sansLesRefus) {
+    console.log('\nRien n a ete ecrit. Corrigez le fichier, puis relancez.')
+    console.log('Pour enregistrer quand meme les lignes propres : --sans-les-refus')
+    exit(2)
+  }
+  console.log(`\nCes ${refus.length} lignes ne seront PAS enregistrees.`)
 }
 
 if (!ecrire) {
