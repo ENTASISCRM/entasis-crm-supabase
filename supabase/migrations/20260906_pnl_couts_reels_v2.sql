@@ -123,7 +123,9 @@ begin
   personnes as (
     select
       ct.cle,
-      max(ct.profile_id) as profile_id,
+      -- max(uuid) n existe pas en Postgres. Toutes les lignes d un meme groupe
+      -- partagent la meme cle, donc le meme profil : on prend le premier non nul.
+      (array_agg(ct.profile_id) filter (where ct.profile_id is not null))[1] as profile_id,
       max(ct.full_name) as full_name,
       -- Le contrat le plus recent donne le libelle affiche.
       (array_agg(ct.type_contrat order by ct.date_debut desc nulls last))[1] as type_contrat,

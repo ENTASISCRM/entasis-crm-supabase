@@ -37,6 +37,11 @@ begin
     raise exception 'Espace rentabilite reserve a la direction';
   end if;
 
+  -- Un appelant qui passe explicitement null ecraserait la valeur par defaut,
+  -- et toutes les comparaisons de dates deviendraient nulles : la fonction
+  -- rendrait zero partout, en silence. C est le pire des resultats possibles.
+  p_date := coalesce(p_date, current_date);
+
   select * into prm from public.pnl_parametres where id = true;
 
   return query
