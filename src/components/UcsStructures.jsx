@@ -170,7 +170,7 @@ export default function UcsStructures({ profile, month }) {
   // Charge le catalogue (refetch si on change de mode pour rafraîchir après édition admin)
   const reload = () => {
     setLoading(true)
-    return ucsService.listAll()
+    return ucsService.listAll(isManager)
       .then(data => { setUcs(data); setError('') })
       .catch(e => {
         logger.warn('[UCS] listAll failed', e)
@@ -182,7 +182,7 @@ export default function UcsStructures({ profile, month }) {
   useEffect(() => {
     let active = true
     setLoading(true)
-    ucsService.listAll()
+    ucsService.listAll(isManager)
       .then(data => { if (active) { setUcs(data); setError('') } })
       .catch(e => {
         logger.warn('[UCS] listAll failed', e)
@@ -686,6 +686,8 @@ function Row({ u, selected, onClick, adminMode, onReload, isManager, onStructure
   const isFinSoon = dUntilFin != null && dUntilFin >= 0 && dUntilFin < 30
   const isFinPast = dUntilFin != null && dUntilFin < 0
   // upfront peut être NULL (notamment Abeille mini-campagnes via SwissLine circulaire)
+  // Cote conseiller la colonne n arrive plus du tout (vue ucs_catalogue) :
+  // upfront_negocie dit s il en existe un, sans en donner la valeur.
   const hasUpfront = u.upfront != null && !isNaN(Number(u.upfront))
   const upfrontVal = hasUpfront ? Number(u.upfront) : null
   // Coupon annuel : on prend coupon_annualise si dispo, sinon coupon_periode × N

@@ -59,15 +59,39 @@ export function computeCouponAnnuel(montant, couponClient) {
  * Tri par défaut : EN_COURS d'abord, puis upfront décroissant
  * (NULL en dernier — les UCS sans upfront négocié, ex Abeille).
  */
-export async function listAll() {
+export async function listAll(estDirection = false) {
+  // L upfront negocie ne part PAS dans le navigateur d un conseiller : sa
+  // commission etant fixee a 1,5 %, l ecart avec l upfront EST la marge du
+  // cabinet. L ecran la masquait deja, mais select('*') l envoyait quand meme,
+  // lisible dans l onglet reseau (constat d audit du 06/09).
+  //
+  // La direction lit la table, tout le monde lit la vue ucs_catalogue, qui ne
+  // porte ni upfront ni notes internes mais garde upfront_negocie pour que le
+  // tri « negocies d abord » et l affichage « n/a » continuent de marcher.
+  // La base tranche : la table est en lecture direction seulement, la vue
+  // filtre sur is_staff(). Ce n est pas un choix d affichage.
+  if (estDirection) {
+    const { data, error } = await supabase
+      .from('ucs_structures')
+      .select(`
+        *,
+        structureur:structureurs(id, nom, compagnies_travaillees)
+      `)
+      .order('etat', { ascending: true })
+      .order('upfront', { ascending: false, nullsFirst: false })
+    if (error) throw error
+    return data || []
+  }
+
   const { data, error } = await supabase
-    .from('ucs_structures')
+    .from('ucs_catalogue')
     .select(`
       *,
       structureur:structureurs(id, nom, compagnies_travaillees)
     `)
     .order('etat', { ascending: true })
-    .order('upfront', { ascending: false, nullsFirst: false })
+    .order('upfront_negocie', { ascending: false })
+    .order('nom_ucs', { ascending: true })
   if (error) throw error
   return data || []
 }

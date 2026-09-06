@@ -4900,9 +4900,13 @@ export default function App(){
   // true) — sans ce remplissage précoce, tout deep link ≠ #/dashboard était
   // rejeté au chargement à froid (F5, lien partagé).
   const visibleTabsRef = useRef(new Set(['dashboard']))
+  // accesPnl doit figurer ICI AUSSI : cette liste sert de garde fou plus bas
+  // (« onglet inconnu, retour a l accueil »). Sans lui, l entree apparaissait
+  // dans la barre laterale mais le clic renvoyait au tableau de bord.
   visibleTabsRef.current = visibleTabs(buildNavDomains({
     isManager: profile?.role === 'manager',
     isRhDelegue: profile?.rh_delegue === true,
+    accesPnl: profile?.acces_pnl === true,
     canSmartRh: profile?.role === 'manager' || profile?.rh_delegue === true || !['STAGIAIRE', 'MANDATAIRE'].includes(String(contractType || '').toUpperCase()),
   }))
 
@@ -5587,7 +5591,7 @@ export default function App(){
 
   // ── B1 : navigation en domaines (source unique lib/navigation.js) ──────
   // (visibleTabsRef est rempli plus haut, avant les early returns.)
-  const navDomains = buildNavDomains({ isManager, isRhDelegue, canSmartRh })
+  const navDomains = buildNavDomains({ isManager, isRhDelegue, canSmartRh, accesPnl: !!profile?.acces_pnl })
   // Vues accessibles → palette ⌘K : même source que la sidebar, fin de la
   // liste MANAGER_ONLY maintenue à la main dans CommandPalette.
   const palettePages = {}
