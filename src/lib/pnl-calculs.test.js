@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest'
 import {
   estGerant, estMandataire, equipe, associes, salaries, mandataires,
   totaux, compteDeResultat, pointDeBascule, cumulerParMois, fmtRatio, fmtMois,
-  recetteMensuelleMoyenne, ceQuiManque, chargesParCategorie, aArbitrer, nonEngage,
+  recetteMensuelleMoyenne, ceQuiManque, chargesParCategorie, aArbitrer, nonEngage, pilotage,
 } from './pnl-calculs'
 
 const ligne = (o = {}) => ({
@@ -306,5 +306,61 @@ describe('recette du cabinet contre recette attribuee', () => {
     // Si les lignes portent plus que la banque, on ne montre pas un manque.
     const cr = compteDeResultat(jeu, 0, 1000)
     expect(cr.encaisseNonAttribue).toBe(0)
+  })
+})
+
+describe('pilotage vers l objectif', () => {
+  const m = (mois, cout, recette, cumul, passe) => ({
+    mois, cout_total: cout, recette, cumul_resultat: cumul, est_passe: passe,
+  })
+  // Huit mois passes a 40 000 de recette pour 20 000 de cout, puis quatre mois
+  // a venir a 25 000 de cout.
+  const annee = [
+    ...Array.from({ length: 8 }, (_, i) => m(i + 1, 20000, 40000, 20000 * (i + 1), true)),
+    ...Array.from({ length: 4 }, (_, i) => m(i + 9, 25000, 0, 0, false)),
+  ]
+
+  it('lit le realise sur le dernier mois passe, pas sur la somme', () => {
+    const p = pilotage(annee, 240000)
+    expect(p.realise).toBe(160000)
+    expect(p.moisPasses).toBe(8)
+    expect(p.moisRestants).toBe(4)
+  })
+
+  it('dit combien il faut encaisser chaque mois restant', () => {
+    const p = pilotage(annee, 240000)
+    // Il reste 80 000 a faire, et 100 000 de cout deja engage sur quatre mois :
+    // il faut donc encaisser 180 000, soit 45 000 par mois.
+    expect(p.resteAFaire).toBe(80000)
+    expect(p.coutAVenir).toBe(100000)
+    expect(p.recetteNecessaire).toBe(180000)
+    expect(p.parMoisNecessaire).toBe(45000)
+  })
+
+  it('compare le rythme actuel a ce qu il faudrait', () => {
+    const p = pilotage(annee, 240000)
+    expect(p.moyenneRecette).toBe(40000)
+    // 40 000 encaisses par mois contre 45 000 necessaires : en retard.
+    expect(p.enAvance).toBe(false)
+    expect(p.projection).toBe(160000 + 40000 * 4 - 100000)
+  })
+
+  it('voit qu un objectif plus bas est deja tenu', () => {
+    const p = pilotage(annee, 100000)
+    expect(p.atteint).toBe(true)
+    expect(p.enAvance).toBe(true)
+  })
+
+  it('ne compte pas un mois sans recette dans la moyenne', () => {
+    // Un mois passe sans donnee bancaire ne doit pas diviser la moyenne.
+    const avecTrou = [m(1, 20000, 40000, 20000, true), m(2, 20000, 0, 0, true)]
+    expect(pilotage(avecTrou, 240000).moyenneRecette).toBe(40000)
+  })
+
+  it('tolere une annee vide sans rendre NaN', () => {
+    const p = pilotage([], 240000)
+    expect(p.realise).toBe(0)
+    expect(p.parMoisNecessaire).toBeNull()
+    expect(Number.isNaN(p.projection)).toBe(false)
   })
 })

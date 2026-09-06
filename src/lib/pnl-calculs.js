@@ -182,3 +182,48 @@ export const fmtMois = (v) => {
   const n = Number(v || 0)
   return Number.isInteger(n) ? String(n) : n.toFixed(1).replace('.', ',')
 }
+
+// ─── Pilotage ─────────────────────────────────────────────────────────────
+// Une seule question : ou j en suis de mon objectif de resultat, et ce qu il
+// faut encaisser chaque mois pour l atteindre.
+//
+// Les mois passes sont du realise, les mois a venir sont du cout deja engage
+// face a une recette encore a faire. On ne melange jamais les deux.
+export function pilotage(moisAnnee, objectif = 0) {
+  const mois = moisAnnee || []
+  const passes = mois.filter((m) => m.est_passe)
+  const aVenir = mois.filter((m) => !m.est_passe)
+
+  const realise = passes.length ? Number(passes[passes.length - 1].cumul_resultat || 0) : 0
+  const recettePassee = passes.reduce((s, m) => s + Number(m.recette || 0), 0)
+  const coutPasse = passes.reduce((s, m) => s + Number(m.cout_total || 0), 0)
+  // On ne divise que par les mois qui portent une recette : un mois sans
+  // donnee tirerait la moyenne vers le bas et ferait croire a un decrochage.
+  const moisAvecRecette = passes.filter((m) => Number(m.recette || 0) > 0).length
+  const moyenneRecette = moisAvecRecette ? recettePassee / moisAvecRecette : 0
+
+  const coutAVenir = aVenir.reduce((s, m) => s + Number(m.cout_total || 0), 0)
+  const resteAFaire = Number(objectif || 0) - realise
+  const recetteNecessaire = coutAVenir + resteAFaire
+  const parMoisNecessaire = aVenir.length ? recetteNecessaire / aVenir.length : null
+  const projection = realise + moyenneRecette * aVenir.length - coutAVenir
+
+  return {
+    objectif: Number(objectif || 0),
+    realise,
+    recettePassee,
+    coutPasse,
+    moisPasses: passes.length,
+    moisRestants: aVenir.length,
+    moyenneRecette,
+    coutAVenir,
+    resteAFaire,
+    recetteNecessaire,
+    parMoisNecessaire,
+    projection,
+    // Au rythme actuel, l objectif est il tenu ?
+    enAvance: parMoisNecessaire != null && moyenneRecette >= parMoisNecessaire,
+    atteint: objectif > 0 && realise >= Number(objectif),
+    avancement: objectif > 0 ? realise / Number(objectif) : null,
+  }
+}

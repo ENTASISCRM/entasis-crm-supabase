@@ -148,9 +148,14 @@ export default async function handler(req, res) {
     const { data: sources } = await admin
       .from('v_production_par_source').select('*').eq('annee', annee)
 
+    // ── Le pilotage : ou en est on de l objectif de resultat ──────────────
+    // Mois passes : la tresorerie reelle, calee sur les soldes bancaires.
+    // Mois a venir : le cout previsionnel, sans inventer de recette.
+    const { data: pilotageLignes } = await admin.rpc('pnl_pilotage', { p_annee: annee })
+
     const { data: prm } = await admin
       .from('pnl_parametres')
-      .select('frais_fixes_mensuels, repartir_frais_fixes, mutuelle_mensuelle')
+      .select('frais_fixes_mensuels, repartir_frais_fixes, mutuelle_mensuelle, objectif_resultat_annuel')
       .eq('id', true).maybeSingle()
 
     // La structure est prise pour son montant annuel entier : un bureau vide
@@ -165,6 +170,8 @@ export default async function handler(req, res) {
       structure_annuelle: structureMensuelle * 12,
       repartir: repartir == null ? Boolean(prm?.repartir_frais_fixes) : repartir,
       mutuelle_en_place: Number(prm?.mutuelle_mensuelle || 0) > 0,
+      objectif: Number(prm?.objectif_resultat_annuel || 0),
+      pilotage: pilotageLignes || [],
       courant: courant || null,
       charges: charges || [],
       sources: sources || [],

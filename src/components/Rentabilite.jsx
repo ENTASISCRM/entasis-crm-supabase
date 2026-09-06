@@ -28,9 +28,11 @@ import {
   MOIS_COURTS, equipe, associes, totaux, compteDeResultat,
   pointDeBascule, cumulerParMois, fmtEur, fmtRatio, fmtMois,
   recetteMensuelleMoyenne, ceQuiManque, chargesParCategorie, aArbitrer, nonEngage,
+  pilotage as calculerPilotage,
 } from '../lib/pnl-calculs'
 
 const VUES = [
+  { cle: 'pilotage', label: 'Pilotage' },
   { cle: 'cabinet', label: 'Le cabinet' },
   { cle: 'personnes', label: 'Par personne' },
   { cle: 'charges', label: 'Les charges' },
@@ -267,6 +269,126 @@ function TableauPersonnes({ lignes, titre, sousTitre }) {
   )
 }
 
+// ─── Pilotage ─────────────────────────────────────────────────────────────
+// La seule question du matin : ou j en suis de mon objectif, et ce qu il faut
+// encaisser d ici la fin de l annee pour y arriver.
+//
+// Les mois passes portent la TRESORERIE REELLE, calee sur les soldes
+// bancaires. Les mois a venir ne portent que leur cout previsionnel : on
+// n invente aucune recette future.
+function VuePilotage({ mois, objectif, annee }) {
+  const p = calculerPilotage(mois, objectif)
+  const reels = (mois || []).filter((m) => m.est_reel)
+  const aVenir = (mois || []).filter((m) => !m.est_reel)
+
+  const Bloc = ({ label, valeur, aide, couleur }) => (
+    <div className="kpi-card" style={couleur ? { borderTop: `2px solid ${couleur}` } : undefined}>
+      <div className="kpi-label">{label}</div>
+      <div className="kpi-value" style={couleur ? { color: couleur } : undefined}>{valeur}</div>
+      {aide && <div className="kpi-hint">{aide}</div>}
+    </div>
+  )
+
+  const vert = 'var(--signed)'
+  const rouge = 'var(--cancelled)'
+  const avancement = Math.max(0, Math.min(1, p.avancement ?? 0))
+
+  return (
+    <>
+      <div className="kpi-grid mb-24">
+        <Bloc label={`Résultat ${annee} à ce jour`} valeur={fmtEur(p.realise)}
+          aide={`${p.moisPasses} mois encaissés et décaissés, calés sur les soldes bancaires`}
+          couleur={p.realise >= 0 ? vert : rouge} />
+        <Bloc label="Objectif de l année" valeur={fmtEur(p.objectif)}
+          aide={p.atteint ? "Déjà atteint" : `Il reste ${fmtEur(p.resteAFaire)} à faire`} couleur="var(--gold)" />
+        <Bloc label="À encaisser chaque mois"
+          valeur={p.parMoisNecessaire != null ? fmtEur(p.parMoisNecessaire) : 'n. c.'}
+          aide={`sur les ${p.moisRestants} mois restants, coûts compris`}
+          couleur={p.enAvance ? vert : rouge} />
+        <Bloc label="Ton rythme actuel" valeur={fmtEur(p.moyenneRecette)}
+          aide={p.enAvance ? 'Suffisant pour tenir l objectif' : `Il manque ${fmtEur(Math.max(0, (p.parMoisNecessaire || 0) - p.moyenneRecette))} par mois`} />
+        <Bloc label="Projection fin d année" valeur={fmtEur(p.projection)}
+          aide="Si le rythme actuel se maintient"
+          couleur={p.projection >= p.objectif ? vert : rouge} />
+      </div>
+
+      {/* La jauge : une seule image pour savoir ou on en est. */}
+      <div className="card card-p mb-24">
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 8 }}>
+          <span style={{ color: 'var(--t2)' }}>
+            <strong style={{ color: 'var(--t1)' }}>{fmtEur(p.realise)}</strong> sur {fmtEur(p.objectif)}
+          </span>
+          <span style={{ color: 'var(--t3)' }}>{Math.round(avancement * 100)} %</span>
+        </div>
+        <div style={{ height: 14, borderRadius: 999, background: 'var(--line)', overflow: 'hidden' }}>
+          <div style={{
+            width: `${avancement * 100}%`, height: '100%', borderRadius: 999,
+            background: p.projection >= p.objectif ? vert : 'var(--gold)',
+            transition: 'width .4s ease',
+          }} />
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 10, lineHeight: 1.6 }}>
+          {p.projection >= p.objectif
+            ? `Au rythme actuel tu finis à ${fmtEur(p.projection)}, soit ${fmtEur(p.projection - p.objectif)} au dessus de l objectif.`
+            : `Au rythme actuel tu finis à ${fmtEur(p.projection)}, soit ${fmtEur(p.objectif - p.projection)} en dessous. Il faudrait encaisser ${fmtEur(p.parMoisNecessaire || 0)} par mois au lieu de ${fmtEur(p.moyenneRecette)}.`}
+        </div>
+      </div>
+
+      <div className="table-wrap">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Mois</th>
+              <th style={{ textAlign: 'right' }}>Personnes</th>
+              <th style={{ textAlign: 'right' }}>Encaissé</th>
+              <th style={{ textAlign: 'right' }}>Décaissé</th>
+              <th style={{ textAlign: 'right' }}>Résultat</th>
+              <th style={{ textAlign: 'right' }}>Cumul</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {(mois || []).map((m) => (
+              <tr key={m.mois} style={m.est_reel ? undefined : { opacity: 0.62 }}>
+                <td className="cell-primary">{MOIS_COURTS[m.mois - 1]}</td>
+                <td style={{ textAlign: 'right' }}>{m.nb_personnes}</td>
+                <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                  {m.est_reel ? fmtEur(m.recette) : ''}
+                </td>
+                <td style={{ textAlign: 'right', color: 'var(--t2)' }}>{fmtEur(m.cout_total)}</td>
+                <td style={{
+                  textAlign: 'right', fontWeight: 700,
+                  color: Number(m.resultat) < 0 ? rouge : vert,
+                }}>{fmtEur(m.resultat)}</td>
+                <td style={{
+                  textAlign: 'right', fontWeight: 700,
+                  color: Number(m.cumul_resultat) < 0 ? rouge : vert,
+                }}>{fmtEur(m.cumul_resultat)}</td>
+                <td style={{ fontSize: 11, color: 'var(--t3)', whiteSpace: 'nowrap' }}>
+                  {m.est_reel ? 'banque' : 'prévisionnel'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="card card-p" style={{ marginTop: 16, borderLeft: '3px solid var(--gold)' }}>
+        <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--t2)' }}>
+          <strong style={{ color: 'var(--t1)' }}>Ce que ce tableau dit, et ce qu il ne dit pas.</strong>{' '}
+          Les {reels.length} premiers mois sont de la trésorerie réelle : le résultat de
+          chaque mois est exactement la variation du solde de tes comptes. Les {aVenir.length} mois
+          suivants ne portent que leur coût prévisionnel, avec l équipe telle qu elle est
+          aujourd hui. Ce n est pas un résultat comptable : l impôt sur les sociétés, les
+          remboursements de dette et les achats immobilisés sortent de la trésorerie sans
+          être des charges de l année. Le résultat comptable sera donc plus élevé que ce
+          chiffre.
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ─── Les charges fixes, poste par poste ───────────────────────────────────
 // Un total agrege que personne ne peut ouvrir redevient une hypothese au bout
 // de trois mois. Chaque euro porte donc son fournisseur, sa periodicite, sa
@@ -413,7 +535,7 @@ function VueCharges({ charges, courant }) {
 export default function Rentabilite({ profile }) {
   const [ouvert, setOuvert] = useState(estDeverrouille())
   const [annee, setAnnee] = useState(new Date().getFullYear())
-  const [vue, setVue] = useState('cabinet')
+  const [vue, setVue] = useState('pilotage')
   const [repartir, setRepartir] = useState(true)
   const [donnees, setDonnees] = useState(null)
   const [chargement, setChargement] = useState(false)
@@ -665,6 +787,11 @@ export default function Rentabilite({ profile }) {
             </div>
           </div>
         </>
+      )}
+
+      {!chargement && vue === 'pilotage' && (
+        <VuePilotage mois={donnees?.cabinet?.pilotage || []}
+          objectif={donnees?.cabinet?.objectif || 0} annee={annee} />
       )}
 
       {!chargement && vue === 'charges' && (
