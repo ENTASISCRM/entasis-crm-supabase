@@ -59,6 +59,7 @@ const AllocationsTypes = lazy(() => import('./components/AllocationsTypes'))
 const ClientsView = lazy(() => import('./components/clients/ClientsView'))
 const RattrapageFiches = lazy(() => import('./components/clients/RattrapageFiches'))
 const DoublonsClients = lazy(() => import('./components/clients/DoublonsClients'))
+const Rentabilite = lazy(() => import('./components/Rentabilite'))
 const Campagnes = lazy(() => import('./components/Campagnes'))
 const ClientView = lazy(() => import('./components/clients/ClientView'))
 // Conformite embarque jspdf : lazy pour rester hors du bundle de login.
@@ -189,6 +190,7 @@ const Icon = {
   Catalogue: ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".8"/><rect x="11" y="3" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".6"/><rect x="3" y="11" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".6"/><rect x="11" y="11" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".4"/></svg>,
   ImmoFolder:()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><path d="M3 6a1 1 0 011-1h4l2 2h6a1 1 0 011 1v7a1 1 0 01-1 1H4a1 1 0 01-1-1V6z" fill="currentColor" opacity=".6"/><rect x="7" y="9" width="2" height="2" rx=".3" fill="currentColor" opacity=".9"/><rect x="10" y="9" width="2" height="2" rx=".3" fill="currentColor" opacity=".7"/></svg>,
   Kanban:    ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><rect x="2" y="3" width="4" height="14" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".8"/><rect x="8" y="3" width="4" height="10" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".6"/><rect x="14" y="3" width="4" height="12" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".5"/></svg>,
+  Money:     ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="10" rx="2" stroke="currentColor" strokeWidth="1.4" opacity=".85"/><circle cx="10" cy="10" r="2.6" stroke="currentColor" strokeWidth="1.4" opacity=".7"/><path d="M5 8v4M15 8v4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".45"/></svg>,
   Editorial: ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><path d="M4.5 15.5l1-3.5 8-8a1.77 1.77 0 012.5 2.5l-8 8-3.5 1z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill="none" opacity=".85"/><path d="M11.5 6l2.5 2.5" stroke="currentColor" strokeWidth="1.2" opacity=".5"/><path d="M3.5 18.5h13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".4"/></svg>,
   Outils:    ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.4" fill="none" opacity=".8"/><path d="M10 2v3M10 15v3M2 10h3M15 10h3M4.2 4.2l2.1 2.1M13.7 13.7l2.1 2.1M4.2 15.8l2.1-2.1M13.7 6.3l2.1-2.1" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" opacity=".6"/></svg>,
   LinkedIn:  ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".8"/><path d="M7 9v4M7 7v.01" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" opacity=".7"/><path d="M10 13v-2.5c0-1 .5-1.5 1.5-1.5s1.5.5 1.5 1.5V13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity=".7"/></svg>,
@@ -815,7 +817,7 @@ function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,mont
   //   manager-only de editorial_packages). Badge = packages en attente.
   // - Rémunération ouverte à tous : le composant sépare vue équipe /
   //   vue personnelle via RLS conseiller_contrats.
-  const domains = buildNavDomains({ isManager, isRhDelegue, canSmartRh })
+  const domains = buildNavDomains({ isManager, isRhDelegue, canSmartRh, accesPnl: !!profile?.acces_pnl })
 
   // Compteurs affichés en badge, agrégés au niveau du domaine.
   const badgeValues = {
@@ -997,7 +999,7 @@ async function genererFicheParrainage(profile){
 // portent déjà l'identité visuelle de chaque écran.
 // Ecrans ou les actions commerciales de la barre du haut ont un sens
 const ECRANS_COMMERCIAUX = ['dashboard','pipeline','dossiers','clients','multi-equipement','leads','agenda','forecast']
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers','multi-equipement':'Multi-équipement',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers',team:'Équipe',leads:'Leads','ucs-structures':'UCS Produits Structurés',allocations:'Allocations types',partenaires:'Partenaires · annuaire',immobilier:'Immobilier · dossiers transmis',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH',connexions:'Connexions au CRM','recrutement':'Recrutement',conformite:'Conformité',editorial:'Agent éditorial',cockpit:'Cockpit ratios'}
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers','multi-equipement':'Multi-équipement',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers',team:'Équipe',leads:'Leads','ucs-structures':'UCS Produits Structurés',allocations:'Allocations types',partenaires:'Partenaires · annuaire',immobilier:'Immobilier · dossiers transmis',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH',connexions:'Connexions au CRM','recrutement':'Recrutement',conformite:'Conformité',editorial:'Agent éditorial',cockpit:'Cockpit ratios',rentabilite:'Chiffres & Rentabilité'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile,onHelp,notifications,notifScope}){
   return (
@@ -5752,6 +5754,11 @@ export default function App(){
               RLS reste le vrai verrou sur chaque ecriture. */}
           {activeTab==='clients'&&!selectedClientId&&clientsVue==='rattrapage'&&isManager&&<RattrapageFiches profile={profile}/>}
           {activeTab==='clients'&&!selectedClientId&&clientsVue==='doublons'&&<DoublonsClients profile={profile}/>}
+          {/* Espace rentabilite : double barriere cote interface. L entree de
+              navigation n existe pas sans le drapeau, et le rendu est garde ici
+              aussi, pour qu un lien profond ne l ouvre pas. La vraie protection
+              reste api/pnl.js et la RLS. */}
+          {activeTab==='rentabilite'&&profile?.acces_pnl&&<Rentabilite profile={profile}/>}
           {/* Campagnes ciblees : ciblage en direct, lancement, entonnoir. */}
           {activeTab==='clients'&&!selectedClientId&&clientsVue==='campagnes'&&isManager&&<Campagnes profile={profile} teamProfiles={teamProfiles}/>}
           {activeTab==='clients'&&!selectedClientId&&clientsVue==='dossiers'&&<DealsTable deals={deals} month={month} profile={profile} onEdit={startEdit} onDelete={deleteDeal} onRefresh={loadAll} onQuickPatch={quickPatchDeal} onSelectClient={(clientId) => {
