@@ -9,22 +9,10 @@
 
 import { supabase } from '../lib/supabase'
 import { euro } from '../lib/ui-shared'
-
-const PAGE = 1000
-
-// Charge toutes les lignes d'une requete par pages de 1000 pour ne pas
-// buter sur la limite PostgREST. buildQuery doit renvoyer une requete neuve
-// a chaque appel car une requete Supabase ne se rejoue pas.
-async function fetchTout(buildQuery) {
-  const lignes = []
-  for (let depart = 0; ; depart += PAGE) {
-    const { data, error } = await buildQuery().range(depart, depart + PAGE - 1)
-    if (error) throw error
-    lignes.push(...(data || []))
-    if (!data || data.length < PAGE) break
-  }
-  return lignes
-}
+// fetchTout est sorti dans services/pagination.js, a l identique : dix autres
+// lectures pleine table du CRM tombaient sous le meme plafond PostgREST de
+// 1000 lignes et le rejouaient chacune a leur facon.
+import { fetchTout } from './pagination'
 
 // Portefeuille clients avec les champs utiles aux generateurs. email et
 // patrimoine_estime servent au generateur fiches a completer (memes champs

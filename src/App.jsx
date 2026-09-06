@@ -22,7 +22,6 @@ import { confirmDialog } from './components/ui/confirm'
 import { Skeleton, SkeletonPage } from './components/ui/Skeleton'
 import SubTabs from './components/ui/SubTabs'
 import { buildNavDomains, viewId, domainOf, visibleTabs } from './lib/navigation'
-import { KanbanDnd, KanbanColumn, KanbanCard, targetColumnOf } from './components/ui/kanban'
 import FormSection from './components/ui/FormSection'
 import SortableTh from './components/ui/SortableTh'
 import ShortcutsHelp from './components/ui/ShortcutsHelp'
@@ -71,6 +70,19 @@ const OpportunitesDuJour = lazy(() => import('./components/OpportunitesDuJour'))
 // Briques V3 multi equipement construites en parallele (peuvent ne pas encore
 // exister a la compilation) : chargees a la demande comme les autres onglets.
 const CockpitRatios = lazy(() => import('./components/CockpitRatios'))
+// Kanban : les primitives dnd-kit ne servent qu'a PipelineBoard, un onglet sur
+// vingt, mais l'import statique en tete de fichier suffisait a faire precharger
+// le chunk 'dnd' par index.html a chaque login (38,37 ko bruts, 12,85 ko sur le
+// reseau, mesure de l'audit perf). Meme traitement que les 23 autres ecrans du
+// fichier : chargement a l'ouverture de l'onglet.
+// Une seule promesse partagee par les trois primitives et par targetColumnOf :
+// les trois lazy() se resolvent alors sur le meme aller retour reseau, sans
+// enchainer trois passes de repli.
+let promesseKanban
+const chargerKanban = () => (promesseKanban ??= import('./components/ui/kanban'))
+const KanbanDnd = lazy(() => chargerKanban().then(m => ({ default: m.KanbanDnd })))
+const KanbanColumn = lazy(() => chargerKanban().then(m => ({ default: m.KanbanColumn })))
+const KanbanCard = lazy(() => chargerKanban().then(m => ({ default: m.KanbanCard })))
 import {
   annualize,
   isPipeline,
@@ -2081,6 +2093,10 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
   async function handleCardMove({itemData,overId,overData}){
     const deal=itemData?.deal
     if(!deal)return
+    // targetColumnOf vit dans le meme module que les primitives, desormais
+    // chargees a la demande : on le prend sur la promesse deja resolue (le
+    // module est forcement la, puisque la carte vient d'etre glissee).
+    const {targetColumnOf}=await chargerKanban()
     await appliquerChangementStatut(deal,targetColumnOf({overId,overData}),{onEdit,onQuickPatch,undoable:true})
   }
 
@@ -2131,6 +2147,9 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
           </button>
         </div>
       )}
+      {/* Repli local : le bandeau et les totaux du pipeline restent affiches
+          pendant que le chunk kanban arrive, seul le plateau attend. */}
+      <Suspense fallback={<SkeletonPage/>}>
       <KanbanDnd onMove={handleCardMove}>
       <div className="pipeline-board">
         {PIPELINE_COLS.map(col=>{
@@ -2289,6 +2308,7 @@ function PipelineBoard({deals,month,profile,onEdit,onQuickPatch}){
         })}
       </div>
       </KanbanDnd>
+      </Suspense>
     </div>
   )
 }
