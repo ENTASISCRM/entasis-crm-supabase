@@ -6,10 +6,14 @@ import {
   estGerant, estMandataire, equipe, associes, salaries, mandataires,
   totaux, compteDeResultat, pointDeBascule, cumulerParMois, fmtRatio, fmtMois,
   recetteMensuelleMoyenne, ceQuiManque, chargesParCategorie, aArbitrer, nonEngage, pilotage,
+  compteDeResultatMensuel,
 } from './pnl-calculs'
 
 const ligne = (o = {}) => ({
   type_contrat: o.type || 'CDI',
+  // Par defaut la personne est la depuis un an : sous un mois de presence,
+  // elle n est pas jugee, et les tests le verifient explicitement plus bas.
+  mois_actifs: o.mois ?? 12,
   est_gerant: o.gerant ?? false,
   commission_encaissee: o.com ?? 0,
   commission_attendue: o.attendu ?? 0,
@@ -85,6 +89,19 @@ describe('totaux', () => {
   it('compte les personnes en perte, celles que Louis doit voir en premier', () => {
     const t = totaux([ligne({ com: 10000, salaire: 6000 }), ligne({ com: 5000, salaire: 8000 })])
     expect(t.enPerte).toBe(1)
+  })
+
+  it('ne compte pas en perte quelqu un arrive depuis moins d un mois', () => {
+    // Une rentree de septembre n est pas un probleme de rentabilite : sans
+    // cette regle la carte annonce douze personnes en perte quand le tableau
+    // juste en dessous n en montre que huit.
+    const t = totaux([
+      ligne({ com: 0, salaire: 300, mois: 0.2 }),
+      ligne({ com: 0, salaire: 300, mois: 0.2 }),
+      ligne({ com: 1000, salaire: 6000, mois: 8 }),
+    ])
+    expect(t.enPerte).toBe(1)
+    expect(t.nouveaux).toBe(2)
   })
 
   it('donne un ratio de couverture lisible', () => {
@@ -362,5 +379,87 @@ describe('pilotage vers l objectif', () => {
     expect(p.realise).toBe(0)
     expect(p.parMoisNecessaire).toBeNull()
     expect(Number.isNaN(p.projection)).toBe(false)
+  })
+})
+
+describe('le pont entre les contributions et le resultat du cabinet', () => {
+  // L ecran affirmait que l ecart etait la structure non absorbee. Il vaut en
+  // realite la recette non rattachee, moins la remuneration des associes,
+  // moins la structure que personne ne porte. On le calcule, on ne l affirme plus.
+  it('boucle a l euro pres, gerants compris', () => {
+    const lignes = [
+      ligne({ com: 40000, salaire: 20000, structure: 7000 }),
+      ligne({ com: 10000, salaire: 18000, structure: 7000 }),
+      { ...ligne({ com: 60000, structure: 7000, gerant: true }), remuneration_associe: 50000 },
+    ]
+    const cr = compteDeResultat(lignes, 25000, 130000)
+    expect(cr.reconciliation.ecart).toBeCloseTo(0, 6)
+    expect(cr.reconciliation.recetteNonAttribuee).toBeCloseTo(20000, 6)
+    // La structure allouee compte AUSSI celle des gerants : 3 x 7000.
+    expect(cr.structureAllouee).toBeCloseTo(21000, 6)
+    expect(cr.structureNonAbsorbee).toBeCloseTo(4000, 6)
+  })
+
+  it('oppose la structure ecoulee, pas douze mois, a une recette de huit mois', () => {
+    // Huit mois de recette contre douze mois de loyer fabriquaient une perte
+    // de plus de trente mille euros qui n avait pas eu lieu.
+    const lignes = [ligne({ com: 100000, salaire: 40000, structure: 60000 })]
+    const surDouzeMois = compteDeResultat(lignes, 103720, 100000)
+    const surLaPeriode = compteDeResultat(lignes, 70875, 100000)
+    expect(surLaPeriode.resultat - surDouzeMois.resultat).toBeCloseTo(32845, 0)
+  })
+})
+
+describe('le compte de resultat du cabinet', () => {
+  // Le cabinet affichait deux chiffres appeles resultat, distants de plusieurs
+  // milliers d euros, parce qu ils venaient de deux moteurs. Le compte de
+  // resultat est desormais la decomposition du chiffre affiche, pas un second
+  // calcul : ces tests verifient qu ils ne peuvent plus diverger.
+  const m = (mois, recette, eq, asso, st, retro, passe) => ({
+    mois, recette, cout_equipe: eq, cout_associes: asso, cout_structure: st,
+    cout_retrocession: retro, cout_total: eq + asso + st + retro,
+    est_passe: passe, est_reel: true,
+  })
+  // La base rend un cumul en fenetre glissante : on le rejoue a l identique,
+  // sinon le test ne compare pas ce que l ecran compare.
+  const avecCumul = (lignes) => {
+    let c = 0
+    return lignes.map((l) => {
+      c += l.recette - l.cout_total
+      return { ...l, resultat: l.recette - l.cout_total, cumul_resultat: Number(c.toFixed(2)) }
+    })
+  }
+
+  it('rend exactement le resultat de la carte, poste par poste', () => {
+    const mois = avecCumul([
+      m(1, 23273.67, 6000, 9500, 8643.39, 2295.18, true),
+      m(2, 74768.10, 6000, 9500, 8643.39, 10075.18, true),
+      m(3, 1947.60, 6000, 9500, 8643.39, 2440.65, false),
+    ])
+    const cdr = compteDeResultatMensuel(mois)
+    const p = pilotage(mois, 240000)
+    expect(cdr.mois).toBe(2)
+    expect(cdr.resultat).toBeCloseTo(p.realise, 2)
+    // La somme des quatre postes vaut le cout rendu par la base, sans reste.
+    expect(cdr.ecart).toBeCloseTo(0, 6)
+  })
+
+  it('ignore le mois en cours, qui porte un mois entier de charges', () => {
+    // Septembre, six jours de commission contre trente jours de charges : le
+    // cumuler faisait chuter le resultat affiche de vingt cinq mille euros.
+    const mois = avecCumul([
+      m(1, 100000, 6000, 9500, 8643.39, 2295.18, true),
+      m(2, 1947.60, 6000, 9500, 8643.39, 500, false),
+    ])
+    const cdr = compteDeResultatMensuel(mois)
+    expect(cdr.mois).toBe(1)
+    expect(cdr.recette).toBeCloseTo(100000, 6)
+    expect(cdr.dernierMois).toBe(1)
+  })
+
+  it('ne rend rien tant qu aucun mois n est termine', () => {
+    const cdr = compteDeResultatMensuel([m(1, 5000, 6000, 9500, 8643.39, 0, false)])
+    expect(cdr.mois).toBe(0)
+    expect(cdr.resultat).toBe(0)
   })
 })

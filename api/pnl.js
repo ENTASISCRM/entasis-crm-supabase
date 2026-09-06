@@ -170,9 +170,14 @@ export default async function handler(req, res) {
       .select('frais_fixes_mensuels, repartir_frais_fixes, mutuelle_mensuelle, objectif_resultat_annuel, source_attribution')
       .eq('id', true).maybeSingle()
 
-    // La structure est prise pour son montant annuel entier : un bureau vide
-    // se paye quand meme, que le poste ait ete occupe ou non.
     const structureMensuelle = Number(courant?.frais_fixes ?? prm?.frais_fixes_mensuels ?? 0)
+
+    // Ce que la structure a REELLEMENT coute depuis le 1er janvier, arrete a
+    // aujourd hui. Le compte de resultat oppose des mois de recette a des mois
+    // de charge : lui servir douze mois de loyer en face de huit mois de
+    // commission fabriquait une perte de plus de trente mille euros qui n a
+    // pas eu lieu.
+    const { data: structureEcoulee } = await admin.rpc('pnl_structure_ecoulee', { p_annee: annee })
 
     const encaisseBanque = (mensuel || []).reduce((t, l) => t + Number(l.commission_encaissee || 0), 0)
     // Le CRM dit QUI a travaille et sur quoi, le grand livre dit COMBIEN.
@@ -183,7 +188,10 @@ export default async function handler(req, res) {
     const cabinet = {
       encaisse_banque: encaisseBanque,
       structure_mensuelle: structureMensuelle,
+      // Ce qu elle coutera sur l annee pleine, pour la projection seulement.
       structure_annuelle: structureMensuelle * 12,
+      // Ce qu elle a coute a ce jour, pour le compte de resultat.
+      structure_ecoulee: Number(structureEcoulee || 0),
       repartir: repartir == null ? Boolean(prm?.repartir_frais_fixes) : repartir,
       mutuelle_en_place: Number(prm?.mutuelle_mensuelle || 0) > 0,
       objectif: Number(prm?.objectif_resultat_annuel || 0),

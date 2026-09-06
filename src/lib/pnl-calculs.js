@@ -43,7 +43,11 @@ export function totaux(lignes) {
     contrats: somme(l, 'contrats_signes'),
     clients: somme(l, 'clients_uniques'),
     personnes: l.length,
-    enPerte: l.filter((x) => Number(x.marge || 0) < 0).length,
+    // Meme regle que la pastille du tableau : sous un mois de presence, on
+    // vient d arriver, on n est pas en perte. Deux comptes differents sur le
+    // meme ecran font douter des deux.
+    enPerte: l.filter((x) => Number(x.marge || 0) < 0 && Number(x.mois_actifs || 0) >= 1).length,
+    nouveaux: l.filter((x) => Number(x.mois_actifs || 0) < 1).length,
   }
 }
 
@@ -52,12 +56,18 @@ export function totaux(lignes) {
 // COMPLET, jamais pour la somme des parts imputees : un bureau vide se paye
 // quand meme. C est ce qui garantit que l interrupteur de repartition change
 // la vue par personne sans jamais changer le resultat du cabinet.
-export function compteDeResultat(lignes, structureAnnuelle = 0, encaisseCabinet = null) {
+export function compteDeResultat(lignes, structureEcoulee = 0, encaisseCabinet = null) {
   const tous = lignes || []
   const eq = equipe(tous)
   const asso = associes(tous)
-  const structure = Number(structureAnnuelle || 0)
-  const structureAllouee = somme(eq, 'cout_frais_fixes')
+  // La structure de la PERIODE ECOULEE, pas douze mois : en face, la recette,
+  // les salaires et la remuneration des associes s arretent tous a aujourd hui.
+  // Opposer douze mois de loyer a huit mois de commission, c est se fabriquer
+  // une perte qui n a pas eu lieu.
+  const structure = Number(structureEcoulee || 0)
+  // Tout le monde porte une part de structure, gerants compris : la retenir
+  // sur la seule equipe laissait croire a un reste non absorbe qui n existe pas.
+  const structureAllouee = somme(tous, 'cout_frais_fixes')
 
   // La recette du cabinet vient des releves bancaires quand on les a : la
   // somme des lignes par personne ne porte que ce qui a pu etre attribue a
@@ -66,32 +76,50 @@ export function compteDeResultat(lignes, structureAnnuelle = 0, encaisseCabinet 
   const encaisse = encaisseCabinet != null ? Number(encaisseCabinet) : encaisseAttribue
   const retrocessions = somme(tous, 'cout_retrocession')
   const salairesCharges = somme(eq, 'cout_fixe')
-  const autresEquipe = somme(eq, 'cout_annexe') + somme(eq, 'cout_outils')
-  // La remuneration d un associe n est plus dans son cout de production : elle
+  const autresEquipe = somme(eq, 'cout_annexe')
+  const outils = somme(tous, 'cout_outils')
+  // La remuneration d un associe n est pas dans son cout de production : elle
   // porte sa propre colonne, et n est retranchee qu ici, une seule fois.
   const remunerationAssocies = somme(tous, 'remuneration_associe')
     + somme(asso, 'cout_annexe') + somme(asso, 'cout_fixe')
   // Les aides percues viennent en DEDUCTION du cout, jamais en recette.
   const aides = somme(tous, 'aide_percue')
 
+  const encaisseNonAttribue = encaisse - encaisseAttribue
+  const structureNonImputee = structure - structureAllouee
+  const resultat = encaisse - retrocessions - salairesCharges - autresEquipe - outils
+    - structure - remunerationAssocies + aides
+  const sommeDesMarges = somme(tous, 'marge')
+
   return {
     encaisse,
     encaisseAttribue,
     // Ce que le cabinet a encaisse sans pouvoir le rattacher a une personne.
-    encaisseNonAttribue: Math.max(0, encaisse - encaisseAttribue),
+    encaisseNonAttribue: Math.max(0, encaisseNonAttribue),
     attendu: somme(tous, 'commission_attendue'),
     retrocessions,
     salairesCharges,
     autresEquipe,
+    outils,
     aides,
     structure,
     structureAllouee,
-    // Ce que personne ne porte : des mois de bureau, d outils et de loyer non
-    // absorbes parce que les postes n ont pas ete occupes toute l annee.
-    structureNonAbsorbee: structure - structureAllouee,
+    // Ce que personne ne porte. Depuis la repartition mois par mois, ce reste
+    // doit valoir zero a l arrondi pres : s il s en ecarte, un contrat manque.
+    structureNonAbsorbee: structureNonImputee,
     remunerationAssocies,
-    resultat: encaisse - retrocessions - salairesCharges - autresEquipe
-      - structure - remunerationAssocies + aides,
+    resultat,
+    // Le pont entre les marges individuelles et le resultat du cabinet, calcule
+    // et non affirme : ces trois lignes expliquent l ecart, a l euro pres.
+    reconciliation: {
+      sommeDesMarges,
+      recetteNonAttribuee: encaisseNonAttribue,
+      remunerationAssocies,
+      structureNonImputee,
+      // Doit valoir zero. Sert de garde fou a l ecran comme dans les tests.
+      ecart: sommeDesMarges + encaisseNonAttribue - remunerationAssocies
+        - structureNonImputee - resultat,
+    },
   }
 }
 
@@ -228,5 +256,39 @@ export function pilotage(moisAnnee, objectif = 0) {
     enAvance: parMoisNecessaire != null && moyenneRecette >= parMoisNecessaire,
     atteint: objectif > 0 && realise >= Number(objectif),
     avancement: objectif > 0 ? realise / Number(objectif) : null,
+  }
+}
+
+// ─── Le compte de resultat du cabinet ─────────────────────────────────────
+// Il n est PAS reconstruit a partir des lignes par personne : il est la
+// decomposition, poste par poste, du resultat mensuel deja affiche. Deux
+// moteurs pour un meme mot donnaient deux nombres distants de cinq mille
+// euros sur le meme ecran. Il n y en a plus qu un.
+// On ne retient que les mois TERMINES : un mois en cours porte quelques jours
+// de commission en face d un mois entier de charges.
+export function compteDeResultatMensuel(moisAnnee) {
+  const finis = (moisAnnee || []).filter((m) => m.est_passe)
+  const som = (cle) => finis.reduce((s, m) => s + Number(m[cle] || 0), 0)
+
+  const recette = som('recette')
+  const retrocessions = som('cout_retrocession')
+  const equipe = som('cout_equipe')
+  const structure = som('cout_structure')
+  const associes = som('cout_associes')
+  const cout = retrocessions + equipe + structure + associes
+
+  return {
+    mois: finis.length,
+    dernierMois: finis.length ? finis[finis.length - 1].mois : null,
+    recette,
+    retrocessions,
+    equipe,
+    structure,
+    associes,
+    cout,
+    resultat: recette - cout,
+    // Garde fou : la somme des quatre postes doit valoir le cout total rendu
+    // par la base. S il s en ecarte, un poste a ete oublie en chemin.
+    ecart: cout - som('cout_total'),
   }
 }
