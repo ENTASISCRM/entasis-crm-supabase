@@ -11,6 +11,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { verifyAuth } from './_auth.js'
 import { verifierJeton } from './_lib/pnl-jeton.js'
+import { retrocessionsAnnuelles, appliquerRetrocessions } from './_lib/pnl-retrocessions.js'
 
 const REFUS = { error: 'Acces refuse' }
 
@@ -82,10 +83,26 @@ export default async function handler(req, res) {
 
   try {
     // ── Les lignes par personne, calculees en base ────────────────────────
-    const { data: lignes, error } = await admin.rpc('pnl_conseiller_annuel', {
+    const { data: lignesBrutes, error } = await admin.rpc('pnl_conseiller_annuel', {
       p_annee: annee, p_repartir: repartir,
     })
     if (error) throw error
+
+    // ── La retrocession due aux conseillers ───────────────────────────────
+    // La moitie de l equipe est payee a la commission, et c est le SEUL cout
+    // d un mandataire. On rejoue le bareme deja configure dans le CRM, mois
+    // par mois, plutot que d inventer un taux : les deux ecrans, fiche de
+    // remuneration et rentabilite, doivent dire la meme chose.
+    const [{ data: deals }, { data: contrats }] = await Promise.all([
+      admin.from('deals').select('*'),
+      admin.from('conseiller_contrats')
+        .select('*, profile:profile_id(id, advisor_code, full_name, is_active)'),
+    ])
+
+    const retro = retrocessionsAnnuelles({
+      deals: deals || [], contrats: contrats || [], annee,
+    })
+    const lignes = appliquerRetrocessions(lignesBrutes || [], retro)
 
     // ── Le mensuel, lu directement du grand livre ─────────────────────────
     const { data: mensuel } = await admin
@@ -149,7 +166,7 @@ export default async function handler(req, res) {
 
     await journaliser(admin, { req, user, action: 'lecture', detail: `annee ${annee}, vue ${vue}` })
 
-    return res.status(200).json({ annee, lignes: lignes || [], parMois, cabinet })
+    return res.status(200).json({ annee, lignes, parMois, cabinet })
   } catch (e) {
     await journaliser(admin, { req, user, action: 'refus', detail: `erreur : ${e.message}` })
     return res.status(500).json({ error: 'Calcul impossible' })

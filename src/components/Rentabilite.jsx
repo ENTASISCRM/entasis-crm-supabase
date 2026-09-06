@@ -147,12 +147,14 @@ const PastilleMarge = ({ marge }) => {
 // Six lignes, chacune retrouvable dans le grand livre ou dans la paie. C est
 // la reponse a la seule question qui compte : est ce que le cabinet gagne de
 // l argent, et sur quoi.
-function CompteDeResultat({ cr }) {
+function CompteDeResultat({ cr, sourceRetro }) {
   const lignes = [
     { label: 'Commissions encaissées', valeur: cr.encaisse, signe: 1,
       aide: cr.attendu ? `${fmtEur(cr.attendu)} encore attendus, non comptés ici` : null },
     { label: 'Rétrocessions aux signataires', valeur: cr.retrocessions, signe: -1,
-      aide: 'Part reversée à celui qui a signé' },
+      aide: sourceRetro === 'bareme'
+        ? 'Calculées avec le barème configuré dans le CRM, en attente des bordereaux'
+        : 'Part reversée à celui qui a signé, montants des bordereaux' },
     { label: 'Salaires et charges', valeur: cr.salairesCharges, signe: -1,
       aide: 'Équipe salariée, alternants et stagiaires' },
     { label: 'Autres coûts d équipe', valeur: cr.autresEquipe, signe: -1 },
@@ -243,6 +245,7 @@ function TableauPersonnes({ lignes, titre, sousTitre }) {
                     `rétrocession ${fmtEur(l.cout_retrocession)}`,
                     `part de structure ${fmtEur(l.cout_frais_fixes)}`,
                     Number(l.aide_percue) ? `moins ${fmtEur(l.aide_percue)} d aides` : null,
+                    l.retrocession_source === 'bareme' ? 'rétrocession issue du barème' : null,
                   ].filter(Boolean).join(' · ')}>
                   {fmtEur(l.cout_total)}
                 </td>
@@ -462,6 +465,14 @@ export default function Rentabilite({ profile }) {
   const recette = useMemo(() => recetteMensuelleMoyenne(donnees?.parMois || []), [donnees])
   // Ce que le grand livre contient et que la page ne compte PAS : seul un
   // bordereau reellement paye vaut comme encaissement.
+  // Un bordereau prime toujours sur le bareme : du cash constate contre un
+  // calcul. Tant qu aucun bordereau n est importe, la retrocession vient du
+  // bareme du CRM et l ecran doit le dire.
+  const sourceRetro = useMemo(() => {
+    const l = donnees?.lignes || []
+    if (l.some((x) => x.retrocession_source === 'bordereau')) return 'bordereau'
+    return l.some((x) => x.retrocession_source === 'bareme') ? 'bareme' : 'aucune'
+  }, [donnees])
   const autresSources = useMemo(
     () => (donnees?.cabinet?.sources || []).filter((s) => s.source !== 'BORDEREAU'),
     [donnees],
@@ -590,7 +601,7 @@ export default function Rentabilite({ profile }) {
             </div>
           )}
 
-          <CompteDeResultat cr={cr} />
+          <CompteDeResultat cr={cr} sourceRetro={sourceRetro} />
 
           <div style={{ margin: '20px 0 8px', display: 'flex', alignItems: 'baseline', gap: 10 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>Mois par mois</div>
