@@ -170,7 +170,7 @@ export default function UcsStructures({ profile, month }) {
   // Charge le catalogue (refetch si on change de mode pour rafraîchir après édition admin)
   const reload = () => {
     setLoading(true)
-    return ucsService.listAll(isManager)
+    return ucsService.listAll()
       .then(data => { setUcs(data); setError('') })
       .catch(e => {
         logger.warn('[UCS] listAll failed', e)
@@ -182,7 +182,7 @@ export default function UcsStructures({ profile, month }) {
   useEffect(() => {
     let active = true
     setLoading(true)
-    ucsService.listAll(isManager)
+    ucsService.listAll()
       .then(data => { if (active) { setUcs(data); setError('') } })
       .catch(e => {
         logger.warn('[UCS] listAll failed', e)

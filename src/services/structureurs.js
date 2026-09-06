@@ -109,7 +109,9 @@ export async function markContactedToday(id) {
 export async function listEnriched() {
   const [structureursRes, ucsRes, simuRes] = await Promise.all([
     supabase.from('structureurs').select('*').order('nom'),
-    supabase.from('ucs_structures').select('id, structureur_id, etat, upfront'),
+    // Par la vue : l upfront y est masque pour qui n est pas la direction,
+    // et la table n est de toute facon plus lisible depuis le navigateur.
+    supabase.from('ucs_catalogue').select('id, structureur_id, etat, upfront'),
     supabase.from('simulations_structures').select('ucs_id, montant'),
   ])
 

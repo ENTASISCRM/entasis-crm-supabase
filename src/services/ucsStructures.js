@@ -59,30 +59,16 @@ export function computeCouponAnnuel(montant, couponClient) {
  * Tri par défaut : EN_COURS d'abord, puis upfront décroissant
  * (NULL en dernier — les UCS sans upfront négocié, ex Abeille).
  */
-export async function listAll(estDirection = false) {
+export async function listAll() {
   // L upfront negocie ne part PAS dans le navigateur d un conseiller : sa
   // commission etant fixee a 1,5 %, l ecart avec l upfront EST la marge du
-  // cabinet. L ecran la masquait deja, mais select('*') l envoyait quand meme,
-  // lisible dans l onglet reseau (constat d audit du 06/09).
+  // cabinet, c est a dire ce que la compagnie verse a Entasis.
   //
-  // La direction lit la table, tout le monde lit la vue ucs_catalogue, qui ne
-  // porte ni upfront ni notes internes mais garde upfront_negocie pour que le
-  // tri « negocies d abord » et l affichage « n/a » continuent de marcher.
-  // La base tranche : la table est en lecture direction seulement, la vue
-  // filtre sur is_staff(). Ce n est pas un choix d affichage.
-  if (estDirection) {
-    const { data, error } = await supabase
-      .from('ucs_structures')
-      .select(`
-        *,
-        structureur:structureurs(id, nom, compagnies_travaillees)
-      `)
-      .order('etat', { ascending: true })
-      .order('upfront', { ascending: false, nullsFirst: false })
-    if (error) throw error
-    return data || []
-  }
-
+  // Un seul chemin de lecture desormais, la vue ucs_catalogue, qui sert
+  // l upfront et les notes internes a la direction et null a tout le monde
+  // d autre. La table, elle, n est plus lisible que par la direction. Ce n est
+  // pas un choix d affichage : la base tranche, le navigateur ne peut pas
+  // demander ce qu il n a pas le droit de voir.
   const { data, error } = await supabase
     .from('ucs_catalogue')
     .select(`
@@ -91,6 +77,7 @@ export async function listAll(estDirection = false) {
     `)
     .order('etat', { ascending: true })
     .order('upfront_negocie', { ascending: false })
+    .order('upfront', { ascending: false, nullsFirst: false })
     .order('nom_ucs', { ascending: true })
   if (error) throw error
   return data || []
@@ -143,8 +130,10 @@ export async function saveSimulation({
   clientId = null,
   montant,
   commissionConseiller,
-  commissionCabinet,
 }) {
+  // La marge du cabinet n est PAS envoyee : le navigateur ne connait pas l
+  // upfront, et un declencheur la calcule en base a l insertion. Tant qu elle
+  // partait d ici, elle etait connue du poste qui l envoyait.
   const { data, error } = await supabase
     .from('simulations_structures')
     .insert({
@@ -153,7 +142,6 @@ export async function saveSimulation({
       client_id: clientId,
       montant,
       commission_conseiller: commissionConseiller,
-      commission_cabinet: commissionCabinet,
     })
     .select('id')
     .single()
@@ -161,20 +149,3 @@ export async function saveSimulation({
   return data
 }
 
-/**
- * Liste les dernières simulations (utile pour la vue manager).
- */
-export async function listRecentSimulations(limit = 50) {
-  const { data, error } = await supabase
-    .from('simulations_structures')
-    .select(`
-      *,
-      ucs:ucs_structures(nom_ucs, code_isin, compagnie),
-      conseiller:profiles(full_name, advisor_code),
-      client:clients(nom, prenom)
-    `)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-  if (error) throw error
-  return data || []
-}
