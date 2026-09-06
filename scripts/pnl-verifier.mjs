@@ -4,7 +4,12 @@
 // base. A lancer une fois, avant de compter dessus : l empreinte a pu etre
 // recopiee depuis une capture d ecran, ou l et 1 se ressemblent.
 //
-//   node scripts/pnl-verifier.mjs "<empreinte>"
+//   node scripts/pnl-verifier.mjs        (il demande les deux)
+//   node scripts/pnl-verifier.mjs '<empreinte>'
+//
+// ATTENTION AUX GUILLEMETS : une empreinte contient des $ ; entre guillemets
+// DOUBLES, le shell les prend pour des variables et la vide de ses morceaux.
+// Guillemets simples, ou pas d argument du tout et le script la demande.
 //
 // Le code est demande, jamais affiche, jamais ecrit.
 
@@ -12,15 +17,30 @@ import { createInterface } from 'node:readline/promises'
 import { stdin, stdout, argv, exit } from 'node:process'
 import { verifierCode } from '../api/_lib/pnl-jeton.js'
 
-const empreinte = argv[2]
-if (!empreinte || !empreinte.startsWith('scrypt$')) {
-  console.error('Usage : node scripts/pnl-verifier.mjs "<empreinte>"')
-  exit(1)
+const rl = createInterface({ input: stdin, output: stdout })
+
+let empreinte = argv[2]
+
+// Le shell mange les $ entre guillemets doubles : on le detecte et on le dit,
+// plutot que de renvoyer un « Usage » qui laisse chercher.
+if (empreinte && !empreinte.startsWith('scrypt$16384$')) {
+  console.log(`
+  L empreinte recue est incomplete : "${empreinte}"
+
+  Le shell a probablement mange les $ (guillemets doubles). Utilise des
+  guillemets SIMPLES, ou colle la ci dessous.
+`)
+  empreinte = null
 }
 
-const rl = createInterface({ input: stdin, output: stdout })
-const code = await rl.question('Ton code : ')
+if (!empreinte) empreinte = (await rl.question('Empreinte : ')).trim()
+const code = await rl.question('Ton code   : ')
 rl.close()
+
+if (!empreinte.startsWith('scrypt$')) {
+  console.error('\n  Ce n est pas une empreinte valide.\n')
+  exit(1)
+}
 
 if (verifierCode(code, empreinte)) {
   console.log('\n  \x1b[32m✓\x1b[0m Le code correspond. L empreinte posee est la bonne.\n')
