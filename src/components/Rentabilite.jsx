@@ -157,8 +157,8 @@ function CompteDeResultat({ cr, sourceRetro }) {
         : 'Relevés bancaires, réconciliés à l euro près' },
     { label: 'Rétrocessions aux signataires', valeur: cr.retrocessions, signe: -1,
       aide: sourceRetro === 'bareme'
-        ? 'Calculées avec le barème configuré dans le CRM, en attente des bordereaux'
-        : 'Part reversée à celui qui a signé, montants des bordereaux' },
+        ? 'Calculées avec le barème configuré dans le CRM'
+        : 'Part reversée au signataire, montants du grand livre' },
     { label: 'Salaires et charges', valeur: cr.salairesCharges, signe: -1,
       aide: 'Équipe salariée, alternants et stagiaires' },
     { label: 'Autres coûts d équipe', valeur: cr.autresEquipe, signe: -1 },
@@ -249,7 +249,7 @@ function TableauPersonnes({ lignes, titre, sousTitre }) {
                     `rétrocession ${fmtEur(l.cout_retrocession)}`,
                     `part de structure ${fmtEur(l.cout_frais_fixes)}`,
                     Number(l.aide_percue) ? `moins ${fmtEur(l.aide_percue)} d aides` : null,
-                    l.retrocession_source === 'bareme' ? 'rétrocession issue du barème' : null,
+                    l.retrocession_source === 'bareme' ? 'rétrocession estimée au barème' : null,
                   ].filter(Boolean).join(' · ')}>
                   {fmtEur(l.cout_total)}
                 </td>
@@ -602,7 +602,9 @@ export default function Rentabilite({ profile }) {
     return l.some((x) => x.retrocession_source === 'bareme') ? 'bareme' : 'aucune'
   }, [donnees])
   const autresSources = useMemo(
-    () => (donnees?.cabinet?.sources || []).filter((s) => s.source !== 'BORDEREAU'),
+    () => (donnees?.cabinet?.sources || []).filter(
+      (s) => s.source !== 'BANQUE' && s.source !== (donnees?.cabinet?.source_attribution || 'CA MOIS'),
+    ),
     [donnees],
   )
   const manque = useMemo(

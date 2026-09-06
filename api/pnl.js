@@ -155,7 +155,7 @@ export default async function handler(req, res) {
 
     const { data: prm } = await admin
       .from('pnl_parametres')
-      .select('frais_fixes_mensuels, repartir_frais_fixes, mutuelle_mensuelle, objectif_resultat_annuel')
+      .select('frais_fixes_mensuels, repartir_frais_fixes, mutuelle_mensuelle, objectif_resultat_annuel, source_attribution')
       .eq('id', true).maybeSingle()
 
     // La structure est prise pour son montant annuel entier : un bureau vide
@@ -171,6 +171,9 @@ export default async function handler(req, res) {
       repartir: repartir == null ? Boolean(prm?.repartir_frais_fixes) : repartir,
       mutuelle_en_place: Number(prm?.mutuelle_mensuelle || 0) > 0,
       objectif: Number(prm?.objectif_resultat_annuel || 0),
+      // Un bordereau dit sur quel compte le contrat est loge, pas qui a vendu.
+      // C est le grand livre CA MOIS, qui porte le signataire, qui attribue.
+      source_attribution: prm?.source_attribution || 'CA MOIS',
       pilotage: pilotageLignes || [],
       courant: courant || null,
       charges: charges || [],
