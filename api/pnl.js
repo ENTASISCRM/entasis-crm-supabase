@@ -13,7 +13,7 @@ import { verifyAuth } from './_auth.js'
 import { verifierJeton } from './_lib/pnl-jeton.js'
 import {
   retrocessionsAnnuelles, appliquerRetrocessions,
-  contributionsAnnuelles, repartirRecette,
+  contributionsAnnuelles, enrichirContributions,
 } from './_lib/pnl-retrocessions.js'
 
 const REFUS = { error: 'Acces refuse' }
@@ -175,7 +175,10 @@ export default async function handler(req, res) {
     const structureMensuelle = Number(courant?.frais_fixes ?? prm?.frais_fixes_mensuels ?? 0)
 
     const encaisseBanque = (mensuel || []).reduce((t, l) => t + Number(l.commission_encaissee || 0), 0)
-    const lignes = repartirRecette(avecRetro, contributions, encaisseBanque)
+    // Le CRM dit QUI a travaille et sur quoi, le grand livre dit COMBIEN.
+    // On enrichit, on ne remplace pas : les deals du CRM ne couvrent pas les
+    // premiers mois de l annee.
+    const lignes = enrichirContributions(avecRetro, contributions)
 
     const cabinet = {
       encaisse_banque: encaisseBanque,

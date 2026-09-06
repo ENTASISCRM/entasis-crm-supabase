@@ -25,15 +25,12 @@ import {
   deverrouiller, chargerRentabilite, verrouiller, estDeverrouille, tempsRestantMs,
 } from '../lib/pnl-api'
 import {
-  MOIS_COURTS, equipe, associes, totaux, compteDeResultat,
-  pointDeBascule, cumulerParMois, fmtEur, fmtRatio, fmtMois,
-  recetteMensuelleMoyenne, ceQuiManque, chargesParCategorie, aArbitrer, nonEngage,
-  pilotage as calculerPilotage,
+  MOIS_COURTS, equipe, associes, totaux, compteDeResultat, fmtEur, fmtMois,
+  chargesParCategorie, aArbitrer, nonEngage, pilotage as calculerPilotage,
 } from '../lib/pnl-calculs'
 
 const VUES = [
   { cle: 'pilotage', label: 'Pilotage' },
-  { cle: 'cabinet', label: 'Le cabinet' },
   { cle: 'personnes', label: 'Par personne' },
   { cle: 'charges', label: 'Les charges' },
 ]
@@ -131,16 +128,23 @@ const Carte = ({ label, valeur, aide, accent }) => (
   </div>
 )
 
-const PastilleMarge = ({ marge }) => {
+// Quelqu un arrive depuis cinq jours n est pas « en perte », il vient
+// d arriver. Confondre les deux, c est faire lire un jugement la ou il n y a
+// qu une arithmetique de calendrier.
+const PastilleMarge = ({ marge, mois }) => {
+  const nouveau = Number(mois || 0) < 1
   const perte = Number(marge || 0) < 0
+  const [texte, couleur, fond] = nouveau
+    ? ['vient d arriver', '#7A6320', 'rgba(197,165,90,0.16)']
+    : perte
+      ? ['en perte', '#B4453B', 'rgba(180,69,59,0.10)']
+      : ['rentable', '#1B7A3E', 'rgba(52,199,89,0.12)']
   return (
     <span style={{
       fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 999,
-      color: perte ? '#B4453B' : '#1B7A3E',
-      background: perte ? 'rgba(180,69,59,0.10)' : 'rgba(52,199,89,0.12)',
-      whiteSpace: 'nowrap',
+      color: couleur, background: fond, whiteSpace: 'nowrap',
     }}>
-      {perte ? 'en perte' : 'rentable'}
+      {texte}
     </span>
   )
 }
@@ -222,7 +226,7 @@ function TableauPersonnes({ lignes, titre, sousTitre }) {
               <th style={{ textAlign: 'right' }}>Encaissé</th>
               <th style={{ textAlign: 'right' }}>Attendu</th>
               <th style={{ textAlign: 'right' }}>Coût</th>
-              <th style={{ textAlign: 'right' }}>Résultat</th>
+              <th style={{ textAlign: 'right' }}>Contribution</th>
               <th />
             </tr>
           </thead>
@@ -258,8 +262,13 @@ function TableauPersonnes({ lignes, titre, sousTitre }) {
                   color: Number(l.marge) < 0 ? 'var(--cancelled)' : 'var(--signed)',
                 }}>
                   {fmtEur(l.marge)}
+                  {Number(l.remuneration_associe) > 0 && (
+                    <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--t3)' }}>
+                      rémunération {fmtEur(l.remuneration_associe)}
+                    </div>
+                  )}
                 </td>
-                <td><PastilleMarge marge={l.marge} /></td>
+                <td><PastilleMarge marge={l.marge} mois={l.mois_actifs} /></td>
               </tr>
             ))}
           </tbody>
@@ -276,7 +285,7 @@ function TableauPersonnes({ lignes, titre, sousTitre }) {
 // Les mois passes portent la TRESORERIE REELLE, calee sur les soldes
 // bancaires. Les mois a venir ne portent que leur cout previsionnel : on
 // n invente aucune recette future.
-function VuePilotage({ mois, objectif, annee }) {
+function VuePilotage({ mois, objectif, annee, cr, sourceRetro }) {
   const p = calculerPilotage(mois, objectif)
   const reels = (mois || []).filter((m) => m.est_reel)
   const aVenir = (mois || []).filter((m) => !m.est_reel)
@@ -333,6 +342,8 @@ function VuePilotage({ mois, objectif, annee }) {
             : `Au rythme actuel tu finis à ${fmtEur(p.projection)}, soit ${fmtEur(p.objectif - p.projection)} en dessous. Il faudrait encaisser ${fmtEur(p.parMoisNecessaire || 0)} par mois au lieu de ${fmtEur(p.moyenneRecette)}.`}
         </div>
       </div>
+
+      {cr && <CompteDeResultat cr={cr} sourceRetro={sourceRetro} />}
 
       <div className="table-wrap">
         <table className="data-table">
@@ -590,40 +601,13 @@ export default function Rentabilite({ profile }) {
   const tEquipe = useMemo(() => totaux(lEquipe), [lEquipe])
   const courant = donnees?.cabinet?.courant || null
   const charges = useMemo(() => donnees?.cabinet?.charges || [], [donnees])
-  const recette = useMemo(() => recetteMensuelleMoyenne(donnees?.parMois || []), [donnees])
-  // Ce que le grand livre contient et que la page ne compte PAS : seul un
-  // bordereau reellement paye vaut comme encaissement.
-  // Un bordereau prime toujours sur le bareme : du cash constate contre un
-  // calcul. Tant qu aucun bordereau n est importe, la retrocession vient du
-  // bareme du CRM et l ecran doit le dire.
+  // Un montant du grand livre prime toujours sur le bareme : du constate
+  // contre un calcul. L ecran doit dire lequel il montre.
   const sourceRetro = useMemo(() => {
     const l = donnees?.lignes || []
     if (l.some((x) => x.retrocession_source === 'bordereau')) return 'bordereau'
     return l.some((x) => x.retrocession_source === 'bareme') ? 'bareme' : 'aucune'
   }, [donnees])
-  const autresSources = useMemo(
-    () => (donnees?.cabinet?.sources || []).filter(
-      (s) => s.source !== 'BANQUE' && s.source !== (donnees?.cabinet?.source_attribution || 'CA MOIS'),
-    ),
-    [donnees],
-  )
-  const manque = useMemo(
-    () => ceQuiManque(Number(courant?.cout_complet || 0), recette?.moyenne || 0),
-    [courant, recette],
-  )
-
-  // Le cout complet du cabinet, celui qui sert au mensuel et a la bascule :
-  // tout ce qui separe l encaisse du resultat.
-  const coutCabinet = cr.encaisse - cr.resultat
-  const mensuel = useMemo(
-    () => cumulerParMois(donnees?.parMois || [], coutCabinet),
-    [donnees, coutCabinet],
-  )
-  const bascule = useMemo(
-    () => pointDeBascule(donnees?.parMois || [], coutCabinet),
-    [donnees, coutCabinet],
-  )
-
   if (!ouvert) return <Verrou onOuvert={() => setOuvert(true)} />
 
   const minutes = Math.floor(restant / 60000)
@@ -664,136 +648,10 @@ export default function Rentabilite({ profile }) {
 
       {chargement && <SkeletonCards />}
 
-      {!chargement && vue === 'cabinet' && (
-        <>
-          {/* La question utile n est pas « combien ca coute » mais « combien il
-              manque chaque mois, et qui le comble ». C est donc elle qui est en
-              haut de la page. */}
-          <div className="kpi-grid mb-24">
-            {manque ? (
-              <Carte
-                label={manque.couvert ? 'Excédent mensuel' : 'Il manque chaque mois'}
-                valeur={fmtEur(Math.abs(manque.manque))}
-                aide={manque.couvert
-                  ? 'Le cabinet couvre ses coûts'
-                  : `Il faut encaisser ${fmtEur(manque.cout)} par mois pour être à l équilibre`}
-                accent={manque.couvert ? 'var(--signed)' : 'var(--cancelled)'} />
-            ) : (
-              <Carte label="Coût complet mensuel" valeur={fmtEur(courant?.cout_complet)}
-                aide="Recette inconnue, le manque ne peut pas être calculé" accent="var(--cancelled)" />
-            )}
-            <Carte label="Coût complet mensuel" valeur={fmtEur(courant?.cout_complet)}
-              aide={courant
-                ? `Équipe ${fmtEur(courant.cout_equipe)} · associés ${fmtEur(courant.cout_associes)} · structure ${fmtEur(courant.frais_fixes)}`
-                : null} />
-            <Carte label="Recette mensuelle" valeur={recette ? fmtEur(recette.moyenne) : 'inconnue'}
-              aide={recette
-                ? `Moyenne sur ${recette.moisComptes} mois encaissés`
-                : 'Aucune commission enregistrée'}
-              accent="var(--gold)" />
-            <Carte label="Ratio de couverture" valeur={fmtRatio(manque?.ratio ?? null)}
-              aide="Euros encaissés pour un euro dépensé" accent="var(--forecast)" />
-            <Carte label="À couvrir sur l année"
-              valeur={fmtEur(Number(courant?.cout_complet || 0) * 12)}
-              aide="Commissions encaissées nécessaires pour l équilibre" />
-          </div>
-
-          {!recette && (
-            <div className="card card-p mb-24" style={{ borderLeft: '3px solid var(--cancelled)' }}>
-              <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--t2)' }}>
-                <strong style={{ color: 'var(--t1)' }}>Aucune commission encaissée n est enregistrée
-                pour {annee}.</strong>{' '}
-                Les coûts ci dessous sont réels, la recette ne l est pas encore. Elle doit
-                venir des bordereaux réellement payés par les compagnies, pas du CA MOIS
-                interne qui compte la production signée : ce sont deux grandeurs
-                différentes, décalées d un à trois mois.
-                {autresSources.length > 0 && (
-                  <>
-                    {' '}Le grand livre contient{' '}
-                    {autresSources.map((s) => `${s.lignes} lignes ${s.source}`).join(', ')},
-                    volontairement non comptées ici pour cette raison.
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-
-          {courant && Number(courant.non_engage) > 0 && (
-            <div className="card card-p mb-24" style={{ borderLeft: '3px solid var(--forecast)' }}>
-              <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--t2)' }}>
-                <strong style={{ color: 'var(--t1)' }}>{fmtEur(courant.non_engage)} par mois
-                ne sont pas encore comptés.</strong>{' '}
-                Véhicule, mutuelle, médecine du travail et contrat incendie sont enregistrés
-                mais désactivés tant qu ils ne sont pas engagés. Le coût complet cible est
-                donc de {fmtEur(Number(courant.cout_complet) + Number(courant.non_engage))} par mois.
-                Voir l onglet Les charges.
-              </div>
-            </div>
-          )}
-
-          <CompteDeResultat cr={cr} sourceRetro={sourceRetro} />
-
-          <div style={{ margin: '20px 0 8px', display: 'flex', alignItems: 'baseline', gap: 10 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>Mois par mois</div>
-            <div style={{ fontSize: 12, color: 'var(--t3)' }}>
-              {bascule
-                ? `Point de bascule en ${MOIS_COURTS[bascule - 1]}, le cumul encaissé passe devant le cumul des coûts`
-                : 'Point de bascule non atteint sur l année'}
-            </div>
-          </div>
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Mois</th>
-                  <th style={{ textAlign: 'right' }}>Contrats</th>
-                  <th style={{ textAlign: 'right' }}>Encaissé</th>
-                  <th style={{ textAlign: 'right' }}>Attendu</th>
-                  <th style={{ textAlign: 'right' }}>Coût du mois</th>
-                  <th style={{ textAlign: 'right' }}>Marge du mois</th>
-                  <th style={{ textAlign: 'right' }}>Cumul</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mensuel.map((m) => (
-                  <tr key={m.mois}>
-                    <td className="cell-primary">{MOIS_COURTS[m.mois - 1]}</td>
-                    <td style={{ textAlign: 'right' }}>{m.contrats || ''}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmtEur(m.commission)}</td>
-                    <td style={{ textAlign: 'right', color: 'var(--t3)' }}>
-                      {Number(m.attendue) ? fmtEur(m.attendue) : ''}
-                    </td>
-                    <td style={{ textAlign: 'right', color: 'var(--t3)' }}>{fmtEur(m.coutMois)}</td>
-                    <td style={{
-                      textAlign: 'right', fontWeight: 600,
-                      color: m.margeMois < 0 ? 'var(--cancelled)' : 'var(--signed)',
-                    }}>{fmtEur(m.margeMois)}</td>
-                    <td style={{
-                      textAlign: 'right', fontWeight: 700,
-                      color: m.cumulMarge < 0 ? 'var(--cancelled)' : 'var(--signed)',
-                    }}>{fmtEur(m.cumulMarge)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="card card-p" style={{ marginTop: 16, borderLeft: '3px solid var(--gold)' }}>
-            <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--t2)' }}>
-              <strong style={{ color: 'var(--t1)' }}>D où viennent ces chiffres.</strong>{' '}
-              Les commissions viennent du grand livre, ligne par ligne. Les salaires
-              viennent des contrats du CRM, au prorata des jours de présence. La
-              structure et la rémunération des associés viennent de la comptabilité.
-              Les charges patronales restent un taux, pas un relevé de paie : c est la
-              seule hypothèse qui reste dans ce tableau.
-            </div>
-          </div>
-        </>
-      )}
-
       {!chargement && vue === 'pilotage' && (
         <VuePilotage mois={donnees?.cabinet?.pilotage || []}
-          objectif={donnees?.cabinet?.objectif || 0} annee={annee} />
+          objectif={donnees?.cabinet?.objectif || 0} annee={annee}
+          cr={cr} sourceRetro={sourceRetro} />
       )}
 
       {!chargement && vue === 'charges' && (

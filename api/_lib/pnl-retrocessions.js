@@ -166,3 +166,24 @@ export function repartirRecette(lignes, contributions, montantTotal) {
     }
   })
 }
+
+/**
+ * Ajoute aux lignes ce que le CRM sait du travail fourni (dossiers signes,
+ * dossiers en co conseil) SANS toucher aux montants.
+ *
+ * Pourquoi ne pas repartir la recette avec cette cle : les deals du CRM ne
+ * commencent qu en avril 2026. Appliquer une cle calculee sur avril a
+ * septembre a la recette de toute l annee a fait tomber le premier producteur
+ * du cabinet de 102 349 a 46 923. Le grand livre, lui, couvre janvier a
+ * juillet : c est lui qui porte les euros.
+ */
+export function enrichirContributions(lignes, contributions) {
+  return (lignes || []).map((l) => {
+    const c = contributions?.get?.(cleDe(l))
+    return {
+      ...l,
+      dossiers_crm: Number(c?.dossiers || 0),
+      dossiers_en_co: Number(c?.enCo || 0),
+    }
+  })
+}

@@ -67,7 +67,10 @@ export function compteDeResultat(lignes, structureAnnuelle = 0, encaisseCabinet 
   const retrocessions = somme(tous, 'cout_retrocession')
   const salairesCharges = somme(eq, 'cout_fixe')
   const autresEquipe = somme(eq, 'cout_annexe') + somme(eq, 'cout_outils')
-  const remunerationAssocies = somme(asso, 'cout_annexe') + somme(asso, 'cout_fixe')
+  // La remuneration d un associe n est plus dans son cout de production : elle
+  // porte sa propre colonne, et n est retranchee qu ici, une seule fois.
+  const remunerationAssocies = somme(tous, 'remuneration_associe')
+    + somme(asso, 'cout_annexe') + somme(asso, 'cout_fixe')
   // Les aides percues viennent en DEDUCTION du cout, jamais en recette.
   const aides = somme(tous, 'aide_percue')
 

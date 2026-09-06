@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   appliquerRetrocessions, cleDe, retrocessionsAnnuelles, MOIS,
-  contributionsAnnuelles, repartirRecette,
+  contributionsAnnuelles, repartirRecette, enrichirContributions,
 } from './pnl-retrocessions.js'
 
 const ligne = (o = {}) => ({
@@ -234,5 +234,26 @@ describe('attribution vivante depuis le CRM', () => {
   it('ne divise pas par zero quand personne n a produit', () => {
     const out = repartirRecette([{ profile_id: 'a', cout_total: 1000, marge: 0 }], new Map(), 50000)
     expect(out[0].part_production).toBe(0)
+  })
+})
+
+describe('enrichissement sans toucher aux montants', () => {
+  it('ajoute les dossiers du CRM et laisse la recette du grand livre intacte', () => {
+    // Le grand livre couvre janvier a juillet, les deals du CRM commencent en
+    // avril : la cle du CRM ne doit jamais remplacer les euros du grand livre.
+    const [l] = enrichirContributions(
+      [{ profile_id: 'a', commission_encaissee: 102349, cout_total: 14221, marge: 88128 }],
+      new Map([['a', { valeur: 500, dossiers: 10, enCo: 4 }]]),
+    )
+    expect(l.commission_encaissee).toBe(102349)
+    expect(l.marge).toBe(88128)
+    expect(l.dossiers_crm).toBe(10)
+    expect(l.dossiers_en_co).toBe(4)
+  })
+
+  it('met des zeros pour qui n a aucun dossier dans le CRM', () => {
+    const [l] = enrichirContributions([{ profile_id: 'b', commission_encaissee: 500 }], new Map())
+    expect(l.dossiers_crm).toBe(0)
+    expect(l.commission_encaissee).toBe(500)
   })
 })
