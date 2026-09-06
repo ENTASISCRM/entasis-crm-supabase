@@ -285,7 +285,7 @@ function TableauPersonnes({ lignes, titre, sousTitre }) {
 // Les mois passes portent la TRESORERIE REELLE, calee sur les soldes
 // bancaires. Les mois a venir ne portent que leur cout previsionnel : on
 // n invente aucune recette future.
-function VuePilotage({ mois, objectif, annee, cr, sourceRetro }) {
+function VuePilotage({ mois, objectif, annee, cr, sourceRetro, courant }) {
   const p = calculerPilotage(mois, objectif)
   const reels = (mois || []).filter((m) => m.est_reel)
   const aVenir = (mois || []).filter((m) => !m.est_reel)
@@ -342,6 +342,58 @@ function VuePilotage({ mois, objectif, annee, cr, sourceRetro }) {
             : `Au rythme actuel tu finis à ${fmtEur(p.projection)}, soit ${fmtEur(p.objectif - p.projection)} en dessous. Il faudrait encaisser ${fmtEur(p.parMoisNecessaire || 0)} par mois au lieu de ${fmtEur(p.moyenneRecette)}.`}
         </div>
       </div>
+
+      {/* Ce qui sort tous les mois quoi qu il arrive. Le poste que le
+          dirigeant veut connaitre de tete. */}
+      {courant && (
+        <div className="card card-p mb-24">
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)', marginBottom: 10 }}>
+            Ce que coûte le cabinet chaque mois, aujourd hui
+          </div>
+          {[
+            ['Salaires et charges de l équipe', courant.cout_equipe,
+              `${courant.nb_personnes} personnes`],
+            ['Structure', courant.frais_fixes,
+              'locaux, outils, comptabilité, assurances, banque, publicité'],
+          ].map(([label, valeur, aide]) => (
+            <div key={label} style={{
+              display: 'flex', justifyContent: 'space-between', gap: 12,
+              padding: '7px 0', borderTop: '1px solid var(--line)',
+            }}>
+              <div style={{ fontSize: 12.5, color: 'var(--t2)' }}>
+                <strong style={{ color: 'var(--t1)' }}>{label}</strong>
+                <div style={{ fontSize: 11.5, color: 'var(--t3)' }}>{aide}</div>
+              </div>
+              <div style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{fmtEur(valeur)}</div>
+            </div>
+          ))}
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', gap: 12,
+            padding: '9px 0', borderTop: '2px solid var(--line)',
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>
+              Charges fixes hors rémunération des dirigeants
+            </div>
+            <div style={{ fontWeight: 800, whiteSpace: 'nowrap' }}>
+              {fmtEur(Number(courant.cout_equipe || 0) + Number(courant.frais_fixes || 0))}
+            </div>
+          </div>
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', gap: 12,
+            padding: '7px 0', borderTop: '1px solid var(--line)', color: 'var(--t3)',
+          }}>
+            <div style={{ fontSize: 12.5 }}>Rémunération des dirigeants</div>
+            <div style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{fmtEur(courant.cout_associes)}</div>
+          </div>
+          {Number(courant.non_engage) > 0 && (
+            <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 10, lineHeight: 1.6 }}>
+              {fmtEur(courant.non_engage)} par mois ne sont pas encore engagés (véhicule,
+              mutuelle, médecine du travail, contrat incendie). Le coût complet cible est
+              donc de {fmtEur(Number(courant.cout_complet) + Number(courant.non_engage))}.
+            </div>
+          )}
+        </div>
+      )}
 
       {cr && <CompteDeResultat cr={cr} sourceRetro={sourceRetro} />}
 
@@ -651,7 +703,7 @@ export default function Rentabilite({ profile }) {
       {!chargement && vue === 'pilotage' && (
         <VuePilotage mois={donnees?.cabinet?.pilotage || []}
           objectif={donnees?.cabinet?.objectif || 0} annee={annee}
-          cr={cr} sourceRetro={sourceRetro} />
+          cr={cr} sourceRetro={sourceRetro} courant={courant} />
       )}
 
       {!chargement && vue === 'charges' && (
