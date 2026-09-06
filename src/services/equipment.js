@@ -4,15 +4,21 @@
 // automatiquement le périmètre (manager voit tout, conseiller voit ses clients).
 
 import { supabase } from '../lib/supabase'
+import { fetchTout } from './pagination'
 import { verifierEcriture, MOTIF_DROITS } from '../lib/ecriture-verifiee'
 
 // Équipement par client (deals signés + équipements déclarés fusionnés).
 export async function listEquipment() {
-  const { data, error } = await supabase
+  // PostgREST plafonne la réponse à 1000 lignes et coupe en silence : le
+  // module afficherait un portefeuille amputé et un taux de multi équipement
+  // calculé dessus, sans aucune erreur. 157 lignes au 06/09/2026, une par
+  // client, donc le plafond est atteint à 1000 clients équipés.
+  // Tri sur client_id (la vue n'a pas de colonne id, client_id y est unique)
+  // pour que deux pages .range ne se recouvrent pas.
+  return fetchTout(() => supabase
     .from('client_equipment')
     .select('*')
-  if (error) throw error
-  return data || []
+    .order('client_id', { ascending: true }))
 }
 
 // Familles de référence (libellé affiché + couleur du badge + ordre).
@@ -123,12 +129,16 @@ export async function setClientPause(clientId, { pause_jusqu_au, pause_motif }) 
 // Pauses actives (échéance non dépassée), fusionnées dans les lignes du module.
 export async function listActivePauses() {
   const today = new Date().toISOString().slice(0, 10)
-  const { data, error } = await supabase
+  // Même plafond silencieux de 1000 lignes. Ici une pause perdue ne masque
+  // rien, elle rend un client à des missions dont il avait été retiré : le
+  // conseiller rappelle quelqu'un qui avait demandé la paix. 0 pause active
+  // au 06/09/2026, donc rien à reproduire aujourd'hui, mais le compteur
+  // monte à chaque mise en veille.
+  return fetchTout(() => supabase
     .from('clients')
     .select('id, pause_jusqu_au, pause_motif')
     .gte('pause_jusqu_au', today)
-  if (error) throw error
-  return data || []
+    .order('id', { ascending: true }))
 }
 
 // Réglages cabinet du module (campagne du mois, objectif de taux multi).

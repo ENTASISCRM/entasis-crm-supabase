@@ -6,6 +6,7 @@
 // (utilisé partout) pour éviter de répéter la liste de colonnes.
 
 import { supabase } from '../lib/supabase'
+import { fetchTout } from './pagination'
 import { verifierEcriture, MOTIF_PROPRIETE } from '../lib/ecriture-verifiee'
 import { nettoyerPourEcriture } from '../lib/colonnes-deals'
 import { logger } from '../lib/logger'
@@ -24,12 +25,20 @@ const CLIENT_JOIN_COLS = `
  * Utilisé au mount.
  */
 export async function listAll() {
-  const { data, error } = await supabase
+  // PostgREST plafonne chaque réponse à 1000 lignes et coupe en silence.
+  // C'est la lecture la plus exposée du CRM : appelée par loadAll à chaque
+  // connexion, elle alimente PP signée, PU, prévisionnel, écran Équipe et
+  // tableau de bord. Mesure du 06/09/2026 : 482 lignes, soit 48 % du
+  // plafond. Le jour où il tombe, tous ces totaux comptent moins que la
+  // réalité sans qu'aucune erreur ne le signale.
+  // Le tri secondaire sur id rend la pagination déterministe : sans lui,
+  // deux dossiers de même created_at peuvent basculer d'une page à l'autre,
+  // l'un en double et l'autre perdu.
+  return fetchTout(() => supabase
     .from('deals')
     .select(`*, clients(${CLIENT_JOIN_COLS})`)
     .order('created_at', { ascending: false })
-  if (error) throw error
-  return data || []
+    .order('id', { ascending: false }))
 }
 
 /**
@@ -40,13 +49,15 @@ export async function listAll() {
 export async function listByAdvisorCodes(codes) {
   if (!codes || codes.length === 0) return []
   const list = codes.join(',')
-  const { data, error } = await supabase
+  // Même plafond silencieux de 1000 lignes que listAll : le filtre conseiller
+  // réduit le volume du jour mais ne le borne pas, et `codes` peut porter
+  // plusieurs conseillers à la fois. Même tri secondaire sur id.
+  return fetchTout(() => supabase
     .from('deals')
     .select(`*, clients(${CLIENT_JOIN_COLS})`)
     .or(`advisor_code.in.(${list}),co_advisor_code.in.(${list})`)
     .order('created_at', { ascending: false })
-  if (error) throw error
-  return data || []
+    .order('id', { ascending: false }))
 }
 
 /**

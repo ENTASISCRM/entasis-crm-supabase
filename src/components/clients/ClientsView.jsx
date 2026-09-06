@@ -9,6 +9,7 @@ import { Skeleton, SkeletonTable } from '../ui/Skeleton'
 import { euro, annualize } from '../../lib/format'
 import { usePersistedState } from '../../hooks/usePersistedState'
 import { exporterCsv, suffixeDate, nombreFr } from '../../lib/export-csv'
+import { fetchTout } from '../../services/pagination'
 
 export default function ClientsView({ supabase, onSelectClient, profile }) {
   const [clients, setClients] = useState([])
@@ -58,19 +59,24 @@ export default function ClientsView({ supabase, onSelectClient, profile }) {
         // (co-conseiller, cas Gianni Pichon co-conseiller de Clement).
         // B6 — colonnes explicites au lieu de select('*') : l'annuaire ne
         // transporte que ce qu'il affiche (payload réduit à volume égal).
-        const [clientsRes, dealsRes, dossiersRes] = await Promise.all([
-          supabase.from('clients').select('id, nom, prenom, email, telephone, advisor_code, co_advisor_code, created_at').order('created_at', { ascending: false }),
+        // PostgREST plafonne CHAQUE réponse à 1000 lignes et coupe en
+        // silence : l'annuaire afficherait un portefeuille amputé, sans
+        // message ni ligne rouge, et le CA par client serait faux là où des
+        // dossiers manquent. Mesure du 06/09/2026 : 372 clients et 482
+        // dossiers, soit près de la moitié du plafond côté dossiers.
+        // fetchTout (services/pagination.js) rejoue la requête par pages de
+        // 1000 ; sous le plafond, c'est le même aller retour qu'avant.
+        // Le tri explicite n'est pas cosmétique : sans ordre stable, deux
+        // pages .range peuvent rendre la même ligne et en oublier une autre.
+        // 2 clients partagent déjà le même created_at, d'où le second tri
+        // sur id.
+        const [clientsData, dealsData, dossiersData] = await Promise.all([
+          fetchTout(() => supabase.from('clients').select('id, nom, prenom, email, telephone, advisor_code, co_advisor_code, created_at').order('created_at', { ascending: false }).order('id', { ascending: false })),
           // `lead_id` sert à l'origine affichée en badge : c'est lui qui dit
           // si le client vient d'une campagne ou du réseau du conseiller.
-          supabase.from('deals').select('id, client_id, lead_id, product, status, pp_m, pu, advisor_code, co_advisor_code').not('client_id', 'is', null),
-          supabase.from('dossiers_immo').select('id, client_id, statut_pipeline').not('client_id', 'is', null),
+          fetchTout(() => supabase.from('deals').select('id, client_id, lead_id, product, status, pp_m, pu, advisor_code, co_advisor_code').not('client_id', 'is', null).order('id', { ascending: true })),
+          fetchTout(() => supabase.from('dossiers_immo').select('id, client_id, statut_pipeline').not('client_id', 'is', null).order('id', { ascending: true })),
         ])
-        if (clientsRes.error) throw clientsRes.error
-        if (dealsRes.error) throw dealsRes.error
-        if (dossiersRes.error) throw dossiersRes.error
-        const clientsData = clientsRes.data
-        const dealsData = dealsRes.data
-        const dossiersData = dossiersRes.data
 
         // Assembler manuellement
         const clients = (clientsData || []).map(c => ({

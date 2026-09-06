@@ -11,6 +11,7 @@
 // hors reseau) pour garder le composant leger.
 
 import { supabase } from '../lib/supabase'
+import { fetchTout } from './pagination'
 import { dealMatchesAdvisor, sumAnnualPp, sumPu } from '../lib/metrics'
 
 // Les n derniers mois calendaires (courant inclus), du plus ancien au plus
@@ -25,43 +26,58 @@ export function derniersMois(n = 4) {
   return out
 }
 
+// Toutes les lectures de ce fichier passent par fetchTout : PostgREST
+// plafonne chaque reponse a 1000 lignes et coupe en silence, un cockpit
+// tronque afficherait des collectes trop basses sans la moindre erreur. Le
+// .order ajoute a chacune n est pas cosmetique : sans tri stable, deux appels
+// .range peuvent rendre la meme ligne deux fois et en oublier une autre.
+
 // Deals signes depuis le premier jour de la fenetre. date_signed est un TEXT
 // ISO YYYY-MM-DD, donc comparable lexicographiquement avec un gte sur la borne.
 export async function listDealsSignes(moisDebut) {
-  const { data, error } = await supabase
+  // 204 deals signes au 06/09/2026, la marge existe mais elle se consomme a
+  // chaque signature et la fenetre s elargit avec nMois.
+  return fetchTout(() => supabase
     .from('deals')
     .select('advisor_code, co_advisor_code, date_signed, pp_m, pu, product')
     .eq('status', 'Signé')
     .not('date_signed', 'is', null)
     .gte('date_signed', `${moisDebut}-01`)
-  if (error) throw error
-  return data || []
+    .order('id', { ascending: true }))
 }
 
 // Portefeuille : un id plus le conseiller, pour compter les clients par
 // conseiller (le denominateur du portefeuille).
 export async function listClientsLeger() {
-  const { data, error } = await supabase.from('clients').select('id, advisor_code')
-  if (error) throw error
-  return data || []
+  // 372 clients au 06/09/2026. Un portefeuille tronque fausserait le
+  // denominateur, donc le taux de multi equipement de chaque conseiller.
+  return fetchTout(() => supabase
+    .from('clients')
+    .select('id, advisor_code')
+    .order('id', { ascending: true }))
 }
 
 // Equipement par client (vue client_equipment, RLS security invoker) :
 // conseiller plus nombre de familles detenues, base du taux de multi.
 export async function listEquipementLeger() {
-  const { data, error } = await supabase.from('client_equipment').select('advisor_code, nb_familles')
-  if (error) throw error
-  return data || []
+  // 157 lignes au 06/09/2026. Tri sur client_id : la vue n a pas de colonne
+  // id, et client_id y est unique donc suffisant pour stabiliser les pages.
+  return fetchTout(() => supabase
+    .from('client_equipment')
+    .select('advisor_code, nb_familles')
+    .order('client_id', { ascending: true }))
 }
 
 // Missions cross sell (table me_missions, RLS alignee clients) : etat, montant
 // reel et date, pour compter les gagnees du mois et les reportees en cours.
 export async function listMissionsLeger() {
-  const { data, error } = await supabase
+  // 1 seule mission au 06/09/2026, tres loin du plafond, mais c est la table
+  // qui grossit a chaque campagne cross sell : paginee comme les trois
+  // autres pour qu il n en reste pas une non protegee dans loadCockpit.
+  return fetchTout(() => supabase
     .from('me_missions')
     .select('advisor_code, statut, montant_reel, updated_at')
-  if (error) throw error
-  return data || []
+    .order('id', { ascending: true }))
 }
 
 // Charge tout ce qu il faut pour le cockpit en un aller retour parallele.
@@ -303,9 +319,11 @@ export function completudeGlobale(clients = []) {
 // co_advisor_code (double rattachement) et date_naissance (bonus). La RLS fait
 // le perimetre (manager tout le cabinet, conseiller ses fiches). Lecture pure.
 export async function listClientsCompletude() {
-  const { data, error } = await supabase
+  // Meme plafond silencieux de 1000 lignes : 372 clients au 06/09/2026, et un
+  // portefeuille coupe donnerait un taux de completude flatteur, calcule sur
+  // un sous ensemble que personne n aurait choisi.
+  return fetchTout(() => supabase
     .from('clients')
     .select('id, advisor_code, co_advisor_code, email, telephone, statut_pro, profession, revenus_annuels, patrimoine_estime, date_naissance')
-  if (error) throw error
-  return data || []
+    .order('id', { ascending: true }))
 }
