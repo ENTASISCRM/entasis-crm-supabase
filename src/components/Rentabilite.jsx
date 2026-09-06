@@ -150,7 +150,9 @@ const PastilleMarge = ({ marge }) => {
 function CompteDeResultat({ cr, sourceRetro }) {
   const lignes = [
     { label: 'Commissions encaissées', valeur: cr.encaisse, signe: 1,
-      aide: cr.attendu ? `${fmtEur(cr.attendu)} encore attendus, non comptés ici` : null },
+      aide: cr.encaisseNonAttribue > 0
+        ? `Relevés bancaires. ${fmtEur(cr.encaisseNonAttribue)} pas encore rattachés à une personne`
+        : 'Relevés bancaires, réconciliés à l euro près' },
     { label: 'Rétrocessions aux signataires', valeur: cr.retrocessions, signe: -1,
       aide: sourceRetro === 'bareme'
         ? 'Calculées avec le barème configuré dans le CRM, en attente des bordereaux'
@@ -456,7 +458,11 @@ export default function Rentabilite({ profile }) {
   const lEquipe = useMemo(() => equipe(lignes), [lignes])
   const lAssocies = useMemo(() => associes(lignes), [lignes])
   const cr = useMemo(
-    () => compteDeResultat(lignes, donnees?.cabinet?.structure_annuelle || 0),
+    () => compteDeResultat(
+      lignes,
+      donnees?.cabinet?.structure_annuelle || 0,
+      donnees?.cabinet?.encaisse_banque ?? null,
+    ),
     [lignes, donnees],
   )
   const tEquipe = useMemo(() => totaux(lEquipe), [lEquipe])

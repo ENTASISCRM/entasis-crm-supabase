@@ -109,7 +109,10 @@ export default async function handler(req, res) {
       .from('production_encaissee')
       .select('mois, volume_pp, volume_pu, commission_encaissee, commission_attendue, retrocession')
       .eq('annee', annee)
-      .eq('source', 'BORDEREAU')
+      // Le mensuel du cabinet vient des RELEVES BANCAIRES : c est le seul
+      // chiffre reconcilie a l euro pres. Les bordereaux servent a savoir QUI
+      // a produit, pas COMBIEN le cabinet a encaisse.
+      .eq('source', 'BANQUE')
 
     const parMois = Array.from({ length: 12 }, (_, i) => ({
       mois: i + 1, pp: 0, pu: 0, commission: 0, attendue: 0, retrocession: 0, contrats: 0,
@@ -154,7 +157,10 @@ export default async function handler(req, res) {
     // se paye quand meme, que le poste ait ete occupe ou non.
     const structureMensuelle = Number(courant?.frais_fixes ?? prm?.frais_fixes_mensuels ?? 0)
 
+    const encaisseBanque = (mensuel || []).reduce((t, l) => t + Number(l.commission_encaissee || 0), 0)
+
     const cabinet = {
+      encaisse_banque: encaisseBanque,
       structure_mensuelle: structureMensuelle,
       structure_annuelle: structureMensuelle * 12,
       repartir: repartir == null ? Boolean(prm?.repartir_frais_fixes) : repartir,

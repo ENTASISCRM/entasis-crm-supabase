@@ -280,3 +280,31 @@ describe('affichage des mois de presence', () => {
     expect(fmtMois(8.5)).toBe('8,5')
   })
 })
+
+describe('recette du cabinet contre recette attribuee', () => {
+  const jeu = [
+    { type_contrat: 'CDI', est_gerant: false, commission_encaissee: 30000,
+      cout_fixe: 24000, cout_annexe: 0, cout_outils: 0, cout_frais_fixes: 0,
+      cout_retrocession: 0, aide_percue: 0, cout_total: 24000, marge: 6000 },
+  ]
+
+  it('prend la recette bancaire quand elle est fournie, pas la somme des lignes', () => {
+    // La somme des lignes ne porte que ce qui a pu etre rattache a quelqu un.
+    const cr = compteDeResultat(jeu, 0, 386358.56)
+    expect(cr.encaisse).toBe(386358.56)
+    expect(cr.encaisseAttribue).toBe(30000)
+    expect(cr.encaisseNonAttribue).toBeCloseTo(356358.56, 2)
+  })
+
+  it('retombe sur la somme des lignes quand la banque n est pas connue', () => {
+    const cr = compteDeResultat(jeu, 0, null)
+    expect(cr.encaisse).toBe(30000)
+    expect(cr.encaisseNonAttribue).toBe(0)
+  })
+
+  it('ne rend jamais un non attribue negatif', () => {
+    // Si les lignes portent plus que la banque, on ne montre pas un manque.
+    const cr = compteDeResultat(jeu, 0, 1000)
+    expect(cr.encaisseNonAttribue).toBe(0)
+  })
+})

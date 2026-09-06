@@ -52,14 +52,18 @@ export function totaux(lignes) {
 // COMPLET, jamais pour la somme des parts imputees : un bureau vide se paye
 // quand meme. C est ce qui garantit que l interrupteur de repartition change
 // la vue par personne sans jamais changer le resultat du cabinet.
-export function compteDeResultat(lignes, structureAnnuelle = 0) {
+export function compteDeResultat(lignes, structureAnnuelle = 0, encaisseCabinet = null) {
   const tous = lignes || []
   const eq = equipe(tous)
   const asso = associes(tous)
   const structure = Number(structureAnnuelle || 0)
   const structureAllouee = somme(eq, 'cout_frais_fixes')
 
-  const encaisse = somme(tous, 'commission_encaissee')
+  // La recette du cabinet vient des releves bancaires quand on les a : la
+  // somme des lignes par personne ne porte que ce qui a pu etre attribue a
+  // quelqu un, et laisserait de cote tout ce qui ne l est pas.
+  const encaisseAttribue = somme(tous, 'commission_encaissee')
+  const encaisse = encaisseCabinet != null ? Number(encaisseCabinet) : encaisseAttribue
   const retrocessions = somme(tous, 'cout_retrocession')
   const salairesCharges = somme(eq, 'cout_fixe')
   const autresEquipe = somme(eq, 'cout_annexe') + somme(eq, 'cout_outils')
@@ -69,6 +73,9 @@ export function compteDeResultat(lignes, structureAnnuelle = 0) {
 
   return {
     encaisse,
+    encaisseAttribue,
+    // Ce que le cabinet a encaisse sans pouvoir le rattacher a une personne.
+    encaisseNonAttribue: Math.max(0, encaisse - encaisseAttribue),
     attendu: somme(tous, 'commission_attendue'),
     retrocessions,
     salairesCharges,
