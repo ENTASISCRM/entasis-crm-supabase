@@ -62,10 +62,21 @@ export default async function handler(req, res) {
     : new Date()
 
   const { data: prof } = await sb
-    .from('profiles').select('id, role, advisor_code, full_name, is_active').eq('id', user.id).maybeSingle()
+    .from('profiles').select('id, role, advisor_code, full_name, is_active, acces_pnl').eq('id', user.id).maybeSingle()
   // Role ET compte actif, comme la fonction SQL is_manager() ; la RLS
   // bloque deja les donnees d un compte desactive, on refuse aussi ici.
   const isManager = prof?.role === 'manager' && prof?.is_active === true
+  // Le versant RECETTE est reserve au drapeau rentabilite, pas au role manager.
+  // Constat d audit du 06/09 : la vue equipe servait a TOUT manager, pour
+  // chaque personne, la valeur cabinet produite face a son cout et l ecart au
+  // seuil, plus le taux applique dossier par dossier. C est exactement le
+  // chiffre que l espace Rentabilite doit fermer, et il etait deja donne. Que
+  // les managers voient le fixe et le variable de l equipe reste assume, c est
+  // la vue equipe ; ce qui sort ici, c est la marge.
+  // La colonne peut ne pas exister tant que la migration n est pas appliquee :
+  // dans ce cas acces_pnl vaut undefined et le bloc est neutralise pour tout
+  // le monde, ce qui est le bon comportement par defaut.
+  const voitLaMarge = isManager && prof?.acces_pnl === true
 
   // Quel contrat compte pour le mois de reference : celui en poste a cette
   // date d apres ses dates de debut et de fin (api/_lib/contrats.js). Le
@@ -78,7 +89,7 @@ export default async function handler(req, res) {
   if (dErr) return res.status(500).json({ error: 'Deals: ' + dErr.message })
 
   // Calcule une ligne (rentab + comm) pour un contrat, moteur inchange.
-  const calcLigne = (contrat, profileLie) => {
+  const calcLigne = (contrat, profileLie, { masquerMarge = false } = {}) => {
     const codes = codesContrat(contrat, profileLie)
     const dealsConseiller = dealsDuConseiller(deals || [], codes, profileLie?.id || null)
     const dealsMois = dealsDuMois(dealsConseiller, month, dateRef.getFullYear())
@@ -86,10 +97,17 @@ export default async function handler(req, res) {
     const comm = commissionsMois(dealsMois, contrat, rentab, profileLie)
     return {
       contrat,
-      rentab,
-      comm,
+      // Sans le drapeau, on renvoie un bloc rentabilite NEUTRE plutot que de
+      // couper la route : la vue equipe, l export de paie et la colonne du
+      // tableau continuent de fonctionner, seul le versant marge disparait.
+      rentab: masquerMarge ? RENTAB_VIDE : rentab,
+      // Le detail par dossier porte le taux applique : meme regle.
+      comm: masquerMarge ? { ...comm, detail: [] } : comm,
       dealsMoisCount: dealsMois.length,
       totalBrut: Number(contrat.salaire_brut_mensuel || 0) + comm.total,
+      // L ecran sait ainsi qu il doit masquer la colonne plutot que d afficher
+      // un zero qui passerait pour une vraie valeur.
+      margeVisible: !masquerMarge,
     }
   }
 
@@ -106,13 +124,15 @@ export default async function handler(req, res) {
         .filter(c => c.type_contrat !== 'GERANT')
         .filter(c => !c.profile || c.profile.is_active !== false)
       const lignes = contratsDeReferenceParPersonne(candidats, dateRef)
-        .map(c => calcLigne(c, c.profile || null))
+        .map(c => calcLigne(c, c.profile || null, { masquerMarge: !voitLaMarge }))
       const totals = {
         fixe: lignes.reduce((s, l) => s + Number(l.contrat.salaire_brut_mensuel || 0), 0),
         variable: lignes.reduce((s, l) => s + l.comm.total, 0),
         total: lignes.reduce((s, l) => s + l.totalBrut, 0),
       }
-      return res.status(200).json({ mode: 'manager', lignes, totals })
+      // margeVisible remonte a l ecran pour qu il retire la colonne plutot que
+      // d afficher un zero, qui se lirait comme une vraie valeur.
+      return res.status(200).json({ mode: 'manager', lignes, totals, margeVisible: voitLaMarge })
     }
 
     // perso : les contrats de l appelant (la RLS ne rend que les siens), et
@@ -123,6 +143,7 @@ export default async function handler(req, res) {
     if (!contrat) {
       return res.status(200).json({ mode: 'perso', contrat: null, rentab: RENTAB_VIDE, comm: COMM_VIDE, dealsMoisCount: 0, tauxCdiApplicable: false })
     }
+    // Vue perso : chacun voit SON propre seuil, c est le sujet de l ecran.
     const ligne = calcLigne(contrat, prof || null)
     return res.status(200).json({ mode: 'perso', ...ligne, tauxCdiApplicable: tauxCdiApplicable(contrat) })
   } catch (e) {

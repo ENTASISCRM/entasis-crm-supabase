@@ -18,7 +18,7 @@
    immobilier, editorial) — la structure reste pure, sans dépendre des data.
 ───────────────────────────────────────────────────────────────────────────── */
 
-export function buildNavDomains({ isManager, isRhDelegue, canSmartRh }) {
+export function buildNavDomains({ isManager, isRhDelegue, canSmartRh, accesPnl }) {
   const domains = [
     {
       key: 'accueil', label: 'Accueil', icon: 'Dashboard',
@@ -41,6 +41,15 @@ export function buildNavDomains({ isManager, isRhDelegue, canSmartRh }) {
         { tab: 'cockpit', label: 'Cockpit ratios' },
       ],
     },
+    // Espace Rentabilite : l entree n existe PAS pour qui ne porte pas le
+    // drapeau. Ce n est pas un masquage cosmetique, c est la premiere des
+    // quatre barrieres : le role manager ne suffit pas, Jean et Martin sont
+    // managers eux aussi. La vraie protection reste cote serveur (api/pnl.js
+    // exige deux jetons) et cote base (RLS sur est_direction_pnl()).
+    ...(accesPnl ? [{
+      key: 'rentabilite', label: 'Chiffres & Rentabilité', icon: 'Money',
+      views: [{ tab: 'rentabilite', label: 'Chiffres & Rentabilité' }],
+    }] : []),
     {
       key: 'clients', label: 'Clients', icon: 'Team',
       views: [

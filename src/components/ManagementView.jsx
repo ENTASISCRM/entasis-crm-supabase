@@ -85,11 +85,16 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
   // deux maps de lecture (par advisor_code et par profile_id) pour retrouver le
   // rentab du conseiller affiche. Etat de chargement + erreur scopes a la seule
   // partie rentabilite (ne bloque pas le reste de la vue).
+  // margeVisible : le serveur dit si l appelant a le droit de voir le versant
+  // recette (drapeau acces_pnl). Sans lui, il renvoie un bloc neutre et cet
+  // ecran doit MASQUER le panneau plutot qu afficher des zeros, qui se
+  // liraient comme de vraies valeurs. Constat d audit du 06/09.
   const [rentabState, setRentabState] = useState({
     loading: true,
     error: null,
     byCode: {},
     byProfileId: {},
+    margeVisible: false,
   })
   useEffect(() => {
     let alive = true
@@ -106,11 +111,17 @@ export default function ManagementView({ deals, objectifs, month, profile, teamP
           if (code) byCode[code] = entry
           if (pid) byProfileId[pid] = entry
         }
-        setRentabState({ loading: false, error: null, byCode, byProfileId })
+        setRentabState({
+          loading: false, error: null, byCode, byProfileId,
+          margeVisible: json?.margeVisible === true,
+        })
       })
       .catch(err => {
         if (!alive) return
-        setRentabState({ loading: false, error: err?.message || 'Erreur calcul rentabilité', byCode: {}, byProfileId: {} })
+        setRentabState({
+          loading: false, error: err?.message || 'Erreur calcul rentabilité',
+          byCode: {}, byProfileId: {}, margeVisible: false,
+        })
       })
     return () => { alive = false }
   }, [month])
@@ -751,7 +762,11 @@ function AdvisorDetailModal({ row, deals, month, rdv, onClose }) {
 
         <div className="modal-body" style={{ padding: 20 }}>
           {/* Rentabilité (si salarié) */}
-          {row.contrat && Number(row.contrat.salaire_brut_mensuel || 0) > 0 && (
+          {/* Le versant marge (valeur produite face au cout, ecart au seuil) est
+              reserve au porteur du drapeau acces_pnl : le serveur renvoie un
+              bloc neutre aux autres, et on MASQUE le panneau plutot que
+              d afficher des zeros qui se liraient comme de vraies valeurs. */}
+          {rentabState.margeVisible && row.contrat && Number(row.contrat.salaire_brut_mensuel || 0) > 0 && (
             <div className="card" style={{ marginBottom: 24, borderTop: `3px solid ${row.rentab.rentabilise ? '#10B981' : '#EF4444'}` }}>
               <div style={{ padding: '14px 20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 12 }}>
