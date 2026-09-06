@@ -3,7 +3,10 @@
 // rentable, ou l inverse.
 
 import { describe, it, expect } from 'vitest'
-import { appliquerRetrocessions, cleDe, retrocessionsAnnuelles, MOIS } from './pnl-retrocessions.js'
+import {
+  appliquerRetrocessions, cleDe, retrocessionsAnnuelles, MOIS,
+  contributionsAnnuelles, repartirRecette,
+} from './pnl-retrocessions.js'
 
 const ligne = (o = {}) => ({
   profile_id: o.profile_id ?? null,
@@ -155,5 +158,81 @@ describe('calcul annuel', () => {
     // PER a 100 par mois, annualise 1 200, au taux mandataire frais + 10 soit
     // 11 pour cent : 132 par mois, 1 584 sur l annee.
     expect(r.get('p2').total).toBeCloseTo(1584, 2)
+  })
+})
+
+describe('attribution vivante depuis le CRM', () => {
+  const deal = (o) => ({
+    id: o.id, status: o.status ?? 'Signé', date_signed: o.date ?? '2026-06-10',
+    month: 'JUIN', product: 'PER Individuel', pp_m: o.pp ?? 1000, pu: 0,
+    advisor_code: o.a, co_advisor_code: o.co ?? null, advisor_profile_id: o.pid ?? null,
+    frais_entree_pct: 1, frais_entree_pp_pct: 1, frais_entree_pu_pct: 1,
+    is_ordre_placement: false,
+  })
+  const ct = (code, id) => ({
+    profile_id: id, full_name: code, type_contrat: 'MANDATAIRE',
+    salaire_brut_mensuel: 0, actif: true, date_debut: '2026-01-01', date_fin: null,
+    profile: { id, advisor_code: code, full_name: code, is_active: true },
+  })
+
+  it('partage une affaire en co a moitie entre les deux', () => {
+    const c = contributionsAnnuelles({
+      deals: [deal({ id: 'd1', a: 'AA', co: 'BB' })],
+      contrats: [ct('AA', 'a'), ct('BB', 'b')], annee: 2026,
+    })
+    expect(c.get('a').valeur).toBeCloseTo(c.get('b').valeur, 6)
+    expect(c.get('a').enCo).toBe(1)
+    expect(c.get('b').enCo).toBe(1)
+  })
+
+  it('donne tout au signataire quand il n y a pas de co', () => {
+    const c = contributionsAnnuelles({
+      deals: [deal({ id: 'd1', a: 'AA' })],
+      contrats: [ct('AA', 'a'), ct('BB', 'b')], annee: 2026,
+    })
+    expect(c.get('a').valeur).toBeGreaterThan(0)
+    expect(c.get('a').enCo).toBe(0)
+    expect(c.get('b')).toBeUndefined()
+  })
+
+  it('ignore une affaire non signee et une affaire d une autre annee', () => {
+    const c = contributionsAnnuelles({
+      deals: [
+        deal({ id: 'd1', a: 'AA', status: 'Prévu' }),
+        deal({ id: 'd2', a: 'AA', date: '2025-06-10' }),
+      ],
+      contrats: [ct('AA', 'a')], annee: 2026,
+    })
+    expect(c.size).toBe(0)
+  })
+
+  it('repartit la recette reelle au prorata, sans en creer ni en perdre', () => {
+    const contributions = new Map([['a', { valeur: 300, dossiers: 3, enCo: 1 }],
+                                   ['b', { valeur: 100, dossiers: 1, enCo: 1 }]])
+    const lignes = [
+      { profile_id: 'a', cout_total: 10000, marge: 0 },
+      { profile_id: 'b', cout_total: 5000, marge: 0 },
+    ]
+    const out = repartirRecette(lignes, contributions, 40000)
+    expect(out[0].commission_encaissee).toBe(30000)
+    expect(out[1].commission_encaissee).toBe(10000)
+    expect(out[0].commission_encaissee + out[1].commission_encaissee).toBe(40000)
+    expect(out[0].marge).toBe(20000)
+    expect(out[0].contrats_signes).toBe(3)
+    expect(out[0].dossiers_en_co).toBe(1)
+  })
+
+  it('n invente aucune recette quand la banque n a rien donne', () => {
+    const out = repartirRecette(
+      [{ profile_id: 'a', cout_total: 10000, marge: -10000 }],
+      new Map([['a', { valeur: 300, dossiers: 3, enCo: 0 }]]), 0,
+    )
+    expect(out[0].commission_encaissee).toBeUndefined()
+    expect(out[0].part_production).toBe(0)
+  })
+
+  it('ne divise pas par zero quand personne n a produit', () => {
+    const out = repartirRecette([{ profile_id: 'a', cout_total: 1000, marge: 0 }], new Map(), 50000)
+    expect(out[0].part_production).toBe(0)
   })
 })

@@ -11,7 +11,10 @@
 import { createClient } from '@supabase/supabase-js'
 import { verifyAuth } from './_auth.js'
 import { verifierJeton } from './_lib/pnl-jeton.js'
-import { retrocessionsAnnuelles, appliquerRetrocessions } from './_lib/pnl-retrocessions.js'
+import {
+  retrocessionsAnnuelles, appliquerRetrocessions,
+  contributionsAnnuelles, repartirRecette,
+} from './_lib/pnl-retrocessions.js'
 
 const REFUS = { error: 'Acces refuse' }
 
@@ -102,7 +105,16 @@ export default async function handler(req, res) {
     const retro = retrocessionsAnnuelles({
       deals: deals || [], contrats: contrats || [], annee,
     })
-    const lignes = appliquerRetrocessions(lignesBrutes || [], retro)
+    const avecRetro = appliquerRetrocessions(lignesBrutes || [], retro)
+
+    // ── Qui a produit, en direct depuis le CRM ────────────────────────────
+    // Le total reste celui de la banque, seul montant reel. La cle de partage
+    // vient du CRM, qui connait le co conseil : une affaire signee a deux
+    // compte pour moitie a chacun. Une affaire signee aujourd hui bouge donc
+    // la rentabilite de chacun sans aucune saisie.
+    const contributions = contributionsAnnuelles({
+      deals: deals || [], contrats: contrats || [], annee,
+    })
 
     // ── Le mensuel, lu directement du grand livre ─────────────────────────
     const { data: mensuel } = await admin
@@ -163,6 +175,7 @@ export default async function handler(req, res) {
     const structureMensuelle = Number(courant?.frais_fixes ?? prm?.frais_fixes_mensuels ?? 0)
 
     const encaisseBanque = (mensuel || []).reduce((t, l) => t + Number(l.commission_encaissee || 0), 0)
+    const lignes = repartirRecette(avecRetro, contributions, encaisseBanque)
 
     const cabinet = {
       encaisse_banque: encaisseBanque,

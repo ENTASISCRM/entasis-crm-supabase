@@ -15,7 +15,7 @@
 
 import {
   codesContrat, dealsDuConseiller, dealsDuMois,
-  evaluerRentabilite, commissionsMois,
+  evaluerRentabilite, commissionsMois, partDeal, valeurCabinetDeal,
 } from './calcul-commission.js'
 import { contratsDeReferenceParPersonne } from './contrats.js'
 
@@ -96,6 +96,73 @@ export function appliquerRetrocessions(lignes, parPersonne) {
       cout_total: Number(l.cout_total || 0) + bareme,
       marge: Number(l.marge || 0) - bareme,
       retrocession_source: 'bareme',
+    }
+  })
+}
+
+// ─── Attribution vivante, depuis le CRM ───────────────────────────────────
+// Ce que chacun a produit dans l annee, au sens du CRM, co conseil compris :
+// partDeal rend 0,5 quand le dossier porte un co conseiller, 1 sinon. Le
+// bordereau, lui, ne connait que le compte qui heberge le contrat.
+//
+// La valeur rendue est une valeur CABINET, mesuree au taux mandataire : c est
+// un etalon commun a tous, pas une commission reellement percue. Elle sert a
+// repartir la recette bancaire, qui est le seul montant reel.
+export function contributionsAnnuelles({ deals = [], contrats = [], annee }) {
+  const signes = (deals || []).filter(
+    (d) => d?.status === 'Signé' && String(d.date_signed || '').startsWith(String(annee)),
+  )
+  // Le 31 decembre : on veut le contrat qui donne les codes de la personne,
+  // pas celui d un mois precis.
+  const refs = contratsDeReferenceParPersonne(
+    (contrats || []).filter(Boolean), new Date(annee, 11, 31),
+  )
+  const parPersonne = new Map()
+  for (const contrat of refs) {
+    const profileLie = contrat.profile || null
+    const codes = codesContrat(contrat, profileLie)
+    const pid = profileLie?.id || contrat.profile_id || null
+    let valeur = 0
+    let dossiers = 0
+    let enCo = 0
+    for (const d of signes) {
+      const part = partDeal(d, codes, pid)
+      if (!part) continue
+      valeur += valeurCabinetDeal(d, part)
+      dossiers += 1
+      if (part < 1) enCo += 1
+    }
+    if (dossiers) parPersonne.set(cleDe(contrat), { valeur, dossiers, enCo })
+  }
+  return parPersonne
+}
+
+/**
+ * Repartit un montant REEL entre les personnes, au prorata de ce qu elles ont
+ * produit dans le CRM. Le total reste celui de la banque, la cle de partage
+ * vient du CRM et tient compte du co conseil.
+ */
+export function repartirRecette(lignes, contributions, montantTotal) {
+  const total = [...(contributions?.values?.() || [])]
+    .reduce((s, c) => s + Number(c.valeur || 0), 0)
+  const montant = Number(montantTotal || 0)
+
+  return (lignes || []).map((l) => {
+    const c = contributions?.get?.(cleDe(l))
+    const dossiers = Number(c?.dossiers || 0)
+    const enCo = Number(c?.enCo || 0)
+    if (!(total > 0) || !(montant > 0)) {
+      return { ...l, dossiers_en_co: enCo, part_production: 0 }
+    }
+    const part = Number(c?.valeur || 0) / total
+    const attribue = montant * part
+    return {
+      ...l,
+      commission_encaissee: attribue,
+      contrats_signes: dossiers,
+      dossiers_en_co: enCo,
+      part_production: part,
+      marge: attribue - Number(l.cout_total || 0),
     }
   })
 }
