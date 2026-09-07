@@ -1385,7 +1385,9 @@ function ClassementEquipe({month, monCode}){
   },[month])
   // On ne montre que ceux qui ont produit : une liste de zeros n emule
   // personne, elle expose ceux qui n ont pas encore signe.
-  const actifs=(lignes||[]).filter(r=>Number(r.dossiers_signes||0)>0)
+  // Quinze au plus, dans une fenetre qui defile : un classement qui occupe
+  // tout l ecran cesse d etre lu. Le seizieme n a jamais motive personne.
+  const actifs=(lignes||[]).filter(r=>Number(r.dossiers_signes||0)>0).slice(0,15)
   if(etat==='erreur'||(etat==='ok'&&!actifs.length))return null
   const topPp=Math.max(1,...actifs.map(r=>Number(r.pp_signee||0)))
   const topPu=Math.max(1,...actifs.map(r=>Number(r.pu_signee||0)))
@@ -1400,9 +1402,10 @@ function ClassementEquipe({month, monCode}){
       {etat==='chargement'&&<div className="section-sub">Chargement…</div>}
       {etat==='ok'&&(
         <div className="table-wrap">
-          <div className="team-row header" style={{gridTemplateColumns:'160px 1fr 1fr 1fr 70px'}}>
+          <div className="team-row header" style={{gridTemplateColumns:'160px 1fr 1fr 1fr 70px',position:'sticky',top:0,zIndex:1,background:'var(--surface,#fff)'}}>
             <span>Conseiller</span><span>PP fin. signée</span><span>PU signée</span><span>Structurés</span><span>Dossiers</span>
           </div>
+          <div style={{maxHeight:280,overflowY:'auto',overscrollBehavior:'contain'}}>
           {actifs.map((r,i)=>(
             <div key={r.advisor_code} className="team-row" style={{gridTemplateColumns:'160px 1fr 1fr 1fr 70px',...(r.advisor_code===monCode?{background:'var(--gold-subtle)'}:null)}}>
               <div><div className="team-advisor-name">{i===0&&<span style={{color:'var(--gold)',marginRight:6}}>★</span>}{r.advisor_code}</div></div>
@@ -1412,6 +1415,7 @@ function ClassementEquipe({month, monCode}){
               <div className="team-amount" style={{textAlign:'center'}}>{r.dossiers_signes}</div>
             </div>
           ))}
+          </div>
         </div>
       )}
     </div>
@@ -1919,8 +1923,9 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onQ
       <div className="mb-24">
         <div className="section-header"><div><div className="section-kicker">Performance équipe</div><div className="section-title">Classement conseillers</div></div></div>
         <div className="table-wrap">
-          <div className="team-row header"><span>Conseiller</span><span>PP fin. signée</span><span>PU signée</span><span>Structurés</span><span>PP Mut.</span><span>PP projetée</span><span>PU projetée</span><span>Dossiers</span><span>Taux sign.</span></div>
-          {advisorRows.map((row,i)=>(
+          <div className="team-row header" style={{position:'sticky',top:0,zIndex:1,background:'var(--surface,#fff)'}}><span>Conseiller</span><span>PP fin. signée</span><span>PU signée</span><span>Structurés</span><span>PP Mut.</span><span>PP projetée</span><span>PU projetée</span><span>Dossiers</span><span>Taux sign.</span></div>
+          <div style={{maxHeight:280,overflowY:'auto',overscrollBehavior:'contain'}}>
+          {advisorRows.slice(0,15).map((row,i)=>(
             <div key={row.id} className="team-row">
               <div><div className="team-advisor-name">{i===0&&<span style={{color:'var(--gold)',marginRight:6}}>★</span>}{row.full_name||row.advisor_code}</div><div className="team-advisor-code">{row.advisor_code}</div></div>
               <div className="team-bar-wrap"><div className="team-bar-track"><div className="team-bar-fill signed" style={{width:`${pct(row.ppSigned,topPp)}%`}}/></div><span className="team-amount">{euro(row.ppSigned)}</span></div>
@@ -1933,6 +1938,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onQ
               <div>{row.totalHorsRdv===0?<span className="badge badge-forecast" title="Aucun dossier ce mois — uniquement des RDV">—</span>:<span className={`badge ${row.signRate>=60?'badge-signed':row.signRate>=30?'badge-progress':'badge-cancelled'}`}>{row.signRate}%</span>}</div>
             </div>
           ))}
+          </div>
           {!advisorRows.length&&<div className="table-empty-state"><div className="empty-icon"><Icon.EmptyPeople/></div><div className="empty-title">Aucun conseiller configuré</div><div className="empty-sub">Renseigne les profils dans <span className="code">public.profiles</span></div></div>}
         </div>
       </div>
