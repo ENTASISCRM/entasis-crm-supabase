@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { logger } from '../lib/logger'
-import { isPpFinancier } from '../lib/metrics'
+import { isPpFinancier, estStructure } from '../lib/metrics'
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler } from 'chart.js'
 import { Line, Bar } from 'react-chartjs-2'
 
@@ -74,11 +74,17 @@ function getSignedDealsInRange(deals, startDate, endDate) {
 // Mutuelle Santé et Prévoyance TNS en sortent depuis le 08/06/2026, comme
 // dans la vue direction et dans ManagementView. Sans cette exclusion, la somme
 // des semaines de juin dépassait la PP du mois sans que rien ne l'explique.
+// Les produits structures ne sont PAS de la PU : ils se posent sur un encours
+// deja collecte, et le compter ici referait le double comptage que le tableau
+// de bord evite depuis le 07/09/2026. Cette revue avait son propre circuit de
+// somme, sans passer par sumPu : la regle devait donc etre posee ici aussi,
+// sinon le rapport du lundi contredisait l ecran du vendredi.
 function getPpForAdvisor(deal, advisorCode) {
   const pp = isPpFinancier(deal) ? (deal.pp_m || 0) * 12 : 0
-  const pu = deal.pu || 0
-  if (deal.co_advisor_code) return { pp: pp * 0.5, pu: pu * 0.5 }
-  return { pp, pu }
+  const struct = estStructure(deal) ? (deal.pu || 0) : 0
+  const pu = estStructure(deal) ? 0 : (deal.pu || 0)
+  if (deal.co_advisor_code) return { pp: pp * 0.5, pu: pu * 0.5, struct: struct * 0.5 }
+  return { pp, pu, struct }
 }
 
 // Calcul historique des semaines
@@ -118,7 +124,8 @@ function getWeeklyHistory(deals) {
     // Même exclusion Mutuelle / Prévoyance que partout ailleurs.
     weekMap[weekKey].signatures += 1
     weekMap[weekKey].pp += isPpFinancier(deal) ? (deal.pp_m || 0) * 12 : 0
-    weekMap[weekKey].pu += deal.pu || 0
+    weekMap[weekKey].pu += estStructure(deal) ? 0 : (deal.pu || 0)
+    weekMap[weekKey].struct = (weekMap[weekKey].struct || 0) + (estStructure(deal) ? (deal.pu || 0) : 0)
   })
 
   // Trier par date chronologique
@@ -449,6 +456,9 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
       const currentPp = myCurrentDeals.reduce((s, d) => {
         return s + getPpForAdvisor(d, code).pp
       }, 0)
+      const currentStruct = myCurrentDeals.reduce((s, d) => {
+        return s + getPpForAdvisor(d, code).struct
+      }, 0)
       const currentPu = myCurrentDeals.reduce((s, d) => {
         return s + getPpForAdvisor(d, code).pu
       }, 0)
@@ -478,6 +488,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
         previousSigs,
         currentPp,
         currentPu,
+        currentStruct,
         trend,
         deals: myCurrentDeals,
         calendar: calData || null
@@ -494,6 +505,9 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
   )
   const totalCurrentPu = advisorRows.reduce(
     (s, r) => s + r.currentPu, 0
+  )
+  const totalCurrentStruct = advisorRows.reduce(
+    (s, r) => s + (r.currentStruct || 0), 0
   )
   const totalPreviousSigs = advisorRows.reduce(
     (s, r) => s + r.previousSigs, 0
@@ -769,6 +783,7 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
       `Signatures : ${totalCurrentSigs} (${ecartSigs >= 0 ? '+' : ''}${ecartSigs} vs S-1)`,
       `PP annualisée signée : ${euro(totalCurrentPp)}`,
       `PU signée : ${euro(totalCurrentPu)}`,
+      `Produits structurés : ${euro(totalCurrentStruct)} (encours retravaillé, hors PU)`,
       `Dossiers signés sur la semaine : ${getSignedDealsInRange(deals, selectedBounds.monday, selectedBounds.sunday).length}`,
     ]
     if (top) {
@@ -907,6 +922,11 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
           label="PU"
           value={euro(totalCurrentPu)}
           accent="green"
+        />
+        <KpiCard
+          label="Structurés"
+          value={euro(totalCurrentStruct)}
+          accent="blue"
         />
         <KpiCard
           label="Projection vendredi"
@@ -1452,8 +1472,8 @@ export default function WeeklyReview({deals, teamProfiles, supabase}) {
               const sigsB = dealsB.length
               const ppA = dealsA.reduce((s, d) => s + (d.pp_m || 0) * 12, 0)
               const ppB = dealsB.reduce((s, d) => s + (d.pp_m || 0) * 12, 0)
-              const puA = dealsA.reduce((s, d) => s + (d.pu || 0), 0)
-              const puB = dealsB.reduce((s, d) => s + (d.pu || 0), 0)
+              const puA = dealsA.reduce((s, d) => s + (estStructure(d) ? 0 : (d.pu || 0)), 0)
+              const puB = dealsB.reduce((s, d) => s + (estStructure(d) ? 0 : (d.pu || 0)), 0)
 
               const deltaColor = (val) => val > 0 ? '#1B6B46' : val < 0 ? '#C0392B' : 'var(--t3)'
               const deltaIcon = (val) => val > 0 ? '↑' : val < 0 ? '↓' : '='
