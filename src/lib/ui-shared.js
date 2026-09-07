@@ -43,6 +43,13 @@ export const COMPANIES_PAR_PRODUIT = {
   // Le cabinet ne place les SCPI qu en direct, jamais dans un contrat
   // d assurance vie : aucun assureur n a sa place ici.
   'SCPI': ['Wemo One', 'MNK', 'Log In', 'Autre'],
+  // Le cabinet ne place de produits structures que chez ces deux maisons : le
+  // catalogue UCS ne contient que du SwissLife et de l Abeille, quatre
+  // produits chacun. Proposer les sept assureurs de la liste generale laissait
+  // saisir une compagnie avec laquelle aucun structure n existe.
+  // « Autre » reste la soupape : un troisieme structureur ne doit pas bloquer
+  // une saisie un vendredi soir.
+  'Produits Structurés': ['SwissLife', 'Abeille Assurances', 'Autre'],
 };
 // Options du select « Compagnie » pour un produit donne. La valeur deja
 // enregistree est toujours proposee, meme hors liste : sinon un dossier
