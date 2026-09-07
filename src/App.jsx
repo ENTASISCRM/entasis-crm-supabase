@@ -91,6 +91,7 @@ import {
   sumAnnualPp,
   sumAnnualPpMutuelle,
   sumPu,
+  sumPuStructures,
   advisorMetrics,
   monthFromDate,
   alignedMonthForDeal,
@@ -1756,9 +1757,14 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onQ
   const signedMut = signed.filter(isMut)
   const pipelineMut = pipeline.filter(isMut)
   const ppS = signedFin.reduce((s, d) => s + annualize(d.pp_m), 0)
-  const puS = signed.reduce((s, d) => s + Number(d.pu || 0), 0)
+  // sumPu EXCLUT les produits structures : ils se posent sur un encours deja
+  // compte en PU, les additionner ferait apparaitre de la collecte neuve qui
+  // n a pas eu lieu. Ils ont leur propre carte, juste a droite.
+  const puS = sumPu(signed)
   const ppP = pipelineFin.reduce((s, d) => s + annualize(d.pp_m), 0)
-  const puP = pipeline.reduce((s, d) => s + Number(d.pu || 0), 0)
+  const puP = sumPu(pipeline)
+  const structS = sumPuStructures(signed)
+  const structP = sumPuStructures(pipeline)
   const ppMutS = signedMut.reduce((s, d) => s + annualize(d.pp_m), 0)
   const ppMutP = pipelineMut.reduce((s, d) => s + annualize(d.pp_m), 0)
   const targets=objectifs[month]||{pp_target:0,pu_target:0}
@@ -1772,13 +1778,15 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onQ
   const prevPipelineFin = prevPipeline.filter(d => !isMut(d))
   const prevSignedMut = prevSigned.filter(isMut)
   const prevPpS = prevSignedFin.reduce((s, d) => s + annualize(d.pp_m), 0)
-  const prevPuS = prevSigned.reduce((s, d) => s + Number(d.pu || 0), 0)
+  const prevPuS = sumPu(prevSigned)
+  const prevStructS = sumPuStructures(prevSigned)
   const prevPpP = prevPipelineFin.reduce((s, d) => s + annualize(d.pp_m), 0)
   const prevPpMutS = prevSignedMut.reduce((s, d) => s + annualize(d.pp_m), 0)
   const dPpS={raw:ppS-prevPpS,label:euro(Math.abs(ppS-prevPpS))}
   const dPuS={raw:puS-prevPuS,label:euro(Math.abs(puS-prevPuS))}
   const dPpProj={raw:(ppS+ppP)-(prevPpS+prevPpP),label:euro(Math.abs((ppS+ppP)-(prevPpS+prevPpP)))}
   const dPpMutS={raw:ppMutS-prevPpMutS,label:euro(Math.abs(ppMutS-prevPpMutS))}
+  const dStructS={raw:structS-prevStructS,label:euro(Math.abs(structS-prevStructS))}
 
   const advisorRows=useMemo(()=>activeAdvisors.map(p=>{
     const m=advisorMetrics(deals,month,p.advisor_code)
@@ -1798,6 +1806,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onQ
         <KpiCard label="PU signée" value={euro(puS)} hint="Versements uniques" accent="green" progressValue={pct(puS,puTarget)} delta={prevMonth?dPuS:null} onOpen={()=>onGoView?.('clients','dossiers')} openLabel="Voir les dossiers du mois"/>
         <KpiCard label="PU prévisionnelle" value={euro(puS+puP)} hint="Atterrissage projeté" accent="blue" onOpen={()=>onGoView?.('pipeline')} openLabel="Ouvrir le pipeline"/>
         <KpiCard label="PP Mutuelle/Prévoyance" value={euro(ppMutS)} hint="Mutuelle Santé + Prévoyance TNS" accent="gold" delta={prevMonth?dPpMutS:null} onOpen={()=>onGoView?.('clients','dossiers')} openLabel="Voir les dossiers du mois"/>
+        <KpiCard label="Produits structurés signés" value={euro(structS)} hint="Encours retravaillé, hors PU" accent="blue" delta={prevMonth?dStructS:null} onOpen={()=>onGoView?.('ucs-structures')} openLabel="Ouvrir le catalogue"/>
       </div>
       <div style={{marginBottom:24}}><Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded onOuvrirClient={onOpenClient}/></Suspense></div>
       <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch}/>

@@ -95,9 +95,40 @@ export function sumAnnualPpMutuelle(deals, advisorCode) {
   }, 0);
 }
 
-// Somme des PU. Même règle 50/50 que sumAnnualPp.
+// Un produit structure se pose le plus souvent SUR un encours deja collecte :
+// le client verse 200 000 EUR sur une assurance vie en juillet, on retravaille
+// cet encours en septembre et on en place une partie dans un structure. Cet
+// argent a deja ete compte en PU le mois de la signature du contrat. Le
+// compter une seconde fois ferait croire a de la collecte neuve qui n existe
+// pas. Les structures sortent donc des agregats de production et vivent dans
+// leur propre indicateur. (Decision Louis, 07/09/2026.)
+//
+// Egalite tolerante : le libelle a ete saisi a la main pendant des mois, avec
+// ou sans accent, au singulier comme au pluriel. Une egalite stricte laisserait
+// passer les dossiers mal orthographies, qui gonfleraient la PU en silence.
+export function estStructure(deal) {
+  const p = String(deal?.product || deal?.produit || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  return p.includes('structur');
+}
+
+// Somme des PU, structures EXCLUS. Même règle 50/50 que sumAnnualPp.
+// Pour la production d une personne ou du cabinet : c est de l argent neuf.
 export function sumPu(deals, advisorCode) {
   return deals.reduce((sum, d) => {
+    if (estStructure(d)) return sum;
+    const pu = Number(d.pu || 0);
+    if (advisorCode && d.co_advisor_code) return sum + pu * 0.5;
+    return sum + pu;
+  }, 0);
+}
+
+// Somme des seuls produits structures. Ce que le cabinet place en retravaillant
+// l encours : une production reelle, qui merite son propre chiffre, mais qui ne
+// doit jamais s additionner a la PU.
+export function sumPuStructures(deals, advisorCode) {
+  return deals.reduce((sum, d) => {
+    if (!estStructure(d)) return sum;
     const pu = Number(d.pu || 0);
     if (advisorCode && d.co_advisor_code) return sum + pu * 0.5;
     return sum + pu;

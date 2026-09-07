@@ -7,6 +7,8 @@ import {
   sumAnnualPp,
   sumAnnualPpMutuelle,
   sumPu,
+  sumPuStructures,
+  estStructure,
   advisorMetrics,
   monthFromDate,
   alignedMonthForDeal, estSimpleRdv, entonnoirLeads, compterPipeline } from './metrics';
@@ -408,3 +410,31 @@ describe('compterPipeline', () => {
     expect(compterPipeline(null, 'MAI', 'LH')).toBe(0);
   });
 });
+
+describe('les produits structures ne gonflent pas la PU', () => {
+  // Un structure se pose sur un encours deja compte en PU le mois de la
+  // signature du contrat. Le recompter ferait apparaitre de la collecte neuve
+  // qui n a pas eu lieu : le cabinet lirait 100 000 EUR de plus qu il n a
+  // collecte. (Cas reel Louis, septembre 2026, structure pose sur une PU de
+  // juillet.)
+  const av = { product: 'Assurance Vie Française', pu: 200000 }
+  const struct = { product: 'Produits Structurés', pu: 100000 }
+
+  it('sumPu ignore les structures, sumPuStructures ne compte qu eux', () => {
+    expect(sumPu([av, struct])).toBe(200000)
+    expect(sumPuStructures([av, struct])).toBe(100000)
+  })
+
+  it('reconnait le libelle quelle que soit sa saisie', () => {
+    for (const p of ['Produits Structurés', 'Produits Structures', 'produit structuré', 'PRODUITS STRUCTURES']) {
+      expect(estStructure({ product: p })).toBe(true)
+    }
+    expect(estStructure({ product: 'Assurance Vie Française' })).toBe(false)
+    expect(estStructure({})).toBe(false)
+  })
+
+  it('partage le co-conseil en deux, comme le reste', () => {
+    const co = { product: 'Produits Structurés', pu: 100000, co_advisor_code: 'JEAN' }
+    expect(sumPuStructures([co], 'LOUIS')).toBe(50000)
+  })
+})
