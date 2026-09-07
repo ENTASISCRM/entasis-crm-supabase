@@ -151,7 +151,7 @@ export default async function handler(req, res) {
     // redevient une hypothese au bout de trois mois.
     const { data: charges } = await admin
       .from('charges_fixes')
-      .select('categorie, libelle, fournisseur, montant, periodicite, montant_mensuel, actif, fiabilite, source, a_arbitrer, notes')
+      .select('id, categorie, libelle, fournisseur, montant, periodicite, montant_mensuel, actif, date_debut, date_fin, fiabilite, source, a_arbitrer, notes')
       .order('categorie').order('montant_mensuel', { ascending: false })
 
     // Ce que le grand livre contient, par source. Le module ne compte QUE les

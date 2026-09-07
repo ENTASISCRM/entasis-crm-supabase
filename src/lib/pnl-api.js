@@ -75,3 +75,28 @@ export async function chargerRentabilite(annee, repartir) {
   if (!r.ok) throw new Error(j.error || `Erreur ${r.status}`)
   return j
 }
+
+// ─── Les charges fixes : ajouter, ajuster, supprimer ──────────────────────
+// Le total des charges fixes n est pas un nombre saisi quelque part : c est
+// la somme de ces lignes. Les tenir a jour, c est tenir le total a jour.
+// Meme regle que la lecture : sans le jeton en memoire, on n appelle rien.
+async function ecrireCharge(corps) {
+  if (!estDeverrouille()) throw new Error('Espace verrouille')
+  const r = await fetch('/api/pnl-charges', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${await jetonSupabase()}`,
+      'x-pnl-jeton': jetonEnMemoire,
+    },
+    body: JSON.stringify(corps),
+  })
+  if (r.status === 403) { verrouiller(); throw new Error('Espace verrouille') }
+  const j = await r.json().catch(() => ({}))
+  if (!r.ok) throw new Error(j.error || `Erreur ${r.status}`)
+  return j
+}
+
+export const creerCharge = (charge) => ecrireCharge({ action: 'creer', charge })
+export const modifierCharge = (id, charge) => ecrireCharge({ action: 'modifier', id, charge })
+export const supprimerCharge = (id) => ecrireCharge({ action: 'supprimer', id })

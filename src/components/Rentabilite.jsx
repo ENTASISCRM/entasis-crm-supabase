@@ -23,6 +23,7 @@ import { messageErreur } from '../lib/ui-shared'
 import { SkeletonCards } from './ui/Skeleton'
 import {
   deverrouiller, chargerRentabilite, verrouiller, estDeverrouille, tempsRestantMs,
+  creerCharge, modifierCharge, supprimerCharge,
 } from '../lib/pnl-api'
 import {
   MOIS_COURTS, equipe, associes, totaux, compteDeResultat, compteDeResultatMensuel,
@@ -462,15 +463,177 @@ function VuePilotage({ mois, objectif, annee, cdr, sourceRetro, courant }) {
   )
 }
 
+// ─── Ajouter ou ajuster une charge fixe ───────────────────────────────────
+// Le total des charges fixes n est pas un nombre saisi quelque part : c est la
+// somme de ces lignes. C est pour cela qu il faut pouvoir les tenir a jour ici
+// plutot que d aller les changer en base.
+const CATEGORIES_SAISIE = ['LOCAUX', 'OUTILS', 'COMPTABILITE', 'ASSURANCES', 'BANQUE',
+  'PUBLICITE', 'VEHICULE', 'SOCIAL', 'FORMATION', 'AUTRE']
+
+const VIDE = {
+  categorie: 'OUTILS', libelle: '', fournisseur: '', montant: '',
+  periodicite: 'MENSUEL', fiabilite: 'FACTURE', actif: true, a_arbitrer: false,
+  source: '', notes: '',
+}
+
+function FormulaireCharge({ charge, onFini, onAnnuler }) {
+  const [f, setF] = useState(() => (charge
+    ? {
+      categorie: charge.categorie || 'AUTRE',
+      libelle: charge.libelle || '',
+      fournisseur: charge.fournisseur || '',
+      montant: String(charge.montant ?? ''),
+      periodicite: charge.periodicite || 'MENSUEL',
+      fiabilite: charge.fiabilite || 'FACTURE',
+      actif: charge.actif !== false,
+      a_arbitrer: charge.a_arbitrer === true,
+      source: charge.source || '',
+      notes: charge.notes || '',
+    }
+    : { ...VIDE }))
+  const [envoi, setEnvoi] = useState(false)
+  const [erreur, setErreur] = useState(null)
+
+  const maj = (cle) => (e) => setF((v) => ({
+    ...v, [cle]: e.target.type === 'checkbox' ? e.target.checked : e.target.value,
+  }))
+
+  // Ce que la ligne pesera par mois, montre AVANT d enregistrer : une facture
+  // annuelle saisie sans y penser change le total de trente fois moins.
+  const parMois = (() => {
+    const n = Number(String(f.montant).replace(',', '.'))
+    if (!Number.isFinite(n)) return null
+    if (f.periodicite === 'MENSUEL') return n
+    if (f.periodicite === 'TRIMESTRIEL') return n / 3
+    if (f.periodicite === 'ANNUEL') return n / 12
+    return 0
+  })()
+
+  const envoyer = async (e) => {
+    e.preventDefault()
+    setErreur(null)
+    const montant = Number(String(f.montant).replace(',', '.'))
+    if (!f.libelle.trim()) return setErreur('Le poste a besoin d un nom')
+    if (!Number.isFinite(montant) || montant < 0) return setErreur('Montant invalide')
+    setEnvoi(true)
+    try {
+      const corps = { ...f, montant, fournisseur: f.fournisseur || null,
+        source: f.source || null, notes: f.notes || null }
+      if (charge?.id) await modifierCharge(charge.id, corps)
+      else await creerCharge(corps)
+      onFini()
+    } catch (err) {
+      setErreur(err.message)
+      setEnvoi(false)
+    }
+  }
+
+  const champ = { display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }
+  const etiquette = { fontSize: 11.5, color: 'var(--t3)', fontWeight: 600 }
+
+  return (
+    <form onSubmit={envoyer} className="card card-p mb-24"
+      style={{ borderLeft: '3px solid var(--gold)' }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)', marginBottom: 12 }}>
+        {charge ? `Ajuster · ${charge.libelle}` : 'Ajouter une charge fixe'}
+      </div>
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12,
+      }}>
+        <label style={champ}>
+          <span style={etiquette}>Poste</span>
+          <input className="form-input" value={f.libelle} onChange={maj('libelle')}
+            placeholder="Loyer, Ringover, expert-comptable…" required />
+        </label>
+        <label style={champ}>
+          <span style={etiquette}>Fournisseur</span>
+          <input className="form-input" value={f.fournisseur} onChange={maj('fournisseur')} />
+        </label>
+        <label style={champ}>
+          <span style={etiquette}>Catégorie</span>
+          <select className="form-select" value={f.categorie} onChange={maj('categorie')}>
+            {CATEGORIES_SAISIE.map((c) => (
+              <option key={c} value={c}>{LIBELLE_CATEGORIE[c] || c}</option>
+            ))}
+          </select>
+        </label>
+        <label style={champ}>
+          <span style={etiquette}>Montant TTC</span>
+          <input className="form-input" value={f.montant} onChange={maj('montant')}
+            inputMode="decimal" placeholder="0,00" required />
+        </label>
+        <label style={champ}>
+          <span style={etiquette}>Périodicité</span>
+          <select className="form-select" value={f.periodicite} onChange={maj('periodicite')}>
+            {['MENSUEL', 'TRIMESTRIEL', 'ANNUEL', 'PONCTUEL'].map((v) => (
+              <option key={v} value={v}>{LIBELLE_PERIODICITE[v]}</option>
+            ))}
+          </select>
+        </label>
+        <label style={champ}>
+          <span style={etiquette}>Fiabilité</span>
+          <select className="form-select" value={f.fiabilite} onChange={maj('fiabilite')}>
+            <option value="FACTURE">Facture en main</option>
+            <option value="MOYENNE">Moyenne constatée</option>
+            <option value="ESTIMATION">Estimation</option>
+          </select>
+        </label>
+      </div>
+
+      <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', margin: '14px 0 4px', fontSize: 12.5 }}>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, cursor: 'pointer' }}>
+          <input type="checkbox" checked={f.actif} onChange={maj('actif')} />
+          Engagé, à compter dans le total
+        </label>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, cursor: 'pointer' }}>
+          <input type="checkbox" checked={f.a_arbitrer} onChange={maj('a_arbitrer')} />
+          À trancher
+        </label>
+      </div>
+
+      {parMois != null && (
+        <div style={{ fontSize: 12.5, color: 'var(--t2)', marginTop: 6 }}>
+          {f.periodicite === 'PONCTUEL'
+            ? 'Une dépense ponctuelle ne pèse pas dans les charges mensuelles : elle est enregistrée pour mémoire.'
+            : <>Cette ligne pèsera <strong style={{ color: 'var(--t1)' }}>{fmtEur(parMois)} par mois</strong>{f.actif ? '' : ', une fois engagée'}.</>}
+        </div>
+      )}
+
+      {erreur && (
+        <div style={{ fontSize: 12.5, color: 'var(--cancelled)', marginTop: 10 }}>{erreur}</div>
+      )}
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+        <button className="btn btn-primary btn-sm" type="submit" disabled={envoi}>
+          {envoi ? 'Enregistrement…' : charge ? 'Enregistrer' : 'Ajouter'}
+        </button>
+        <button className="btn btn-outline btn-sm" type="button" onClick={onAnnuler} disabled={envoi}>
+          Annuler
+        </button>
+      </div>
+    </form>
+  )
+}
+
 // ─── Les charges fixes, poste par poste ───────────────────────────────────
 // Un total agrege que personne ne peut ouvrir redevient une hypothese au bout
 // de trois mois. Chaque euro porte donc son fournisseur, sa periodicite, sa
 // fiabilite et sa source.
-function VueCharges({ charges, courant }) {
+function VueCharges({ charges, courant, onChange }) {
   const parCat = chargesParCategorie(charges)
   const arbitrages = aArbitrer(charges)
   const attente = nonEngage(charges)
   const total = parCat.reduce((s, c) => s + c.montant, 0)
+  // 'nouveau' pour le formulaire vide, un objet charge pour l ajustement.
+  const [edition, setEdition] = useState(null)
+  const [suppression, setSuppression] = useState(null)
+  const [erreur, setErreur] = useState(null)
+
+  const supprimer = async (c) => {
+    setErreur(null)
+    try { await supprimerCharge(c.id); setSuppression(null); onChange() }
+    catch (e) { setErreur(e.message); setSuppression(null) }
+  }
 
   const Fiabilite = ({ v }) => {
     const couleur = { FACTURE: 'var(--signed)', MOYENNE: 'var(--forecast)' }[v] || 'var(--t3)'
@@ -517,6 +680,30 @@ function VueCharges({ charges, courant }) {
         </div>
       )}
 
+      {edition && (
+        <FormulaireCharge charge={edition === 'nouveau' ? null : edition}
+          onFini={() => { setEdition(null); onChange() }}
+          onAnnuler={() => setEdition(null)} />
+      )}
+
+      {erreur && (
+        <div className="card card-p mb-24" style={{ borderLeft: '3px solid var(--cancelled)' }}>
+          <div style={{ fontSize: 12.5, color: 'var(--cancelled)' }}>{erreur}</div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
+        <div style={{ fontSize: 12, color: 'var(--t3)' }}>
+          Le total ci-dessus est la somme de ces lignes. Les tenir à jour, c est tenir le total à jour.
+        </div>
+        {!edition && (
+          <button className="btn btn-primary btn-sm" onClick={() => setEdition('nouveau')}>
+            Ajouter une charge
+          </button>
+        )}
+      </div>
+
       <div className="table-wrap">
         <table className="data-table">
           <thead>
@@ -527,13 +714,14 @@ function VueCharges({ charges, courant }) {
               <th>Périodicité</th>
               <th style={{ textAlign: 'right' }}>Par mois</th>
               <th>Fiabilité</th>
+              <th />
             </tr>
           </thead>
           <tbody>
             {parCat.map((cat) => (
               <Fragment key={cat.categorie}>
                 <tr>
-                  <td colSpan={6} style={{
+                  <td colSpan={7} style={{
                     background: 'var(--gold-subtle)', fontWeight: 700, fontSize: 12,
                     color: 'var(--t1)',
                   }}>
@@ -546,7 +734,7 @@ function VueCharges({ charges, courant }) {
                 {charges
                   .filter((c) => c.actif !== false && c.categorie === cat.categorie)
                   .map((c) => (
-                    <tr key={c.libelle + c.fournisseur}>
+                    <tr key={c.id || c.libelle + c.fournisseur}>
                       <td>
                         <div className="cell-primary">
                           {c.libelle}
@@ -561,6 +749,25 @@ function VueCharges({ charges, courant }) {
                       </td>
                       <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmtEur(c.montant_mensuel)}</td>
                       <td><Fiabilite v={c.fiabilite} /></td>
+                      <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
+                        {suppression === c.id ? (
+                          <>
+                            <button className="btn btn-outline btn-sm" style={{ color: 'var(--cancelled)' }}
+                              onClick={() => supprimer(c)}>Supprimer</button>
+                            {' '}
+                            <button className="btn btn-outline btn-sm"
+                              onClick={() => setSuppression(null)}>Non</button>
+                          </>
+                        ) : (
+                          <>
+                            <button className="btn btn-outline btn-sm"
+                              onClick={() => { setErreur(null); setEdition(c) }}>Ajuster</button>
+                            {' '}
+                            <button className="btn btn-outline btn-sm" title="Supprimer ce poste"
+                              onClick={() => { setErreur(null); setSuppression(c.id) }}>×</button>
+                          </>
+                        )}
+                      </td>
                     </tr>
                   ))}
               </Fragment>
@@ -581,13 +788,17 @@ function VueCharges({ charges, courant }) {
             <table className="data-table">
               <tbody>
                 {attente.map((c) => (
-                  <tr key={c.libelle + c.fournisseur}>
+                  <tr key={c.id || c.libelle + c.fournisseur}>
                     <td>
                       <div className="cell-primary">{c.libelle}</div>
                       {c.notes && <div className="cell-sub">{c.notes}</div>}
                     </td>
                     <td style={{ textAlign: 'right', color: 'var(--t3)', whiteSpace: 'nowrap' }}>
                       {fmtEur(c.montant_mensuel)} par mois
+                    </td>
+                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <button className="btn btn-outline btn-sm"
+                        onClick={() => { setErreur(null); setEdition(c) }}>Ajuster</button>
                     </td>
                   </tr>
                 ))}
@@ -728,7 +939,8 @@ export default function Rentabilite({ profile }) {
       )}
 
       {!chargement && vue === 'charges' && (
-        <VueCharges charges={charges} courant={courant} />
+        <VueCharges charges={charges} courant={courant}
+          onChange={() => charger(annee, repartir)} />
       )}
 
       {!chargement && vue === 'personnes' && (
