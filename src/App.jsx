@@ -1385,10 +1385,15 @@ function ClassementEquipe({month, monCode}){
   },[month])
   // On ne montre que ceux qui ont produit : une liste de zeros n emule
   // personne, elle expose ceux qui n ont pas encore signe.
-  // Quinze au plus, dans une fenetre qui defile : un classement qui occupe
-  // tout l ecran cesse d etre lu. Le seizieme n a jamais motive personne.
-  const actifs=(lignes||[]).filter(r=>Number(r.dossiers_signes||0)>0).slice(0,15)
+  // TOUT LE MONDE figure au classement, y compris a zero (Louis, 07/09/2026).
+  // J avais masque les zeros en pensant epargner ceux qui n ont pas encore
+  // signe : c etait mon jugement, pas le sien. Une equipe commerciale se
+  // regarde en entier, et un conseiller a zero qui voit les autres avancer
+  // sait ou il en est. Quinze au plus, pour que le bloc reste lisible.
+  const actifs=(lignes||[]).slice(0,15)
   if(etat==='erreur'||(etat==='ok'&&!actifs.length))return null
+  // Les barres se mesurent au meilleur du mois : a zero, la barre est vide,
+  // ce qui est exactement l information.
   const topPp=Math.max(1,...actifs.map(r=>Number(r.pp_signee||0)))
   const topPu=Math.max(1,...actifs.map(r=>Number(r.pu_signee||0)))
   const topSt=Math.max(1,...actifs.map(r=>Number(r.struct_signee||0)))
