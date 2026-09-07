@@ -1790,11 +1790,12 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onQ
 
   const advisorRows=useMemo(()=>activeAdvisors.map(p=>{
     const m=advisorMetrics(deals,month,p.advisor_code)
-    return {...p,...m,_rankScore:m.ppSigned*0.30+m.puSigned*0.02}
+    return {...p,...m,_rankScore:m.ppSigned*0.30+m.puSigned*0.02+(m.structSigned||0)*0.02}
   }).sort((a,b)=>b._rankScore-a._rankScore),[activeAdvisors,deals,month])
 
   const topPp=Math.max(1,...advisorRows.map(r=>r.ppSigned))
   const topPu=Math.max(1,...advisorRows.map(r=>r.puSigned))
+  const topStruct=Math.max(1,...advisorRows.map(r=>r.structSigned||0))
   const hotDeals=monthDeals.filter(d=>(d.priority==='Urgente'||d.priority==='Haute')&&isPipeline(d.status)).sort((a,b)=>annualize(b.pp_m)-annualize(a.pp_m)).slice(0,8)
 
   return (
@@ -1852,12 +1853,13 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onQ
       <div className="mb-24">
         <div className="section-header"><div><div className="section-kicker">Performance équipe</div><div className="section-title">Classement conseillers</div></div></div>
         <div className="table-wrap">
-          <div className="team-row header"><span>Conseiller</span><span>PP fin. signée</span><span>PU signée</span><span>PP Mut.</span><span>PP projetée</span><span>PU projetée</span><span>Dossiers</span><span>Taux sign.</span></div>
+          <div className="team-row header"><span>Conseiller</span><span>PP fin. signée</span><span>PU signée</span><span>Structurés</span><span>PP Mut.</span><span>PP projetée</span><span>PU projetée</span><span>Dossiers</span><span>Taux sign.</span></div>
           {advisorRows.map((row,i)=>(
             <div key={row.id} className="team-row">
               <div><div className="team-advisor-name">{i===0&&<span style={{color:'var(--gold)',marginRight:6}}>★</span>}{row.full_name||row.advisor_code}</div><div className="team-advisor-code">{row.advisor_code}</div></div>
               <div className="team-bar-wrap"><div className="team-bar-track"><div className="team-bar-fill signed" style={{width:`${pct(row.ppSigned,topPp)}%`}}/></div><span className="team-amount">{euro(row.ppSigned)}</span></div>
               <div className="team-bar-wrap"><div className="team-bar-track"><div className="team-bar-fill signed" style={{width:`${pct(row.puSigned,topPu)}%`}}/></div><span className="team-amount">{euro(row.puSigned)}</span></div>
+              <div className="team-bar-wrap" title="Produits structures places, hors PU : le meme argent ne compte pas deux fois"><div className="team-bar-track"><div className="team-bar-fill signed" style={{width:`${pct(row.structSigned||0,topStruct)}%`}}/></div><span className="team-amount">{euro(row.structSigned||0)}</span></div>
               <div className="team-amount" title="PP Mutuelle Sante + Prevoyance TNS">{euro(row.ppMutuelleSigned||0)}</div>
               <div className="team-bar-wrap"><div className="team-bar-track"><div className="team-bar-fill" style={{width:`${pct(row.ppProjected,topPp)}%`}}/></div><span className="team-amount">{euro(row.ppProjected)}</span></div>
               <div className="team-bar-wrap"><div className="team-bar-track"><div className="team-bar-fill" style={{width:`${pct(row.puProjected,topPu)}%`}}/></div><span className="team-amount">{euro(row.puProjected)}</span></div>

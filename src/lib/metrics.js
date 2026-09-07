@@ -184,6 +184,13 @@ export function advisorMetrics(deals, month, code) {
   // PP Mutuelle / Prévoyance (assurance personnes), ajout 2026-06-08.
   const ppMutS = sumAnnualPpMutuelle(signed, code);
   const ppMutP = sumAnnualPpMutuelle(pipeline, code);
+  // Les structures sont sortis de la PU pour ne pas compter deux fois le meme
+  // argent, mais ils restent une PRODUCTION : placer 220 000 EUR en
+  // retravaillant un encours est un acte commercial, pas rien. Sans cette
+  // ligne, un conseiller qui ne fait que du structure affiche zero partout et
+  // tombe en bas du classement.
+  const structS = sumPuStructures(signed, code);
+  const structP = sumPuStructures(pipeline, code);
 
   // L'argent se partage, pas le travail. Un dossier signé à deux est UN dossier
   // signé pour chacun des deux : celui qui l'a porté ne l'a pas signé à moitié.
@@ -214,10 +221,12 @@ export function advisorMetrics(deals, month, code) {
     rdvCount,
     ppSigned: ppS,
     puSigned: puS,
+    structSigned: structS,
     ppPipeline: ppP,
     puPipeline: puP,
     ppProjected: ppS + ppP,
     puProjected: puS + puP,
+    structProjected: structS + structP,
     ppMutuelleSigned: ppMutS,
     ppMutuellePipeline: ppMutP,
     ppMutuelleProjected: ppMutS + ppMutP,

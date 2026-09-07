@@ -7,6 +7,7 @@ import {
   sumAnnualPp,
   sumAnnualPpMutuelle,
   sumPu,
+  advisorMetrics,
   sumPuStructures,
   estStructure,
   advisorMetrics,
@@ -436,5 +437,35 @@ describe('les produits structures ne gonflent pas la PU', () => {
   it('partage le co-conseil en deux, comme le reste', () => {
     const co = { product: 'Produits Structurés', pu: 100000, co_advisor_code: 'JEAN' }
     expect(sumPuStructures([co], 'LOUIS')).toBe(50000)
+  })
+})
+
+describe('le classement compte les structures', () => {
+  // Un conseiller qui place 220 000 EUR en retravaillant un encours affichait
+  // zero partout et tombait en bas du classement : les structures avaient ete
+  // sortis de la PU pour ne pas compter deux fois le meme argent, mais n
+  // avaient ete remis nulle part. (Cas Louis, septembre 2026.)
+  const d = (o) => ({ month: 'SEPTEMBRE', date_signed: '2026-09-07', status: 'Signé', ...o })
+
+  it('rend le volume structure a part, sans le melanger a la PU', () => {
+    const deals = [
+      d({ advisor_code: 'LH', product: 'Produits Structurés', pu: 220000, pp_m: 0 }),
+      d({ advisor_code: 'LH', product: 'Assurance Vie Française', pu: 20000, pp_m: 0 }),
+    ]
+    const m = advisorMetrics(deals, 'SEPTEMBRE', 'LH')
+    expect(m.puSigned).toBe(20000)
+    expect(m.structSigned).toBe(220000)
+  })
+
+  it('place devant celui qui a place le plus gros capital', () => {
+    const deals = [
+      d({ advisor_code: 'LH', product: 'Produits Structurés', pu: 220000, pp_m: 0 }),
+      d({ advisor_code: 'NANS', product: 'Assurance Vie Française', pu: 0, pp_m: 200 }),
+    ]
+    const score = (c) => {
+      const m = advisorMetrics(deals, 'SEPTEMBRE', c)
+      return m.ppSigned * 0.30 + m.puSigned * 0.02 + (m.structSigned || 0) * 0.02
+    }
+    expect(score('LH')).toBeGreaterThan(score('NANS'))
   })
 })
