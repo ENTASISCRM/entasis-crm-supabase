@@ -1806,7 +1806,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onQ
         <KpiCard label="PU signée" value={euro(puS)} hint="Versements uniques" accent="green" progressValue={pct(puS,puTarget)} delta={prevMonth?dPuS:null} onOpen={()=>onGoView?.('clients','dossiers')} openLabel="Voir les dossiers du mois"/>
         <KpiCard label="PU prévisionnelle" value={euro(puS+puP)} hint="Atterrissage projeté" accent="blue" onOpen={()=>onGoView?.('pipeline')} openLabel="Ouvrir le pipeline"/>
         <KpiCard label="PP Mutuelle/Prévoyance" value={euro(ppMutS)} hint="Mutuelle Santé + Prévoyance TNS" accent="gold" delta={prevMonth?dPpMutS:null} onOpen={()=>onGoView?.('clients','dossiers')} openLabel="Voir les dossiers du mois"/>
-        <KpiCard label="Produits structurés signés" value={euro(structS)} hint="Encours retravaillé, hors PU" accent="blue" delta={prevMonth?dStructS:null} onOpen={()=>onGoView?.('ucs-structures')} openLabel="Ouvrir le catalogue"/>
+        <KpiCard label="Produits structurés signés" value={euro(structS)} hint={structP>0?`Encours retravaillé · ${euro(structP)} en cours`:'Encours retravaillé, hors PU'} accent="blue" delta={prevMonth?dStructS:null} onOpen={()=>onGoView?.('ucs-structures')} openLabel="Ouvrir le catalogue"/>
       </div>
       <div style={{marginBottom:24}}><Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded onOuvrirClient={onOpenClient}/></Suspense></div>
       <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch}/>
