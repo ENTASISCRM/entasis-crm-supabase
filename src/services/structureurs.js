@@ -193,8 +193,11 @@ export async function getDashboardKpis() {
  */
 export async function getPriorityActions() {
   const [ucsRes, structuresEnriched] = await Promise.all([
+    // La vue, jamais la table : elle rend l upfront a la direction et null a
+    // tout le monde d autre. La table n est plus lisible que par la direction,
+    // une lecture directe rendrait zero ligne a un manager.
     supabase
-      .from('ucs_structures')
+      .from('ucs_catalogue')
       .select('id, nom_ucs, upfront, structureur_id, etat')
       .eq('etat', 'EN_COURS'),
     listEnriched(),
@@ -258,7 +261,7 @@ export async function getPriorityActions() {
  */
 export async function listUcsForStructureur(structureurId) {
   const { data, error } = await supabase
-    .from('ucs_structures')
+    .from('ucs_catalogue')
     .select('*')
     .eq('structureur_id', structureurId)
     .order('etat')
