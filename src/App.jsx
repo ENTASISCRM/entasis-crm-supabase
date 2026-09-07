@@ -1405,7 +1405,11 @@ function ClassementEquipe({month, monCode}){
           <div className="team-row header" style={{gridTemplateColumns:'160px 1fr 1fr 1fr 70px',position:'sticky',top:0,zIndex:1,background:'var(--surface,#fff)'}}>
             <span>Conseiller</span><span>PP fin. signée</span><span>PU signée</span><span>Structurés</span><span>Dossiers</span>
           </div>
-          <div style={{maxHeight:280,overflowY:'auto',overscrollBehavior:'contain'}}>
+          {/* Pas de zone de defilement tant que la liste tient : une molette
+              capturee par un bloc qu on essaie simplement de depasser donne
+              l impression que la page est bloquee. Elle n apparait qu au dela
+              de six lignes, quand elle sert vraiment a gagner de la place. */}
+          <div style={actifs.length>6?{maxHeight:280,overflowY:'auto'}:undefined}>
           {actifs.map((r,i)=>(
             <div key={r.advisor_code} className="team-row" style={{gridTemplateColumns:'160px 1fr 1fr 1fr 70px',...(r.advisor_code===monCode?{background:'var(--gold-subtle)'}:null)}}>
               <div><div className="team-advisor-name">{i===0&&<span style={{color:'var(--gold)',marginRight:6}}>★</span>}{r.advisor_code}</div></div>
@@ -1924,7 +1928,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onQ
         <div className="section-header"><div><div className="section-kicker">Performance équipe</div><div className="section-title">Classement conseillers</div></div></div>
         <div className="table-wrap">
           <div className="team-row header" style={{position:'sticky',top:0,zIndex:1,background:'var(--surface,#fff)'}}><span>Conseiller</span><span>PP fin. signée</span><span>PU signée</span><span>Structurés</span><span>PP Mut.</span><span>PP projetée</span><span>PU projetée</span><span>Dossiers</span><span>Taux sign.</span></div>
-          <div style={{maxHeight:280,overflowY:'auto',overscrollBehavior:'contain'}}>
+          <div style={advisorRows.length>6?{maxHeight:280,overflowY:'auto'}:undefined}>
           {advisorRows.slice(0,15).map((row,i)=>(
             <div key={row.id} className="team-row">
               <div><div className="team-advisor-name">{i===0&&<span style={{color:'var(--gold)',marginRight:6}}>★</span>}{row.full_name||row.advisor_code}</div><div className="team-advisor-code">{row.advisor_code}</div></div>
