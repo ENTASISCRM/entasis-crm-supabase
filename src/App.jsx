@@ -1361,6 +1361,64 @@ function AreaChart({actual,projected,target,title,subtitle}){
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   CLASSEMENT EQUIPE — visible de tous
+   Un conseiller ne voit que ses propres dossiers (la RLS les filtre par
+   advisor_code), donc le classement ne peut pas se calculer dans le
+   navigateur : il vient de la RPC classement_conseillers_month, qui rend des
+   VOLUMES par personne et rien d autre. Jamais un cout, jamais une commission,
+   jamais l objectif du cabinet.
+───────────────────────────────────────────────────────────────────────────── */
+function ClassementEquipe({month, monCode}){
+  const [lignes,setLignes]=useState(null)
+  const [etat,setEtat]=useState('chargement')
+  useEffect(()=>{
+    let vivant=true
+    setEtat('chargement')
+    supabase.rpc('classement_conseillers_month',{p_month:month})
+      .then(({data,error})=>{
+        if(!vivant)return
+        if(error){logger.error('classement_conseillers_month',error);setEtat('erreur');return}
+        setLignes(data||[]);setEtat('ok')
+      })
+      .catch(e=>{if(vivant){logger.error('classement_conseillers_month',e);setEtat('erreur')}})
+    return ()=>{vivant=false}
+  },[month])
+  // On ne montre que ceux qui ont produit : une liste de zeros n emule
+  // personne, elle expose ceux qui n ont pas encore signe.
+  const actifs=(lignes||[]).filter(r=>Number(r.dossiers_signes||0)>0)
+  if(etat==='erreur'||(etat==='ok'&&!actifs.length))return null
+  const topPp=Math.max(1,...actifs.map(r=>Number(r.pp_signee||0)))
+  const topPu=Math.max(1,...actifs.map(r=>Number(r.pu_signee||0)))
+  const topSt=Math.max(1,...actifs.map(r=>Number(r.struct_signee||0)))
+  return (
+    <div style={{marginTop:28}}>
+      <div className="section-header"><div>
+        <div className="section-kicker">Performance équipe · {month}</div>
+        <div className="section-title">Classement conseillers</div>
+        <div className="section-sub">Ce que chacun a signé ce mois — volumes, tous conseillers confondus.</div>
+      </div></div>
+      {etat==='chargement'&&<div className="section-sub">Chargement…</div>}
+      {etat==='ok'&&(
+        <div className="table-wrap">
+          <div className="team-row header" style={{gridTemplateColumns:'160px 1fr 1fr 1fr 70px'}}>
+            <span>Conseiller</span><span>PP fin. signée</span><span>PU signée</span><span>Structurés</span><span>Dossiers</span>
+          </div>
+          {actifs.map((r,i)=>(
+            <div key={r.advisor_code} className="team-row" style={{gridTemplateColumns:'160px 1fr 1fr 1fr 70px',...(r.advisor_code===monCode?{background:'var(--gold-subtle)'}:null)}}>
+              <div><div className="team-advisor-name">{i===0&&<span style={{color:'var(--gold)',marginRight:6}}>★</span>}{r.advisor_code}</div></div>
+              <div className="team-bar-wrap"><div className="team-bar-track"><div className="team-bar-fill signed" style={{width:`${pct(Number(r.pp_signee||0),topPp)}%`}}/></div><span className="team-amount">{euro(r.pp_signee)}</span></div>
+              <div className="team-bar-wrap"><div className="team-bar-track"><div className="team-bar-fill signed" style={{width:`${pct(Number(r.pu_signee||0),topPu)}%`}}/></div><span className="team-amount">{euro(r.pu_signee)}</span></div>
+              <div className="team-bar-wrap" title="Produits structures places, hors PU"><div className="team-bar-track"><div className="team-bar-fill signed" style={{width:`${pct(Number(r.struct_signee||0),topSt)}%`}}/></div><span className="team-amount">{euro(r.struct_signee)}</span></div>
+              <div className="team-amount" style={{textAlign:'center'}}>{r.dossiers_signes}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
    ANNUAL BAR CHART — 12 mois
 ───────────────────────────────────────────────────────────────────────────── */
 function AnnualChart({deals,objectifs,currentMonth,advisorCode,title,subtitle,metric='pp',targetMensuel=null}){
@@ -1576,7 +1634,7 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab,onQuickP
   // Un échec de cette RPC affichait 0 € — indiscernable d'un mois sans
   // signature, et donc alarmant à tort. On distingue maintenant trois états :
   // chargement, échec (on le dit), et chiffre réel.
-  const [cabinet, setCabinet] = useState({ ppCab: 0, puCab: 0, signedCount: 0, totalCount: 0 })
+  const [cabinet, setCabinet] = useState({ ppCab: 0, puCab: 0, structCab: 0, signedCount: 0, totalCount: 0 })
   const [cabinetEtat, setCabinetEtat] = useState('chargement')
   useEffect(() => {
     let alive = true
@@ -1593,6 +1651,7 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab,onQuickP
         setCabinet({
           ppCab: Number(r.pp_signee || 0),
           puCab: Number(r.pu_signee || 0),
+          structCab: Number(r.struct_signee || 0),
           signedCount: Number(r.signed_count || 0),
           totalCount: Number(r.total_count || 0),
         })
@@ -1701,7 +1760,14 @@ function AdvisorDashboard({deals,objectifs,month,profile,onEdit,onGoTab,onQuickP
       <div className="kpi-grid mb-24" style={{gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))'}}>
         <KpiCard label="Cabinet · PP signée" value={euroCab(cabinet.ppCab)} hint={hintCab(`${cabinet.signedCount} dossier${cabinet.signedCount!==1?'s':''} signé${cabinet.signedCount!==1?'s':''} sur ${cabinet.totalCount}`)} accent="gold"/>
         <KpiCard label="Cabinet · PU signée" value={euroCab(cabinet.puCab)} hint={hintCab('Versements uniques équipe')} accent="blue"/>
+        <KpiCard label="Cabinet · Structurés" value={euroCab(cabinet.structCab)} hint={hintCab('Encours retravaillé, hors PU')} accent="blue"/>
       </div>
+      {/* Le classement, visible de TOUTE l equipe : chacun voit ou il se situe,
+          c est ce qui fait avancer une equipe commerciale (Louis 07/09/2026).
+          Il vient d une RPC : un conseiller ne voit que ses propres dossiers,
+          la RLS les filtre, un calcul local ne rendrait que sa ligne. Il porte
+          des VOLUMES par personne, jamais l objectif cabinet ni un cout. */}
+      <ClassementEquipe month={month} monCode={code}/>
       {/* D3 : ce qui doit être fait aujourd'hui passe AVANT le reste. */}
       <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch}/>
       {/* C2 : les dossiers En cours sans mouvement depuis 21 jours, avec
