@@ -3709,6 +3709,13 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
   // Garde anti-double-clic, bouton Enregistrer disabled pendant le save.
   // Bug Jean 01/06/2026, doublon Celine Merle créé par double-clic rapide.
   const [isSaving,setIsSaving]=useState(false)
+  // Le refus d enregistrement, affiche DANS la modale a cote des boutons et
+  // tant qu on ne l a pas corrige : le verrou de signature (fiche client
+  // incomplete) ne se voyait qu en toast, et la carte revenait dans sa colonne
+  // sans explication visible. Efface a chaque nouvel essai et a chaque
+  // changement de dossier (la modale n est jamais demontee par App).
+  const [erreurSauvegarde,setErreurSauvegarde]=useState('')
+  useEffect(()=>{setErreurSauvegarde('')},[open,initialDeal])
 
   // B3 — création en 2 temps : à la création, mode « express » (client,
   // produits, montants, dates — l'essentiel en ~15 s) ; « Tout renseigner »
@@ -4001,6 +4008,7 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
     // Anti-réentrance, si un save est déjà en cours, on ignore le 2e clic.
     if (isSaving) return;
     setIsSaving(true);
+    setErreurSauvegarde('');
     try {
       await submitInner(e);
     } finally {
@@ -4101,7 +4109,8 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
         }
       }
 
-      await onSave(deals); // Passer le tableau de deals
+      const resultat = await onSave(deals); // Passer le tableau de deals
+      if (resultat && resultat.ok === false) { setErreurSauvegarde(resultat.message); return }
     } else {
       // Mode classique : un seul deal
       // Un dossier ne se signe pas sans produit : la rémunération et le multi
@@ -4120,7 +4129,8 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
       // Dossier existant : la fiche ne reçoit que ce qui a changé depuis sa
       // lecture à l'ouverture (lib/fiche-dossier). Un dossier neuf garde le
       // chemin d'avant : tout ce qui est rempli va sur la fiche créée.
-      await onSave(isNew ? normalized : { ...normalized, client_fiche_modifs: modifsFiche(deal, ficheInitialeRef.current, initialDeal) });
+      const resultat = await onSave(isNew ? normalized : { ...normalized, client_fiche_modifs: modifsFiche(deal, ficheInitialeRef.current, initialDeal) });
+      if (resultat && resultat.ok === false) { setErreurSauvegarde(resultat.message); return }
     }
   }
 
@@ -4813,6 +4823,11 @@ function DealModal({open,initialDeal,profile,supabase,teamProfiles=[],onClose,on
               )}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
+              {erreurSauvegarde && (
+                <div role="alert" style={{ alignSelf: 'center', maxWidth: 420, fontSize: 12.5, lineHeight: 1.4, color: 'var(--cancelled)', fontWeight: 600, textAlign: 'right' }}>
+                  {erreurSauvegarde}
+                </div>
+              )}
               <button type="button" className="btn btn-outline" onClick={requestClose} disabled={isSaving}>Annuler</button>
               <button type="submit" className="btn btn-gold" disabled={isSaving}>
                 {isSaving ? 'Enregistrement…' : isNew ? 'Créer le dossier' : 'Enregistrer'}
@@ -5316,8 +5331,44 @@ export default function App(){
         }, user.id)
       }
 
-      // Les ecritures sur la FICHE du client attendent que les dossiers
-      // soient enregistres : voir plus bas, apres la boucle d ecriture.
+      // La FICHE du client (email, telephone, statut, profession, revenus,
+      // patrimoine) s ecrit AVANT le dossier. Le verrou de signature en base
+      // lit la fiche au moment de l UPDATE du dossier : ecrite apres, elle
+      // etait encore vide quand il la regardait, et un conseiller qui
+      // remplissait revenus et patrimoine ET cochait Signe dans le meme
+      // enregistrement se voyait refuser la signature, sans que la fiche soit
+      // ecrite non plus (Alexis, dossier Manceau, 10/09/2026). Les ecritures
+      // d ATTRIBUTION (co conseiller), elles, restent apres la boucle : elles
+      // ouvrent un acces et n ont pas a preceder un dossier qui n existe pas.
+      // Enregistre / complète la data structurée sur la fiche CLIENT (email,
+      // téléphone, statut, profession, revenus, patrimoine), pour un nouveau
+      // comme pour un client existant. Ne touche que les champs renseignés.
+      // email et telephone sont indispensables ici : sans eux, la fiche d'un
+      // client EXISTANT restait vide et le verrou de signature bloquait alors
+      // que le conseiller avait bien rempli la modale.
+      // Un dossier existant apporte client_fiche_modifs (lib/fiche-dossier) :
+      // seuls les champs modifiés par rapport à la fiche lue à l'ouverture,
+      // sinon chaque Enregistrer réécrivait la fiche avec de vieilles valeurs
+      // et retamponnait updated_at et maj_par sans saisie réelle.
+      if (clientId) {
+        const modifs = cleanDeals[0].client_fiche_modifs
+        const aEcrire = modifs !== undefined ? modifs : {
+          email: cleanDeals[0].client_email,
+          telephone: cleanDeals[0].client_phone,
+          statut_pro: cleanDeals[0].client_statut_pro,
+          profession: cleanDeals[0].client_profession,
+          revenus_annuels: cleanDeals[0].client_revenus,
+          patrimoine_estime: cleanDeals[0].client_patrimoine,
+        }
+        const ficheEcrite = await clientsService.updateInfoIfProvided(clientId, aEcrire)
+        // Refus silencieux de la RLS (fiche d un autre conseiller, frequent en
+        // co conseil) : le dossier s enregistre quand meme, mais on le dit,
+        // sinon la fiche reste incomplete sans que personne ne le sache.
+        if (ficheEcrite === false && Object.values(aEcrire).some((v) => v != null && String(v).trim() !== '')) {
+          toast.error('La fiche client n a pas été mise à jour : elle appartient à un autre conseiller. Demande lui de la compléter.', { duration: 7000 })
+        }
+      }
+
 
       // Appliquer le même client_id à tous les deals + auto-aligner le month
       // sur date_signed pour les deals signés (cf alignedMonthForDeal dans
@@ -5430,8 +5481,11 @@ export default function App(){
             await dealsService.create(deal)
           }
         } catch (e) {
+          // Le message vient de la base (verrou de signature, propriete) et
+          // reste sous les yeux dans la modale : un toast de sept secondes se
+          // rate quand on regarde le kanban. Voir DealModal.erreurSauvegarde.
           toast.error(messageErreur(e))
-          return
+          return { ok: false, message: messageErreur(e) }
         }
       }
 
@@ -5481,35 +5535,6 @@ export default function App(){
               : 'Dossier enregistré. La fiche client est déjà partagée avec un autre conseiller, et elle n en accueille qu un : ton co conseiller voit le dossier, pas la fiche. La direction peut changer le co de la fiche.',
             { icon: 'ℹ️', duration: 6000 },
           )
-        }
-      }
-
-      // Enregistre / complète la data structurée sur la fiche CLIENT (email,
-      // téléphone, statut, profession, revenus, patrimoine), pour un nouveau
-      // comme pour un client existant. Ne touche que les champs renseignés.
-      // email et telephone sont indispensables ici : sans eux, la fiche d'un
-      // client EXISTANT restait vide et le verrou de signature bloquait alors
-      // que le conseiller avait bien rempli la modale.
-      // Un dossier existant apporte client_fiche_modifs (lib/fiche-dossier) :
-      // seuls les champs modifiés par rapport à la fiche lue à l'ouverture,
-      // sinon chaque Enregistrer réécrivait la fiche avec de vieilles valeurs
-      // et retamponnait updated_at et maj_par sans saisie réelle.
-      if (clientId) {
-        const modifs = cleanDeals[0].client_fiche_modifs
-        const aEcrire = modifs !== undefined ? modifs : {
-          email: cleanDeals[0].client_email,
-          telephone: cleanDeals[0].client_phone,
-          statut_pro: cleanDeals[0].client_statut_pro,
-          profession: cleanDeals[0].client_profession,
-          revenus_annuels: cleanDeals[0].client_revenus,
-          patrimoine_estime: cleanDeals[0].client_patrimoine,
-        }
-        const ficheEcrite = await clientsService.updateInfoIfProvided(clientId, aEcrire)
-        // Refus silencieux de la RLS (fiche d un autre conseiller, frequent en
-        // co conseil) : le dossier s enregistre quand meme, mais on le dit,
-        // sinon la fiche reste incomplete sans que personne ne le sache.
-        if (ficheEcrite === false && Object.values(aEcrire).some((v) => v != null && String(v).trim() !== '')) {
-          toast.error('La fiche client n a pas été mise à jour : elle appartient à un autre conseiller. Demande lui de la compléter.', { duration: 7000 })
         }
       }
 
