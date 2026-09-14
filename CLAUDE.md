@@ -220,13 +220,32 @@ Ce que l'audit a mis en évidence sans correctif de code :
   chaque pull request en déposant les captures en artefact. En local, il
   faut un serveur `vite preview` sur le port 4173 et Chromium (variable
   `PLAYWRIGHT_CHROMIUM_PATH` si celui de Playwright n'est pas installé).
-* **Hyppolite Morel arrive le 14 septembre** : son profil CRM naît à sa
-  première connexion Google, il faut alors poser le code `HYPPOLITE` et
-  rattacher sa fiche contrat (identifiant
-  `8e1bf94e-ce69-448b-abb1-bf57b82f42c2`, libellée « MOREL Hyppolite »).
-  Sa date de début est passée au 14 septembre le 2 septembre, sur décision
-  de Louis. Reste une incohérence de saisie : la fin est au 1er septembre
-  2028 alors que le début est au 14 septembre 2026, à trancher.
+* **Hyppolite Morel arrive le 14 septembre.** Le matin même, Jean n'a pas
+  réussi à le connecter au CRM : Hyppolite n'avait aucun compte CRM, rien
+  n'était cassé. Ce fichier disait à tort que le profil naît à la première
+  connexion Google : **l'écran de connexion n'a pas de bouton Google** (la
+  fonction `handleGoogleLogin` traîne dans `App.jsx` sans bouton, le lien
+  magique l'a remplacé). Un compte CRM se crée par **« Créer un compte »**
+  au bas de la page (email, mot de passe, prénom, nom), comme les quatre
+  arrivants du 1er septembre. Ni « Se connecter », ni « Mot de passe
+  oublié », ni le lien magique ne créent un compte (`shouldCreateUser:
+  false`, la base répond « Signups not allowed for otp », affiché tel quel ;
+  « Mot de passe oublié » dit « Email envoyé » même pour une adresse
+  inconnue, Jean l'a cliqué douze fois). Une adresse `@entasis-conseil.fr`
+  donne un profil actif tout de suite ; le code conseiller est posé par le
+  déclencheur `attribuer_advisor_code` à partir du prénom
+  (`generer_advisor_code('Hyppolite Morel')` rend `HYPPOLITE`, sans
+  doublon) ; Pilotage RH propose alors « Lier au contrat existant », le
+  code égalant le matricule de la fiche
+  (`8e1bf94e-ce69-448b-abb1-bf57b82f42c2`, « MOREL Hyppolite », du
+  14 septembre 2026 au 14 septembre 2028). Aucune écriture SQL nécessaire.
+* **Le lien d'invitation de l'onglet Équipe ne marche plus** :
+  `validate_invitation_token` n'est plus exécutable par `anon` (le droit
+  posé par la migration du 15 juillet a été retiré par une des migrations
+  de sécurité du 26 août ou du 6 septembre, appliquées sans fichier dans le
+  dépôt). Un invité sans session voit « lien invalide ou expiré ». La
+  dernière invitation utilisée date du 2 juillet. À rouvrir par migration,
+  ou retirer le formulaire.
 * **Une fiche contrat fantôme** : un CDI au 25 mai 2026, sans date de fin,
   sans profil rattaché, avec le drapeau `actif` à faux. Il n'entre dans
   aucun calcul, mais il traîne dans Pilotage RH. À dater ou à retirer.
@@ -457,9 +476,9 @@ demande de Louis :
   bulletin sous la main ; à corriger quand un bulletin passe.
   Aucune donnée d'un bulletin n'entre dans ce dépôt, matricule mis à part.
 * **Hyppolite Morel a son matricule `HYPPOLITE` posé d'avance** : quand son
-  profil naîtra à sa première connexion, Pilotage RH le rapprochera tout
-  seul de sa fiche. Sa fin de contrat est passée au 14 septembre 2028,
-  alignée sur son début.
+  profil naîtra (par « Créer un compte », voir plus haut), Pilotage RH le
+  rapprochera tout seul de sa fiche. Sa fin de contrat est passée au
+  14 septembre 2028, alignée sur son début.
 * **Le libellé d'une fiche contrat suit le nom du profil rattaché.** Un
   même conseiller portait jusqu'à trois orthographes, deux fiches n'avaient
   qu'un prénom. Sans effet sur le rattachement des dossiers, qui passe par
@@ -474,8 +493,9 @@ demande de Louis :
 
 Alois Carini, Charlotte Billard, Ilana Zarrouk et Eliott Bec sont
 finalisés (profil, code conseiller, fiche contrat rattachée). Hyppolite
-Morel arrive le 14. Le CRM se connecte par Google, le profil se crée à la
-première connexion ; la Lead Room a ses propres comptes.
+Morel arrive le 14. Un compte CRM se crée par « Créer un compte » sur la
+page de connexion (email et mot de passe, aucun bouton Google), le profil
+naît à ce moment là ; la Lead Room a ses propres comptes.
 
 **Aucun mot de passe ne figure dans ce dépôt, et il ne doit jamais y en
 avoir.**
