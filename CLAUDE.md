@@ -30,7 +30,7 @@ Trois commandes, dans cet ordre. Aucune ne doit régresser :
 
 ```
 npx eslint src/          # un avertissement préexistant, zéro erreur attendue
-npx vitest run           # 695 tests
+npx vitest run           # 706 tests
 npx vite build
 ```
 
@@ -348,6 +348,25 @@ sans mouvement depuis plus de 21 jours, 42 en co conseil.
   conseiller voit si le premier s'en est occupé. La colonne se remplit au
   fil des saisies, l'historique d'avant le 3 septembre n'a pas de nom.
   Migration `20260903061444_clients_maj_par_le_dernier_conseiller_qui_a_saisi.sql`.
+
+### L'écran Marchés
+
+* **Le CAC 40 ouvre la bande et a sa propre carte** sous elle : niveau,
+  variation du jour et courbe sur douze mois. Il était sixième dans la bande,
+  derrière le Nikkei et l'or, donc invisible sans attendre le défilement.
+* **Un fonds sous surveillance porte `suivi: true`** dans
+  `src/config/fonds.js`. L'écran le remonte en tête de tableau, le marque d'un
+  point doré, et un bouton « Sous surveillance » n'affiche que ceux là
+  (`ordonnerFonds`, testée). Les cinq supports du pôle prudent Abeille sont
+  marqués depuis le 14 septembre, sur demande de Louis : Carmignac
+  Investissement Latitude A, Varenne Valeur A, Helium Selection B, Moneta
+  Long Short A et Eleva Absolute Return Europe A1. Ils étaient déjà dans le
+  référentiel depuis le 24 août, ils se perdaient parmi trente sept lignes.
+* **Le retrait d'un fonds vise son ISIN, pas son rang.** Depuis que la liste
+  affichée est triée, un index n'y désigne plus la même ligne que dans l'état.
+* Les widgets TradingView et les VL Yahoo sont extérieurs : le harnais de
+  contrôle visuel coupe ces requêtes, la capture ne prouve donc que la mise
+  en page, jamais les chiffres.
 
 ### L'onglet Partenaires
 

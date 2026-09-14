@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useRef, useCallback, lazy, Suspense } from 'react'
 import { Toaster, toast } from 'react-hot-toast'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
-import { FUNDS_DEFAULT } from './config/fonds'
+import { FUNDS_DEFAULT, ordonnerFonds } from './config/fonds'
 import { logger } from './lib/logger'
 import { alertesContrats } from './lib/alertes-contrats'
 import { santeFlux, resumeSante } from './lib/sante-flux'
@@ -2824,6 +2824,7 @@ function MarketView(){
   const [newFund,setNewFund]=useState({name:'',isin:'',cat:'',refLabel:'',refSymbol:''})
   const [addError,setAddError]=useState('')
   const [addLoading,setAddLoading]=useState(false)
+  const [surveillanceSeule,setSurveillanceSeule]=useState(false)
   const [editPerfIsin,setEditPerfIsin]=useState(null)
   const [editPerfVals,setEditPerfVals]=useState({perf1W:'',perf1M:'',perf3M:'',perf1Y:''})
 
@@ -2935,6 +2936,11 @@ function MarketView(){
     el.appendChild(s)
   },[])
 
+  // Ordre d'affichage : les fonds sous surveillance d'abord, le reste dans
+  // l'ordre du référentiel. Le tri de JS est stable, l'ordre relatif tient.
+  const nbSuivis=funds.filter(f=>f.suivi).length
+  const fondsAffiches=useMemo(()=>ordonnerFonds(funds,surveillanceSeule),[funds,surveillanceSeule])
+
   // Badge de performance sur les tokens sémantiques de la charte (C1).
   function PerfBadge({val}){
     if(val==null||val===0)return <span style={{color:'var(--t3)',fontSize:11}}>—</span>
@@ -2964,6 +2970,14 @@ function MarketView(){
           </div>
         </div>
         <div style={{display:'flex',gap:8}}>
+          {nbSuivis>0&&(
+            <button
+              className={surveillanceSeule?'btn btn-gold btn-sm':'btn btn-outline btn-sm'}
+              aria-pressed={surveillanceSeule}
+              title={surveillanceSeule?'Revoir tous les fonds':'N afficher que les fonds sous surveillance'}
+              onClick={()=>setSurveillanceSeule(v=>!v)}
+            >Sous surveillance · {nbSuivis}</button>
+          )}
           <button className="btn btn-gold btn-sm" onClick={()=>{setNewFund({name:'',isin:'',cat:'',refLabel:'',refSymbol:''});setAddError('');setAddModal(true)}}>
             <Icon.Plus/> Ajouter
           </button>
@@ -3005,7 +3019,7 @@ function MarketView(){
             </tr>
           </thead>
           <tbody>
-            {funds.map((f,i)=>{
+            {fondsAffiches.map((f,i)=>{
               const d=navData[f.isin]
               const isSelected=selectedFund?.isin===f.isin
               return(
@@ -3020,7 +3034,10 @@ function MarketView(){
                 >
                   <td className="tnum" style={{color:'var(--t3)',fontWeight:600}}>{i+1}</td>
                   <td>
-                    <div className="cell-primary" style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:340}}>{f.name}</div>
+                    <div className="cell-primary" style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:340}}>
+                      {f.suivi&&<span title="Sous surveillance rapprochée" style={{display:'inline-block',width:6,height:6,borderRadius:'50%',background:'var(--gold)',marginRight:7,verticalAlign:'middle'}}/>}
+                      {f.name}
+                    </div>
                     <div className="cell-sub">{f.cat}{d?.date?` · VL au ${d.date}`:''}</div>
                   </td>
                   <td><span className="cell-mono" style={{fontSize:11,color:'var(--t3)'}}>{f.isin}</span></td>
@@ -3051,7 +3068,7 @@ function MarketView(){
                       disabled={funds.length<=1}
                       title="Retirer ce fonds de la liste"
                       aria-label={`Retirer ${f.name}`}
-                      onClick={()=>{if(funds.length>1){setFunds(prev=>prev.filter((_,j)=>j!==i));if(selectedFund?.isin===f.isin)setSelectedFund(null)}}}
+                      onClick={()=>{if(funds.length>1){setFunds(prev=>prev.filter(x=>x.isin!==f.isin));if(selectedFund?.isin===f.isin)setSelectedFund(null)}}}
                     >✕</button>
                   </td>
                 </tr>

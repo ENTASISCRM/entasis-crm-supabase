@@ -4,6 +4,12 @@
 // Extrait de App.jsx pour être partagé entre l'écran Marchés (qui suit leurs
 // performances) et les allocations types (qui les assemblent par profil).
 // Aucune donnée modifiée au passage : même liste, même ordre, mêmes ISIN.
+//
+// `suivi: true` marque un fonds sous surveillance rapprochée : l'écran
+// Marchés le remonte en tête de tableau et le signale. Demande de Louis du
+// 14 septembre sur les cinq supports du pôle prudent Abeille, qui portent une
+// allocation en cours. Trente sept lignes, cinq qui comptent aujourd'hui :
+// sans ce drapeau elles se perdent dans la liste.
 // ═══════════════════════════════════════════════════════════════════════════
 
 export const FUNDS_DEFAULT = [
@@ -50,11 +56,11 @@ export const FUNDS_DEFAULT = [
     // (LU1331973468) que j'avais saisie d'abord ne sert sur aucun contrat ;
     // SwissLife utilise la A2 (LU1920211973), à ajouter le jour où l'on
     // encodera l'allocation SwissLife 70/30 du même document.
-    {name:'Eleva Absolute Return Europe A1',   isin:'LU1331971769', cat:'Performance absolue',     refSymbol:'INDEX:CAC40',      refLabel:'CAC 40',      color:'#64748B'},
-    {name:'Moneta Long Short A',               isin:'FR0010400762', cat:'Actions Europe Long/Short',refSymbol:'INDEX:CAC40',     refLabel:'CAC 40',      color:'#A21CAF'},
-    {name:'Helium Selection B',                isin:'LU1112771503', cat:'Performance absolue',     refSymbol:'INDEX:CAC40',      refLabel:'CAC 40',      color:'#0D9488'},
-    {name:'Varenne Valeur A',                  isin:'LU2358392376', cat:'Multi-stratégies',        refSymbol:'INDEX:CAC40',      refLabel:'CAC 40',      color:'#C2410C'},
-    {name:'Carmignac Invest. Latitude A',      isin:'FR0010147603', cat:'Actions Monde Flex.',     refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',     color:'#4338CA'},
+    {name:'Eleva Absolute Return Europe A1',   isin:'LU1331971769', suivi:true, cat:'Performance absolue',     refSymbol:'INDEX:CAC40',      refLabel:'CAC 40',      color:'#64748B'},
+    {name:'Moneta Long Short A',               isin:'FR0010400762', suivi:true, cat:'Actions Europe Long/Short',refSymbol:'INDEX:CAC40',     refLabel:'CAC 40',      color:'#A21CAF'},
+    {name:'Helium Selection B',                isin:'LU1112771503', suivi:true, cat:'Performance absolue',     refSymbol:'INDEX:CAC40',      refLabel:'CAC 40',      color:'#0D9488'},
+    {name:'Varenne Valeur A',                  isin:'LU2358392376', suivi:true, cat:'Multi-stratégies',        refSymbol:'INDEX:CAC40',      refLabel:'CAC 40',      color:'#C2410C'},
+    {name:'Carmignac Invest. Latitude A',      isin:'FR0010147603', suivi:true, cat:'Actions Monde Flex.',     refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',     color:'#4338CA'},
     {name:'Robeco BP US Large Cap D-EUR',      isin:'LU0474363974', cat:'Actions USA',             refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',     color:'#BE123C'},
     {name:'Comgest Monde C',                   isin:'FR0000284689', cat:'Actions Monde Croissance',refSymbol:'FOREXCOM:SPXUSD',  refLabel:'S&P 500',     color:'#15803D'},
     {name:'CPR Global Disruptive Opp. A',      isin:'FR0010836163', cat:'Actions Innovation',      refSymbol:'NASDAQ:QQQ',       refLabel:'Nasdaq QQQ',  color:'#1E40AF'},
@@ -64,6 +70,24 @@ export const FUNDS_DEFAULT = [
     {name:'abrdn Japanese Sust. Eq. S Hgd',    isin:'LU0505784883', cat:'Actions Japon',           refSymbol:'INDEX:NKY',        refLabel:'Nikkei 225',  color:'#9F1239'},
     {name:'Amundi Actions Or P-C',             isin:'FR0012336683', cat:'Or et mines',             refSymbol:'TVC:GOLD',         refLabel:'Or',          color:'#7C2D12'},
   ]
+
+/**
+ * L'ordre d'affichage de l'écran Marchés : les fonds sous surveillance
+ * d'abord, le reste dans l'ordre du référentiel. Le tri de JS est stable,
+ * l'ordre relatif de chaque groupe tient donc sans clé secondaire.
+ *
+ * @param {Array} fonds  la liste telle que l'écran la porte (elle bouge :
+ *                       on peut ajouter ou retirer un fonds à l'écran)
+ * @param {boolean} surveillanceSeule  ne garder que les fonds suivis
+ */
+export function ordonnerFonds(fonds, surveillanceSeule = false) {
+  const liste = Array.isArray(fonds) ? fonds : []
+  const base = surveillanceSeule ? liste.filter((f) => f?.suivi) : liste
+  return [...base].sort((a, b) => (b?.suivi ? 1 : 0) - (a?.suivi ? 1 : 0))
+}
+
+// Les fonds sous surveillance rapprochée, dans l'ordre du référentiel.
+export const FONDS_SUIVIS = FUNDS_DEFAULT.filter(f => f.suivi)
 
 // Index par ISIN, pour rattacher une ligne d'allocation à son fonds.
 export const FONDS_PAR_ISIN = Object.fromEntries(FUNDS_DEFAULT.map(f => [f.isin, f]))
