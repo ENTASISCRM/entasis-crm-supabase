@@ -37,6 +37,7 @@ import * as clientsService from '../services/clients'
 import * as structureursService from '../services/structureurs'
 import { fetchRemuneration } from '../lib/remuneration-api'
 import Structureurs from './Structureurs'
+import MesStructures from './MesStructures'
 import { messageErreur } from '../lib/ui-shared'
 
 const ETATS = [
@@ -118,8 +119,10 @@ export default function UcsStructures({ profile, month }) {
   const [selectedUcsId, setSelectedUcsId] = useState(null)
   const [filters, setFilters] = useState(loadFilters)
   const [adminMode, setAdminMode] = useState(false)
-  // Sous-vue : 'catalogue' (existant) ou 'partenaires' (écran Structureurs,
-  // manager only — même détection de rôle que le mode admin ci-dessus).
+  // Sous vue : 'catalogue' (existant), 'partenaires' (écran Structureurs) ou
+  // 'positions' (Mes structurés : encours et valorisations, demande de la
+  // direction du 16/09/2026). Les deux dernières sont manager only, même
+  // détection de rôle que le mode admin plus haut.
   const [vue, setVue] = useState('catalogue')
   // Side panel structureur : visible uniquement pour les managers, ouvert au
   // clic sur un chip structureur dans une ligne du tableau.
@@ -254,6 +257,7 @@ export default function UcsStructures({ profile, month }) {
           tabs={[
             { key: 'catalogue', label: 'Catalogue' },
             { key: 'partenaires', label: 'Partenaires' },
+            { key: 'positions', label: 'Mes structurés' },
           ]}
           active={vue}
           onChange={setVue}
@@ -261,9 +265,12 @@ export default function UcsStructures({ profile, month }) {
         />
       )}
 
-      {/* Sous-vue Partenaires : écran Structureurs rendu tel quel */}
+      {/* Sous vue Partenaires : écran Structureurs rendu tel quel.
+          Sous vue Mes structurés : encours placés et valorisations saisies. */}
       {isManager && vue === 'partenaires' ? (
         <Structureurs profile={profile} />
+      ) : isManager && vue === 'positions' ? (
+        <MesStructures profile={profile} />
       ) : (
         <>
       <Header
