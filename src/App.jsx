@@ -92,6 +92,7 @@ import {
   sumAnnualPpMutuelle,
   sumPu,
   sumPuStructures,
+  sumFraisEmprunteur,
   advisorMetrics,
   monthFromDate,
   alignedMonthForDeal,
@@ -1844,6 +1845,10 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onQ
   const puP = sumPu(pipeline)
   const structS = sumPuStructures(signed)
   const structP = sumPuStructures(pipeline)
+  // Frais de dossier d assurance emprunteur : factures au client, jamais un
+  // versement. Leur propre carte, hors PU, comme les structures.
+  const fraisS = sumFraisEmprunteur(signed)
+  const fraisP = sumFraisEmprunteur(pipeline)
   const ppMutS = signedMut.reduce((s, d) => s + annualize(d.pp_m), 0)
   const ppMutP = pipelineMut.reduce((s, d) => s + annualize(d.pp_m), 0)
   const targets=objectifs[month]||{pp_target:0,pu_target:0}
@@ -1859,6 +1864,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onQ
   const prevPpS = prevSignedFin.reduce((s, d) => s + annualize(d.pp_m), 0)
   const prevPuS = sumPu(prevSigned)
   const prevStructS = sumPuStructures(prevSigned)
+  const prevFraisS = sumFraisEmprunteur(prevSigned)
   const prevPpP = prevPipelineFin.reduce((s, d) => s + annualize(d.pp_m), 0)
   const prevPpMutS = prevSignedMut.reduce((s, d) => s + annualize(d.pp_m), 0)
   const dPpS={raw:ppS-prevPpS,label:euro(Math.abs(ppS-prevPpS))}
@@ -1866,6 +1872,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onQ
   const dPpProj={raw:(ppS+ppP)-(prevPpS+prevPpP),label:euro(Math.abs((ppS+ppP)-(prevPpS+prevPpP)))}
   const dPpMutS={raw:ppMutS-prevPpMutS,label:euro(Math.abs(ppMutS-prevPpMutS))}
   const dStructS={raw:structS-prevStructS,label:euro(Math.abs(structS-prevStructS))}
+  const dFraisS={raw:fraisS-prevFraisS,label:euro(Math.abs(fraisS-prevFraisS))}
 
   const advisorRows=useMemo(()=>activeAdvisors.map(p=>{
     const m=advisorMetrics(deals,month,p.advisor_code)
@@ -1887,6 +1894,7 @@ function ManagerDashboard({deals,objectifs,month,teamProfiles,profile,onEdit,onQ
         <KpiCard label="PU prévisionnelle" value={euro(puS+puP)} hint="Atterrissage projeté" accent="blue" onOpen={()=>onGoView?.('pipeline')} openLabel="Ouvrir le pipeline"/>
         <KpiCard label="PP Mutuelle/Prévoyance" value={euro(ppMutS)} hint="Mutuelle Santé + Prévoyance TNS" accent="gold" delta={prevMonth?dPpMutS:null} onOpen={()=>onGoView?.('clients','dossiers')} openLabel="Voir les dossiers du mois"/>
         <KpiCard label="Produits structurés signés" value={euro(structS)} hint={structP>0?`Encours retravaillé · ${euro(structP)} en cours`:'Encours retravaillé, hors PU'} accent="blue" delta={prevMonth?dStructS:null} onOpen={()=>onGoView?.('ucs-structures')} openLabel="Ouvrir le catalogue"/>
+        <KpiCard label="Frais de dossier assurance emprunteur" value={euro(fraisS)} hint={fraisP>0?`Facturés au client, hors PU · ${euro(fraisP)} en cours`:'Facturés au client, hors PU'} accent="gold" delta={prevMonth?dFraisS:null} onOpen={()=>onGoView?.('clients','dossiers')} openLabel="Ouvrir les dossiers"/>
       </div>
       <div style={{marginBottom:24}}><Suspense fallback={null}><OpportunitesDuJour profile={profile} embedded onOuvrirClient={onOpenClient}/></Suspense></div>
       <ActionsDuJour deals={deals} profile={profile} onEdit={onEdit} onQuickPatch={onQuickPatch}/>
