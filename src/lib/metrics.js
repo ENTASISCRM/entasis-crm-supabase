@@ -112,11 +112,24 @@ export function estStructure(deal) {
   return p.includes('structur');
 }
 
-// Somme des PU, structures EXCLUS. Même règle 50/50 que sumAnnualPp.
-// Pour la production d une personne ou du cabinet : c est de l argent neuf.
+// Assurance emprunteur : le montant saisi en PU est un frais de dossier
+// facture au client, pas un versement. Meme regle que les structures, pour la
+// raison inverse : un structure est de l encours retravaille, un frais de
+// dossier n est pas de l encours du tout. Dans les deux cas, l ajouter a la PU
+// ferait apparaitre une collecte qui n a pas eu lieu. Il a sa propre carte sur
+// le tableau de bord de la direction (demande de Louis, 16/09/2026).
+export function estAssuranceEmprunteur(deal) {
+  const p = String(deal?.product || deal?.produit || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  return p.includes('assurance de pret') || p.includes('assurance emprunteur');
+}
+
+// Somme des PU, structures et frais de dossier EXCLUS. Même règle 50/50 que
+// sumAnnualPp. Pour la production d une personne ou du cabinet : c est de
+// l argent neuf.
 export function sumPu(deals, advisorCode) {
   return deals.reduce((sum, d) => {
-    if (estStructure(d)) return sum;
+    if (estStructure(d) || estAssuranceEmprunteur(d)) return sum;
     const pu = Number(d.pu || 0);
     if (advisorCode && d.co_advisor_code) return sum + pu * 0.5;
     return sum + pu;
@@ -129,6 +142,18 @@ export function sumPu(deals, advisorCode) {
 export function sumPuStructures(deals, advisorCode) {
   return deals.reduce((sum, d) => {
     if (!estStructure(d)) return sum;
+    const pu = Number(d.pu || 0);
+    if (advisorCode && d.co_advisor_code) return sum + pu * 0.5;
+    return sum + pu;
+  }, 0);
+}
+
+// Somme des frais de dossier d assurance emprunteur, et rien d autre. Ce que
+// le cabinet facture au client sur ce produit : la seule base de remuneration
+// du dossier, qui ne doit jamais se confondre avec un versement.
+export function sumFraisEmprunteur(deals, advisorCode) {
+  return deals.reduce((sum, d) => {
+    if (!estAssuranceEmprunteur(d)) return sum;
     const pu = Number(d.pu || 0);
     if (advisorCode && d.co_advisor_code) return sum + pu * 0.5;
     return sum + pu;

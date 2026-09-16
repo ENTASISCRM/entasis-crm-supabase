@@ -10,6 +10,8 @@ import {
   advisorMetrics,
   sumPuStructures,
   estStructure,
+  sumFraisEmprunteur,
+  estAssuranceEmprunteur,
   advisorMetrics,
   monthFromDate,
   alignedMonthForDeal, estSimpleRdv, entonnoirLeads, compterPipeline } from './metrics';
@@ -424,6 +426,16 @@ describe('les produits structures ne gonflent pas la PU', () => {
   it('sumPu ignore les structures, sumPuStructures ne compte qu eux', () => {
     expect(sumPu([av, struct])).toBe(200000)
     expect(sumPuStructures([av, struct])).toBe(100000)
+  })
+
+  it('sumPu ignore aussi les frais de dossier d assurance emprunteur', () => {
+    // 500 euros de frais factures au client ne sont pas 500 euros de collecte.
+    const emprunteur = { product: 'Assurance de Prêt', pu: 500 }
+    expect(sumPu([av, struct, emprunteur])).toBe(200000)
+    expect(sumFraisEmprunteur([av, struct, emprunteur])).toBe(500)
+    expect(sumFraisEmprunteur([{ product: 'Assurance de Prêt', pu: 500, co_advisor_code: 'X' }], 'LH')).toBe(250)
+    expect(estAssuranceEmprunteur({ product: 'Assurance de Pret' })).toBe(true)
+    expect(estAssuranceEmprunteur({ product: 'Produits Structurés' })).toBe(false)
   })
 
   it('reconnait le libelle quelle que soit sa saisie', () => {
