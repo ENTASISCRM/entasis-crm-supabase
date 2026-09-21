@@ -73,6 +73,9 @@ migration 7.
 Journal : joue le 21 septembre 2026 sur DEV, sept etapes vertes avant la
 relecture adversariale ; puis, corrections appliquees sur DEV
 (`academy_6_correctifs_relecture`, version 20260921152944) et reportees
-dans le fichier de migration 6 du depot (corps des fonctions identiques
-octet pour octet, verifie par md5), dix etapes vertes. En production, la
-migration 6 corrigee s applique telle quelle.
+dans les fichiers de migration 6, 6b et 6c du depot (une seule migration
+logique en trois fichiers, chacun assez court pour l outil MCP ; corps des
+fonctions identiques octet pour octet, verifie par md5), dix etapes vertes.
+En production, les trois fichiers corriges s appliquent tels quels, dans
+l ordre ; sur DEV, le meme contenu est enregistre sous le nom unique
+`academy_6_entrainement` plus `academy_6_correctifs_relecture`.

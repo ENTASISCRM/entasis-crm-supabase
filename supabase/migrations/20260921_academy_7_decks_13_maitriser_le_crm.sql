@@ -38,7 +38,7 @@ begin
   update public.academy_module_versions set memo_md = $academy_deck$Une fiche complète, un échange consigné, une suite datée : voilà ce que le CRM attend après chaque contact.
 
 ## Créer un dossier
-- Trois chemins : bouton « Nouveau dossier », touche N’hors saisie, palette ⌘K.
+- Trois chemins : bouton « Nouveau dossier », touche N hors saisie, palette ⌘K.
 - Client connu : « Rechercher un client existant », sinon doublon.
 - Express : nom, email, téléphone, mois, un produit, date prévue.
 - Quatre statuts : En cours, RDV calé (valeur « Prévu »), Signé, Annulé.
@@ -65,7 +65,7 @@ $academy_deck$, competence = coalesce(nullif($academy_deck$Tenir une fiche, trac
   insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
   values (v_ver, 1, $academy_deck$choix$academy_deck$, $academy_deck$Créer un dossier$academy_deck$, 1, $academy_deck${"enonce":"Vous êtes sur l'écran Pipeline, aucun champ n'a le focus, aucune modale n'est ouverte. Quelle touche ouvre « Nouveau dossier » ?","choix":["N","Entrée","/","?"]}$academy_deck$::jsonb)
   returning id into v_item;
-  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":0}$academy_deck$::jsonb, $academy_deck$La touche N’ouvre « Nouveau dossier » hors saisie et hors onglet Leads ; « ? » affiche l'aide des raccourcis.$academy_deck$);
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":0}$academy_deck$::jsonb, $academy_deck$La touche N ouvre « Nouveau dossier » hors saisie et hors onglet Leads ; « ? » affiche l'aide des raccourcis.$academy_deck$);
   insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
   values (v_ver, 2, $academy_deck$choix$academy_deck$, $academy_deck$Créer un dossier$academy_deck$, 2, $academy_deck${"enonce":"Cas fictif. Vous enregistrez le dossier de Monsieur Piel en statut En cours ; le CRM refuse. Produit et compagnie sont renseignés, la fiche est à « Signature 6/6 ». Quel champ manque le plus probablement ?","choix":["« Date de signature effective »","« Date de signature prévue »","« Co-conseiller »","« Source »"]}$academy_deck$::jsonb)
   returning id into v_item;
@@ -131,7 +131,7 @@ $academy_deck$, competence = coalesce(nullif($academy_deck$Tenir une fiche, trac
   returning id into v_item;
   insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"indices":[0,1,2]}$academy_deck$::jsonb, $academy_deck$Six champs : email, téléphone, statut, profession, revenus annuels, patrimoine estimé ; date de naissance et situation familiale comptent pour la jauge.$academy_deck$);
   insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
-  values (v_ver, 18, $academy_deck$multi$academy_deck$, $academy_deck$Créer un dossier$academy_deck$, 2, $academy_deck${"enonce":"Cochez tout ce qui ouvre la modale « Nouveau dossier ».","choix":["Le bouton doré « Nouveau dossier » en haut à droite des écrans commerciaux","La touche N’hors saisie","La palette ⌘K et son action « Nouveau dossier »","Le bouton « + Nouveau client » de l'Annuaire","Le bouton « Nouvelle relance » de l'Agenda"]}$academy_deck$::jsonb)
+  values (v_ver, 18, $academy_deck$multi$academy_deck$, $academy_deck$Créer un dossier$academy_deck$, 2, $academy_deck${"enonce":"Cochez tout ce qui ouvre la modale « Nouveau dossier ».","choix":["Le bouton doré « Nouveau dossier » en haut à droite des écrans commerciaux","La touche N hors saisie","La palette ⌘K et son action « Nouveau dossier »","Le bouton « + Nouveau client » de l'Annuaire","Le bouton « Nouvelle relance » de l'Agenda"]}$academy_deck$::jsonb)
   returning id into v_item;
   insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"indices":[0,1,2]}$academy_deck$::jsonb, $academy_deck$Trois chemins ouvrent la même modale ; « + Nouveau client » crée une fiche et « Nouvelle relance » un événement Google.$academy_deck$);
   insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)

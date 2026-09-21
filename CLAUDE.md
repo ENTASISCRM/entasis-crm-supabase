@@ -576,7 +576,8 @@ Ce qu'il faut savoir avant d'y toucher :
   route = hash après `#/formation/`.
 
 Pour tester : DEV, migrations 1 à 7 dans l'ordre (les seeds 3 sont ceux
-des leçons, désormais sans usage ; les seeds 7 sont les decks, un fichier
+des leçons, désormais sans usage ; la 6 tient en trois fichiers, 6, 6b et
+6c, à appliquer dans cet ordre ; les seeds 7 sont les decks, un fichier
 par deck, idempotents) ; `scripts/academy/tests-sql/acceptation-entrainement.sql`
 (un bloc `DO`, dix étapes, se termine par `TESTS OK`) ; côté écran
 `npm run test:visuel` (scénarios `formation-*`). Les decks se régénèrent

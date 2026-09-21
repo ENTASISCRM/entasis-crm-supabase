@@ -494,7 +494,8 @@ CREATE TABLE dossiers_immo (
 
 Migrations `supabase/migrations/20260921_academy_1..7*`. Le socle (1) et
 les fonctions de la première version (2, leçons et quiz) sont remplacés
-côté fonctions par la migration 6 (mode entraînement) ; la 5 garde le
+côté fonctions par la migration 6 (mode entraînement, en trois fichiers 6,
+6b et 6c pour tenir dans l'outil d'application) ; la 5 garde le
 garde fou des parcours ; la 7 sème les decks (un fichier par deck, en
 brouillon). Les tables de la première version restent sans usage.
 

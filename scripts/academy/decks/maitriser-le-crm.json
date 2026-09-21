@@ -2,7 +2,7 @@
  "slug": "maitriser-le-crm",
  "titre": "Maîtriser le CRM Entasis",
  "competence": "Tenir une fiche, tracer un échange, programmer le suivi et utiliser les étapes réellement présentes dans le CRM",
- "memo_md": "Une fiche complète, un échange consigné, une suite datée : voilà ce que le CRM attend après chaque contact.\n\n## Créer un dossier\n- Trois chemins : bouton « Nouveau dossier », touche N’hors saisie, palette ⌘K.\n- Client connu : « Rechercher un client existant », sinon doublon.\n- Express : nom, email, téléphone, mois, un produit, date prévue.\n- Quatre statuts : En cours, RDV calé (valeur « Prévu »), Signé, Annulé.\n- Date prévue obligatoire pour En cours et RDV calé ; date effective pour Signé.\n\n## Compléter la fiche\n- Six champs pour signer : email, téléphone, statut, profession, revenus annuels, patrimoine estimé (« Signature n/6 »).\n- Jauge de complétude : huit champs pondérés, quatre niveaux, de « Complète » à « À démarrer ».\n- Un montant à 0 passe le verrou mais fausse la fiche.\n\n## Suivre et relancer\n- Une relance vit dans « Prochaine action » et « Pour le » ; l'Agenda ne crée qu'un événement Google.\n- Gabarits : devis standard J+2, J+7, J+15 ; suite de rendez vous J+1, J+5, J+12 ; pièces manquantes J+3, J+10, J+20. Aucun email envoyé.\n- « Ma journée » : RDV du jour, relances en retard, relances du jour. Trois gestes : Fait, → demain, → +7 j, annulables sept secondes.\n- Fait arme l'étape suivante depuis aujourd'hui.\n- « Dossiers sans mouvement » : En cours, sans « Pour le », plus de 21 jours sans modification. Gestes : Déjà signé, Toujours en cours, Relancer, Abandonner.\n\n## Tracer et signer\n- Fiche client, onglet Historique, « + Consigner un échange ».\n- Trois verrous : fiche complète, produit choisi, « Date de signature effective ».\n- Lendemain d'un RDV calé : « RDV tenu » ou « No-show ».\n- La direction lit « Complétude des fiches » dans Équipe, sans montant.\n",
+ "memo_md": "Une fiche complète, un échange consigné, une suite datée : voilà ce que le CRM attend après chaque contact.\n\n## Créer un dossier\n- Trois chemins : bouton « Nouveau dossier », touche N hors saisie, palette ⌘K.\n- Client connu : « Rechercher un client existant », sinon doublon.\n- Express : nom, email, téléphone, mois, un produit, date prévue.\n- Quatre statuts : En cours, RDV calé (valeur « Prévu »), Signé, Annulé.\n- Date prévue obligatoire pour En cours et RDV calé ; date effective pour Signé.\n\n## Compléter la fiche\n- Six champs pour signer : email, téléphone, statut, profession, revenus annuels, patrimoine estimé (« Signature n/6 »).\n- Jauge de complétude : huit champs pondérés, quatre niveaux, de « Complète » à « À démarrer ».\n- Un montant à 0 passe le verrou mais fausse la fiche.\n\n## Suivre et relancer\n- Une relance vit dans « Prochaine action » et « Pour le » ; l'Agenda ne crée qu'un événement Google.\n- Gabarits : devis standard J+2, J+7, J+15 ; suite de rendez vous J+1, J+5, J+12 ; pièces manquantes J+3, J+10, J+20. Aucun email envoyé.\n- « Ma journée » : RDV du jour, relances en retard, relances du jour. Trois gestes : Fait, → demain, → +7 j, annulables sept secondes.\n- Fait arme l'étape suivante depuis aujourd'hui.\n- « Dossiers sans mouvement » : En cours, sans « Pour le », plus de 21 jours sans modification. Gestes : Déjà signé, Toujours en cours, Relancer, Abandonner.\n\n## Tracer et signer\n- Fiche client, onglet Historique, « + Consigner un échange ».\n- Trois verrous : fiche complète, produit choisi, « Date de signature effective ».\n- Lendemain d'un RDV calé : « RDV tenu » ou « No-show ».\n- La direction lit « Complétude des fiches » dans Équipe, sans montant.\n",
  "items": [
   {
    "cle": "i01",
@@ -21,7 +21,7 @@
    "corrige": {
     "index": 0
    },
-   "explication": "La touche N’ouvre « Nouveau dossier » hors saisie et hors onglet Leads ; « ? » affiche l'aide des raccourcis."
+   "explication": "La touche N ouvre « Nouveau dossier » hors saisie et hors onglet Leads ; « ? » affiche l'aide des raccourcis."
   },
   {
    "cle": "i02",
@@ -306,7 +306,7 @@
     "enonce": "Cochez tout ce qui ouvre la modale « Nouveau dossier ».",
     "choix": [
      "Le bouton doré « Nouveau dossier » en haut à droite des écrans commerciaux",
-     "La touche N’hors saisie",
+     "La touche N hors saisie",
      "La palette ⌘K et son action « Nouveau dossier »",
      "Le bouton « + Nouveau client » de l'Annuaire",
      "Le bouton « Nouvelle relance » de l'Agenda"
