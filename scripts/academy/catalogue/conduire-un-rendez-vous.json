@@ -1,0 +1,358 @@
+{
+ "numero": 10,
+ "slug": "conduire-un-rendez-vous",
+ "titre": "Conduire un rendez-vous et répondre aux objections",
+ "theme": "methode",
+ "niveau": "perfectionnement",
+ "competence": "Reformuler, expliquer les frais, répondre sans promettre et conclure une prochaine étape",
+ "objectif": "À la fin du module, le conseiller sait accueillir une objection, la reformuler jusqu'à validation du client, présenter les frais d'une solution et la rémunération du cabinet de façon complète, répondre sans promesse de rendement ni superlatif, et terminer chaque rendez-vous par une prochaine étape datée et tracée.",
+ "duree_minutes": 16,
+ "prerequis": [
+  "reussir-la-decouverte"
+ ],
+ "responsable_relecture": "à désigner par la direction",
+ "a_completer_par_le_cabinet": [
+  "Statut réglementaire exact du cabinet et des conseillers (CIF, courtier en assurance, autres inscriptions ORIAS) : à confirmer avant de citer une habilitation en rendez-vous.",
+  "Mode de rémunération du cabinet (honoraires, commissions, les deux) et formulation validée à employer devant le client.",
+  "Modèle de lettre de mission ou de document d'entrée en relation en vigueur, et moment de sa remise dans le parcours.",
+  "Support interne de présentation des frais (tableau, simulateur) à utiliser en rendez-vous, s'il existe.",
+  "Procédure de saisie de la prochaine étape dans le CRM : champ, statut et délai attendus après un rendez-vous.",
+  "Délai interne d'envoi du compte rendu ou de la feuille de route après un rendez-vous.",
+  "Conditions du premier entretien (gratuit, sans engagement, facturé) et formulation à employer.",
+  "Contenu exact de l'accompagnement inclus dans la rémunération (fréquence des points de suivi, coordination avec les autres professionnels du client) tel qu'il figure dans la lettre de mission."
+ ],
+ "lecons": [
+  {
+   "slug": "l1",
+   "titre": "Reformuler avant de répondre",
+   "duree_minutes": 5,
+   "objectif_observable": "Reformuler une objection client en une phrase que le client valide, puis poser une question de précision avant toute réponse.",
+   "corps_markdown": "## Explication simple\n\nUne objection n'est pas une attaque. C'est une information sur ce que le client comprend, craint ou attend. Quand un client dit « Pourquoi payer des frais alors que je peux investir seul ? », il dit trois choses à la fois : il a une idée du coût, il a une idée de ce qu'il sait faire seul, et il ne voit pas encore ce que le cabinet apporte. Répondre tout de suite, c'est répondre à la question que l'on croit avoir entendue. Reformuler, c'est vérifier que l'on a bien entendu.\n\nLa reformulation se fait en trois temps. Accueillir : « C'est une question légitime. » Reformuler : « Si je vous comprends bien, vous vous demandez ce que le cabinet apporte de plus que ce que vous feriez vous-même, et si cela justifie un coût. C'est bien cela ? » Faire préciser : « Concrètement, que feriez-vous seul ? » Vous ne répondez qu'après sa confirmation.\n\nCette posture prolonge la méthode du cabinet : l'écoute précède l'étude. Elle répond aussi à une obligation. Le code monétaire et financier demande au conseiller en investissements financiers d'agir de manière honnête, loyale et professionnelle, et de recueillir la situation et les objectifs du client avant de conseiller. Reformuler, c'est la version orale de ce recueil.\n\n## Exemple\n\nCas fictif. Madame Aubert, 44 ans, kinésithérapeute libérale, reçoit une proposition d'assurance vie multisupports. Elle coupe : « Franchement, avec une application en ligne je place moi-même, pourquoi payer des frais ? »\n\nRéponse réactive : le conseiller énumère aussitôt les services du cabinet, le suivi, l'expertise. Madame Aubert n'a rien demandé de tout cela. Elle se ferme.\n\nRéponse reformulée : « Vous avez raison de poser la question. Si je comprends bien, vous savez déjà ouvrir un contrat seule, et vous cherchez ce qui, dans notre accompagnement, vaudrait un coût en plus. C'est cela ? » Elle précise : « Oui, et surtout je ne veux pas payer pour quelqu'un qui me met sur un fonds sans regarder ma situation. » La vraie objection apparaît : elle craint un conseil impersonnel, pas le coût en soi. Le conseiller peut alors parler de l'analyse patrimoniale et de la feuille de route, ce qui répond exactement à sa crainte.\n\n## Erreur fréquente\n\nTrois erreurs reviennent. La première : dérouler une liste d'arguments sans avoir vérifié la question. La deuxième : reformuler en déformant, par exemple « Vous trouvez que c'est trop cher », alors que le client n'a pas parlé de prix mais de valeur ajoutée. Le client se sent mal compris. La troisième : reformuler avec une question qui oriente, du type « Vous voulez donc un conseil personnalisé, n'est-ce pas ? ». C'est une réponse déguisée, pas une reformulation.\n\n## En rendez-vous\n\nQuand l'objection tombe, marquez un temps. Notez le mot exact employé par le client. Reformulez en une phrase et terminez par « C'est bien cela ? ». Laissez le silence faire son travail : le client complète souvent de lui-même. Posez ensuite une seule question de précision. Écrivez la reformulation validée dans le compte rendu du rendez-vous : elle servira à rédiger la feuille de route et à préparer le prochain échange.\n\n## Trois points à retenir\n\n1. Une objection est une information : elle dit ce que le client comprend et craint.\n2. Reformuler, puis faire valider par le client, avant de répondre.\n3. Une reformulation fidèle reprend les mots du client, sans les traduire ni les orienter.",
+   "mini_question": {
+    "cle": "q01",
+    "type": "qcm",
+    "lecon": "l1",
+    "competence": "Reformuler une objection",
+    "enonce": "Cas fictif. En plein rendez-vous, un dirigeant vous dit : « Pourquoi payer des frais alors que je peux investir seul ? » Quelle est la première chose à faire ?",
+    "choix": [
+     "Reformuler ce que vous avez compris et demander au client s'il confirme",
+     "Présenter immédiatement la liste des services inclus dans l'accompagnement",
+     "Répondre que les frais sont négociables pour éviter de perdre le client",
+     "Changer de sujet et revenir sur les objectifs de vie évoqués plus tôt"
+    ],
+    "bonne_reponse": 0,
+    "explication": "La leçon 1 pose la règle : une objection est une information, on la reformule et on la fait valider avant d'y répondre. Répondre tout de suite, c'est répondre à la question que l'on croit avoir entendue. Négocier ou éviter le sujet ne traite pas la question posée.",
+    "difficulte": "1"
+   },
+   "sources": [
+    {
+     "titre": "Article L541-8-1 du code monétaire et financier (règles de bonne conduite des conseillers en investissements financiers)",
+     "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000035043376",
+     "emetteur": "Légifrance",
+     "date_consultation": "2026-09-21",
+     "date_validite": "Version en vigueur depuis le 3 janvier 2018",
+     "ce_qu_elle_etablit": "Le CIF agit de manière honnête, loyale et professionnelle, dans le meilleur intérêt du client ; il recueille sa situation financière, ses objectifs, sa connaissance et son expérience avant de conseiller ; toute information adressée au client est exacte, claire et non trompeuse."
+    },
+    {
+     "titre": "Article L521-4 du code des assurances (précision des exigences et besoins, conseil motivé)",
+     "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000036920558",
+     "emetteur": "Légifrance",
+     "date_consultation": "2026-09-21",
+     "date_validite": "Version en vigueur depuis le 1er octobre 2018",
+     "ce_qu_elle_etablit": "Avant la conclusion d'un contrat d'assurance, le distributeur précise par écrit les exigences et les besoins du client, fournit une information objective, compréhensible, exacte et non trompeuse, et motive son conseil."
+    }
+   ]
+  },
+  {
+   "slug": "l2",
+   "titre": "Expliquer les frais sans les cacher",
+   "duree_minutes": 5,
+   "objectif_observable": "Présenter au client les catégories de frais d'une solution et la rémunération du cabinet, en pourcentage et en euros sur son propre montant, avant toute recommandation.",
+   "corps_markdown": "## Explication simple\n\nL'AMF classe les frais des placements en deux familles. Les frais ponctuels : frais d'entrée ou frais sur versement, frais de sortie ou de retrait. Les frais récurrents : frais de gestion prélevés chaque année, et parfois une commission de surperformance. En assurance vie s'ajoutent les frais d'arbitrage, prélevés à chaque transfert entre supports. En assurance vie, il y a deux étages : les frais du contrat (versement, gestion du contrat, arbitrage) et les frais des supports détenus dans le contrat (frais courants du fonds, indiqués dans son document d'informations clés).\n\nLes frais récurrents pèsent dans la durée. Exemple pédagogique du guide AMF : 5 000 euros placés avec 1 % de frais par an supportent 50 euros la première année ; avec un rendement brut hypothétique de 5 % par an et 2 % de frais d'entrée, le rendement net de tous frais ressort à environ 2,9 % après deux ans et 3,5 % après cinq ans. C'est un exemple de calcul, pas une performance attendue.\n\nTroisième élément : la rémunération du cabinet. Pour un conseiller en investissements financiers, la lettre de mission remise avant le conseil indique les conditions de rémunération, les coûts et frais et une mise en garde sur les risques. En assurance vie en unités de compte, l'information précontractuelle présente la performance brute de frais, la performance nette de frais et les frais prélevés. Le mode de rémunération d'Entasis et sa formulation devant le client sont [à compléter par le cabinet].\n\n## Exemple\n\nCas fictif. Monsieur Lenoir, 51 ans, gérant majoritaire de SARL, envisage de verser 40 000 euros sur une assurance vie. Il compare avec une plateforme en ligne. Le conseiller écrit deux colonnes. Contrat : frais sur versement en pourcentage et en euros sur 40 000 euros, frais de gestion annuels sur le fonds en euros et sur les unités de compte, frais d'arbitrage. Supports : frais courants des fonds envisagés, lus dans leur document d'informations clés. Il ajoute une ligne : la rémunération du cabinet, telle que la lettre de mission la décrit. Puis il dit ce que le cabinet fait en contrepartie : analyse patrimoniale et feuille de route, puis le suivi prévu par le cabinet [à compléter par le cabinet]. Il ne dit pas que cela « rapportera plus ». Il dit ce que cela coûte et ce que cela comprend.\n\n## Erreur fréquente\n\nAnnoncer un frais en pourcentage seulement : 2 % paraît petit, 800 euros sur 40 000 euros parle. Oublier l'étage des supports et présenter les seuls frais du contrat. Minimiser avec un mot comme « négligeable » ou « classique ». Dire que le conseil est gratuit ou « offert » : même si le premier entretien ne donne lieu à aucune facturation [à compléter par le cabinet], le conseil a un mode de rémunération que le client doit connaître.\n\n## En rendez-vous\n\nPréparez les documents d'informations clés des solutions envisagées et repérez la rubrique frais. Présentez les frais avant la recommandation, pas après. Écrivez les montants en euros sur le versement réel du client. Nommez les deux étages en assurance vie. Indiquez à quoi sert chaque frais. Terminez par la rémunération du cabinet et ce qu'elle comprend. Demandez : « Est-ce clair pour vous ? Souhaitez-vous que je vous l'adresse par écrit ? » Le support interne de présentation des frais, s'il existe, est [à compléter par le cabinet].\n\n## Trois points à retenir\n\n1. Deux familles de frais, ponctuels et récurrents, et deux étages en assurance vie, contrat et supports.\n2. Toujours en pourcentage et en euros, sur le montant réel du client, avant la recommandation.\n3. La rémunération du cabinet se dit, s'écrit dans la lettre de mission, et s'accompagne de ce qu'elle comprend.",
+   "mini_question": {
+    "cle": "q05",
+    "type": "qcm",
+    "lecon": "l2",
+    "competence": "Expliquer les frais",
+    "enonce": "Cas fictif. Vous présentez une assurance vie multisupports à une cliente. Quelle présentation des frais est complète ?",
+    "choix": [
+     "Les frais sur versement et les frais de gestion du contrat, puisque les supports sont gérés par la compagnie",
+     "Les frais du contrat (versement, gestion, arbitrage) et les frais courants des supports, plus la rémunération du cabinet",
+     "Les frais courants des fonds indiqués dans leur document d'informations clés, qui regroupent tous les frais",
+     "Le taux de frais global annoncé par l'assureur, qui suffit pour comparer avec une plateforme"
+    ],
+    "bonne_reponse": 1,
+    "explication": "La leçon 2 distingue deux étages en assurance vie : les frais du contrat et les frais des supports détenus dans le contrat, auxquels s'ajoute la rémunération du cabinet. Ne présenter qu'un étage fait croire au client qu'il paie moins qu'il ne paie.",
+    "difficulte": "2"
+   },
+   "sources": [
+    {
+     "titre": "S'informer sur les frais liés à vos investissements financiers (guide pédagogique)",
+     "url": "https://www.amf-france.org/sites/institutionnel/files/private/2023-10/les-frais-des-placements-financiers-2023.pdf",
+     "emetteur": "Autorité des marchés financiers (AMF)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "Édition 2023",
+     "ce_qu_elle_etablit": "Typologie des frais (frais d'entrée et de sortie, frais récurrents, commission de surperformance, frais sur versement, de gestion, d'arbitrage et de retrait en assurance vie), exemple chiffré de l'effet des frais sur le rendement net, et conseil de lire la rubrique frais du document d'informations clés ou du prospectus."
+    },
+    {
+     "titre": "Article 325-6 du règlement général de l'AMF (lettre de mission du conseiller en investissements financiers)",
+     "url": "https://www.amf-france.org/en/eli/fr/aai/amf/rg/article/325-6/20180608/notes",
+     "emetteur": "Autorité des marchés financiers (AMF)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "Version en vigueur depuis le 8 juin 2018",
+     "ce_qu_elle_etablit": "Avant de formuler un conseil, le CIF soumet au client une lettre de mission signée des deux parties, qui précise notamment la nature du service, les conditions de rémunération, le caractère indépendant ou non du conseil, une mise en garde sur les risques et les coûts et frais associés."
+    },
+    {
+     "titre": "Article L522-5 du code des assurances (contrats de capitalisation et d'assurance vie : information et conseil)",
+     "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000048252377",
+     "emetteur": "Légifrance",
+     "date_consultation": "2026-09-21",
+     "date_validite": "Version en vigueur depuis le 24 octobre 2024",
+     "ce_qu_elle_etablit": "Pour les contrats en unités de compte, une information détaillée est fournie avant souscription, incluant la performance brute de frais, la performance nette de frais et les frais prélevés ; le conseil précise les raisons qui le motivent."
+    },
+    {
+     "titre": "Article L541-8-1 du code monétaire et financier",
+     "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000035043376",
+     "emetteur": "Légifrance",
+     "date_consultation": "2026-09-21",
+     "date_validite": "Version en vigueur depuis le 3 janvier 2018",
+     "ce_qu_elle_etablit": "Les comptes rendus adressés au client incluent les coûts liés aux services fournis pour son compte ; le CIF ne rémunère ni n'évalue ses collaborateurs d'une manière qui nuirait à l'intérêt du client."
+    }
+   ]
+  },
+  {
+   "slug": "l3",
+   "titre": "Répondre sans promettre, conclure sur une étape",
+   "duree_minutes": 5,
+   "objectif_observable": "Formuler une réponse à une objection sans promesse de rendement ni superlatif, puis fixer une prochaine étape avec une action, une date et un responsable.",
+   "corps_markdown": "## Explication simple\n\nUne fois l'objection reformulée et les frais posés, il reste à répondre. Toute information adressée au client doit être exacte, claire et non trompeuse. Cela interdit trois familles de phrases. Les promesses de résultat : « vous ferez mieux qu'en solo ». Les superlatifs : « le meilleur contrat ». Les garanties implicites : « sans risque », « sécurisé », hors mention exacte de la garantie du fonds en euros. L'AMF rappelle que toute indication de performance passée doit s'accompagner de la mention que ces performances ne préjugent pas des performances futures, et d'une information sur le risque.\n\nQue dire alors ? Ce que le cabinet fait : l'écoute, l'étude, l'accompagnement, la coordination avec les autres professionnels du client. Ce que disent les documents d'informations clés : scénarios et frais. Ce que l'on ne sait pas : « Je ne peux pas vous dire ce que fera le marché. » Une réponse honnête tient en trois temps : reconnaître la part de vérité de l'objection, décrire ce que le cabinet apporte, nommer les risques et les limites.\n\nEnfin, un rendez-vous ne se termine pas sur un accord vague, mais sur une prochaine étape : une action, une date, un responsable, un document. Les exigences et besoins du client sont précisés par écrit avant tout contrat d'assurance ; pour le CIF, la lettre de mission précède le conseil. La prochaine étape est souvent l'envoi de ces documents. Sa saisie dans le CRM suit une procédure [à compléter par le cabinet].\n\n## Exemple\n\nCas fictif. Monsieur Ravel, 58 ans, chirurgien-dentiste, après l'explication des frais : « Vous me garantissez que je ferai mieux avec vous qu'avec mes placements en ligne ? »\n\nRéponse à proscrire : « Avec notre sélection, vous serez gagnant. » C'est une promesse de résultat.\n\nRéponse conforme : « Non, je ne peux pas vous le garantir, et personne ne le peut honnêtement. Ce sur quoi je m'engage, c'est la méthode : une analyse patrimoniale et une feuille de route, puis le suivi prévu par le cabinet [à compléter par le cabinet]. Les unités de compte présentent un risque de perte en capital, je vous le redirai par écrit. »\n\nConclusion : « Je vous adresse jeudi la lettre de mission et un état des frais chiffré sur vos 60 000 euros. Nous nous revoyons le 12 à 18 h pour la feuille de route. Cela vous convient-il ? »\n\n## Erreur fréquente\n\nRépondre à « vous me garantissez ? » par un oui atténué : « En principe, oui. » Compenser l'absence de promesse par un superlatif sur le cabinet. Citer une performance passée sans la mise en garde. Côté conclusion, terminer par « je reviens vers vous » sans date, ou par « réfléchissez et rappelez-moi », qui laisse au client la charge de la suite.\n\n## En rendez-vous\n\nAvant de répondre, demandez-vous : cette phrase est-elle vraie quel que soit le comportement des marchés ? Si non, reformulez-la. Remplacez « vous gagnerez » par « voici ce que nous faisons ». Nommez le risque à voix haute, même sans question du client. Puis prenez l'agenda : proposez une action, une date et un livrable, faites valider, relisez à voix haute avant de vous quitter. Saisissez-la dans le CRM dès la fin du rendez-vous avec l'objection reformulée et la réponse donnée. Le délai interne d'envoi du compte rendu est [à compléter par le cabinet].\n\n## Trois points à retenir\n\n1. Exacte, claire, non trompeuse : aucune promesse de résultat, aucun superlatif, les risques nommés.\n2. On s'engage sur une méthode de travail, jamais sur une performance.\n3. Un rendez-vous se conclut sur une action, une date, un responsable et un document, validés avec le client.",
+   "mini_question": {
+    "cle": "q08",
+    "type": "qcm",
+    "lecon": "l3",
+    "competence": "Répondre sans promettre et conclure",
+    "enonce": "Cas fictif. Une cliente demande : « Avec vous, je suis sûre de faire mieux que seule ? » Quelle réponse respecte l'obligation d'information exacte, claire et non trompeuse ?",
+    "choix": [
+     "« Oui, nos clients font systématiquement mieux, c'est notre métier. »",
+     "« Non, personne ne peut le garantir ; ce sur quoi je m'engage, c'est la méthode, avec ses risques que je vous nommerai par écrit. »",
+     "« Nos fonds ont fait 7 % l'an dernier, ce qui parle de soi-même. »",
+     "« En principe oui, sauf accident de marché, mais c'est rare. »"
+    ],
+    "bonne_reponse": 1,
+    "explication": "La leçon 3 enseigne qu'on s'engage sur une méthode, jamais sur une performance. Les autres réponses promettent un résultat, citent une performance passée sans mise en garde ou atténuent un oui qui reste une promesse.",
+    "difficulte": "2"
+   },
+   "sources": [
+    {
+     "titre": "Article L541-8-1 du code monétaire et financier",
+     "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000035043376",
+     "emetteur": "Légifrance",
+     "date_consultation": "2026-09-21",
+     "date_validite": "Version en vigueur depuis le 3 janvier 2018",
+     "ce_qu_elle_etablit": "Toutes les informations, y compris promotionnelles, adressées aux clients et clients potentiels présentent un contenu exact, clair et non trompeur."
+    },
+    {
+     "titre": "Article L521-4 du code des assurances",
+     "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000036920558",
+     "emetteur": "Légifrance",
+     "date_consultation": "2026-09-21",
+     "date_validite": "Version en vigueur depuis le 1er octobre 2018",
+     "ce_qu_elle_etablit": "Exigences et besoins précisés par écrit, information compréhensible, exacte et non trompeuse, conseil motivé par écrit avant la conclusion du contrat."
+    },
+    {
+     "titre": "Article 325-6 du règlement général de l'AMF (lettre de mission)",
+     "url": "https://www.amf-france.org/en/eli/fr/aai/amf/rg/article/325-6/20180608/notes",
+     "emetteur": "Autorité des marchés financiers (AMF)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "Version en vigueur depuis le 8 juin 2018",
+     "ce_qu_elle_etablit": "La lettre de mission, signée avant le conseil, contient une mise en garde sur les risques et précise les conditions de rémunération ainsi que les coûts et frais."
+    },
+    {
+     "titre": "Publication de la recommandation 2024-R-03 sur le devoir de conseil en assurance",
+     "url": "https://acpr.banque-france.fr/fr/actualites/publication-de-la-recommandation-sur-le-devoir-de-conseil-en-assurance",
+     "emetteur": "Autorité de contrôle prudentiel et de résolution (ACPR)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "Recommandation du 21 novembre 2024, applicable au 31 décembre 2025 (1er janvier 2026 pour le conseil dans la durée en assurance vie)",
+     "ce_qu_elle_etablit": "Le distributeur recueille les informations du client, justifie son conseil de façon claire et pédagogique, et exerce le devoir de conseil dans la durée pour les contrats d'assurance vie."
+    },
+    {
+     "titre": "Les performances passées ne préjugent pas des performances futures : pourquoi cette mention ?",
+     "url": "https://www.amf-france.org/sites/institutionnel/files/pdf/59217/fr/Les_performances_passees_ne_prejugent_pas_des_performances_futures__pourquoi_cette_mention_.pdf",
+     "emetteur": "Autorité des marchés financiers (AMF)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "Article du 13 février 2015, toujours en ligne",
+     "ce_qu_elle_etablit": "Toute publicité affichant une performance passée doit préciser qu'elle ne permet pas de prévoir les performances futures ; toute indication de performance doit être équilibrée par une information sur le risque."
+    }
+   ]
+  }
+ ],
+ "cas_pratique": {
+  "titre": "« Pourquoi payer des frais alors que je peux investir seul ? »",
+  "situation_markdown": "**Cas fictif.** Madame Delaunay, 47 ans, architecte libérale à Boulogne-Billancourt, est reçue pour un second rendez-vous. Lors de la découverte, elle a exprimé deux objectifs de vie : constituer un capital pour compléter sa retraite dans une quinzaine d'années, et garder une réserve disponible pour d'éventuels travaux dans son agence. Elle dispose de 60 000 euros sur un livret et d'un contrat d'assurance vie ancien de 25 000 euros investi en fonds en euros. Sa tolérance au risque est mesurée : elle accepte des fluctuations sur la partie long terme, pas sur la réserve.\n\nLe conseiller ouvre la feuille de route : conserver une réserve sur livret, orienter une partie du capital long terme vers une assurance vie multisupports avec une allocation prudente en unités de compte, et faire un point avec son expert-comptable sur la prévoyance. Au moment où il aborde l'assurance vie, Madame Delaunay l'interrompt :\n\n« Attendez. J'ai une application de courtage sur mon téléphone, j'y ai déjà mis 5 000 euros sur un tracker. Pourquoi payer des frais alors que je peux investir seule ? Et d'ailleurs, vous, comment êtes-vous payés ? »\n\nLe conseiller a devant lui le document d'informations clés des deux supports envisagés et la lettre de mission du cabinet, non encore signée. Il reste vingt minutes de rendez-vous.",
+  "questions": [
+   "Formulez, en une ou deux phrases, la reformulation que le conseiller devrait proposer à Madame Delaunay avant toute réponse, puis la question de précision qui suit.",
+   "Listez les éléments que le conseiller doit présenter pour répondre de façon complète à la question des frais, en précisant sous quelle forme (pourcentage, euros) et à quel moment.",
+   "Parmi ces trois phrases, laquelle est acceptable et pourquoi les deux autres ne le sont pas : « Avec notre allocation, vous ferez mieux que votre tracker » ; « Notre contrat est le meilleur du marché sur les frais » ; « Je ne peux pas vous dire ce que fera le marché ; je peux vous dire ce que nous faisons, ce que cela coûte et ce que vous risquez. »",
+   "Rédigez la prochaine étape que le conseiller propose en fin de rendez-vous, avec ses quatre composantes."
+  ],
+  "corrige_markdown": "### Question 1 : reformuler\n\nUne reformulation fidèle reprend les deux idées de Madame Delaunay sans les traduire : « Si je vous comprends bien, vous savez déjà investir seule, vous l'avez fait, et vous vous demandez ce que notre accompagnement apporte qui justifierait un coût. Et vous voulez savoir clairement comment le cabinet est rémunéré. C'est bien cela ? » Puis une seule question de précision : « Sur votre application, comment avez-vous choisi le tracker et combien de temps comptez-vous y laisser cet argent ? » Cette question relie l'objection à ses objectifs de vie : la réserve pour les travaux et le capital retraite n'ont pas le même horizon.\n\nErreur à éviter : « Vous trouvez cela trop cher », qui déforme, ou une liste d'arguments immédiate.\n\n### Question 2 : les frais, complets\n\nLe conseiller présente, avant la recommandation, et en euros sur le montant réellement envisagé :\n\n1. Les frais du contrat d'assurance vie : frais sur versement, frais de gestion annuels sur le fonds en euros et sur les unités de compte, frais d'arbitrage, frais de retrait s'ils existent.\n2. Les frais des supports : frais courants des deux fonds, lus dans leur document d'informations clés, et l'éventuelle commission de surperformance.\n3. Le coût de sa solution actuelle, pour comparer honnêtement : son application a aussi des frais de courtage, de tenue de compte ou d'inactivité, et le tracker a des frais courants.\n4. La rémunération du cabinet, telle que la lettre de mission la décrit, et ce qu'elle comprend : l'analyse patrimoniale et la feuille de route, puis le suivi prévu par le cabinet [à compléter par le cabinet]. Le mode de rémunération et sa formulation sont [à compléter par le cabinet].\n\nIl termine par : « Est-ce clair ? Je vous l'adresse par écrit. » Les chiffres exacts des frais dépendent des contrats et supports retenus et se lisent dans leurs documents, jamais de mémoire.\n\n### Question 3 : répondre sans promettre\n\nSeule la troisième phrase est acceptable : elle est vraie quel que soit le comportement des marchés, elle décrit la méthode, le coût et le risque. La première est une promesse de résultat : nul ne peut garantir de faire mieux qu'un tracker. La deuxième est un superlatif et une affirmation comparative absolue, invérifiable en rendez-vous ; elle contrevient à l'exigence d'information exacte, claire et non trompeuse. Le conseiller ajoute la mise en garde : les unités de compte présentent un risque de perte en capital, et les performances passées ne préjugent pas des performances futures.\n\n### Question 4 : la prochaine étape\n\nUne prochaine étape a quatre composantes : une action, une date, un responsable, un document. Exemple : « Je vous envoie d'ici jeudi la lettre de mission et un état des frais chiffré sur le montant que vous envisagez, avec la comparaison avec votre solution actuelle. Vous me confirmez d'ici lundi le montant que vous souhaitez garder en réserve pour les travaux. Nous nous revoyons le 12 à 18 h pour valider la feuille de route. » Le conseiller relit cette étape à voix haute, la fait valider, puis la saisit dans le CRM avec l'objection reformulée et la réponse donnée. La procédure de saisie est [à compléter par le cabinet].\n\nCe qui n'est pas une prochaine étape : « Réfléchissez et rappelez-moi. »"
+ },
+ "questions": [
+  {
+   "cle": "q01",
+   "type": "qcm",
+   "lecon": "l1",
+   "competence": "Reformuler une objection",
+   "enonce": "Cas fictif. En plein rendez-vous, un dirigeant vous dit : « Pourquoi payer des frais alors que je peux investir seul ? » Quelle est la première chose à faire ?",
+   "choix": [
+    "Reformuler ce que vous avez compris et demander au client s'il confirme",
+    "Présenter immédiatement la liste des services inclus dans l'accompagnement",
+    "Répondre que les frais sont négociables pour éviter de perdre le client",
+    "Changer de sujet et revenir sur les objectifs de vie évoqués plus tôt"
+   ],
+   "bonne_reponse": 0,
+   "explication": "La leçon 1 pose la règle : une objection est une information, on la reformule et on la fait valider avant d'y répondre. Répondre tout de suite, c'est répondre à la question que l'on croit avoir entendue. Négocier ou éviter le sujet ne traite pas la question posée.",
+   "difficulte": "1"
+  },
+  {
+   "cle": "q02",
+   "type": "vrai_faux",
+   "lecon": "l1",
+   "competence": "Reformuler une objection",
+   "enonce": "Vrai ou faux : une fois l'objection reformulée, le conseiller peut répondre sans attendre que le client confirme la reformulation, pour ne pas ralentir le rendez-vous.",
+   "choix": [
+    "Vrai",
+    "Faux"
+   ],
+   "bonne_reponse": 1,
+   "explication": "Faux. La leçon 1 impose de faire valider la reformulation par le client (« C'est bien cela ? ») puis de poser une question de précision avant toute réponse. Répondre avant la confirmation, c'est répondre à la question que l'on croit avoir entendue.",
+   "difficulte": "1"
+  },
+  {
+   "cle": "q03",
+   "type": "cas_court",
+   "lecon": "l1",
+   "competence": "Reformuler une objection",
+   "enonce": "Cas fictif. Une cliente dit : « Je ne veux pas payer quelqu'un qui me mettra sur un fonds sans regarder ma situation. » Quelle reformulation est fidèle ?",
+   "choix": [
+    "« Vous trouvez que nos frais sont trop élevés par rapport à une banque en ligne, c'est cela ? »",
+    "« Si je comprends bien, ce qui vous inquiète, c'est de payer pour un conseil qui ne tiendrait pas compte de votre situation. C'est bien cela ? »",
+    "« Vous voulez donc un conseil sur-mesure, ce que nous faisons justement, n'est-ce pas ? »",
+    "« Vous avez eu une mauvaise expérience avec un conseiller par le passé, je suppose ? »"
+   ],
+   "bonne_reponse": 1,
+   "explication": "La leçon 1 distingue la reformulation fidèle, qui reprend les mots du client et demande validation, de la reformulation qui déforme (le prix, alors qu'elle parle de valeur), qui oriente (une réponse déguisée) ou qui suppose un vécu que la cliente n'a pas évoqué.",
+   "difficulte": "2"
+  },
+  {
+   "cle": "q04",
+   "type": "qcm",
+   "lecon": "l1",
+   "competence": "Reformuler une objection",
+   "enonce": "Cas fictif. Après votre reformulation, le client confirme : « Oui, je peux le faire seul sur une plateforme. » Quelle question de précision posez-vous ensuite ?",
+   "choix": [
+    "« Concrètement, que feriez-vous seul, et sur quel horizon ? »",
+    "« Savez-vous que les plateformes ont aussi des frais cachés ? »",
+    "« Préférez-vous que je vous fasse une remise sur les frais ? »",
+    "« Avez-vous déjà lu un document d'informations clés en entier ? »"
+   ],
+   "bonne_reponse": 0,
+   "explication": "La leçon 1 prévoit, après validation de la reformulation, une seule question ouverte de précision qui fait parler le client de ce qu'il ferait réellement. Les autres options contre-argumentent, négocient ou mettent le client en défaut avant d'avoir compris son projet.",
+   "difficulte": "2"
+  },
+  {
+   "cle": "q05",
+   "type": "qcm",
+   "lecon": "l2",
+   "competence": "Expliquer les frais",
+   "enonce": "Cas fictif. Vous présentez une assurance vie multisupports à une cliente. Quelle présentation des frais est complète ?",
+   "choix": [
+    "Les frais sur versement et les frais de gestion du contrat, puisque les supports sont gérés par la compagnie",
+    "Les frais du contrat (versement, gestion, arbitrage) et les frais courants des supports, plus la rémunération du cabinet",
+    "Les frais courants des fonds indiqués dans leur document d'informations clés, qui regroupent tous les frais",
+    "Le taux de frais global annoncé par l'assureur, qui suffit pour comparer avec une plateforme"
+   ],
+   "bonne_reponse": 1,
+   "explication": "La leçon 2 distingue deux étages en assurance vie : les frais du contrat et les frais des supports détenus dans le contrat, auxquels s'ajoute la rémunération du cabinet. Ne présenter qu'un étage fait croire au client qu'il paie moins qu'il ne paie.",
+   "difficulte": "2"
+  },
+  {
+   "cle": "q06",
+   "type": "cas_court",
+   "lecon": "l2",
+   "competence": "Expliquer les frais",
+   "enonce": "Cas fictif. Un client envisage un versement de 20 000 euros sur un contrat dont les frais sur versement sont de 2 %. Comment présentez-vous ce frais en rendez-vous ?",
+   "choix": [
+    "« 2 %, c'est le tarif classique, et c'est négligeable sur la durée. »",
+    "« 2 %, soit 400 euros sur votre versement, prélevés à l'entrée ; s'y ajoutent chaque année les frais de gestion du contrat et ceux des supports, que je vous détaille maintenant. »",
+    "« 2 % à l'entrée, mais je vous les offre, donc n'en parlons plus. »",
+    "« Il y a des frais d'entrée, je vous enverrai le détail après signature. »"
+   ],
+   "bonne_reponse": 1,
+   "explication": "La leçon 2 demande d'annoncer chaque frais en pourcentage et en euros sur le montant réel du client, avant la recommandation, et de ne pas s'arrêter au premier étage. Minimiser, promettre une gratuité non vérifiée ou reporter le détail après signature contredit cette règle.",
+   "difficulte": "3"
+  },
+  {
+   "cle": "q07",
+   "type": "vrai_faux",
+   "lecon": "l2",
+   "competence": "Expliquer les frais",
+   "enonce": "Cas fictif. Un client vous demande de lui adresser votre recommandation par mail dès ce soir, la lettre de mission suivra « quand on aura le temps ». Vrai ou faux : pour un conseiller en investissements financiers, la lettre de mission signée, avec ses conditions de rémunération et ses coûts et frais, doit précéder la formulation du conseil.",
+   "choix": [
+    "Vrai",
+    "Faux"
+   ],
+   "bonne_reponse": 0,
+   "explication": "Vrai. La leçon 2 s'appuie sur l'article 325-6 du règlement général de l'AMF : avant de formuler un conseil, le CIF soumet une lettre de mission signée des deux parties, qui précise les conditions de rémunération, une mise en garde sur les risques et les coûts et frais. Le statut du cabinet et le modèle de lettre en vigueur sont à confirmer en interne.",
+   "difficulte": "1"
+  },
+  {
+   "cle": "q08",
+   "type": "qcm",
+   "lecon": "l3",
+   "competence": "Répondre sans promettre et conclure",
+   "enonce": "Cas fictif. Une cliente demande : « Avec vous, je suis sûre de faire mieux que seule ? » Quelle réponse respecte l'obligation d'information exacte, claire et non trompeuse ?",
+   "choix": [
+    "« Oui, nos clients font systématiquement mieux, c'est notre métier. »",
+    "« Non, personne ne peut le garantir ; ce sur quoi je m'engage, c'est la méthode, avec ses risques que je vous nommerai par écrit. »",
+    "« Nos fonds ont fait 7 % l'an dernier, ce qui parle de soi-même. »",
+    "« En principe oui, sauf accident de marché, mais c'est rare. »"
+   ],
+   "bonne_reponse": 1,
+   "explication": "La leçon 3 enseigne qu'on s'engage sur une méthode, jamais sur une performance. Les autres réponses promettent un résultat, citent une performance passée sans mise en garde ou atténuent un oui qui reste une promesse.",
+   "difficulte": "2"
+  },
+  {
+   "cle": "q09",
+   "type": "qcm",
+   "lecon": "l3",
+   "competence": "Répondre sans promettre et conclure",
+   "enonce": "Cas fictif. Le rendez-vous se termine. Quelle formulation constitue une véritable prochaine étape ?",
+   "choix": [
+    "« Réfléchissez de votre côté et rappelez-moi quand vous serez prêt. »",
+    "« Je reviens vers vous très vite avec des éléments. »",
+    "« Je vous adresse jeudi la lettre de mission et l'état des frais chiffré ; nous nous revoyons le 12 à 18 h pour la feuille de route. Cela vous convient-il ? »",
+    "« On se rappelle dans le mois pour voir où vous en êtes. »"
+   ],
+   "bonne_reponse": 2,
+   "explication": "La leçon 3 définit la prochaine étape par une action, une date, un responsable et un document, validés avec le client. Les autres formulations n'ont pas de date, laissent la charge de la suite au client ou restent vagues.",
+   "difficulte": "2"
+  },
+  {
+   "cle": "q10",
+   "type": "cas_court",
+   "lecon": "l3",
+   "competence": "Répondre sans promettre et conclure",
+   "enonce": "Cas fictif. Un client hésite entre votre feuille de route et son application de courtage. Il vous demande de « trancher en une phrase ». Quelle réponse est conforme ?",
+   "choix": [
+    "« Notre allocation est la plus performante du marché pour votre profil. »",
+    "« Je ne trancherai pas sur un résultat que personne ne connaît ; je peux vous dire ce que nous faisons, ce que cela coûte et ce que vous risquez, et vous l'envoyer par écrit d'ici jeudi. »",
+    "« Avec nous, vous êtes sécurisé, alors qu'une application vous laisse seul. »",
+    "« Nos clients qui ont suivi cette allocation ont tous été satisfaits. »"
+   ],
+   "bonne_reponse": 1,
+   "explication": "La leçon 3 impose une réponse vraie quel que soit le comportement des marchés, sans superlatif ni garantie implicite, qui nomme méthode, coût et risque, puis débouche sur une étape datée. Les autres réponses contiennent un superlatif, une promesse de sécurité ou une preuve sociale invérifiable.",
+   "difficulte": "3"
+  }
+ ]
+}

@@ -1,0 +1,474 @@
+{
+ "numero": 12,
+ "slug": "maitriser-le-crm",
+ "titre": "Maîtriser le CRM Entasis",
+ "theme": "outils",
+ "niveau": "decouverte",
+ "competence": "Tenir une fiche, tracer un échange, programmer le suivi et utiliser les étapes réellement présentes dans le CRM",
+ "objectif": "À la fin du module, le nouvel arrivant sait créer un dossier express, compléter la fiche client jusqu'aux six champs exigés pour signer, consigner un échange dans l'onglet Historique, poser une prochaine action datée ou une séquence de relance, dérouler « Ma journée » chaque matin avec les trois gestes « Fait », « → demain », « → +7 j », trier « Dossiers sans mouvement », et signer un dossier en passant les trois verrous du CRM.",
+ "duree_minutes": 25,
+ "prerequis": [],
+ "lecons": [
+  {
+   "slug": "l1",
+   "titre": "La fiche client et le dossier",
+   "duree_minutes": 5,
+   "objectif_observable": "Créer un dossier en mode express, le rattacher à un client existant, reconnaître les quatre statuts (En cours, RDV calé, Signé, Annulé), citer les six champs de la fiche exigés pour signer et poser la « Date de signature prévue ».",
+   "corps_markdown": "## Explication simple\nTout part de deux objets. La fiche client porte l'identité et la situation de la personne ; elle se crée depuis l'Annuaire avec « + Nouveau client ». Le dossier porte une opération : produit, compagnie, montants, statut et dates. Un client peut avoir plusieurs dossiers.\n\nTrois chemins ouvrent la même modale de dossier : le bouton doré « Nouveau dossier » en haut à droite des écrans commerciaux, la touche N hors saisie, ou la palette ⌘K et son action « Nouveau dossier ». Elle s'ouvre en mode express. La section « Informations client » demande « Nom du client * », « Email * », « Téléphone * » et « Mois » ; le champ « Client » sert à « Rechercher un client existant (nom, email, téléphone...) » avant de créer. « Tout renseigner (relances, notes…) » déplie le formulaire complet ; « Créer le dossier » enregistre.\n\nLe mode express montre déjà la section « Produits » (bloc « Produit 1 » avec « Produit * », « Compagnie », « PP mensuelle (€) », « PU (€) », « Statut », et le bouton « + Ajouter un produit »), les deux dates et la section repliable « Équipe & suivi » (« Conseiller principal * », « Co-conseiller », « Priorité », « Source »). « Tout renseigner (relances, notes…) » ajoute la section repliable « Données client pour la signature » (Statut, Profession, Revenus annuels (€), Patrimoine estimé (€)) et, en bas, le bloc « Séquence de relance », les champs « Prochaine action » et « Pour le », et le champ « Notes ». En édition d'un dossier existant, la section produit s'appelle « Dossier » et le formulaire complet s'affiche d'office.\n\nQuatre statuts existent : En cours, RDV calé (valeur « Prévu » ; c'est le statut du brouillon que pose la Lead Room quand un rendez vous est pris, on peut aussi le choisir soi même dans le sélecteur « Statut »), Signé (colonne « Signé ✓ » du pipeline) et Annulé. Un brouillon venu de la Lead Room porte la puce « ✏️ À compléter » tant que son produit vaut Autre et sa PP mensuelle 0.\n\nSix champs de la fiche sont exigés pour signer : email, téléphone, statut, profession, revenus annuels, patrimoine estimé. La fiche client les compte sous l'indicateur « Signature n/6 » et la modale client affiche le bandeau « Champs obligatoires pour signer encore à remplir ».\n\nEnfin, les dates. « Date de signature prévue » est obligatoire pour un dossier En cours ou RDV calé (sur un brouillon lié à un lead de la Lead Room, au produit Autre ou vide et aux montants à 0, le champ s'appelle « Date du rendez-vous »). « Date de signature effective » est obligatoire pour un dossier Signé. Le mois du dossier suit la date saisie.\n\n## Exemple\nCas fictif. Vous raccrochez avec Madame Lefort, infirmière libérale, intéressée par un PER. Touche N, nom, email, téléphone, mois, puis « Produit * » (PER Individuel) et « Date de signature prévue », « Créer le dossier » : trente secondes. Sans produit, le CRM refuse (« Veuillez sélectionner au moins un produit ») ; sans date prévue, il refuse aussi (« Date de signature prévue obligatoire pour un dossier en cours. »). Le dossier apparaît dans la colonne En cours. Le soir, vous rouvrez le dossier et posez la compagnie et la PP mensuelle.\n\n## Erreur frequente\nCréer un second dossier pour un client qui existe déjà, parce qu'on a tapé le nom sans passer par « Rechercher un client existant ». Résultat : deux fiches, deux historiques, un doublon à traiter dans la vue « Doublons ».\n\n## En rendez-vous\nPendant l'échange, ne saisissez que l'express. Juste après, ouvrez « Tout renseigner (relances, notes…) » et remplissez « Données client pour la signature » tant que les informations sont fraîches. Si vous fermez la modale avec des champs modifiés, le CRM demande « Abandonner les modifications ? » : choisissez « Continuer la saisie » tant que vous n'avez pas enregistré. Rédaction du champ « Notes » : [a completer par le cabinet].\n\n## Trois points a retenir\n1. Bouton « Nouveau dossier », touche N ou palette ⌘K : une seule modale, l'express suffit pour commencer, avec au minimum un produit et une « Date de signature prévue ».\n2. Quatre statuts : En cours, RDV calé, Signé, Annulé. La « Date de signature prévue » est obligatoire pour les deux premiers.\n3. Six champs de la fiche conditionnent la signature : email, téléphone, statut, profession, revenus annuels, patrimoine estimé.\n",
+   "mini_question": {
+    "cle": "m12-l1-mini",
+    "type": "qcm",
+    "lecon": "l1",
+    "competence": "Tenir une fiche : créer un dossier sans doublon",
+    "enonce": "Cas fictif. Vous venez d'avoir au téléphone Monsieur Garnier, déjà client du cabinet, pour une nouvelle assurance vie. Vous ouvrez « Nouveau dossier ». Quel est le bon premier geste dans la modale ?",
+    "choix": [
+     "Taper son nom dans « Nom du client * » et créer le dossier",
+     "Utiliser le champ « Client » pour « Rechercher un client existant » et rattacher sa fiche",
+     "Aller dans l'Annuaire et cliquer « + Nouveau client »",
+     "Cliquer « Tout renseigner (relances, notes…) » puis saisir son email"
+    ],
+    "bonne_reponse": 1,
+    "explication": "Un client existant se rattache par la recherche du champ « Client » : les astérisques d'email et de téléphone disparaissent et le dossier alimente sa fiche et son historique. Retaper le nom crée un doublon (leçon 1, Erreur fréquente).",
+    "difficulte": "1"
+   },
+   "sources": [
+    {
+     "titre": "Statuts, priorités et libellé « RDV calé »",
+     "url": "/Users/louis/entasis-crm-supabase/src/lib/ui-shared.js (lignes 7-8 et 86-93)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "Les quatre statuts en base (Signé, En cours, Prévu, Annulé), les trois priorités et le fait que « Prévu » s'affiche « RDV calé » à l'écran et se choisit aussi dans le sélecteur « Statut »."
+    },
+    {
+     "titre": "Modale dossier : titres, section « Informations client », boutons du pied",
+     "url": "/Users/louis/entasis-crm-supabase/src/App.jsx (lignes 4170-4184, 4310-4342, 4828-4859)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "Le mode express, les champs « Nom du client * », « Email * », « Téléphone * », « Mois », la recherche « Rechercher un client existant (nom, email, téléphone...) », le bouton « Tout renseigner (relances, notes…) » (affiché seulement en express) et « Créer le dossier » / « Enregistrer » ; le titre « Éditer le dossier » et le formulaire complet d'office en édition."
+    },
+    {
+     "titre": "Contenu du mode express : section « Produits », dates, « Équipe & suivi » ; ce que « Tout renseigner » ajoute",
+     "url": "/Users/louis/entasis-crm-supabase/src/App.jsx (lignes 3745-3749, 3997, 4353, 4396-4408, 4447-4456, 4573, 4725-4733, 4806-4821)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "En express : section « Produits » (« Produit 1 », « Produit * » obligatoire, « + Ajouter un produit »), les deux dates et « Équipe & suivi ». « Tout renseigner » ajoute « Données client pour la signature », le bloc « Séquence de relance », « Prochaine action », « Pour le » et « Notes ». En édition, la section produit s'intitule « Dossier »."
+    },
+    {
+     "titre": "Refus à la création : produit obligatoire et dates validées ; puce « À compléter »",
+     "url": "/Users/louis/entasis-crm-supabase/src/App.jsx (lignes 157-158, 2286-2293, 4020-4028, 4093-4096, 4126-4132)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "Le message « Veuillez sélectionner au moins un produit », la validation des dates sur chaque produit à la création (« Date de signature prévue obligatoire pour un dossier en cours. »), et la puce « À compléter » réservée aux dossiers dont le produit vaut Autre et la PP mensuelle 0 (brouillons créés depuis un RDV)."
+    },
+    {
+     "titre": "Sections « Données client pour la signature » et « Dossier », dates prévue et effective",
+     "url": "/Users/louis/entasis-crm-supabase/src/App.jsx (lignes 4355-4385, 4573-4581, 4684-4724)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "Les champs Statut, Profession, Revenus annuels (€), Patrimoine estimé (€), Produit, Compagnie, PP mensuelle (€), PU (€), et l'obligation de « Date de signature prévue » pour En cours / RDV calé et de « Date de signature effective » pour Signé."
+    },
+    {
+     "titre": "Libellé « Date du rendez-vous » réservé au brouillon simple de la Lead Room",
+     "url": "/Users/louis/entasis-crm-supabase/src/App.jsx (lignes 4003 et 4686) et src/lib/metrics.js (lignes 32-37)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "estRdvCale = estSimpleRdv (lead_id non nul, produit Autre ou vide, PU et PP à 0) et statut Prévu ; dans ce seul cas le champ de date prévue s'intitule « Date du rendez-vous »."
+    },
+    {
+     "titre": "Fiche client : indicateur « Signature n/6 » et six champs requis",
+     "url": "/Users/louis/entasis-crm-supabase/src/components/clients/ClientView.jsx (lignes 53-60, 345-351)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "La liste CHAMPS_REQUIS (email, téléphone, statut, profession, revenus, patrimoine) et l'affichage « Signature n/6 » sur la fiche."
+    },
+    {
+     "titre": "Confirmation « Abandonner les modifications ? » et raccourci N",
+     "url": "/Users/louis/entasis-crm-supabase/src/App.jsx (lignes 4006-4015 et 4985-5019)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "Le dialogue « Abandonner » / « Continuer la saisie » à la fermeture d'une modale modifiée, et la touche n qui ouvre « Nouveau dossier » hors saisie et hors onglet Leads."
+    }
+   ]
+  },
+  {
+   "slug": "l2",
+   "titre": "Suivre et relancer",
+   "duree_minutes": 5,
+   "objectif_observable": "Poser une prochaine action datée ou une séquence de relance sur un dossier, traiter « Ma journée » avec « Fait », « → demain », « → +7 j », trier « Dossiers sans mouvement » avec ses quatre gestes et consigner un échange dans l'onglet Historique.",
+   "corps_markdown": "## Explication simple\nTrois outils : la prochaine action posée sur le dossier, la file « Ma journée » qui la ressort au bon jour, et la chronologie de la fiche client.\n\nLa prochaine action se pose dans la modale du dossier, formulaire complet, sous la section « Équipe & suivi » : le bloc « Séquence de relance », puis un champ « Prochaine action » et une date « Pour le » (l'aide du champ dit « Apparaît dans « Mes actions du jour » à cette date », c'est la file « Ma journée » de l'accueil). La section « Équipe & suivi » elle même ne contient que « Conseiller principal * », « Co-conseiller », « Priorité » et « Source ». Pour un enchaînement, le bloc « Séquence de relance » propose trois gabarits : « Relance devis standard » (J+2, J+7, J+15), « Suite de rendez vous » (J+1, J+5, J+12) et « Pièces manquantes » (J+3, J+10, J+20). « Démarrer » pose l'étape 1 dans « Prochaine action » et « Pour le » ; c'est « Enregistrer » qui persiste. Aucun email n'est envoyé : c'est vous qui appelez ou écrivez. « Arrêter la séquence » la retire.\n\nChaque matin, l'accueil « Mon mois » affiche « Ma journée » : les RDV du jour, puis les relances en retard, puis celles du jour. Sur chaque relance, trois gestes exactement : « Fait », « → demain », « → +7 j ». « Fait » clôt l'action et, si une séquence court, arme l'étape suivante datée depuis aujourd'hui. Un report se compte depuis aujourd'hui. Chaque geste est annulable sept secondes par le bouton « Annuler » du toast ; cliquer la ligne ouvre le dossier.\n\nPlus bas, « Dossiers sans mouvement » liste les dossiers En cours qui n'ont aucune relance datée (« Pour le » vide) et qu'on n'a pas modifiés depuis plus de 21 jours (c'est la date de dernière modification du dossier qui compte, pas la date de la relance). Un dossier dont la relance est en retard n'y figure pas : il est déjà dans « Ma journée ». Le bloc propose quatre gestes : « Déjà signé », « Toujours en cours » (le dossier se tait 21 jours de plus), « Relancer » (ouvre le dossier pour y poser une date), « Abandonner » (Annulé après confirmation).\n\nCe qui s'est dit se consigne sur la fiche client, onglet « Historique », bouton « + Consigner un échange » : Type (Appel, E-mail, Rendez-vous, Courrier, Note), Sens (Sortant, Entrant, Interne), Date, Objet, Compte rendu, « Dossier concerné (optionnel) », puis « Consigner ». Pour naviguer vite, ⌘K ouvre la palette ; « ? » affiche l'aide des raccourcis.\n\n## Exemple\nCas fictif. Lundi, vous envoyez un devis d'assurance vie à Monsieur Bayard. Dans le dossier, gabarit « Relance devis standard », « Démarrer », « Enregistrer ». Mercredi, « Ma journée » affiche « Appel de suivi du devis ». Vous l'appelez, il hésite ; vous consignez l'appel dans « Historique », puis cliquez « Fait » : l'étape 2, « Email de relance du devis » (J+7), s'arme pour mercredi prochain, sept jours après le clic, et le toast dit « Étape 2 sur 3 armée pour le JJ/MM ».\n\n## Erreur frequente\nPlanifier la relance dans l'Agenda avec « Nouvelle relance ». Ce bouton crée un événement Google (« Ouvrir dans Google Agenda ») et rien dans le dossier : la relance n'apparaîtra jamais dans « Ma journée ».\n\n## En rendez-vous\nTerminez chaque échange par deux gestes : consigner (« + Consigner un échange ») et dater la suite (« Pour le »). Une action sans date n'existe pas pour la file du matin. Si le client demande un délai, utilisez « → +7 j » plutôt que de laisser l'action glisser en retard. Délai maximal entre deux contacts hors gabarit : [a completer par le cabinet].\n\n## Trois points a retenir\n1. Une relance vit dans « Prochaine action » et « Pour le » ; l'Agenda crée un événement Google, pas une relance CRM.\n2. « Ma journée » ne propose que « Fait », « → demain », « → +7 j » ; le tri se fait dans « Dossiers sans mouvement », qui ne regroupe que les dossiers En cours sans relance datée et sans modification depuis plus de 21 jours.\n3. Les séquences n'envoient aucun email ; « Fait » arme l'étape suivante depuis aujourd'hui.\n",
+   "mini_question": {
+    "cle": "m12-l2-mini",
+    "type": "qcm",
+    "lecon": "l2",
+    "competence": "Programmer le suivi : reporter une relance depuis Ma journée",
+    "enonce": "Cas fictif. Dans « Ma journée », la relance de Madame Nadal est due aujourd'hui. Elle vous demande de la rappeler la semaine prochaine. Quel geste faites-vous sur la ligne ?",
+    "choix": [
+     "« Fait », puisque vous l'avez eue au téléphone",
+     "« → +7 j »",
+     "Ouvrir l'Agenda et cliquer « Nouvelle relance »",
+     "« → demain », puis à nouveau chaque jour"
+    ],
+    "bonne_reponse": 1,
+    "explication": "« → +7 j » reporte l'action d'une semaine à compter d'aujourd'hui et la garde dans la file. « Fait » clôturerait l'action (et armerait l'étape suivante d'une séquence), l'Agenda ne crée qu'un événement Google (leçon 2, Explication simple et Erreur fréquente).",
+    "difficulte": "1"
+   },
+   "sources": [
+    {
+     "titre": "Construction de « Ma journée » : RDV du jour, relances en retard, relances du jour",
+     "url": "/Users/louis/entasis-crm-supabase/src/lib/ma-journee.js (lignes 38-62 et 76-85)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "L'ordre des trois groupes, l'exclusion des dossiers Annulé, et le report toujours compté depuis aujourd'hui (dateReport)."
+    },
+    {
+     "titre": "Gestes de la file du matin : « Fait », « → demain », « → +7 j »",
+     "url": "/Users/louis/entasis-crm-supabase/src/App.jsx (lignes 2020-2059)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "Les trois gestes exacts, tous annulables via le toast, le titre « Ma journée » et le sous titre « N à traiter · N RDV · N en retard »."
+    },
+    {
+     "titre": "Emplacement des champs « Prochaine action » et « Pour le » sous « Équipe & suivi »",
+     "url": "/Users/louis/entasis-crm-supabase/src/App.jsx (lignes 4729-4802 et 4806-4818)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "La section « Équipe & suivi » ne contient que Conseiller principal, Co-conseiller, Priorité et Source ; le bloc « Séquence de relance », « Prochaine action » et « Pour le » sont placés en dessous, hors section, avec l'aide « Apparaît dans « Mes actions du jour » à cette date. »."
+    },
+    {
+     "titre": "Gabarits de séquence de relance",
+     "url": "/Users/louis/entasis-crm-supabase/src/config/sequencesRelance.js (lignes 22-56)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "Les trois gabarits « Relance devis standard », « Suite de rendez vous », « Pièces manquantes » et leurs étapes J+x (étape 2 du devis standard : delaiJours 7)."
+    },
+    {
+     "titre": "Bloc « Séquence de relance » de la modale et mécanique de « Fait »",
+     "url": "/Users/louis/entasis-crm-supabase/src/components/dossiers/SequenceRelance.jsx (lignes 80-166) et src/lib/sequences.js (lignes 98-111, 150-160)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "« Démarrer » pose l'étape 1, « Arrêter la séquence », l'aide « Aucun email n'est envoyé », patchApresFait qui date l'étape suivante depuis aujourd'hui (ajouterJours(today, delaiJours)) et le toast « Étape N sur 3 armée pour le JJ/MM »."
+    },
+    {
+     "titre": "Règle de stagnation : dernière modification du dossier et seuil de 21 jours",
+     "url": "/Users/louis/entasis-crm-supabase/src/lib/stagnants.js (lignes 10-15, 31, 40-48, 51-58)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "Le mouvement est la colonne updated_at ; SEUIL_STAGNATION_JOURS = 21 ; estStagnant retient un dossier En cours, sans next_action_date, dont joursSansMouvement dépasse 21."
+    },
+    {
+     "titre": "Bloc « Dossiers sans mouvement » et ses quatre gestes",
+     "url": "/Users/louis/entasis-crm-supabase/src/components/DossiersStagnants.jsx (lignes 73, 75-80, 122-124, 246-249)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "La mention « N jours sans mouvement » et les gestes « Déjà signé », « Toujours en cours », « Relancer », « Abandonner »."
+    },
+    {
+     "titre": "Onglet Historique : « + Consigner un échange », types et sens",
+     "url": "/Users/louis/entasis-crm-supabase/src/components/clients/ClientTimeline.jsx (lignes 31-36, 170-215) et src/services/interactions.js (lignes 11-23)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "Le formulaire Type / Sens / Date / Objet / Compte rendu / « Dossier concerné (optionnel) », le bouton « Consigner » et la fusion avec les traces système."
+    },
+    {
+     "titre": "Agenda : « Nouvelle relance » ouvre un événement Google",
+     "url": "/Users/louis/entasis-crm-supabase/src/App.jsx (lignes 2791-2815)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "La modale « Planifier une relance » se termine par « Ouvrir dans Google Agenda » : aucune ligne CRM n'est créée."
+    }
+   ]
+  },
+  {
+   "slug": "l3",
+   "titre": "Signer proprement et rendre compte",
+   "duree_minutes": 5,
+   "objectif_observable": "Passer les trois verrous de la signature (fiche complète, produit, date effective), utiliser « Déjà signé » et « RDV tenu » / « No-show », partager un dossier avec un co-conseiller, distinguer le verrou de signature de la jauge de complétude et savoir ce que la direction lit dans « Équipe ».",
+   "corps_markdown": "## Explication simple\nSigner n'est jamais un geste unique. Glisser la carte vers « Signé ✓ », cliquer « Déjà signé » dans « Dossiers sans mouvement » ou changer le « Statut » : dans tous les cas la modale s'ouvre en Signé et trois verrous s'appliquent à l'enregistrement.\n\nVerrou 1, la fiche complète : email, téléphone, statut, profession, revenus annuels, patrimoine estimé. S'il manque un champ, le toast dit « Pour signer, complétez la fiche client : … » avec la liste des manquants. Verrou 2, le produit : « Choisis le produit du dossier avant de le signer. » Verrou 3, la date : « Date de signature effective obligatoire pour un dossier signé. » Retirer une signature demande la confirmation « Retirer la signature ».\n\nLe lendemain d'un RDV calé, la carte du pipeline propose « RDV tenu » (le dossier passe En cours) et « No-show » (confirmation, le brouillon passe Annulé).\n\nUn dossier peut être partagé : dans « Équipe & suivi », « Conseiller principal * » est verrouillé sur vous, et le champ « Co-conseiller » ajoute un collègue avec l'avertissement « ⚠ Commission divisée par 2 entre les 2 conseillers ». Les deux voient alors le dossier et la fiche.\n\nLa complétude a deux mesures. Le verrou de signature compte six champs (« Signature n/6 » sur la fiche). La jauge de complétude compte huit champs pondérés (dont date de naissance et situation familiale) en quatre niveaux : « Complète », « Presque complète », « Partielle », « À démarrer ». Elle sert aux campagnes et à l'écran « Multi-équipement », où une mission au montant en fourchette porte le lien « à préciser ✎ » pour compléter la fiche ; les gestes y sont « Proposer », « Relancer », « Plus tard », et une mission passe dans « Gagnées ✓ » d'elle même à la signature du dossier.\n\nLa direction voit tout cela : accueil « Vue cabinet », filtre « Tous les conseillers » du pipeline, et dans l'onglet « Équipe » le tableau « Complétude des fiches » (Conseiller, Fiches, Score moyen, Complètes, « Champs les plus souvent manquants »), sans aucun montant.\n\n## Exemple\nCas fictif. Monsieur Ravel a signé un contrat de capitalisation vendredi. Vous glissez la carte vers « Signé ✓ » : la modale s'ouvre, vous posez la « Date de signature effective », cliquez « Enregistrer » et lisez « Pour signer, complétez la fiche client : profession, patrimoine estimé. » Vous remplissez les deux champs, enregistrez de nouveau : le dossier est signé.\n\n## Erreur frequente\nSigner avec une fiche bricolée (patrimoine à 0, profession « à voir ») pour passer le verrou. Le CRM l'accepte : pour lui, un montant à 0 est une donnée saisie, et il ne détecte pas la tricherie. Le résultat est une fiche fausse dans la vue « Complétude des fiches » de la direction et des suggestions Multi-équipement erronées. À l'inverse, une fiche signée dont il manque encore la date de naissance ou la situation familiale (jauge à moins de 100 %) remonte, après 21 jours sans mouvement, dans « Signés, fiche à finir » avec le geste « Compléter la fiche ». Règle de traitement d'une fiche bricolée : [a completer par le cabinet].\n\n## En rendez-vous\nAvant de conclure, vérifiez « Signature n/6 » sur la fiche : à 6/6, la signature passera. Demandez les deux informations les plus souvent oubliées : revenus annuels et patrimoine estimé. Si un collègue a mené le rendez vous avec vous, posez le « Co-conseiller » avant d'enregistrer la signature. Qui valide un partage de dossier : [a completer par le cabinet].\n\n## Trois points a retenir\n1. Trois verrous : fiche complète (six champs), produit choisi, « Date de signature effective ». Jamais de signature d'un seul geste.\n2. « Signature n/6 » et la jauge de complétude mesurent deux choses : le droit de signer et la qualité de la donnée.\n3. La direction lit la complétude par conseiller dans « Équipe », sans montant.\n",
+   "mini_question": {
+    "cle": "m12-l3-mini",
+    "type": "vrai_faux",
+    "lecon": "l3",
+    "competence": "Signer proprement : comprendre que la signature passe toujours par la modale",
+    "enonce": "Vrai ou faux : dans le pipeline, glisser une carte vers la colonne « Signé ✓ » suffit à enregistrer la signature du dossier.",
+    "choix": [
+     "Vrai",
+     "Faux"
+    ],
+    "bonne_reponse": 1,
+    "explication": "Faux. Le glisser vers Signé ouvre toujours la modale en Signé ; l'enregistrement n'aboutit que si la fiche est complète, le produit choisi et la « Date de signature effective » posée (leçon 3, Explication simple).",
+    "difficulte": "1"
+   },
+   "sources": [
+    {
+     "titre": "Trois verrous de la signature : fiche complète, produit, dates",
+     "url": "/Users/louis/entasis-crm-supabase/src/App.jsx (lignes 4020-4029, 4056-4084, 4144-4147)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "Les messages « Pour signer, complétez la fiche client : … », « Choisis le produit du dossier avant de le signer. » et « Date de signature effective obligatoire pour un dossier signé. » ; le verrou ne tient les revenus pour manquants que s'ils sont null ou vides, un 0 est accepté (lignes 4072-4083)."
+    },
+    {
+     "titre": "Changement de statut par glisser déposer : jamais Signé d'un geste",
+     "url": "/Users/louis/entasis-crm-supabase/src/App.jsx (lignes 2118-2129)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "appliquerChangementStatut ouvre la modale pour Signé, demande « Retirer la signature » pour sortir de Signé et « Abandonner » pour Annulé."
+    },
+    {
+     "titre": "Boutons « RDV tenu » et « No-show » sur une carte du kanban",
+     "url": "/Users/louis/entasis-crm-supabase/src/App.jsx (lignes 2365-2389)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "Dès le lendemain d'un RDV calé, « RDV tenu » passe En cours (annulable, dossier à qualifier) et « No-show » passe Annulé après confirmation."
+    },
+    {
+     "titre": "Section « Équipe & suivi » : conseiller principal verrouillé et co-conseiller",
+     "url": "/Users/louis/entasis-crm-supabase/src/App.jsx (lignes 4729-4790)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "« Conseiller principal * » verrouillé pour un conseiller, champ « Co-conseiller » et avertissement « ⚠ Commission divisée par 2 entre les 2 conseillers »."
+    },
+    {
+     "titre": "Score de complétude à huit champs et quatre niveaux ; un montant à 0 compte comme saisi",
+     "url": "/Users/louis/entasis-crm-supabase/src/lib/completude.js (lignes 41-59 et 78-86)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "CHAMPS_CAMPAGNE (huit champs pondérés), NIVEAUX « Complète », « Presque complète », « Partielle », « À démarrer », distincts du verrou de signature à six champs, et champRempli qui tient « un montant à 0 » pour une donnée saisie."
+    },
+    {
+     "titre": "Multi-équipement : chips, gestes et lien « à préciser ✎ »",
+     "url": "/Users/louis/entasis-crm-supabase/src/components/MultiEquipement.jsx (lignes 42-46, 445-453, 560, 613) et src/config/multiEquipementRules.js (lignes 27-29, 226-233)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "Les chips « À proposer », « En cours », « Gagnées ✓ », les gestes « Proposer », « Relancer », « Plus tard », le lien « à préciser ✎ », et le statut professionnel structuré utilisé pour les suggestions."
+    },
+    {
+     "titre": "Vue direction : « Complétude des fiches » dans l'onglet Équipe",
+     "url": "/Users/louis/entasis-crm-supabase/src/components/CompletudeEquipe.jsx (lignes 1-14, 84-130) et src/App.jsx (ligne 3720)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "Le tableau Conseiller / Fiches / Score moyen / Complètes / « Champs les plus souvent manquants », réservé au manager, sans aucun montant."
+    },
+    {
+     "titre": "Liste « Signés, fiche à finir » et geste « Compléter la fiche »",
+     "url": "/Users/louis/entasis-crm-supabase/src/lib/stagnants.js (lignes 143-168) et src/components/DossiersStagnants.jsx (lignes 28-31, 97-130, 256-257, 281-284)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "fichesSigneesSansMouvement retient les dossiers Signé dont le score des huit champs est inférieur à 100 et sans mouvement depuis plus de 21 jours ; ils remontent avec le geste « Compléter la fiche », la mention « avec CODE » et qui a saisi en dernier ; la direction voit « Vue direction · signés, fiche à finir »."
+    },
+    {
+     "titre": "Modale « Modifier le client » : libellés des champs de signature et bandeau",
+     "url": "/Users/louis/entasis-crm-supabase/src/components/clients/ClientView.jsx (ligne 391) et src/components/clients/ClientModal.jsx (lignes 318, 353, 460, 471, 537, 548)",
+     "emetteur": "CRM Entasis (code source)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "État du dépôt au 21/09/2026, à revérifier à chaque mise en production",
+     "ce_qu_elle_etablit": "Le bouton « Modifier » de la fiche ouvre « Modifier le client » avec « Statut professionnel », « Profession », « Revenus annuels (€) », « Patrimoine estimé (€) » et le bandeau « Champs obligatoires pour signer encore à remplir : … »."
+    }
+   ]
+  }
+ ],
+ "cas_pratique": {
+  "titre": "Reprendre un dossier incomplet et organiser la prochaine action",
+  "situation_markdown": "**Cas fictif.** Vous êtes alternant depuis deux semaines. Un collègue est absent cette semaine et la direction vous demande de reprendre son dossier le plus ancien. La procédure de reprise d'un dossier d'un collègue absent (qui décide, qui prévient le client) : [a completer par le cabinet].\n\nSur votre accueil « Mon mois », le bloc « Dossiers sans mouvement » affiche le dossier de **Madame Oriane Castel** avec la mention « 24 jours sans mouvement ». Vous l'ouvrez :\n\n- Statut : En cours, brouillon venu de la Lead Room après un « RDV tenu » il y a 24 jours, jamais qualifié depuis (puce « ✏️ À compléter »).\n- Section « Dossier » : Produit « Autre », Compagnie vide, PP mensuelle 0, PU 0.\n- « Date de signature prévue » : la date du rendez vous passé, jamais mise à jour.\n- « Prochaine action » et « Pour le » : vides, aucune séquence.\n- Champ « Notes » du collègue : « Veut une proposition PER, décision avant fin de mois, rappeler après le 25. »\n- Sur la fiche client, l'indicateur affiche « Signature 2/6 » (seuls l'email et le téléphone sont remplis). Aucun échange n'est consigné dans « Historique ».\n\nNous sommes le 21 du mois. Vous ne pouvez pas joindre Madame Castel aujourd'hui.",
+  "questions": [
+   "1. Pourquoi ce dossier apparaît-il dans « Dossiers sans mouvement », et lequel des quatre gestes du bloc choisissez-vous pour commencer ?",
+   "2. Dans la modale, que devez-vous renseigner au minimum pour que le dossier s'enregistre En cours et quitte la puce « À compléter » ?",
+   "3. Comment faites-vous entrer dans le CRM ce que le collègue a appris, sachant que le champ « Notes » n'alimente pas la chronologie de la fiche client ?",
+   "4. Quelle prochaine action posez-vous, avec quelle date, et que se passera-t-il le jour venu dans « Ma journée » ?",
+   "5. Le 28, Madame Castel accepte de signer. Quels champs manqueront encore pour que la signature passe, et où les saisissez-vous ?"
+  ],
+  "corrige_markdown": "**1. Pourquoi il est là, et quel geste.** Le bloc liste les dossiers En cours sans relance datée (« Pour le » vide) et sans modification depuis plus de 21 jours ; celui-ci n'a pas bougé depuis 24 jours et n'a ni « Pour le » ni séquence. Le bon geste est « Relancer » : il ouvre le dossier pour y poser une date. « Toujours en cours » ferait taire le dossier 21 jours de plus sans rien corriger ; « Déjà signé » ouvrirait la modale en Signé alors que rien n'est signé ; « Abandonner » le passerait en Annulé (leçon 2).\n\n**2. Le minimum dans la modale.** La modale s'ouvre en « Éditer le dossier », formulaire complet. Dans la section « Dossier », remplacez « Autre » par « PER Individuel » et choisissez une compagnie ; renseignez la « PP mensuelle (€) » si le collègue l'a notée, sinon laissez le montant et revenez y après l'appel. Posez une nouvelle « Date de signature prévue » (celle du rendez vous passé n'a jamais été mise à jour) : elle est obligatoire pour un dossier En cours, sinon le CRM refuse avec « Date de signature prévue obligatoire pour un dossier en cours. » Le mois du dossier suivra cette date. Puis « Enregistrer ». La puce « À compléter » disparaît dès que le produit n'est plus Autre (leçon 1).\n\n**3. Tracer ce que le collègue a appris.** Ouvrez la fiche client de Madame Castel, onglet « Historique », « + Consigner un échange » : Type « Note », Sens « Interne », Date d'aujourd'hui, Objet du type « Reprise du dossier en l'absence de [prénom] », Compte rendu qui reprend l'information du collègue (proposition PER attendue, décision avant fin de mois, rappeler après le 25), et « Dossier concerné (optionnel) » réglé sur ce dossier. Cliquez « Consigner ». La convention de rédaction des comptes rendus : [a completer par le cabinet] (leçon 2).\n\n**4. La prochaine action.** Sous la section « Équipe & suivi », dans les champs « Prochaine action » et « Pour le », saisissez « Appeler pour présenter la proposition PER » et le 26 (le collègue a noté « après le 25 »). « Enregistrer ». Le 26, la ligne apparaîtra dans « Ma journée » avec les gestes « Fait », « → demain », « → +7 j » ; un clic sur la ligne ouvre le dossier. Après l'appel, si un devis part, vous pourrez démarrer le gabarit « Relance devis standard » (J+2, J+7, J+15) : « Démarrer » puis « Enregistrer ». Aucun email ne partira tout seul (leçon 2).\n\n**5. Signer le 28.** La fiche est à « Signature 2/6 » : il manque statut, profession, revenus annuels et patrimoine estimé. Vous les saisissez dans la section « Données client pour la signature » de la modale (« Statut », « Profession », « Revenus annuels (€) », « Patrimoine estimé (€) »), ou sur la fiche client via « Modifier » (modale « Modifier le client », champs « Statut professionnel », « Profession », « Revenus annuels (€) », « Patrimoine estimé (€) », avec le bandeau « Champs obligatoires pour signer encore à remplir : … »). Ensuite, passez le « Statut » du dossier en Signé, posez la « Date de signature effective » et vérifiez que le produit est choisi. Si un champ manque encore, le toast « Pour signer, complétez la fiche client : … » vous dira lequel. À 6/6, la signature passe (leçon 3)."
+ },
+ "questions": [
+  {
+   "cle": "m12-q01",
+   "type": "qcm",
+   "lecon": "l1",
+   "competence": "Tenir une fiche : créer un dossier vite",
+   "enonce": "Vous êtes sur l'écran Pipeline, aucun champ n'a le focus, aucune modale n'est ouverte. Vous voulez ouvrir « Nouveau dossier » au clavier. Quelle touche ?",
+   "choix": [
+    "N",
+    "Entrée",
+    "/",
+    "?"
+   ],
+   "bonne_reponse": 0,
+   "explication": "La touche N ouvre la modale « Nouveau dossier » hors saisie et hors onglet Leads. « / » va à la recherche de l'écran et « ? » affiche l'aide des raccourcis (leçon 1, Explication simple).",
+   "difficulte": "1"
+  },
+  {
+   "cle": "m12-q02",
+   "type": "qcm",
+   "lecon": "l1",
+   "competence": "Tenir une fiche : dates obligatoires selon le statut",
+   "enonce": "Cas fictif. Vous enregistrez le dossier de Monsieur Piel en statut En cours ; le CRM refuse. Le produit et la compagnie sont renseignés, la fiche est à « Signature 6/6 ». Quel champ manque le plus probablement ?",
+   "choix": [
+    "« Date de signature effective »",
+    "« Date de signature prévue »",
+    "« Co-conseiller »",
+    "« Source »"
+   ],
+   "bonne_reponse": 1,
+   "explication": "La « Date de signature prévue » est obligatoire pour un dossier En cours ou RDV calé ; la date effective ne l'est que pour Signé. Co-conseiller et Source sont facultatifs (leçon 1, Explication simple).",
+   "difficulte": "2"
+  },
+  {
+   "cle": "m12-q03",
+   "type": "vrai_faux",
+   "lecon": "l1",
+   "competence": "Tenir une fiche : lire les statuts",
+   "enonce": "Vrai ou faux : sur le brouillon créé par la Lead Room (produit Autre, 0 €), le statut s'affiche « RDV calé » et le champ de date s'appelle « Date du rendez-vous ».",
+   "choix": [
+    "Vrai",
+    "Faux"
+   ],
+   "bonne_reponse": 0,
+   "explication": "Vrai. « RDV calé » est le libellé écran de la valeur « Prévu », statut du brouillon créé par la Lead Room ; sur ce brouillon (lié à un lead, produit Autre ou vide, montants à 0), le champ de date prévue s'intitule « Date du rendez-vous ». Sur tout autre dossier, il reste « Date de signature prévue » (leçon 1, Explication simple).",
+   "difficulte": "1"
+  },
+  {
+   "cle": "m12-q04",
+   "type": "cas_court",
+   "lecon": "l1",
+   "competence": "Tenir une fiche : compléter les données de signature au bon endroit",
+   "enonce": "Cas fictif. En mode express, vous avez saisi le nom, l'email, le téléphone et le mois de Madame Abitbol. Elle vient de vous donner sa profession, ses revenus et son patrimoine, et vous voulez les saisir tout de suite sans quitter la modale. Que faites-vous ?",
+   "choix": [
+    "Cliquer « Créer le dossier », puis rouvrir la fiche client depuis l'Annuaire",
+    "Cliquer « Tout renseigner (relances, notes…) », puis remplir la section « Données client pour la signature »",
+    "Écrire ces informations dans le champ « Notes »",
+    "Aller dans l'Annuaire, « + Nouveau client », et ressaisir la personne"
+   ],
+   "bonne_reponse": 1,
+   "explication": "« Tout renseigner (relances, notes…) » déplie le formulaire complet, dont la section « Données client pour la signature » (Statut, Profession, Revenus annuels, Patrimoine estimé). Le champ Notes n'alimente pas la fiche, et recréer un client ferait un doublon (leçon 1, En rendez-vous).",
+   "difficulte": "2"
+  },
+  {
+   "cle": "m12-q05",
+   "type": "qcm",
+   "lecon": "l2",
+   "competence": "Programmer le suivi : comprendre l'armement d'une séquence",
+   "enonce": "Cas fictif. Le dossier de Monsieur Lançon suit « Relance devis standard ». L'étape 1 était due lundi ; vous ne cliquez « Fait » que jeudi. Pour quel jour l'étape 2 (J+7) est-elle armée ?",
+   "choix": [
+    "Lundi prochain, sept jours après l'échéance dépassée",
+    "Jeudi prochain, sept jours après aujourd'hui",
+    "Aujourd'hui, pour rattraper le retard",
+    "La séquence s'arrête car une étape est en retard"
+   ],
+   "bonne_reponse": 1,
+   "explication": "« Fait » arme l'étape suivante datée depuis aujourd'hui, jamais depuis l'échéance passée. Le retard ne stoppe pas la séquence (leçon 2, Explication simple et Trois points à retenir).",
+   "difficulte": "2"
+  },
+  {
+   "cle": "m12-q06",
+   "type": "qcm",
+   "lecon": "l2",
+   "competence": "Programmer le suivi : choisir le bon geste de tri",
+   "enonce": "Cas fictif. Le dossier de Madame Ferrand est En cours, sans relance datée, et personne ne l'a modifié depuis 25 jours : il apparaît dans « Dossiers sans mouvement » avec « 25 jours sans mouvement ». Elle vient de vous confirmer par téléphone que le dossier avance, mais aucune date n'est encore possible. Dans quel bloc et avec quel geste traitez-vous la ligne ?",
+   "choix": [
+    "« Ma journée », geste « → +7 j »",
+    "« Dossiers sans mouvement », geste « Toujours en cours »",
+    "« Dossiers sans mouvement », geste « Abandonner »",
+    "« Dossiers sans mouvement », geste « Déjà signé »"
+   ],
+   "bonne_reponse": 1,
+   "explication": "Un dossier En cours sans relance datée et sans modification depuis plus de 21 jours est dans « Dossiers sans mouvement ». « Toujours en cours » le marque vu et le fait revenir après 21 jours ; il n'est pas dans « Ma journée » puisqu'il n'a pas de date (leçon 2, Explication simple).",
+   "difficulte": "1"
+  },
+  {
+   "cle": "m12-q07",
+   "type": "cas_court",
+   "lecon": "l2",
+   "competence": "Tracer un échange au bon endroit",
+   "enonce": "Cas fictif. Monsieur Delorme vous appelle pour signaler qu'il vend son appartement dans trois mois. Aucun statut ne change, aucune action n'est à dater pour l'instant. Où tracez-vous cette information ?",
+   "choix": [
+    "Dans le champ « Notes » du dossier, en écrasant le texte existant",
+    "Dans l'Agenda, avec « Nouvelle relance »",
+    "Sur la fiche client, onglet « Historique », « + Consigner un échange » avec Type « Appel » et Sens « Entrant »",
+    "Dans « Prochaine action », sans date"
+   ],
+   "bonne_reponse": 2,
+   "explication": "Un échange se consigne dans l'onglet « Historique » de la fiche client, ce qui l'inscrit dans la chronologie de la relation. L'Agenda crée un événement Google, et une prochaine action sans date n'apparaît nulle part (leçon 2, Explication simple et En rendez-vous).",
+   "difficulte": "2"
+  },
+  {
+   "cle": "m12-q08",
+   "type": "qcm",
+   "lecon": "l3",
+   "competence": "Signer proprement : réagir au verrou de fiche",
+   "enonce": "Cas fictif. Vous enregistrez le dossier de Madame Roussel en Signé, produit et « Date de signature effective » renseignés. Le toast affiche « Pour signer, complétez la fiche client : revenus annuels. » Que faites-vous ?",
+   "choix": [
+    "Repasser le dossier En cours et le signer plus tard, sans rien changer",
+    "Saisir 0 dans « Revenus annuels (€) » pour passer le verrou",
+    "Renseigner « Revenus annuels (€) » dans « Données client pour la signature », puis « Enregistrer » à nouveau",
+    "Demander à la direction de forcer la signature depuis « Vue cabinet »"
+   ],
+   "bonne_reponse": 2,
+   "explication": "Le verrou de fiche exige les six champs, dont les revenus annuels ; on les saisit dans « Données client pour la signature » puis on réenregistre. Saisir 0 passe le verrou, car le CRM tient un montant à 0 pour une donnée saisie, mais c'est une fiche fausse que la direction lit dans « Complétude des fiches » et qui trompe le Multi-équipement ; il n'existe pas de signature forcée, la « Vue cabinet » ne fait que lire (leçon 3, Explication simple et Erreur fréquente).",
+   "difficulte": "2"
+  },
+  {
+   "cle": "m12-q09",
+   "type": "vrai_faux",
+   "lecon": "l3",
+   "competence": "Partager un dossier : conséquence affichée du co-conseiller",
+   "enonce": "Vrai ou faux : sélectionner un « Co-conseiller » dans « Équipe & suivi » n'a aucune conséquence affichée dans la modale.",
+   "choix": [
+    "Vrai",
+    "Faux"
+   ],
+   "bonne_reponse": 1,
+   "explication": "Faux. La modale affiche « ⚠ Commission divisée par 2 entre les 2 conseillers » dès qu'un co-conseiller est sélectionné, et les deux conseillers voient ensuite le dossier et la fiche (leçon 3, Explication simple).",
+   "difficulte": "1"
+  },
+  {
+   "cle": "m12-q10",
+   "type": "qcm",
+   "lecon": "l3",
+   "competence": "Rendre compte : savoir ce que la direction lit",
+   "enonce": "La direction veut voir, conseiller par conseiller, le nombre de fiches, le score moyen de complétude et les champs les plus souvent manquants. Dans quel écran trouve-t-elle ce tableau ?",
+   "choix": [
+    "Onglet « Équipe », tableau « Complétude des fiches »",
+    "Écran Pipeline, filtre « Tous les conseillers »",
+    "Annuaire des clients, filtre « Mes clients »",
+    "Écran « Multi-équipement », chip « À proposer »"
+   ],
+   "bonne_reponse": 0,
+   "explication": "Le tableau « Complétude des fiches » (Conseiller, Fiches, Score moyen, Complètes, « Champs les plus souvent manquants ») est en bas de l'onglet « Équipe », réservé au manager et sans aucun montant. Le filtre du pipeline ne montre que les dossiers (leçon 3, Explication simple).",
+   "difficulte": "3"
+  }
+ ],
+ "a_completer_par_le_cabinet": [
+  "Convention de rédaction du champ « Notes » d'un dossier et des comptes rendus consignés dans l'onglet Historique (leçon 1 et cas pratique)",
+  "Délai maximal entre deux contacts avec un client hors gabarit de séquence de relance (leçon 2)",
+  "Qui valide le partage d'un dossier avec un co-conseiller et dans quel délai (leçon 3)",
+  "Règle de traitement d'une fiche bricolée pour passer le verrou de signature : qui la repère, qui la corrige, quelle suite (leçon 3)",
+  "Procédure de reprise d'un dossier d'un collègue absent : qui décide, qui prévient le client, qui reste conseiller principal (cas pratique)",
+  "Règle d'attribution et de prise des leads dans la Lead Room (le CRM ne fait qu'afficher les leads entrants)",
+  "À qui signaler un doublon de fiche ou une fiche client erronée"
+ ],
+ "responsable_relecture": "[a completer par le cabinet]"
+}
