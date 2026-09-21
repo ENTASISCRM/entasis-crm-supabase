@@ -95,8 +95,8 @@ const AFFECTATIONS = {
 }
 
 const TENTATIVES = [
-  { id: 'at1', version_id: 'av1', slug: 'methode-entasis', titre: 'La méthode Entasis', competence: 'Dérouler la méthode du cabinet', type: 'initial', numero: 1, demarree_le: iso(-34, '10:00:00'), soumise_le: iso(-34, '10:09:00'), score: 7, total: 10, seuil: 0.8, reussie: false, duree_s: 540, notions_a_revoir: ['Le suivi après signature'] },
-  { id: 'at2', version_id: 'av1', slug: 'methode-entasis', titre: 'La méthode Entasis', competence: 'Dérouler la méthode du cabinet', type: 'initial', numero: 2, demarree_le: iso(-33, '10:00:00'), soumise_le: iso(-33, '10:08:00'), score: 9, total: 10, seuil: 0.8, reussie: true, duree_s: 480, notions_a_revoir: [] },
+  { id: 'at1', version_id: 'av1', slug: 'methode-entasis', titre: 'La méthode Entasis', competence: 'Dérouler la méthode du cabinet', type: 'quiz', numero: 1, demarree_le: iso(-34, '10:00:00'), soumise_le: iso(-34, '10:09:00'), score: 7, total: 10, seuil: 0.8, reussie: false, duree_s: 540, notions_a_revoir: ['Le suivi après signature'] },
+  { id: 'at2', version_id: 'av1', slug: 'methode-entasis', titre: 'La méthode Entasis', competence: 'Dérouler la méthode du cabinet', type: 'quiz', numero: 2, demarree_le: iso(-33, '10:00:00'), soumise_le: iso(-33, '10:08:00'), score: 9, total: 10, seuil: 0.8, reussie: true, duree_s: 480, notions_a_revoir: [] },
   { id: 'at3', version_id: 'av1', slug: 'methode-entasis', titre: 'La méthode Entasis', competence: 'Dérouler la méthode du cabinet', type: 'revision_j7', numero: 3, demarree_le: iso(-26, '11:00:00'), soumise_le: iso(-26, '11:04:00'), score: 5, total: 5, seuil: 0.8, reussie: true, duree_s: 240, notions_a_revoir: [] },
 ]
 
@@ -205,7 +205,7 @@ const QUESTIONS_QUIZ = [
 ]
 
 const ouvrirTentative = (corps) => ({
-  tentative_id: 'at-ouverte', type: corps?.p_type || 'initial', numero: 1, total: QUESTIONS_QUIZ.length,
+  tentative_id: 'at-ouverte', type: corps?.p_type || 'quiz', numero: 1, total: QUESTIONS_QUIZ.length,
   demarree_le: iso(0), version_id: corps?.p_version_id || 'av1', seuil: 0.8, questions: QUESTIONS_QUIZ,
 })
 
@@ -229,8 +229,8 @@ const soumettreTentative = (corps) => {
 // ── Direction : pilotage, fiche, matrice ─────────────────────────────────────
 const LIGNES = [
   { profile_id: 'u-conseiller', nom: 'Conseiller Démo', advisor_code: 'DEMO', parcours: ['Intégration, 30 jours'], modules_affectes: 3, modules_valides: 1, modules_en_cours: 1, modules_a_revoir: 0, modules_non_commences: 1, retards: 1, derniere_activite: iso(-1), temps_actif_s: 2620, premier_score: { score: 7, total: 10, titre: 'La méthode Entasis', le: iso(-34) }, dernier_score: { score: 5, total: 5, titre: 'La méthode Entasis', le: iso(-26), type: 'revision_j7' }, prochaine_revision: jour(-3), revisions_dues: 1, a_examiner: ['Une révision J30 en attente depuis 3 jours', 'Assurance vie non commencé, échéance dépassée'] },
-  { profile_id: 'u-temoin', nom: 'Conseiller Témoin', advisor_code: 'TEMO', parcours: ['Fondamentaux du conseiller'], modules_affectes: 2, modules_valides: 2, modules_en_cours: 0, modules_a_revoir: 0, modules_non_commences: 0, retards: 0, derniere_activite: iso(-8), temps_actif_s: 4110, premier_score: { score: 9, total: 10, titre: 'PER et retraite', le: iso(-20) }, dernier_score: { score: 8, total: 10, titre: 'Assurance vie', le: iso(-8), type: 'initial' }, prochaine_revision: jour(2), revisions_dues: 0, a_examiner: [] },
-  { profile_id: 'u-nouveau', nom: 'Sacha Démo', advisor_code: 'SADE', parcours: ['Intégration, 30 jours'], modules_affectes: 3, modules_valides: 0, modules_en_cours: 0, modules_a_revoir: 1, modules_non_commences: 2, retards: 0, derniere_activite: iso(-12), temps_actif_s: 300, premier_score: { score: 4, total: 10, titre: 'La méthode Entasis', le: iso(-12) }, dernier_score: { score: 4, total: 10, titre: 'La méthode Entasis', le: iso(-12), type: 'initial' }, prochaine_revision: null, revisions_dues: 0, a_examiner: ['Aucune activité depuis 12 jours', 'Un quiz initial sous le seuil'] },
+  { profile_id: 'u-temoin', nom: 'Conseiller Témoin', advisor_code: 'TEMO', parcours: ['Fondamentaux du conseiller'], modules_affectes: 2, modules_valides: 2, modules_en_cours: 0, modules_a_revoir: 0, modules_non_commences: 0, retards: 0, derniere_activite: iso(-8), temps_actif_s: 4110, premier_score: { score: 9, total: 10, titre: 'PER et retraite', le: iso(-20) }, dernier_score: { score: 8, total: 10, titre: 'Assurance vie', le: iso(-8), type: 'quiz' }, prochaine_revision: jour(2), revisions_dues: 0, a_examiner: [] },
+  { profile_id: 'u-nouveau', nom: 'Sacha Démo', advisor_code: 'SADE', parcours: ['Intégration, 30 jours'], modules_affectes: 3, modules_valides: 0, modules_en_cours: 0, modules_a_revoir: 1, modules_non_commences: 2, retards: 0, derniere_activite: iso(-12), temps_actif_s: 300, premier_score: { score: 4, total: 10, titre: 'La méthode Entasis', le: iso(-12) }, dernier_score: { score: 4, total: 10, titre: 'La méthode Entasis', le: iso(-12), type: 'quiz' }, prochaine_revision: null, revisions_dues: 0, a_examiner: ['Aucune activité depuis 12 jours', 'Un quiz initial sous le seuil'] },
 ]
 
 const pilotage = () => ({
