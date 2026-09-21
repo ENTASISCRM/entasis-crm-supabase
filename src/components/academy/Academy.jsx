@@ -1,0 +1,113 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// ENTASIS ACADEMY : le conteneur de la rubrique Formation
+//
+// App.jsx lit le hash après #/formation/ et passe la route en tableau :
+//   ['parcours'] (défaut), ['catalogue'], ['module', slug], ['lecon', id],
+//   ['quiz', versionId], ['quiz', versionId, 'revision_j7'|'revision_j30'],
+//   ['resultats'], ['pilotage'], ['fiche', profileId], ['administration', ...]
+// Ce composant choisit l écran. Pilotage, fiche d un autre et administration
+// sont réservés à la direction (manager ou drapeau academy_admin) : ce
+// n est qu un affichage, la RLS et les fonctions SQL restent le vrai verrou.
+//
+// Le lien « Données suivies », présent sous tous les écrans, ouvre la notice
+// lue dans academy_mon_parcours (texte et rétention), chargée au premier
+// clic seulement.
+// ═══════════════════════════════════════════════════════════════════════════
+
+import { useState } from 'react'
+import { monParcours } from '../../services/academy'
+import { messageErreur } from '../../lib/ui-shared'
+import MonParcours from './MonParcours'
+import Catalogue from './Catalogue'
+import ModuleDetail from './ModuleDetail'
+import LecteurLecon from './LecteurLecon'
+import Quiz from './Quiz'
+import MesResultats from './MesResultats'
+import Pilotage from './Pilotage'
+import FicheCollaborateur from './FicheCollaborateur'
+import Administration from './Administration'
+import NoticeDonnees from './NoticeDonnees'
+import './academy.css'
+
+const TYPES_REVISION = ['revision_j7', 'revision_j30']
+const estDirection = (profile) => profile?.role === 'manager' || profile?.academy_admin === true
+
+function ReserveDirection({ detail }) {
+  return (
+    <div className="card">
+      <div className="table-empty-state">
+        <div style={{ fontSize: 16, color: 'var(--t2)' }}>Réservé à la direction</div>
+        <div className="form-hint" style={{ marginTop: 8 }}>{detail || 'Cet écran est réservé au manager et à l administrateur de la formation. Ton parcours et tes résultats sont dans Formation.'}</div>
+      </div>
+    </div>
+  )
+}
+
+export default function Academy({ profile, route, onNaviguer }) {
+  const [notice, setNotice] = useState(null)
+  const r = Array.isArray(route) && route.length > 0 ? route : ['parcours']
+  const [vue, a, b] = r
+  const direction = estDirection(profile)
+
+  async function ouvrirNotice() {
+    if (notice?.texte !== undefined) { setNotice((n) => ({ ...n, ouverte: true })); return }
+    setNotice({ ouverte: true, chargement: true })
+    try {
+      const p = await monParcours()
+      setNotice({ ouverte: true, chargement: false, texte: p?.notice_donnees || '', retention: p?.retention_intervalles_mois })
+    } catch (e) {
+      setNotice({ ouverte: true, chargement: false, erreur: messageErreur(e) })
+    }
+  }
+
+  let contenu
+  switch (vue) {
+    case 'catalogue':
+      contenu = <Catalogue profile={profile} onNaviguer={onNaviguer} />
+      break
+    case 'module':
+      contenu = <ModuleDetail key={a} profile={profile} slug={a} onNaviguer={onNaviguer} />
+      break
+    case 'lecon':
+      contenu = <LecteurLecon key={a} profile={profile} leconId={a} onNaviguer={onNaviguer} />
+      break
+    case 'quiz':
+      contenu = <Quiz key={`${a}-${b || 'quiz'}`} profile={profile} versionId={a} type={TYPES_REVISION.includes(b) ? b : 'quiz'} onNaviguer={onNaviguer} />
+      break
+    case 'resultats':
+      contenu = <MesResultats profile={profile} onNaviguer={onNaviguer} />
+      break
+    case 'pilotage':
+      contenu = direction ? <Pilotage profile={profile} onNaviguer={onNaviguer} /> : <ReserveDirection />
+      break
+    case 'fiche':
+      contenu = direction || (a && a === profile?.id)
+        ? <FicheCollaborateur key={a} profile={profile} profileId={a} onNaviguer={onNaviguer} />
+        : <ReserveDirection detail="La fiche d un autre collaborateur est réservée à la direction." />
+      break
+    case 'administration':
+      contenu = direction ? <Administration profile={profile} route={r} onNaviguer={onNaviguer} /> : <ReserveDirection />
+      break
+    default:
+      contenu = <MonParcours profile={profile} onNaviguer={onNaviguer} />
+  }
+
+  return (
+    <div className="ac">
+      {contenu}
+      <div className="ac-pied">
+        <span>Ce que la formation enregistre :</span>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={ouvrirNotice}>Données suivies</button>
+      </div>
+      {notice?.ouverte && (
+        <NoticeDonnees
+          texte={notice.texte}
+          retentionMois={notice.retention}
+          chargement={notice.chargement}
+          erreur={notice.erreur}
+          onFermer={() => setNotice((n) => ({ ...n, ouverte: false }))}
+        />
+      )}
+    </div>
+  )
+}

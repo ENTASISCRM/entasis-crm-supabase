@@ -1,0 +1,127 @@
+/* Administration de l Entasis Academy : les quelques règles propres aux
+   écrans de la direction, préfixe aca-. Tout le reste vient des classes
+   partagées de styles.css (section-header, subtabs, form-section,
+   form-pliable, table-wrap, data-table, modal-box, badge, btn, notice).
+   Jetons seulement, aucune couleur en dur : le gris tertiaire (--t3) ne
+   porte jamais de texte utile, le secondaire (--t2) le remplace. */
+
+.aca .section-sub { color: var(--t2); }
+
+/* La barre d outils au dessus d un onglet : un texte à gauche, les gestes à
+   droite, qui passent à la ligne sur un écran étroit. */
+.aca-outils { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 14px 0; }
+.aca-outils-droite { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+.aca-mention { font-size: 12.5px; color: var(--t2); margin: 12px 0 0; line-height: 1.45; }
+.aca-actions { display: inline-flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+/* La liste des versions d un module, une ligne par version : le badge de
+   statut, le numéro, qui a relu, les comptes, puis les gestes. */
+.aca-versions { display: flex; flex-direction: column; gap: 8px; }
+.aca-version {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 10px; border-radius: var(--rad-sm); background: rgba(0,0,0,0.02);
+  border: 0.5px solid var(--bd);
+}
+.aca-version-numero { font-weight: 650; color: var(--t1); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.aca-version-meta { font-size: 12px; color: var(--t2); line-height: 1.4; flex: 1 1 220px; min-width: 0; }
+.aca-version .aca-actions { margin-left: auto; }
+
+/* L en tête de l éditeur : le titre, le statut, le retour. */
+.aca-entete-retour { margin-bottom: 10px; }
+.aca-entete-etat { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* L éditeur de texte : la saisie à gauche, l aperçu rendu à droite au dessus
+   de 1100 px, l un sous l autre en dessous. L aperçu défile à l intérieur de
+   sa boîte pour ne pas allonger la page d une leçon de trois écrans. */
+.aca-editeur { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+@media (min-width: 1100px) {
+  .aca-editeur { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+.aca-editeur .form-textarea { min-height: 260px; font-family: inherit; line-height: 1.5; resize: vertical; }
+.aca-apercu {
+  padding: 14px 16px; border-radius: var(--rad); background: var(--bg-subtle);
+  border: 0.5px solid var(--bd); max-height: 520px; overflow: auto; font-size: 13.5px; line-height: 1.55; color: var(--t1);
+}
+.aca-apercu-titre {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--t2); margin-bottom: 8px;
+}
+.aca-apercu-vide { color: var(--t2); font-style: italic; }
+
+/* Les leçons : un accordéon par leçon, le résumé dans le bouton replié. */
+.aca-lecons { display: flex; flex-direction: column; gap: 12px; }
+.aca-lecons .form-pliable-corps > * + * { margin-top: 14px; }
+.aca-grille-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.aca-grille-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
+
+/* Les questions : une carte par question, la ligne d en tête porte la clé,
+   la leçon, les statistiques et l alerte de formulation. */
+.aca-questions { display: flex; flex-direction: column; gap: 12px; }
+.aca-question {
+  padding: 16px 18px; background: var(--card); border: 0.5px solid var(--bd);
+  border-radius: var(--rad-lg); box-shadow: var(--sh-sm);
+}
+.aca-question > * + * { margin-top: 14px; }
+.aca-question-archivee { background: var(--bg-subtle); box-shadow: none; }
+.aca-question-tete { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.aca-question-cle { font-weight: 700; color: var(--t1); font-variant-numeric: tabular-nums; }
+.aca-question-stats { font-size: 12.5px; color: var(--t2); }
+.aca-question-tete .aca-actions { margin-left: auto; }
+.aca-pied { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.aca-pied .aca-statut { font-size: 12px; color: var(--t2); }
+
+/* Les cases à cocher des collaborateurs et la liste des modules d un
+   parcours : des rangées denses, lisibles au clavier. */
+.aca-cases { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px 14px; }
+.aca-case { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--t1); padding: 4px 0; }
+.aca-case input { width: 16px; height: 16px; accent-color: var(--navy); }
+.aca-case-code { color: var(--t2); font-size: 12px; }
+.aca-case input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+.aca-modules-parcours { display: flex; flex-direction: column; gap: 8px; }
+.aca-module-parcours {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; gap: 10px; align-items: center;
+  padding: 8px 10px; border-radius: var(--rad-sm); background: rgba(0,0,0,0.02); border: 0.5px solid var(--bd);
+}
+.aca-module-parcours-ordre { font-weight: 650; color: var(--t2); font-variant-numeric: tabular-nums; min-width: 22px; }
+.aca-module-parcours .form-input, .aca-module-parcours .form-select { height: 32px; font-size: 13px; }
+.aca-module-parcours .aca-delai { width: 96px; }
+@media (max-width: 720px) {
+  .aca-module-parcours { grid-template-columns: auto minmax(0, 1fr); }
+}
+
+/* Le parcours affiché : ses modules ordonnés en petites étiquettes. */
+.aca-parcours { display: flex; flex-direction: column; gap: 12px; }
+.aca-parcours-carte {
+  padding: 16px 20px; background: var(--card); border: 0.5px solid var(--bd);
+  border-radius: var(--rad-lg); box-shadow: var(--sh-sm);
+}
+.aca-parcours-tete { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.aca-parcours-titre { font-size: 15px; font-weight: 700; color: var(--t1); letter-spacing: -0.01em; }
+.aca-parcours-desc { font-size: 13px; color: var(--t2); margin-top: 3px; line-height: 1.45; }
+.aca-etapes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.aca-etape {
+  font-size: 12px; font-weight: 600; color: var(--t2);
+  border: 1px solid var(--bd-strong); border-radius: 6px; padding: 3px 8px; white-space: nowrap;
+}
+.aca-etape b { color: var(--t1); font-variant-numeric: tabular-nums; }
+
+/* Le journal : le détail JSON tient sur une ligne, le survol donne tout. */
+.aca-code {
+  display: inline-block; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  vertical-align: middle; font-size: 11.5px; padding: 2px 6px; border-radius: 5px;
+  background: rgba(0,0,0,0.04); color: var(--t2);
+}
+
+/* L aperçu collaborateur dans la modale : une leçon après l autre, puis le
+   quiz. Les radios sont là pour donner la mesure, jamais pour répondre. */
+.aca-apercu-lecon + .aca-apercu-lecon, .aca-apercu-quiz { margin-top: 22px; padding-top: 18px; border-top: 0.5px solid var(--bd); }
+.aca-apercu-lecon h3, .aca-apercu-quiz h3 { font-size: 16px; font-weight: 700; color: var(--t1); margin: 0 0 4px; }
+.aca-apercu-objectif { font-size: 13px; color: var(--t2); margin: 0 0 12px; }
+.aca-apercu-question { margin-top: 14px; }
+.aca-apercu-enonce { font-size: 13.5px; font-weight: 600; color: var(--t1); margin-bottom: 6px; }
+.aca-apercu-choix { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.aca-apercu-choix li { font-size: 13px; color: var(--t1); display: flex; gap: 8px; align-items: center; }
+.aca-modale-large { width: min(100%, 920px); }
+
+.aca .btn:focus-visible, .aca .form-pliable-bouton:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }

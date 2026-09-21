@@ -1,0 +1,168 @@
+/* Pilotage des formations et fiche collaborateur : les règles propres à ces
+   deux écrans de direction, préfixe acp-. Tout le reste vient des classes
+   partagées de styles.css (section-header, card, kpi-grid, table-wrap,
+   data-table, badge, btn, modal-box, chart-card, team-bar). Jetons seulement,
+   aucune couleur en dur : une cellule de la matrice se lit par son texte
+   autant que par sa teinte. */
+
+.acp .section-sub { color: var(--t2); }
+
+/* ── Barre de filtres ──────────────────────────────────────────────────── */
+.acp-filtres {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 14px 16px; margin: 0 0 18px;
+  background: var(--card); border: 0.5px solid var(--bd); border-radius: var(--rad-lg);
+  box-shadow: var(--sh-sm);
+}
+.acp-filtres-ligne { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.acp-filtres-libelle { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--t2); margin-right: 2px; }
+.acp-puces { display: flex; flex-wrap: wrap; gap: 7px; }
+.acp-puce {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 30px; padding: 0 12px; border-radius: 15px; cursor: pointer;
+  font-family: inherit; font-size: 12.5px; font-weight: 600; letter-spacing: -0.005em;
+  color: var(--t2); background: var(--card); border: 1px solid var(--bd);
+  transition: background var(--tr-fast), color var(--tr-fast), border-color var(--tr-fast);
+}
+.acp-puce:hover { border-color: var(--bd-strong); color: var(--t1); }
+.acp-puce.on { background: var(--navy); border-color: var(--navy); color: var(--t-inv); }
+.acp-puce:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.acp-periode { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--t2); }
+.acp-periode .form-input { width: 150px; height: 32px; padding: 0 10px; font-size: 13px; }
+.acp-filtres .filter-select { min-width: 160px; }
+.acp-filtres-note { font-size: 12px; color: var(--t2); }
+
+/* ── Indicateurs ───────────────────────────────────────────────────────── */
+.acp-kpis { margin-bottom: 18px; }
+.acp-kpi-kicker { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--t2); margin-bottom: 8px; }
+.acp-kpi-valeur {
+  font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1;
+  color: var(--t1); font-variant-numeric: tabular-nums;
+}
+.acp-kpi-effectif { font-size: 13px; font-weight: 600; color: var(--t2); margin-left: 8px; letter-spacing: 0; }
+.acp-kpi-sous { font-size: 12px; color: var(--t2); margin-top: 6px; line-height: 1.4; }
+
+/* ── Blocs et titres de section ────────────────────────────────────────── */
+.acp-bloc { margin: 26px 0 0; }
+.acp-bloc-tete { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.acp-bloc-titre { font-size: 16px; font-weight: 700; color: var(--t1); letter-spacing: -0.01em; }
+.acp-bloc-sous { font-size: 12.5px; color: var(--t2); margin-top: 2px; }
+.acp-outils { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ── Tableau par personne ──────────────────────────────────────────────── */
+.acp-tri {
+  display: inline-flex; align-items: center; gap: 4px;
+  font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit;
+  background: none; border: none; padding: 0; cursor: pointer;
+}
+.acp-tri:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 4px; }
+.acp-tri-fleche { font-size: 10px; color: var(--t3); }
+.acp-tri.on .acp-tri-fleche { color: var(--gold); }
+.acp-table td { vertical-align: top; }
+.acp-table .team-bar-wrap { min-width: 120px; margin-top: 4px; }
+.acp-faits { margin: 0; padding: 0; list-style: none; font-size: 12px; color: var(--t2); }
+.acp-faits li + li { margin-top: 3px; }
+.acp-rien { color: var(--t2); font-style: italic; }
+.acp-actions { display: flex; gap: 4px; flex-wrap: wrap; }
+
+/* ── Matrice collaborateurs × compétences ─────────────────────────────── */
+.acp-matrice-wrap { overflow-x: auto; }
+.acp-matrice th { white-space: normal; min-width: 120px; }
+.acp-matrice th .cell-sub { text-transform: none; letter-spacing: 0; font-weight: 500; }
+.acp-cellule {
+  display: inline-block; padding: 3px 9px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 600; white-space: nowrap;
+  border: 0.5px solid transparent;
+}
+.acp-cellule-acquis { color: var(--signed); background: var(--signed-bg); border-color: var(--signed-bd); }
+.acp-cellule-renforcer { color: var(--progress); background: var(--progress-bg); border-color: var(--progress-bd); }
+.acp-cellule-non { color: var(--t2); background: rgba(0,0,0,0.04); border-color: var(--bd); }
+.acp-cellule-ancien { opacity: 0.75; }
+.acp-legende { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 10px; font-size: 12px; color: var(--t2); }
+.acp-legende .acp-cellule { margin-right: 6px; }
+
+/* ── Notions à travailler en collectif ────────────────────────────────── */
+.acp-notions { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.acp-notion {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 14px; background: var(--card); border: 0.5px solid var(--bd); border-radius: var(--rad);
+}
+.acp-notion-taux { font-size: 18px; font-weight: 700; color: var(--t1); font-variant-numeric: tabular-nums; min-width: 56px; }
+.acp-notion-nom { font-size: 13.5px; font-weight: 600; color: var(--t1); }
+.acp-notion-detail { font-size: 12px; color: var(--t2); margin-left: auto; }
+
+/* ── Graphiques ────────────────────────────────────────────────────────── */
+.acp-graphes { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; }
+.acp-graphe { height: 220px; position: relative; }
+.acp-valeurs { margin-top: 12px; }
+.acp-valeurs summary { cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--t2); }
+.acp-valeurs summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 4px; }
+.acp-valeurs .data-table { margin-top: 8px; }
+.acp-valeurs .data-table th, .acp-valeurs .data-table td { padding: 6px 10px; font-size: 12px; }
+
+/* ── Fiche collaborateur ───────────────────────────────────────────────── */
+.acp-entete-actions { display: flex; gap: 8px; align-items: center; }
+.acp-progression { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.acp-module {
+  display: grid; grid-template-columns: minmax(200px, 2fr) minmax(160px, 1.4fr) minmax(180px, 1.6fr);
+  gap: 8px 16px; align-items: center;
+  padding: 12px 16px; background: var(--card); border: 0.5px solid var(--bd); border-radius: var(--rad);
+}
+.acp-module-titre { font-size: 13.5px; font-weight: 600; color: var(--t1); }
+.acp-module-competence { font-size: 12px; color: var(--t2); margin-top: 2px; }
+.acp-module-statut { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--t2); }
+.acp-module-meta { font-size: 12px; color: var(--t2); text-align: right; }
+.acp-module-meta.retard { color: var(--cancelled); font-weight: 600; }
+
+/* La frise : une pastille par type d événement, le libellé dit le type, la
+   couleur ne fait que l accompagner. */
+.acp-frise { margin: 0; padding: 0 0 0 4px; list-style: none; position: relative; }
+.acp-frise::before { content: ''; position: absolute; left: 9px; top: 6px; bottom: 6px; width: 2px; background: var(--bd-strong); }
+.acp-frise-item { position: relative; padding: 0 0 14px 28px; }
+.acp-frise-item:last-child { padding-bottom: 0; }
+.acp-frise-pastille {
+  position: absolute; left: 4px; top: 4px; width: 12px; height: 12px; border-radius: 50%;
+  border: 2px solid var(--card); box-shadow: 0 0 0 1px var(--bd-strong);
+}
+.acp-frise-pastille.affectation_creee { background: var(--t3); }
+.acp-frise-pastille.lecon_terminee { background: var(--gold); }
+.acp-frise-pastille.tentative_soumise { background: var(--navy); }
+.acp-frise-pastille.module_valide { background: var(--signed); }
+.acp-frise-pastille.revision_faite { background: var(--gold); }
+.acp-frise-pastille.autre { background: var(--t3); }
+.acp-frise-libelle { font-size: 13px; font-weight: 600; color: var(--t1); }
+.acp-frise-detail { font-size: 12px; color: var(--t2); margin-top: 2px; }
+.acp-frise-date { font-size: 11.5px; color: var(--t2); font-variant-numeric: tabular-nums; }
+
+/* Temps actif par semaine, en barres CSS pures (pas de chart.js sur la fiche). */
+.acp-barres { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.acp-barre { display: grid; grid-template-columns: 130px 1fr 64px; gap: 10px; align-items: center; font-size: 12.5px; color: var(--t2); }
+.acp-barre-piste { height: 8px; background: rgba(0,0,0,0.05); border-radius: 999px; overflow: hidden; }
+.acp-barre-remplissage { height: 100%; background: var(--gold); border-radius: 999px; }
+.acp-barre-valeur { text-align: right; font-variant-numeric: tabular-nums; color: var(--t1); font-weight: 600; }
+
+/* Commentaires de coaching. */
+.acp-commentaires { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.acp-commentaire { padding: 10px 14px; background: var(--gold-subtle); border: 0.5px solid var(--gold-line); border-radius: var(--rad); }
+.acp-commentaire-meta { font-size: 11.5px; color: var(--t2); margin-bottom: 4px; }
+.acp-commentaire-texte { font-size: 13px; color: var(--t1); white-space: pre-wrap; line-height: 1.45; }
+.acp-form-coaching { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.acp-form-coaching .btn { align-self: flex-start; }
+
+/* Aperçu de relance : le texte tel qu il sera copié. */
+.acp-relance-texte {
+  white-space: pre-wrap; font-size: 13px; line-height: 1.5; color: var(--t1);
+  padding: 12px 14px; background: rgba(0,0,0,0.03); border: 0.5px solid var(--bd); border-radius: var(--rad);
+}
+.acp-relance-champ { font-size: 12.5px; color: var(--t2); }
+.acp-relance-champ b { color: var(--t1); font-weight: 600; }
+
+/* Écran réservé à la direction : même repli que Campagnes. */
+.acp-garde-titre { font-size: 16px; color: var(--t2); }
+
+@media (max-width: 720px) {
+  .acp-module { grid-template-columns: 1fr; }
+  .acp-module-meta { text-align: left; }
+  .acp-barre { grid-template-columns: 100px 1fr 56px; }
+  .acp-periode .form-input { width: 130px; }
+}
