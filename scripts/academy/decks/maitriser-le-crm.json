@@ -1,0 +1,853 @@
+{
+ "slug": "maitriser-le-crm",
+ "titre": "Maîtriser le CRM Entasis",
+ "competence": "Tenir une fiche, tracer un échange, programmer le suivi et utiliser les étapes réellement présentes dans le CRM",
+ "memo_md": "Une fiche complète, un échange consigné, une suite datée : voilà ce que le CRM attend après chaque contact.\n\n## Créer un dossier\n- Trois chemins : bouton « Nouveau dossier », touche N’hors saisie, palette ⌘K.\n- Client connu : « Rechercher un client existant », sinon doublon.\n- Express : nom, email, téléphone, mois, un produit, date prévue.\n- Quatre statuts : En cours, RDV calé (valeur « Prévu »), Signé, Annulé.\n- Date prévue obligatoire pour En cours et RDV calé ; date effective pour Signé.\n\n## Compléter la fiche\n- Six champs pour signer : email, téléphone, statut, profession, revenus annuels, patrimoine estimé (« Signature n/6 »).\n- Jauge de complétude : huit champs pondérés, quatre niveaux, de « Complète » à « À démarrer ».\n- Un montant à 0 passe le verrou mais fausse la fiche.\n\n## Suivre et relancer\n- Une relance vit dans « Prochaine action » et « Pour le » ; l'Agenda ne crée qu'un événement Google.\n- Gabarits : devis standard J+2, J+7, J+15 ; suite de rendez vous J+1, J+5, J+12 ; pièces manquantes J+3, J+10, J+20. Aucun email envoyé.\n- « Ma journée » : RDV du jour, relances en retard, relances du jour. Trois gestes : Fait, → demain, → +7 j, annulables sept secondes.\n- Fait arme l'étape suivante depuis aujourd'hui.\n- « Dossiers sans mouvement » : En cours, sans « Pour le », plus de 21 jours sans modification. Gestes : Déjà signé, Toujours en cours, Relancer, Abandonner.\n\n## Tracer et signer\n- Fiche client, onglet Historique, « + Consigner un échange ».\n- Trois verrous : fiche complète, produit choisi, « Date de signature effective ».\n- Lendemain d'un RDV calé : « RDV tenu » ou « No-show ».\n- La direction lit « Complétude des fiches » dans Équipe, sans montant.\n",
+ "items": [
+  {
+   "cle": "i01",
+   "type": "choix",
+   "competence": "Créer un dossier",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Vous êtes sur l'écran Pipeline, aucun champ n'a le focus, aucune modale n'est ouverte. Quelle touche ouvre « Nouveau dossier » ?",
+    "choix": [
+     "N",
+     "Entrée",
+     "/",
+     "?"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "La touche N’ouvre « Nouveau dossier » hors saisie et hors onglet Leads ; « ? » affiche l'aide des raccourcis."
+  },
+  {
+   "cle": "i02",
+   "type": "choix",
+   "competence": "Créer un dossier",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Vous enregistrez le dossier de Monsieur Piel en statut En cours ; le CRM refuse. Produit et compagnie sont renseignés, la fiche est à « Signature 6/6 ». Quel champ manque le plus probablement ?",
+    "choix": [
+     "« Date de signature effective »",
+     "« Date de signature prévue »",
+     "« Co-conseiller »",
+     "« Source »"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "La « Date de signature prévue » est obligatoire pour En cours et RDV calé ; la date effective ne l'est que pour Signé."
+  },
+  {
+   "cle": "i03",
+   "type": "choix",
+   "competence": "Créer un dossier",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Cas fictif. Monsieur Garnier, déjà client du cabinet, vous appelle pour une nouvelle assurance vie. Vous ouvrez « Nouveau dossier ». Quel est le bon premier geste dans la modale ?",
+    "choix": [
+     "Taper son nom dans « Nom du client * » et créer le dossier",
+     "Utiliser le champ « Client » pour « Rechercher un client existant » et rattacher sa fiche",
+     "Aller dans l'Annuaire et cliquer « + Nouveau client »",
+     "Cliquer « Tout renseigner (relances, notes…) » puis saisir son email"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Un client existant se rattache par la recherche du champ « Client » ; retaper le nom crée un doublon."
+  },
+  {
+   "cle": "i04",
+   "type": "choix",
+   "competence": "Compléter la fiche client",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. En mode express, vous avez saisi nom, email, téléphone et mois de Madame Abitbol. Elle vous donne sa profession, ses revenus et son patrimoine ; vous voulez les saisir sans quitter la modale. Que faites-vous ?",
+    "choix": [
+     "Cliquer « Créer le dossier », puis rouvrir la fiche client depuis l'Annuaire",
+     "Cliquer « Tout renseigner (relances, notes…) », puis remplir « Données client pour la signature »",
+     "Écrire ces informations dans le champ « Notes »",
+     "Aller dans l'Annuaire, « + Nouveau client », et ressaisir la personne"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "« Tout renseigner (relances, notes…) » déplie la section « Données client pour la signature » ; le champ Notes n'alimente pas la chronologie de la fiche."
+  },
+  {
+   "cle": "i05",
+   "type": "choix",
+   "competence": "Programmer le suivi",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Le dossier de Monsieur Lançon suit « Relance devis standard ». L'étape 1 était due lundi ; vous ne cliquez « Fait » que jeudi. Pour quel jour l'étape 2 (J+7) est-elle armée ?",
+    "choix": [
+     "Lundi prochain, sept jours après l'échéance dépassée",
+     "Jeudi prochain, sept jours après aujourd'hui",
+     "Aujourd'hui, pour rattraper le retard",
+     "Nulle part : la séquence s'arrête quand une étape est en retard"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "« Fait » arme l'étape suivante datée depuis aujourd'hui, le jour du clic ; le retard ne stoppe pas la séquence."
+  },
+  {
+   "cle": "i06",
+   "type": "choix",
+   "competence": "Trier sans mouvement",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Le dossier de Madame Ferrand est En cours, sans relance datée, non modifié depuis 25 jours : il est dans « Dossiers sans mouvement ». Elle vous confirme que le dossier avance, mais aucune date n'est possible. Quel geste sur la ligne ?",
+    "choix": [
+     "« → +7 j »",
+     "« Toujours en cours »",
+     "« Abandonner »",
+     "« Déjà signé »"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "« Toujours en cours » fait taire le dossier 21 jours de plus ; « → +7 j » appartient à « Ma journée »."
+  },
+  {
+   "cle": "i07",
+   "type": "choix",
+   "competence": "Tracer un échange",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Monsieur Delorme vous appelle pour signaler qu'il vend son appartement dans trois mois. Aucun statut ne change, rien n'est à dater pour l'instant. Où tracez-vous cette information ?",
+    "choix": [
+     "Dans le champ « Notes » du dossier, en écrasant le texte existant",
+     "Dans l'Agenda, avec « Nouvelle relance »",
+     "Sur la fiche client, onglet « Historique », « + Consigner un échange », Type « Appel », Sens « Entrant »",
+     "Dans « Prochaine action », sans date"
+    ]
+   },
+   "corrige": {
+    "index": 2
+   },
+   "explication": "Un échange se consigne dans l'onglet « Historique » de la fiche client ; une prochaine action sans date n'apparaît nulle part."
+  },
+  {
+   "cle": "i08",
+   "type": "choix",
+   "competence": "Signer proprement",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Vous enregistrez le dossier de Madame Roussel en Signé, produit et « Date de signature effective » renseignés. Le toast affiche « Pour signer, complétez la fiche client : revenus annuels. » Que faites-vous ?",
+    "choix": [
+     "Repasser le dossier En cours et le signer plus tard, sans rien changer",
+     "Saisir 0 dans « Revenus annuels (€) » pour passer le verrou",
+     "Renseigner « Revenus annuels (€) » dans « Données client pour la signature », puis « Enregistrer » à nouveau",
+     "Demander à la direction de forcer la signature depuis « Vue cabinet »"
+    ]
+   },
+   "corrige": {
+    "index": 2
+   },
+   "explication": "On saisit le champ manquant puis on réenregistre ; un 0 passe le verrou mais fausse la fiche."
+  },
+  {
+   "cle": "i09",
+   "type": "choix",
+   "competence": "Compléter la fiche client",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "La direction veut voir, conseiller par conseiller, le nombre de fiches, le score moyen de complétude et les champs les plus souvent manquants. Dans quel écran trouve-t-elle ce tableau ?",
+    "choix": [
+     "Onglet « Équipe », tableau « Complétude des fiches »",
+     "Écran Pipeline, filtre « Tous les conseillers »",
+     "Accueil « Vue cabinet »",
+     "Écran « Multi-équipement », chip « À proposer »"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Le tableau « Complétude des fiches » (Conseiller, Fiches, Score moyen, Complètes, champs manquants) est dans l'onglet « Équipe », sans montant."
+  },
+  {
+   "cle": "i10",
+   "type": "choix",
+   "competence": "Programmer le suivi",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Le dossier de Madame Vial est En cours, sa relance « Pour le » date d'il y a dix jours et personne n'a touché le dossier depuis 30 jours. Où le CRM le fait-il remonter ce matin ?",
+    "choix": [
+     "Dans « Dossiers sans mouvement », avec « 30 jours sans mouvement »",
+     "Dans « Ma journée », parmi les relances en retard",
+     "Dans « Signés, fiche à finir »",
+     "Nulle part : il faut le chercher dans le pipeline"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Une relance en retard est dans « Ma journée » ; « Dossiers sans mouvement » ne retient que les dossiers sans relance datée."
+  },
+  {
+   "cle": "i11",
+   "type": "vrai_faux",
+   "competence": "Créer un dossier",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Sur le brouillon créé par la Lead Room (produit Autre, montants à 0), le statut s'affiche « RDV calé » et le champ de date s'appelle « Date du rendez-vous »."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "« RDV calé » est le libellé écran de « Prévu » ; sur ce seul brouillon, la date s'intitule « Date du rendez-vous »."
+  },
+  {
+   "cle": "i12",
+   "type": "vrai_faux",
+   "competence": "Signer proprement",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Dans le pipeline, glisser une carte vers la colonne « Signé ✓ » suffit à enregistrer la signature du dossier."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "Le glisser ouvre la modale en Signé ; l'enregistrement passe seulement avec fiche complète, produit choisi et « Date de signature effective »."
+  },
+  {
+   "cle": "i13",
+   "type": "vrai_faux",
+   "competence": "Signer proprement",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Sélectionner un « Co-conseiller » dans « Équipe & suivi » n'a aucune conséquence affichée dans la modale."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "La modale affiche « Commission divisée par 2 entre les 2 conseillers », et les deux conseillers voient ensuite le dossier et la fiche."
+  },
+  {
+   "cle": "i14",
+   "type": "vrai_faux",
+   "competence": "Programmer le suivi",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Une séquence de relance démarrée dans le CRM n'envoie aucun email : c'est le conseiller qui appelle ou écrit à chaque étape."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "L'aide du bloc « Séquence de relance » le dit : aucun email n'est envoyé, la séquence ne fait que dater les étapes."
+  },
+  {
+   "cle": "i15",
+   "type": "vrai_faux",
+   "competence": "Programmer le suivi",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Le bouton « Nouvelle relance » de l'Agenda crée une relance qui apparaîtra dans « Ma journée » à la date choisie."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "« Nouvelle relance » se termine par « Ouvrir dans Google Agenda » : un événement Google est créé, rien dans le dossier."
+  },
+  {
+   "cle": "i16",
+   "type": "vrai_faux",
+   "competence": "Compléter la fiche client",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Un patrimoine estimé saisi à 0 passe le verrou de signature, car le CRM tient un montant à 0 pour une donnée saisie."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "Le CRM accepte le 0 comme saisi et ne détecte pas la tricherie ; la fiche fausse remonte dans « Complétude des fiches »."
+  },
+  {
+   "cle": "i17",
+   "type": "multi",
+   "competence": "Compléter la fiche client",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Cochez tout ce qui fait partie des six champs de la fiche exigés pour signer.",
+    "choix": [
+     "Email",
+     "Téléphone",
+     "Profession",
+     "Date de naissance",
+     "Situation familiale",
+     "Source"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "Six champs : email, téléphone, statut, profession, revenus annuels, patrimoine estimé ; date de naissance et situation familiale comptent pour la jauge."
+  },
+  {
+   "cle": "i18",
+   "type": "multi",
+   "competence": "Créer un dossier",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cochez tout ce qui ouvre la modale « Nouveau dossier ».",
+    "choix": [
+     "Le bouton doré « Nouveau dossier » en haut à droite des écrans commerciaux",
+     "La touche N’hors saisie",
+     "La palette ⌘K et son action « Nouveau dossier »",
+     "Le bouton « + Nouveau client » de l'Annuaire",
+     "Le bouton « Nouvelle relance » de l'Agenda"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "Trois chemins ouvrent la même modale ; « + Nouveau client » crée une fiche et « Nouvelle relance » un événement Google."
+  },
+  {
+   "cle": "i19",
+   "type": "multi",
+   "competence": "Programmer le suivi",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Cochez tout ce qui est un geste proposé sur une relance dans « Ma journée ».",
+    "choix": [
+     "« Fait »",
+     "« → demain »",
+     "« → +7 j »",
+     "« Relancer »",
+     "« Toujours en cours »",
+     "« Abandonner »"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "« Ma journée » propose exactement trois gestes ; les trois autres appartiennent à « Dossiers sans mouvement »."
+  },
+  {
+   "cle": "i20",
+   "type": "multi",
+   "competence": "Trier sans mouvement",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cochez tout ce qu'un dossier doit réunir pour figurer dans « Dossiers sans mouvement ».",
+    "choix": [
+     "Statut En cours",
+     "Aucune relance datée (« Pour le » vide)",
+     "Aucune modification du dossier depuis plus de 21 jours",
+     "Une relance en retard",
+     "Une fiche client à moins de « Signature 6/6 »",
+     "Statut RDV calé"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "En cours, « Pour le » vide, plus de 21 jours sans modification ; une relance en retard est déjà dans « Ma journée »."
+  },
+  {
+   "cle": "i21",
+   "type": "multi",
+   "competence": "Signer proprement",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cochez tout ce que le CRM vérifie à l'enregistrement d'un dossier en Signé (les trois verrous).",
+    "choix": [
+     "La fiche client complète sur les six champs",
+     "Un produit choisi",
+     "La « Date de signature effective »",
+     "La jauge de complétude au niveau « Complète »",
+     "Un co-conseiller renseigné",
+     "La « Date de signature prévue »"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "Trois verrous : fiche complète, produit, date effective ; la jauge à huit champs ne bloque pas la signature."
+  },
+  {
+   "cle": "i22",
+   "type": "ordre",
+   "competence": "Créer un dossier",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Vous raccrochez avec une prospecte intéressée par un PER. Remettez dans l'ordre la création express du dossier.",
+    "elements": [
+     "Touche N : la modale s'ouvre en mode express",
+     "Rechercher un client existant, sinon saisir nom, email, téléphone et mois",
+     "Choisir « Produit * » (PER Individuel)",
+     "Poser la « Date de signature prévue »",
+     "Cliquer « Créer le dossier »",
+     "Le soir, rouvrir le dossier pour la compagnie et la PP mensuelle"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   },
+   "explication": "L'express suffit pour commencer : identité, au moins un produit et une date prévue, puis on complète plus tard."
+  },
+  {
+   "cle": "i23",
+   "type": "ordre",
+   "competence": "Programmer le suivi",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Remettez dans l'ordre d'affichage les blocs de l'accueil « Mon mois », du haut vers le bas.",
+    "elements": [
+     "« Ma journée » : les RDV du jour",
+     "« Ma journée » : les relances en retard",
+     "« Ma journée » : les relances du jour",
+     "Plus bas, le bloc « Dossiers sans mouvement »"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3
+    ]
+   },
+   "explication": "« Ma journée » affiche RDV du jour, relances en retard puis relances du jour ; « Dossiers sans mouvement » vient plus bas."
+  },
+  {
+   "cle": "i24",
+   "type": "ordre",
+   "competence": "Programmer le suivi",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Lundi, vous envoyez un devis d'assurance vie. Remettez dans l'ordre le déroulé d'une séquence « Relance devis standard ».",
+    "elements": [
+     "Ouvrir le dossier en formulaire complet, bloc « Séquence de relance »",
+     "Choisir le gabarit « Relance devis standard » et cliquer « Démarrer »",
+     "Cliquer « Enregistrer » pour persister l'étape 1",
+     "Le jour venu, appeler le client depuis « Ma journée »",
+     "Consigner l'appel dans « Historique » puis cliquer « Fait »",
+     "L'étape 2 s'arme sept jours après le clic"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   },
+   "explication": "« Démarrer » pose l'étape 1, « Enregistrer » la persiste, « Fait » arme l'étape suivante datée depuis aujourd'hui."
+  },
+  {
+   "cle": "i25",
+   "type": "ordre",
+   "competence": "Signer proprement",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Monsieur Ravel a signé vendredi. Remettez dans l'ordre les gestes d'une signature propre.",
+    "elements": [
+     "Vérifier « Signature n/6 » sur la fiche client",
+     "Glisser la carte vers « Signé ✓ » : la modale s'ouvre en Signé",
+     "Poser la « Date de signature effective »",
+     "Cliquer « Enregistrer »",
+     "Si le toast liste des champs manquants, les remplir puis enregistrer de nouveau"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ]
+   },
+   "explication": "La signature passe par la modale ; le toast « Pour signer, complétez la fiche client : … » nomme ce qui manque."
+  },
+  {
+   "cle": "i26",
+   "type": "association",
+   "competence": "Programmer le suivi",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Associez chaque gabarit de séquence de relance à ses étapes.",
+    "gauche": [
+     "« Relance devis standard »",
+     "« Suite de rendez vous »",
+     "« Pièces manquantes »"
+    ],
+    "droite": [
+     "J+2, J+7, J+15",
+     "J+1, J+5, J+12",
+     "J+3, J+10, J+20"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ]
+    ]
+   },
+   "explication": "Devis standard J+2, J+7, J+15 ; suite de rendez vous J+1, J+5, J+12 ; pièces manquantes J+3, J+10, J+20."
+  },
+  {
+   "cle": "i27",
+   "type": "association",
+   "competence": "Créer un dossier",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Associez chaque statut de dossier à ce qui le caractérise.",
+    "gauche": [
+     "En cours",
+     "RDV calé",
+     "Signé",
+     "Annulé"
+    ],
+    "droite": [
+     "Dossier ouvert, « Date de signature prévue » obligatoire",
+     "Valeur « Prévu », brouillon posé par la Lead Room",
+     "Colonne « Signé ✓ », « Date de signature effective » obligatoire",
+     "Issue de « Abandonner » ou de « No-show »"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      3,
+      3
+     ]
+    ]
+   },
+   "explication": "Quatre statuts : En cours et RDV calé exigent la date prévue, Signé la date effective, Annulé vient d'un abandon ou d'un no-show."
+  },
+  {
+   "cle": "i28",
+   "type": "association",
+   "competence": "Trier sans mouvement",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Associez chaque geste de « Dossiers sans mouvement » à son effet.",
+    "gauche": [
+     "« Déjà signé »",
+     "« Toujours en cours »",
+     "« Relancer »",
+     "« Abandonner »"
+    ],
+    "droite": [
+     "Ouvre la modale en Signé",
+     "Le dossier se tait 21 jours de plus",
+     "Ouvre le dossier pour y poser une date",
+     "Passe le dossier en Annulé après confirmation"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      3,
+      3
+     ]
+    ]
+   },
+   "explication": "Quatre gestes : signer, faire taire 21 jours, dater une relance, ou annuler après confirmation."
+  },
+  {
+   "cle": "i29",
+   "type": "association",
+   "competence": "Compléter la fiche client",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Associez chaque indicateur du CRM à ce qu'il mesure.",
+    "gauche": [
+     "Verrou de signature",
+     "Jauge de complétude",
+     "Puce « À compléter »",
+     "« Signés, fiche à finir »"
+    ],
+    "droite": [
+     "Six champs, affichés « Signature n/6 »",
+     "Huit champs pondérés, quatre niveaux",
+     "Produit Autre et PP mensuelle à 0",
+     "Dossier Signé, jauge sous 100 %, plus de 21 jours sans mouvement"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      3,
+      3
+     ]
+    ]
+   },
+   "explication": "Le verrou dit le droit de signer, la jauge la qualité de la donnée ; la puce signale un brouillon."
+  },
+  {
+   "cle": "i30",
+   "type": "trou_choix",
+   "competence": "Trier sans mouvement",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "« Dossiers sans mouvement » retient les dossiers En cours sans relance datée et non modifiés depuis plus de ___ jours.",
+    "choix": [
+     "7",
+     "15",
+     "21",
+     "30"
+    ]
+   },
+   "corrige": {
+    "index": 2
+   },
+   "explication": "Le seuil de stagnation est 21 jours, comptés sur la date de dernière modification du dossier."
+  },
+  {
+   "cle": "i31",
+   "type": "trou_choix",
+   "competence": "Programmer le suivi",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Chaque geste de « Ma journée » est annulable pendant ___ secondes par le bouton « Annuler » du toast.",
+    "choix": [
+     "trois",
+     "cinq",
+     "sept",
+     "dix"
+    ]
+   },
+   "corrige": {
+    "index": 2
+   },
+   "explication": "« Fait », « → demain » et « → +7 j » sont annulables sept secondes via le toast."
+  },
+  {
+   "cle": "i32",
+   "type": "trou_choix",
+   "competence": "Tracer un échange",
+   "difficulte": 3,
+   "payload": {
+    "phrase": "Cas fictif. Vous reprenez le dossier d'un collègue absent et reportez ses notes dans « Historique » : Type « Note », Sens ___.",
+    "choix": [
+     "« Sortant »",
+     "« Entrant »",
+     "« Interne »",
+     "« Rendez-vous »"
+    ]
+   },
+   "corrige": {
+    "index": 2
+   },
+   "explication": "Une information venue du cabinet se consigne en Type « Note », Sens « Interne » ; « Rendez-vous » est un type."
+  },
+  {
+   "cle": "i33",
+   "type": "trou_choix",
+   "competence": "Signer proprement",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "Le lendemain d'un RDV calé, la carte du pipeline propose « RDV tenu » et ___.",
+    "choix": [
+     "« Déjà signé »",
+     "« No-show »",
+     "« Abandonner »",
+     "« Relancer »"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "« RDV tenu » passe le dossier En cours ; « No-show » passe le brouillon en Annulé après confirmation."
+  },
+  {
+   "cle": "i34",
+   "type": "trou_saisie",
+   "competence": "Compléter la fiche client",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "La fiche client compte les champs exigés pour signer sous l'indicateur « Signature n/___ ».",
+    "aide": "un nombre"
+   },
+   "corrige": {
+    "reponses": [
+     "6",
+     "six",
+     "Six"
+    ]
+   },
+   "explication": "Six champs conditionnent la signature : email, téléphone, statut, profession, revenus annuels, patrimoine estimé."
+  },
+  {
+   "cle": "i35",
+   "type": "trou_saisie",
+   "competence": "Programmer le suivi",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Dans le gabarit « Relance devis standard », l'étape 2 tombe à J+___.",
+    "aide": "un nombre de jours"
+   },
+   "corrige": {
+    "reponses": [
+     "7",
+     "sept",
+     "Sept"
+    ]
+   },
+   "explication": "« Relance devis standard » enchaîne J+2, J+7 et J+15."
+  },
+  {
+   "cle": "i36",
+   "type": "trou_saisie",
+   "competence": "Créer un dossier",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "À l'écran, le statut de valeur « Prévu » s'affiche « RDV ___ ».",
+    "aide": "un mot"
+   },
+   "corrige": {
+    "reponses": [
+     "calé",
+     "cale",
+     "Calé",
+     "Cale"
+    ]
+   },
+   "explication": "« RDV calé » est le libellé écran de la valeur « Prévu », statut du brouillon posé par la Lead Room."
+  },
+  {
+   "cle": "i37",
+   "type": "trou_saisie",
+   "competence": "Compléter la fiche client",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "La jauge de complétude compte ___ champs pondérés, contre six pour le verrou de signature.",
+    "aide": "un nombre"
+   },
+   "corrige": {
+    "reponses": [
+     "8",
+     "huit",
+     "Huit"
+    ]
+   },
+   "explication": "La jauge compte huit champs pondérés, dont date de naissance et situation familiale, en quatre niveaux."
+  },
+  {
+   "cle": "i38",
+   "type": "carte",
+   "competence": "Tracer un échange",
+   "difficulte": 1,
+   "payload": {
+    "recto": "Quels types et quels sens propose « + Consigner un échange » ?",
+    "verso": "Types : Appel, E-mail, Rendez-vous, Courrier, Note. Sens : Sortant, Entrant, Interne."
+   },
+   "corrige": {},
+   "explication": "Le formulaire de l'onglet Historique demande Type, Sens, Date, Objet, Compte rendu et un dossier concerné facultatif."
+  },
+  {
+   "cle": "i39",
+   "type": "carte",
+   "competence": "Compléter la fiche client",
+   "difficulte": 1,
+   "payload": {
+    "recto": "Quels sont les quatre niveaux de la jauge de complétude ?",
+    "verso": "Complète, Presque complète, Partielle, À démarrer."
+   },
+   "corrige": {},
+   "explication": "La jauge classe les fiches en quatre niveaux, distincts du verrou de signature à six champs."
+  },
+  {
+   "cle": "i40",
+   "type": "carte",
+   "competence": "Signer proprement",
+   "difficulte": 2,
+   "payload": {
+    "recto": "Que devient une mission Multi-équipement quand le dossier correspondant est signé ?",
+    "verso": "Elle passe d'elle-même dans « Gagnées ✓ », sans geste du conseiller."
+   },
+   "corrige": {},
+   "explication": "Gestes : « Proposer », « Relancer », « Plus tard » ; la signature du dossier bascule seule la mission en Gagnées."
+  }
+ ]
+}

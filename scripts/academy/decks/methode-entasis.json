@@ -1,0 +1,842 @@
+{
+ "slug": "methode-entasis",
+ "titre": "La méthode Entasis",
+ "competence": "Préparer et structurer la découverte, l'analyse et le suivi",
+ "memo_md": "Une stratégie d'ensemble, pas une collection de produits.\n\n## Les trois temps\n- Écoute : premier entretien de 30 minutes, confidentiel et sans engagement. Comprendre, pas proposer.\n- Étude : analyse patrimoniale complète, puis feuille de route argumentée, chaque recommandation chiffrée.\n- Accompagnement : un conseiller dédié, un point annuel formel, des ajustements au fil de la vie.\n\n## Avant tout conseil (AMF)\n- Recueillir : situation financière (dont capacité à subir des pertes), connaissances et expérience, objectifs, horizon, tolérance au risque.\n- Sans ces informations : s'abstenir de tout conseil.\n- Demande de produit : notée, reportée à l'étude, ni acceptée ni rejetée.\n\n## Le bilan patrimonial\nActifs, passifs, revenus, fiscalité, régime matrimonial, clauses bénéficiaires, objectifs de vie.\n\n## L'étude, dans l'ordre\n1. Diagnostic : où en est le client ?\n2. Objectifs de vie hiérarchisés, avec leur horizon.\n3. Stratégie, puis moyens : les solutions arrivent ici seulement.\n- Pour chaque recommandation : objectif servi, chiffre, contrainte, risque, scénario défavorable.\n- Aucun chiffre réglementaire de mémoire : source officielle datée, ou mention « à vérifier ».\n- Le conseil écrit : la déclaration d'adéquation.\n\n## Le suivi\n- Point annuel : « Qu'est-ce qui a changé dans votre vie ? » Famille, activité, revenus, projets, rapport au risque.\n- Mariage, naissance, cession, héritage, baisse de revenus : mettre à jour l'étude, pas de réponse immédiate.\n- Notaire, avocat fiscaliste, expert-comptable : coordonnés avec l'accord du client, sans les remplacer.\n- Chaque échange, même bref, est tracé dans le CRM le jour même.\n",
+ "items": [
+  {
+   "cle": "i01",
+   "type": "choix",
+   "competence": "Recueillir avant de conseiller",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Madame Roux, pharmacienne, déclare en découverte : « Je veux du rendement, mais je ne veux surtout pas perdre. » Que faites-vous ?",
+    "choix": [
+     "Noter « profil équilibré » et passer à la question suivante.",
+     "Expliquer que rendement et risque sont liés, puis retenir un profil dynamique puisqu'elle veut du rendement.",
+     "Proposer un fonds en euros pour lever le doute immédiatement.",
+     "Explorer la contradiction : demander ce qu'elle ferait si son épargne baissait de 10 % sur un an, quel montant elle peut immobiliser, et pour quel projet."
+    ]
+   },
+   "corrige": {
+    "index": 3
+   },
+   "explication": "Une contradiction apparente se creuse par des questions concrètes sur la réaction à une baisse, la capacité de perte et l'horizon, avant toute solution."
+  },
+  {
+   "cle": "i02",
+   "type": "choix",
+   "competence": "Préparer la découverte",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Un dirigeant ouvre le premier entretien par : « Quel placement me conseillez-vous ? » Quelle réponse correspond à la méthode Entasis ?",
+    "choix": [
+     "Présenter l'assurance vie, enveloppe souple qui convient à la plupart des situations.",
+     "Lui demander d'utiliser le simulateur en ligne et de revenir avec le résultat.",
+     "Expliquer que la recommandation viendra après l'écoute et l'étude, puis poser des questions sur sa situation et ses projets.",
+     "Refuser de poursuivre tant qu'il n'a pas signé un document d'entrée en relation."
+    ]
+   },
+   "corrige": {
+    "index": 2
+   },
+   "explication": "L'écoute précède toute proposition : la demande est accueillie, notée, puis le conseiller recueille situation, projets, horizon et rapport au risque."
+  },
+  {
+   "cle": "i03",
+   "type": "choix",
+   "competence": "Recueillir avant de conseiller",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Selon l'AMF, que doit faire le conseiller si le client ne communique pas sa situation financière, ses connaissances et ses objectifs ?",
+    "choix": [
+     "Limiter sa recommandation à des supports peu risqués.",
+     "S'abstenir de tout conseil.",
+     "Conseiller sur la base d'un profil moyen.",
+     "Faire signer une décharge, puis conseiller."
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Sans ces informations, le conseiller doit s'abstenir de tout conseil, quel que soit le niveau de risque du support."
+  },
+  {
+   "cle": "i04",
+   "type": "choix",
+   "competence": "Préparer la découverte",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Au terme du premier entretien, quel signe montre que l'écoute a été correctement menée ?",
+    "choix": [
+     "Le client a signé un bulletin de souscription.",
+     "Le conseiller a présenté les métiers du cabinet et remis une plaquette.",
+     "Le conseiller résume la situation, les projets, l'horizon et le rapport au risque du client, et celui-ci confirme ce résumé.",
+     "L'entretien a duré plus de 30 minutes."
+    ]
+   },
+   "corrige": {
+    "index": 2
+   },
+   "explication": "L'écoute est réussie quand le conseiller restitue situation, projets, horizon et rapport au risque et que le client valide cette restitution."
+  },
+  {
+   "cle": "i05",
+   "type": "choix",
+   "competence": "Coordonner et tracer",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. En découverte, un dirigeant avance : « Mon expert-comptable me dit que je paie trop d'impôt. » Que faites-vous de cet argument ?",
+    "choix": [
+     "Le contester : l'expert-comptable n'est pas compétent en gestion de patrimoine.",
+     "Le valider et chiffrer aussitôt l'économie d'impôt qu'un PER permettrait.",
+     "Le prendre comme une information à intégrer et proposer, avec l'accord du client, de solliciter l'expert-comptable lors de l'étude.",
+     "Demander au client de changer d'expert-comptable avant de poursuivre."
+    ]
+   },
+   "corrige": {
+    "index": 2
+   },
+   "explication": "L'argument n'est ni contesté ni validé : le cabinet coordonne les professionnels du client autour d'une stratégie unique, avec son accord."
+  },
+  {
+   "cle": "i06",
+   "type": "choix",
+   "competence": "Argumenter et chiffrer",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Qu'est-ce qui rend une feuille de route « argumentée » au sens de la méthode Entasis ?",
+    "choix": [
+     "Elle relie chaque recommandation à un objectif du client, s'appuie sur une simulation chiffrée et nomme les contraintes, les risques et un scénario défavorable.",
+     "Elle cite pour chaque solution le nom du contrat et de son gestionnaire.",
+     "Elle propose au moins trois solutions concurrentes pour laisser le choix au client.",
+     "Elle indique le rendement attendu de chaque solution sur dix ans."
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Argumenter, c'est relier la recommandation à un objectif, la chiffrer et en montrer les limites ; un nom de contrat n'argumente rien."
+  },
+  {
+   "cle": "i07",
+   "type": "choix",
+   "competence": "Argumenter et chiffrer",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Après le premier entretien, le client écrit : « Envoyez-moi juste le bulletin de souscription, on verra l'étude plus tard. » Que faites-vous ?",
+    "choix": [
+     "Envoyer le bulletin pour ne pas perdre le client ; l'étude suivra.",
+     "Faire signer une décharge de responsabilité, puis envoyer le bulletin.",
+     "Expliquer que l'étude chiffrée protège sa décision, proposer une date de restitution proche, et tracer l'échange.",
+     "Transmettre le dossier à un collègue plus expérimenté sans répondre."
+    ]
+   },
+   "corrige": {
+    "index": 2
+   },
+   "explication": "Aucune recommandation ne précède l'étude ; on répond à la pression de calendrier par une date de restitution, et une décharge ne remplace pas l'analyse."
+  },
+  {
+   "cle": "i08",
+   "type": "choix",
+   "competence": "Organiser le suivi",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Quel est l'objet premier du point annuel formel dans la méthode Entasis ?",
+    "choix": [
+     "Présenter une nouvelle solution chaque année pour entretenir la relation.",
+     "Renouveler les documents contractuels signés à l'entrée en relation.",
+     "Mettre à jour les données du client dans les simulateurs en ligne du site.",
+     "Vérifier que la situation, les objectifs et le rapport au risque n'ont pas changé, et que ce qui est en place reste adapté."
+    ]
+   },
+   "corrige": {
+    "index": 3
+   },
+   "explication": "Le point annuel détecte les changements de vie et vérifie l'adéquation de la stratégie ; arriver avec une solution en fait un rendez-vous de vente."
+  },
+  {
+   "cle": "i09",
+   "type": "choix",
+   "competence": "Coordonner et tracer",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Quel est le rôle du conseiller Entasis vis-à-vis du notaire et de l'expert-comptable de son client ?",
+    "choix": [
+     "Les consulter uniquement en cas de désaccord avec le client.",
+     "Les coordonner autour d'une stratégie unique, avec l'accord du client, sans se substituer à leur expertise.",
+     "Les remplacer progressivement pour simplifier les échanges du client.",
+     "Leur transmettre le dossier complet du client sans avoir à le lui demander."
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Le cabinet orchestre les professionnels déjà présents auprès du client, sans les remplacer, et tout échange suppose l'accord préalable du client."
+  },
+  {
+   "cle": "i10",
+   "type": "choix",
+   "competence": "Structurer l'analyse",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Un gérant majoritaire de 55 ans veut préparer sa retraite et réduire son impôt. L'écoute révèle qu'il n'a aucune prévoyance et que ses revenus chuteraient fortement en cas d'arrêt de travail. Quelle hiérarchie l'étude retient-elle ?",
+    "choix": [
+     "Réduire l'impôt, puis organiser l'épargne retraite, puis protéger les revenus.",
+     "Organiser l'épargne retraite, puis réduire l'impôt, puis protéger les revenus.",
+     "Protéger les revenus, puis organiser l'épargne retraite, puis traiter la fiscalité.",
+     "Traiter les trois volets en parallèle, sans hiérarchie, pour respecter la demande du client."
+    ]
+   },
+   "corrige": {
+    "index": 2
+   },
+   "explication": "L'étude hiérarchise les objectifs : le point aveugle révélé à l'écoute passe en premier et la demande initiale, réduire l'impôt, arrive en troisième position."
+  },
+  {
+   "cle": "i11",
+   "type": "vrai_faux",
+   "competence": "Préparer la découverte",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Le premier entretien de découverte est confidentiel et sans engagement, qu'il ait lieu au cabinet, en visio ou par téléphone."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "Le premier entretien de 30 minutes est confidentiel et sans engagement, quel que soit le canal : cabinet, visio ou téléphone."
+  },
+  {
+   "cle": "i12",
+   "type": "vrai_faux",
+   "competence": "Argumenter et chiffrer",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Une simulation chiffrée présentée au client doit aussi montrer ce qui se passe dans un scénario défavorable, et pas seulement dans le scénario espéré."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "L'AMF demande d'envisager avec le client l'évolution de ses investissements dans un scénario défavorable, pour mesurer la perte possible."
+  },
+  {
+   "cle": "i13",
+   "type": "vrai_faux",
+   "competence": "Préparer la découverte",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Quand un client demande un produit précis au premier entretien, le conseiller doit lui expliquer sur le moment pourquoi ce produit ne lui convient pas."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "Une demande de produit se note et se reporte à l'étude, sans être ni acceptée ni rejetée sur le moment."
+  },
+  {
+   "cle": "i14",
+   "type": "vrai_faux",
+   "competence": "Organiser le suivi",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Le professionnel est tenu de mettre régulièrement à jour les informations concernant le client, notamment en cas de changement de situation familiale, personnelle ou professionnelle."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "L'AMF le rappelle : la mise à jour régulière sert à vérifier que ce qui est en place reste adapté."
+  },
+  {
+   "cle": "i15",
+   "type": "vrai_faux",
+   "competence": "Argumenter et chiffrer",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Un plafond de déduction retenu de mémoire peut figurer dans une feuille de route s'il est présenté comme un simple ordre de grandeur."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "Un chiffre réglementaire ne se cite pas de mémoire : source officielle datée, ou mention « à vérifier »."
+  },
+  {
+   "cle": "i16",
+   "type": "vrai_faux",
+   "competence": "Organiser le suivi",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Au point annuel, un client annonce un héritage. La feuille de route ayant été validée l'an dernier, le conseiller peut lui proposer immédiatement une enveloppe pour accueillir les fonds."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "Quand un changement apparaît au point annuel, le conseiller annonce une mise à jour de l'étude plutôt qu'une réponse immédiate."
+  },
+  {
+   "cle": "i17",
+   "type": "multi",
+   "competence": "Recueillir avant de conseiller",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Cochez tout ce que l'AMF impose de recueillir avant tout conseil en investissement.",
+    "choix": [
+     "La situation financière du client, dont sa capacité à subir des pertes",
+     "Ses connaissances et son expérience",
+     "Ses objectifs, dont son horizon et sa tolérance au risque",
+     "Le nom de sa banque actuelle",
+     "Le montant qu'il souhaite placer dès le premier entretien",
+     "L'avis de son expert-comptable"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "L'AMF vise trois blocs : situation financière (dont capacité de perte), connaissances et expérience, objectifs avec horizon et tolérance au risque."
+  },
+  {
+   "cle": "i18",
+   "type": "multi",
+   "competence": "Préparer la découverte",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cochez tout ce que couvre le bilan patrimonial dans la méthode Entasis.",
+    "choix": [
+     "Le régime matrimonial",
+     "Les clauses bénéficiaires",
+     "Les objectifs de vie",
+     "La liste des produits déjà retenus pour le client",
+     "Le rendement attendu de chaque solution"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "Le bilan couvre actifs, passifs, revenus, fiscalité, régime matrimonial, clauses bénéficiaires et objectifs de vie ; aucune solution n'y figure encore."
+  },
+  {
+   "cle": "i19",
+   "type": "multi",
+   "competence": "Coordonner et tracer",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cochez tout ce que le conseiller trace dans le CRM à l'issue d'un premier entretien.",
+    "choix": [
+     "La demande initiale du client",
+     "L'accord ou non du client pour contacter son expert-comptable",
+     "La prochaine action datée",
+     "La recommandation de produit retenue",
+     "Le chiffre de déduction annoncé au client",
+     "Le nom du contrat pressenti"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "On trace la demande initiale, les informations recueillies, les accords de coordination et la prochaine action datée ; aucun produit n'est retenu à ce stade."
+  },
+  {
+   "cle": "i20",
+   "type": "multi",
+   "competence": "Argumenter et chiffrer",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cochez tout ce que le conseiller énonce pour chaque recommandation lors du rendez-vous de restitution.",
+    "choix": [
+     "L'objectif servi",
+     "Le chiffre issu de la simulation",
+     "La contrainte et le risque",
+     "Le nom du gestionnaire du contrat",
+     "Le rendement garanti sur dix ans"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "Pour chaque recommandation, le conseiller dit l'objectif servi, le chiffre, la contrainte et le risque, et montre le scénario défavorable."
+  },
+  {
+   "cle": "i21",
+   "type": "multi",
+   "competence": "Organiser le suivi",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Cochez tout ce qui, dans la méthode Entasis, peut rendre une stratégie patrimoniale obsolète.",
+    "choix": [
+     "Un mariage",
+     "Une cession d'entreprise",
+     "Un héritage",
+     "Un changement de conseiller dédié au cabinet",
+     "Une hausse des marchés financiers"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "Mariage, naissance, cession d'entreprise, héritage, baisse de revenus : chacun de ces événements de vie peut rendre une stratégie obsolète."
+  },
+  {
+   "cle": "i22",
+   "type": "ordre",
+   "competence": "Préparer la découverte",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Remettez dans l'ordre les étapes du premier entretien de découverte.",
+    "elements": [
+     "Poser le cadre : « Je ne vous proposerai rien aujourd'hui. »",
+     "Accueillir, noter et reporter la demande de produit",
+     "Poser des questions ouvertes et reformuler",
+     "Résumer oralement et faire valider par le client",
+     "Annoncer l'analyse complète et une date de restitution",
+     "Consigner l'échange dans la fiche client"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   },
+   "explication": "Cadre, demande notée et reportée, questions ouvertes, résumé validé, annonce de la suite, puis traçage dans la fiche client."
+  },
+  {
+   "cle": "i23",
+   "type": "ordre",
+   "competence": "Structurer l'analyse",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Remettez dans l'ordre les étapes de l'étude selon la méthode Entasis.",
+    "elements": [
+     "Le diagnostic : où en est le client ?",
+     "Les objectifs de vie hiérarchisés, avec leur horizon",
+     "La stratégie : comment y aller ?",
+     "Les moyens : les solutions au service d'un objectif"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3
+    ]
+   },
+   "explication": "L'étude suit un ordre : diagnostic, objectifs hiérarchisés, stratégie, puis moyens ; les solutions n'apparaissent qu'en dernier."
+  },
+  {
+   "cle": "i24",
+   "type": "ordre",
+   "competence": "Argumenter et chiffrer",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Remettez dans l'ordre le déroulé du rendez-vous de restitution de l'étude.",
+    "elements": [
+     "Présenter le diagnostic : « Voici ce que j'ai compris de votre situation », et le faire valider",
+     "Exposer les objectifs hiérarchisés identifiés ensemble",
+     "Présenter la stratégie et les moyens, avec objectif servi, chiffre, contrainte, risque et scénario défavorable",
+     "Conclure par les décisions à prendre, les documents à réunir et la prochaine étape"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3
+    ]
+   },
+   "explication": "La restitution suit l'ordre de l'étude : diagnostic validé, objectifs hiérarchisés, stratégie et moyens, puis décisions et prochaine étape."
+  },
+  {
+   "cle": "i25",
+   "type": "ordre",
+   "competence": "Organiser le suivi",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Remettez dans l'ordre la préparation et la conduite du point annuel.",
+    "elements": [
+     "Relire la feuille de route et les échanges de l'année",
+     "Ouvrir par : « Qu'est-ce qui a changé dans votre vie depuis notre dernier point ? »",
+     "Passer en revue famille, activité, revenus, projets, rapport au risque",
+     "Reprendre chaque brique en place et vérifier qu'elle sert toujours son objectif",
+     "Fixer la prochaine échéance",
+     "Tracer l'échange dans le CRM le jour même"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   },
+   "explication": "Le point annuel se prépare par relecture, s'ouvre sur les changements, revoit chaque brique, puis fixe l'échéance et se trace le jour même."
+  },
+  {
+   "cle": "i26",
+   "type": "association",
+   "competence": "Préparer la découverte",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Associez chaque temps de la méthode Entasis à son contenu.",
+    "gauche": [
+     "L'écoute",
+     "L'étude",
+     "L'accompagnement"
+    ],
+    "droite": [
+     "Premier entretien de 30 minutes pour comprendre, sans proposer",
+     "Analyse patrimoniale complète et feuille de route argumentée",
+     "Conseiller dédié, point annuel formel, ajustements au fil de la vie"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ]
+    ]
+   },
+   "explication": "La méthode tient en trois temps : l'écoute pour comprendre, l'étude pour argumenter, l'accompagnement pour ajuster dans la durée."
+  },
+  {
+   "cle": "i27",
+   "type": "association",
+   "competence": "Structurer l'analyse",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Associez chaque question de l'étude à l'étape qui y répond.",
+    "gauche": [
+     "Où en est le client ?",
+     "Où veut-il aller ?",
+     "Comment y aller ?"
+    ],
+    "droite": [
+     "Le diagnostic",
+     "Les objectifs de vie hiérarchisés",
+     "La stratégie"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ]
+    ]
+   },
+   "explication": "Le diagnostic décrit la situation, les objectifs hiérarchisés fixent la destination, la stratégie dit comment y aller."
+  },
+  {
+   "cle": "i28",
+   "type": "association",
+   "competence": "Préparer la découverte",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Associez chaque phrase du conseiller au moment où elle se dit.",
+    "gauche": [
+     "« Je ne vous proposerai rien aujourd'hui. »",
+     "« C'est noté, nous l'examinerons dans l'étude. »",
+     "« Voici ce que j'ai compris de votre situation. »",
+     "« Qu'est-ce qui a changé dans votre vie depuis notre dernier point ? »"
+    ],
+    "droite": [
+     "Ouverture du premier entretien",
+     "Réponse à une demande de produit en découverte",
+     "Ouverture du rendez-vous de restitution",
+     "Ouverture du point annuel"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      3,
+      3
+     ]
+    ]
+   },
+   "explication": "Chaque temps de la méthode a sa phrase d'ouverture : le cadre, le report de la demande, le diagnostic à valider, la question des changements."
+  },
+  {
+   "cle": "i29",
+   "type": "association",
+   "competence": "Recueillir avant de conseiller",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Associez chaque information à recueillir à la question ouverte qui la fait émerger.",
+    "gauche": [
+     "Ce qui amène le client",
+     "L'objectif de l'épargne",
+     "L'horizon",
+     "La tolérance au risque"
+    ],
+    "droite": [
+     "« Qu'est-ce qui vous amène ? »",
+     "« À quoi doit servir cette épargne ? »",
+     "« Dans combien de temps ? »",
+     "« Comment réagiriez-vous si la valeur baissait ? »"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      3,
+      3
+     ]
+    ]
+   },
+   "explication": "Les questions ouvertes du premier entretien recueillent projets, horizon et rapport au risque sans évoquer de solution."
+  },
+  {
+   "cle": "i30",
+   "type": "trou_choix",
+   "competence": "Préparer la découverte",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "La règle de la maison : une stratégie d'ensemble, pas une ___ de produits.",
+    "choix": [
+     "sélection",
+     "collection",
+     "gamme",
+     "liste"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "La formule du cabinet est : une stratégie d'ensemble, pas une collection de produits."
+  },
+  {
+   "cle": "i31",
+   "type": "trou_choix",
+   "competence": "Structurer l'analyse",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Dans l'étude, les solutions n'apparaissent qu'à l'étape ___, comme des moyens au service d'un objectif.",
+    "choix": [
+     "du diagnostic",
+     "des objectifs",
+     "de la stratégie",
+     "de l'écoute"
+    ]
+   },
+   "corrige": {
+    "index": 2
+   },
+   "explication": "Les solutions n'apparaissent qu'au stade de la stratégie, après le diagnostic et les objectifs hiérarchisés."
+  },
+  {
+   "cle": "i32",
+   "type": "trou_choix",
+   "competence": "Argumenter et chiffrer",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "Un chiffre réglementaire cité sans ___ n'a pas sa place dans une feuille de route.",
+    "choix": [
+     "validation du client",
+     "simulation sur dix ans",
+     "accord de l'expert-comptable",
+     "source officielle datée"
+    ]
+   },
+   "corrige": {
+    "index": 3
+   },
+   "explication": "Tout chiffre réglementaire s'appuie sur une source officielle datée, ou porte la mention « à vérifier »."
+  },
+  {
+   "cle": "i33",
+   "type": "trou_choix",
+   "competence": "Organiser le suivi",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "L'accompagnement Entasis : un conseiller dédié, un point ___ formel, des ajustements au fil de votre vie.",
+    "choix": [
+     "mensuel",
+     "trimestriel",
+     "semestriel",
+     "annuel"
+    ]
+   },
+   "corrige": {
+    "index": 3
+   },
+   "explication": "Le cabinet formule l'accompagnement ainsi : un conseiller dédié, un point annuel formel, des ajustements au fil de votre vie."
+  },
+  {
+   "cle": "i34",
+   "type": "trou_saisie",
+   "competence": "Préparer la découverte",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Le premier entretien de découverte dure ___ minutes.",
+    "aide": "un nombre"
+   },
+   "corrige": {
+    "reponses": [
+     "30",
+     "trente",
+     "Trente"
+    ]
+   },
+   "explication": "Le premier entretien dure 30 minutes, confidentiel et sans engagement."
+  },
+  {
+   "cle": "i35",
+   "type": "trou_saisie",
+   "competence": "Argumenter et chiffrer",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "Le conseil en investissement est formalisé dans un rapport écrit, dit déclaration d'___.",
+    "aide": "un mot"
+   },
+   "corrige": {
+    "reponses": [
+     "adéquation",
+     "adequation",
+     "Adéquation",
+     "Adequation"
+    ]
+   },
+   "explication": "La déclaration d'adéquation détaille et justifie les propositions, leurs avantages et leurs risques au regard de la situation et des objectifs du client."
+  },
+  {
+   "cle": "i36",
+   "type": "trou_saisie",
+   "competence": "Recueillir avant de conseiller",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Avant tout conseil, la situation financière recueillie inclut la capacité du client à subir des ___.",
+    "aide": "un mot au pluriel"
+   },
+   "corrige": {
+    "reponses": [
+     "pertes",
+     "perte",
+     "Pertes"
+    ]
+   },
+   "explication": "L'AMF inclut dans la situation financière la capacité du client à subir des pertes."
+  },
+  {
+   "cle": "i37",
+   "type": "trou_saisie",
+   "competence": "Coordonner et tracer",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Chaque échange avec le client, même bref, est tracé dans le CRM le ___ même.",
+    "aide": "un mot"
+   },
+   "corrige": {
+    "reponses": [
+     "jour",
+     "Jour"
+    ]
+   },
+   "explication": "Chaque échange, même bref, est tracé le jour même ; un appel non consigné est une information perdue et un risque pour le client."
+  },
+  {
+   "cle": "i38",
+   "type": "carte",
+   "competence": "Structurer l'analyse",
+   "difficulte": 2,
+   "payload": {
+    "recto": "Quelle est l'erreur fréquente qui transforme l'étude en fiche produit ?",
+    "verso": "Rédiger trois pages sur une enveloppe et une ligne sur le client : on décrit un produit, on n'argumente pas."
+   },
+   "corrige": {},
+   "explication": "Une étude décrit la situation du client et argumente une stratégie ; trois pages sur le fonctionnement d'une enveloppe n'argumentent rien."
+  },
+  {
+   "cle": "i39",
+   "type": "carte",
+   "competence": "Argumenter et chiffrer",
+   "difficulte": 2,
+   "payload": {
+    "recto": "Contrainte à énoncer sur un PER individuel : jusqu'à quand l'épargne est-elle bloquée ?",
+    "verso": "En principe jusqu'à la retraite, hors les cas de déblocage anticipé prévus par la loi."
+   },
+   "corrige": {},
+   "explication": "Le PER individuel est en principe bloqué jusqu'à la retraite ; seuls les cas de déblocage anticipé listés par Service-Public permettent de récupérer l'épargne."
+  },
+  {
+   "cle": "i40",
+   "type": "carte",
+   "competence": "Organiser le suivi",
+   "difficulte": 1,
+   "payload": {
+    "recto": "Selon le cabinet, à quoi tient un patrimoine solide ?",
+    "verso": "Jamais à un geste spectaculaire : à une suite d'ajustements justes, discrets, pensés dans la durée."
+   },
+   "corrige": {},
+   "explication": "Le cabinet le formule ainsi : un patrimoine solide repose sur une suite d'ajustements justes, discrets, pensés dans la durée."
+  }
+ ]
+}

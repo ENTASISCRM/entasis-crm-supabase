@@ -1,0 +1,858 @@
+{
+ "slug": "assurance-vie",
+ "titre": "Assurance vie : enveloppe, supports, frais, rachats et transmission",
+ "competence": "Expliquer enveloppe, supports, frais, rachats et principes de transmission",
+ "memo_md": "Disponible ne veut pas dire sans risque : l'assurance vie est une enveloppe, le rendement et le risque viennent des supports.\n\n## Enveloppe et supports\n- Fonds en euros : capital garanti par l'assureur, net des frais.\n- Unités de compte : nombre de parts garanti, valeur non garantie, risque de perte en capital.\n- Rachat à la valeur du jour. Renonciation : 30 jours calendaires.\n- Trois questions : horizon, part intacte, baisse supportable.\n\n## Frais et rachats\n- Quatre frais : versement, gestion (fonds en euros compris), arbitrage, support.\n- Paiement du rachat : deux mois au plus.\n- Seuls les gains sont imposés, jamais le capital versé.\n- Versements depuis le 27 septembre 2017 : 12,8 % avant huit ans, 7,5 % après (12,8 % au delà de 150 000 euros).\n- Après huit ans : abattement annuel 4 600 euros (seul) ou 9 200 euros (couple).\n- Prélèvements sociaux : 17,2 % (fiche F2329), 18,6 % en général. À revérifier.\n- Fonds en euros : prélevés chaque année sur les intérêts.\n\n## Transmission\n- L132-13 : ni rapport ni réduction, sauf primes manifestement exagérées.\n- Primes avant 70 ans : 152 500 euros par bénéficiaire, puis 20 % jusqu'à 700 000 euros, puis 31,25 %.\n- Primes après 70 ans : 30 500 euros en tout, puis droits de succession.\n- Conjoint marié et partenaire de PACS exonérés.\n- Clause à éviter : personne sans précision, enfant sans « vivant ou représenté », montant fixe.\n- Bénéficiaire acceptant : rien sans son accord.",
+ "items": [
+  {
+   "cle": "i01",
+   "type": "choix",
+   "competence": "Enveloppe et supports",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Qu'est-ce que l'assurance vie ?",
+    "choix": [
+     "Une enveloppe : un contrat conclu avec un assureur, dans lequel les sommes versées sont investies sur des supports",
+     "Un support financier dont l'assureur fixe le rendement chaque année",
+     "Un placement dont le capital est garanti quel que soit le support choisi",
+     "Un compte d'épargne dont les fonds restent bloqués pendant huit ans"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "L'assurance vie est une enveloppe ; le rendement et le risque viennent des supports, pas du contrat."
+  },
+  {
+   "cle": "i02",
+   "type": "carte",
+   "competence": "Enveloppe et supports",
+   "difficulte": 1,
+   "payload": {
+    "recto": "Disponible veut-il dire sans risque ?",
+    "verso": "Non. Le rachat est possible à tout moment, mais à la valeur du jour des unités de compte."
+   },
+   "corrige": {},
+   "explication": "L'enveloppe permet le rachat ; seul le fonds en euros garantit le capital, les unités de compte exposent à une perte."
+  },
+  {
+   "cle": "i03",
+   "type": "association",
+   "competence": "Enveloppe et supports",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Associez chaque élément du contrat à ce qu'il apporte.",
+    "gauche": [
+     "Enveloppe",
+     "Fonds en euros",
+     "Unités de compte"
+    ],
+    "droite": [
+     "Contrat avec l'assureur qui apporte la souplesse : versements, arbitrages, rachats",
+     "Capital garanti par l'assureur, net des frais prévus au contrat",
+     "Nombre de parts garanti, valeur qui suit les marchés"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ]
+    ]
+   },
+   "explication": "L'enveloppe donne la souplesse ; le fonds en euros garantit le capital, les unités de compte seulement un nombre de parts."
+  },
+  {
+   "cle": "i04",
+   "type": "vrai_faux",
+   "competence": "Enveloppe et supports",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Sur le fonds en euros, l'assureur garantit le capital investi, net des frais prévus au contrat, et les intérêts acquis restent acquis."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "C'est la définition du fonds en euros ; la garantie n'exclut ni les frais de gestion ni les prélèvements sociaux."
+  },
+  {
+   "cle": "i05",
+   "type": "choix",
+   "competence": "Enveloppe et supports",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Sur une unité de compte, que garantit l'assureur ?",
+    "choix": [
+     "Le capital investi, net des frais",
+     "Un nombre de parts, pas leur valeur",
+     "La valeur des parts au jour du versement",
+     "Les intérêts acquis, qui restent acquis"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "L'assureur garantit un nombre de parts ; leur valeur suit les marchés, d'où un risque de perte en capital."
+  },
+  {
+   "cle": "i06",
+   "type": "trou_choix",
+   "competence": "Enveloppe et supports",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "Un contrat investi pour partie en unités de compte reste rachetable, mais ___.",
+    "choix": [
+     "à la valeur du jour, qui peut être inférieure aux sommes versées",
+     "au capital net des frais, garanti par l'assureur",
+     "uniquement après le délai de renonciation de 30 jours",
+     "uniquement avec l'accord du bénéficiaire, qu'il ait accepté ou non"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Un rachat sur unités de compte se fait à la valeur du jour ; le client peut récupérer moins que ses versements."
+  },
+  {
+   "cle": "i07",
+   "type": "choix",
+   "competence": "Enveloppe et supports",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Un client vous dit : « Avec l'assurance vie, je peux retirer quand je veux, donc je ne peux pas perdre d'argent. » Quelle réponse est juste ?",
+    "choix": [
+     "Le rachat est possible à tout moment, mais sur les unités de compte il se fait à la valeur du jour, qui peut être inférieure aux versements",
+     "C'est exact : l'assureur garantit au moins les sommes versées, quel que soit le support",
+     "C'est exact avant huit ans ; ensuite l'épargne est bloquée",
+     "Le rachat n'est possible qu'après huit ans, ce qui protège le capital"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Disponible ne veut pas dire sans risque : seul le fonds en euros garantit le capital."
+  },
+  {
+   "cle": "i08",
+   "type": "choix",
+   "competence": "Enveloppe et supports",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Une cliente dispose de 60 000 euros. Elle aura besoin de 20 000 euros dans dix-huit mois pour des travaux ; le reste n'a pas d'usage prévu avant dix ans. Quelle orientation retenir pour les 20 000 euros ?",
+    "choix": [
+     "Un support sans risque de perte en capital, car l'horizon est court et la somme doit être retrouvée intacte",
+     "Des unités de compte, car dix-huit mois suffisent pour absorber une baisse",
+     "La même répartition que les 40 000 euros restants, pour simplifier le contrat",
+     "Aucune décision possible : l'assurance vie bloque les fonds pendant huit ans"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Le support découle de l'horizon et de la part à retrouver intacte ; une somme à court terme ne s'expose pas au risque de perte."
+  },
+  {
+   "cle": "i09",
+   "type": "ordre",
+   "competence": "Enveloppe et supports",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Remettez dans l'ordre la démarche en rendez-vous avant de parler de supports.",
+    "elements": [
+     "« Quand aurez-vous besoin de ces sommes ? »",
+     "« Quelle part devez-vous pouvoir retrouver intacte ? »",
+     "« Quelle baisse temporaire pourriez-vous supporter sans racheter ? »",
+     "Reformuler : retrait possible à tout moment, mais à la valeur du jour des unités de compte",
+     "Remettre la note d'information et le document d'informations clés"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ]
+   },
+   "explication": "Trois questions dans l'ordre (horizon, part intacte, baisse supportable), puis la reformulation, puis les documents précontractuels."
+  },
+  {
+   "cle": "i10",
+   "type": "vrai_faux",
+   "competence": "Rachat et délais",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Après avoir été informé de la conclusion du contrat, le client dispose de 30 jours calendaires pour y renoncer."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "Le délai de renonciation est de 30 jours calendaires après l'information de la conclusion du contrat."
+  },
+  {
+   "cle": "i11",
+   "type": "multi",
+   "competence": "Enveloppe et supports",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Un client veut placer 120 000 euros et réclame une répartition fonds en euros / unités de compte dès le premier entretien. Cochez tout ce que le conseiller doit connaître avant de proposer une répartition.",
+    "choix": [
+     "L'horizon de chaque somme",
+     "L'épargne de précaution dont il dispose déjà",
+     "Son rapport au risque et la baisse temporaire qu'il accepterait sans racheter",
+     "Le rendement du fonds en euros de l'année passée",
+     "Le délai de paiement d'un rachat par l'assureur"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "Horizon, épargne de précaution, rapport au risque, situation fiscale et objectifs : sans cela, aucune répartition ne peut être argumentée."
+  },
+  {
+   "cle": "i12",
+   "type": "multi",
+   "competence": "Frais du contrat",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Cochez tout ce qui fait partie des familles de frais d'un contrat d'assurance vie.",
+    "choix": [
+     "Frais sur versement",
+     "Frais d'arbitrage",
+     "Prélèvements sociaux",
+     "Abattement annuel de 4 600 euros",
+     "Frais propres à chaque unité de compte"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     4
+    ]
+   },
+   "explication": "Quatre familles : versement, gestion, arbitrage, support ; les prélèvements sociaux sont un impôt, l'abattement une règle fiscale."
+  },
+  {
+   "cle": "i13",
+   "type": "association",
+   "competence": "Frais du contrat",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Associez chaque famille de frais au moment où elle s'applique.",
+    "gauche": [
+     "Frais sur versement",
+     "Frais de gestion du contrat",
+     "Frais d'arbitrage",
+     "Frais du support"
+    ],
+    "droite": [
+     "À l'entrée, sur chaque somme versée",
+     "Chaque année sur l'épargne, fonds en euros compris",
+     "Quand le client change de support",
+     "Prélevés à l'intérieur de chaque unité de compte"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      3,
+      3
+     ]
+    ]
+   },
+   "explication": "Versement à l'entrée, gestion chaque année, arbitrage au changement de support, frais du support dans l'unité de compte."
+  },
+  {
+   "cle": "i14",
+   "type": "vrai_faux",
+   "competence": "Frais du contrat",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Les frais de gestion du contrat ne s'appliquent pas à l'épargne placée sur le fonds en euros."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "Les frais de gestion du contrat sont prélevés chaque année sur l'épargne, fonds en euros compris."
+  },
+  {
+   "cle": "i15",
+   "type": "choix",
+   "competence": "Frais du contrat",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Un client lit la ligne « frais de gestion du contrat » sur son relevé annuel et conclut qu'il connaît le coût total de son assurance vie. Que lui manque-t-il ?",
+    "choix": [
+     "Les frais propres à chaque unité de compte, prélevés à l'intérieur du support, et les éventuels frais d'arbitrage et de gestion déléguée",
+     "Rien : les frais de gestion du contrat regroupent l'ensemble des frais",
+     "Les prélèvements sociaux, qui sont des frais de l'assureur",
+     "Les frais sur versement, qui sont prélevés chaque année"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Les frais du support sont absents de la ligne « frais de gestion du contrat » ; le document d'informations clés les affiche."
+  },
+  {
+   "cle": "i16",
+   "type": "choix",
+   "competence": "Rachat et délais",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Cas fictif. Un client a envoyé une demande de rachat total avec toutes les pièces. Trois semaines plus tard, il s'inquiète de ne rien avoir reçu. Que lui répondre ?",
+    "choix": [
+     "L'assureur dispose au plus de deux mois à compter de la réception du dossier complet ; au delà, des intérêts de retard courent",
+     "Le délai légal est de dix jours ouvrés ; il faut saisir immédiatement le médiateur",
+     "Aucun délai n'encadre le paiement d'un rachat ; seul le contrat en décide",
+     "Le rachat total n'est pas possible avant huit ans ; il faut attendre l'échéance"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "ABE Info Service rappelle le délai maximal de deux mois à réception de l'intégralité des pièces, puis des intérêts de retard."
+  },
+  {
+   "cle": "i17",
+   "type": "trou_saisie",
+   "competence": "Fiscalité du rachat",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Pour les versements effectués depuis le 27 septembre 2017, les gains rachetés avant huit ans supportent un prélèvement forfaitaire de ___ %.",
+    "aide": "taux en chiffres"
+   },
+   "corrige": {
+    "reponses": [
+     "12,8",
+     "12.8",
+     "12,8 %",
+     "12.8 %",
+     "12,8%",
+     "12.8%"
+    ]
+   },
+   "explication": "12,8 % avant huit ans, 7,5 % après (12,8 % pour la fraction des primes au delà de 150 000 euros)."
+  },
+  {
+   "cle": "i18",
+   "type": "ordre",
+   "competence": "Rachat et délais",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Remettez dans l'ordre chronologique la vie d'un contrat, de la souscription au rachat.",
+    "elements": [
+     "Le client est informé de la conclusion du contrat",
+     "Le délai de renonciation de 30 jours calendaires court",
+     "L'assureur adresse chaque année un relevé de situation avec les frais prélevés",
+     "Le client envoie une demande de rachat avec le dossier complet",
+     "L'assureur paie sous deux mois au plus",
+     "Passé ce délai, des intérêts de retard courent"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   },
+   "explication": "Information, renonciation sous 30 jours, relevé annuel, demande de rachat, paiement sous deux mois, puis intérêts de retard."
+  },
+  {
+   "cle": "i19",
+   "type": "association",
+   "competence": "Rachat et délais",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Associez chaque repère à sa durée ou à sa date.",
+    "gauche": [
+     "Délai de renonciation",
+     "Délai maximal de paiement d'un rachat",
+     "Ancienneté du contrat ouvrant l'abattement annuel",
+     "Date charnière des versements pour les taux de 12,8 % et 7,5 %"
+    ],
+    "droite": [
+     "30 jours calendaires",
+     "Deux mois à réception du dossier complet",
+     "Huit ans",
+     "27 septembre 2017"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      3,
+      3
+     ]
+    ]
+   },
+   "explication": "Renonciation 30 jours, paiement deux mois, abattement après huit ans, régime des versements depuis le 27 septembre 2017."
+  },
+  {
+   "cle": "i20",
+   "type": "vrai_faux",
+   "competence": "Fiscalité du rachat",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Lors d'un rachat partiel, le capital versé par le client est imposé à l'impôt sur le revenu au même titre que les gains."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "Seule la part de gains comprise dans le rachat est imposable ; le capital versé revient sans impôt."
+  },
+  {
+   "cle": "i21",
+   "type": "trou_saisie",
+   "competence": "Fiscalité du rachat",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Après huit ans, l'abattement annuel sur les gains rachetés est de ___ euros pour une personne seule.",
+    "aide": "montant en euros"
+   },
+   "corrige": {
+    "reponses": [
+     "4600",
+     "4 600",
+     "4.600",
+     "4600 euros",
+     "4 600 euros"
+    ]
+   },
+   "explication": "4 600 euros pour une personne seule, 9 200 euros pour un couple soumis à imposition commune."
+  },
+  {
+   "cle": "i22",
+   "type": "multi",
+   "competence": "Fiscalité du rachat",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cochez tout ce qui s'applique aux gains rachetés sur un contrat de plus de huit ans, alimenté par des versements postérieurs au 27 septembre 2017 et inférieurs à 150 000 euros.",
+    "choix": [
+     "Un abattement annuel de 4 600 ou 9 200 euros",
+     "Un prélèvement forfaitaire de 7,5 % sur le solde",
+     "L'option pour le barème progressif",
+     "Une exonération totale d'impôt sur le revenu",
+     "Une dispense de prélèvements sociaux"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "Abattement annuel, puis 7,5 % ou barème sur option ; les prélèvements sociaux restent dus dans tous les cas."
+  },
+  {
+   "cle": "i23",
+   "type": "choix",
+   "competence": "Fiscalité du rachat",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Un couple soumis à imposition commune rachète, sur un contrat de dix ans alimenté uniquement par des versements postérieurs au 27 septembre 2017 pour un total inférieur à 150 000 euros, une somme contenant 12 000 euros de gains. Comment ces gains sont-ils traités à l'impôt sur le revenu, hors prélèvements sociaux ?",
+    "choix": [
+     "Abattement de 9 200 euros, puis prélèvement de 7,5 % sur le solde (ou barème progressif sur option)",
+     "Abattement de 4 600 euros, puis prélèvement de 12,8 % sur le solde",
+     "Exonération totale, car le contrat a plus de huit ans",
+     "Prélèvement de 12,8 % sur la totalité des 12 000 euros, sans abattement"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Après huit ans, 9 200 euros d'abattement pour un couple, puis 7,5 % jusqu'à 150 000 euros de primes (fiche F22414)."
+  },
+  {
+   "cle": "i24",
+   "type": "ordre",
+   "competence": "Fiscalité du rachat",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Un client rachète 30 000 euros sur un contrat de onze ans, alimenté par des versements postérieurs au 27 septembre 2017 et inférieurs à 150 000 euros. Remettez dans l'ordre les étapes du traitement fiscal de ce rachat.",
+    "elements": [
+     "L'assureur calcule au prorata la part de gains comprise dans le rachat",
+     "Le capital versé compris dans le rachat revient sans impôt",
+     "L'abattement annuel de 4 600 ou 9 200 euros s'impute sur les gains",
+     "Le solde des gains supporte 7,5 %, ou le barème progressif sur option",
+     "Les prélèvements sociaux s'ajoutent sur les gains"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ]
+   },
+   "explication": "Prorata des gains, capital hors impôt, abattement annuel, 7,5 % sur le solde, prélèvements sociaux en plus."
+  },
+  {
+   "cle": "i25",
+   "type": "trou_choix",
+   "competence": "Fiscalité du rachat",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Les produits des contrats d'assurance vie supportent des prélèvements sociaux au taux global de ___ (fiche F2329 vérifiée le 30 juin 2026).",
+    "choix": [
+     "17,2 %",
+     "18,6 %",
+     "12,8 %",
+     "7,5 %"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "17,2 % pour l'assurance vie (CSG 9,2 %, CRDS 0,5 %, solidarité 7,5 %) ; 18,6 % est le taux général depuis 2026."
+  },
+  {
+   "cle": "i26",
+   "type": "choix",
+   "competence": "Fiscalité du rachat",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Un conseiller annonce à un client dont l'épargne est sur le fonds en euros : « Zéro impôt tant que vous ne rachetez pas. » Qu'en penser ?",
+    "choix": [
+     "Inexact : les prélèvements sociaux sont prélevés chaque année lors de l'inscription des intérêts en compte",
+     "Exact : aucun prélèvement n'intervient avant un rachat, quel que soit le support",
+     "Inexact : l'impôt sur le revenu est prélevé chaque année sur les intérêts du fonds en euros",
+     "Exact seulement après huit ans, grâce à l'abattement annuel"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Sur le fonds en euros, les prélèvements sociaux sont dus chaque année à l'inscription des intérêts en compte."
+  },
+  {
+   "cle": "i27",
+   "type": "association",
+   "competence": "Fiscalité décès",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Associez chaque situation au régime des capitaux décès qui s'applique.",
+    "gauche": [
+     "Primes versées avant 70 ans",
+     "Primes versées après 70 ans",
+     "Conjoint marié ou partenaire de PACS",
+     "Primes manifestement exagérées"
+    ],
+    "droite": [
+     "Abattement de 152 500 euros par bénéficiaire, puis 20 % et 31,25 %",
+     "Abattement global de 30 500 euros, puis droits de succession",
+     "Exonération, quel que soit l'âge au versement",
+     "Exception à l'article L132-13 : rapport et réduction redeviennent possibles"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      3,
+      3
+     ]
+    ]
+   },
+   "explication": "Le régime dépend de l'âge au versement ; le conjoint et le partenaire de PACS sont exonérés ; les primes exagérées sont requalifiables."
+  },
+  {
+   "cle": "i28",
+   "type": "trou_choix",
+   "competence": "Fiscalité décès",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Pour les primes versées avant 70 ans, chaque bénéficiaire dispose d'un abattement de ___ euros.",
+    "choix": [
+     "152 500",
+     "30 500",
+     "150 000",
+     "700 000"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "152 500 euros par bénéficiaire pour les primes versées avant 70 ans ; 30 500 euros en tout après 70 ans."
+  },
+  {
+   "cle": "i29",
+   "type": "trou_saisie",
+   "competence": "Fiscalité décès",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Pour les primes versées après 70 ans, l'abattement est global et s'élève à ___ euros, tous contrats et bénéficiaires confondus.",
+    "aide": "montant en euros"
+   },
+   "corrige": {
+    "reponses": [
+     "30500",
+     "30 500",
+     "30.500",
+     "30500 euros",
+     "30 500 euros"
+    ]
+   },
+   "explication": "30 500 euros en tout après 70 ans ; le surplus des primes suit les droits de succession selon le lien de parenté."
+  },
+  {
+   "cle": "i30",
+   "type": "carte",
+   "competence": "Fiscalité décès",
+   "difficulte": 1,
+   "payload": {
+    "recto": "Primes versées avant 70 ans : quel prélèvement au delà de l'abattement de 152 500 euros ?",
+    "verso": "20 % jusqu'à 700 000 euros, puis 31,25 % au delà."
+   },
+   "corrige": {},
+   "explication": "Après l'abattement de 152 500 euros par bénéficiaire, 20 % jusqu'à 700 000 euros puis 31,25 %."
+  },
+  {
+   "cle": "i31",
+   "type": "vrai_faux",
+   "competence": "Fiscalité décès",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Le conjoint marié et le partenaire de PACS sont exonérés sur les capitaux décès, que les primes aient été versées avant ou après 70 ans."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "Le conjoint marié et le partenaire de PACS sont exonérés dans les deux régimes, avant et après 70 ans."
+  },
+  {
+   "cle": "i32",
+   "type": "choix",
+   "competence": "Fiscalité décès",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Un client de 72 ans souhaite verser 100 000 euros sur une assurance vie au profit de ses deux enfants « pour profiter des 152 500 euros par enfant ». Que lui expliquer ?",
+    "choix": [
+     "L'abattement de 152 500 euros par bénéficiaire ne concerne que les primes versées avant 70 ans ; après 70 ans, c'est un abattement global de 30 500 euros, puis les droits de succession sur le surplus des primes",
+     "Il a raison : l'abattement de 152 500 euros s'applique quel que soit l'âge au versement",
+     "Après 70 ans, plus aucun versement n'est autorisé sur une assurance vie",
+     "Après 70 ans, le capital transmis est intégralement exonéré pour les enfants"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Le régime des capitaux décès dépend de l'âge de l'assuré au moment des versements ; après 70 ans, 30 500 euros en tout."
+  },
+  {
+   "cle": "i33",
+   "type": "trou_choix",
+   "competence": "Fiscalité décès",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "Selon l'article L132-13 du code des assurances, le capital décès n'est soumis ni au rapport à succession ni à la réduction pour atteinte à la réserve, sauf ___.",
+    "choix": [
+     "primes manifestement exagérées au regard des facultés du souscripteur",
+     "primes versées après 70 ans",
+     "acceptation du bénéfice par un bénéficiaire",
+     "contrat de moins de huit ans"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "L'article L132-13 réserve le cas des primes manifestement exagérées eu égard aux facultés du souscripteur."
+  },
+  {
+   "cle": "i34",
+   "type": "multi",
+   "competence": "Clause bénéficiaire",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cochez toutes les rédactions de clause bénéficiaire qu'ABE Info Service invite à éviter.",
+    "choix": [
+     "Une personne nommée sans précision",
+     "Un enfant désigné sans la mention « vivant ou représenté »",
+     "Une répartition en pourcentage entre les bénéficiaires",
+     "Des parts exprimées en montant fixe",
+     "Une modification de la clause par courrier signé"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     3
+    ]
+   },
+   "explication": "À éviter : personne sans précision, enfant sans « vivant ou représenté », bénéficiaires difficiles à identifier, parts en montant fixe."
+  },
+  {
+   "cle": "i35",
+   "type": "trou_saisie",
+   "competence": "Clause bénéficiaire",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "Dans une clause bénéficiaire, un enfant se désigne avec la mention « vivant ou ___ ».",
+    "aide": "un mot"
+   },
+   "corrige": {
+    "reponses": [
+     "représenté",
+     "represente",
+     "représentés",
+     "representes",
+     "représentée",
+     "representee"
+    ]
+   },
+   "explication": "La mention « vivant ou représenté » prévoit le prédécès de l'enfant ; sans elle, la répartition devient inadaptée."
+  },
+  {
+   "cle": "i36",
+   "type": "vrai_faux",
+   "competence": "Clause bénéficiaire",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Une cliente a fait accepter le bénéfice de son contrat par son fils il y a trois ans. Elle peut aujourd'hui modifier seule la clause bénéficiaire."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "Un bénéficiaire acceptant bloque toute modification de la clause et tout rachat sans son accord."
+  },
+  {
+   "cle": "i37",
+   "type": "multi",
+   "competence": "Clause bénéficiaire",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Le fils d'une cliente a accepté le bénéfice de son contrat. Cochez toutes les opérations qui exigent désormais son accord.",
+    "choix": [
+     "Un rachat partiel ou total",
+     "Une avance",
+     "Un versement libre complémentaire",
+     "La modification de la clause bénéficiaire",
+     "La réception du relevé de situation annuel"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     3
+    ]
+   },
+   "explication": "L'accord du bénéficiaire acceptant est requis pour le rachat, l'avance, le nantissement et la modification de la clause."
+  },
+  {
+   "cle": "i38",
+   "type": "carte",
+   "competence": "Fiscalité du rachat",
+   "difficulte": 2,
+   "payload": {
+    "recto": "Quels événements exonèrent d'impôt sur le revenu les gains d'un rachat ?",
+    "verso": "Licenciement, retraite anticipée, invalidité, liquidation judiciaire, sous condition de délai."
+   },
+   "corrige": {},
+   "explication": "Ces événements exonèrent d'impôt sur le revenu sous condition de délai ; les prélèvements sociaux restent dus."
+  },
+  {
+   "cle": "i39",
+   "type": "choix",
+   "competence": "Clause bénéficiaire",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Un client vous montre sa clause : « Mes enfants Paul et Léa, 50 000 euros chacun, le solde à mon conjoint. » Quel est le principal point de vigilance à lui signaler ?",
+    "choix": [
+     "Les parts en montant fixe et l'absence de la mention « vivants ou représentés » exposent à une répartition inadaptée si la valeur du contrat évolue ou si un enfant décède avant lui",
+     "La clause est parfaite : elle nomme précisément chaque bénéficiaire",
+     "Le conjoint ne peut jamais être bénéficiaire d'une assurance vie",
+     "Il faut convertir la clause en rente viagère pour éviter les droits de succession"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Parts en valeur absolue et enfant désigné sans prévoir son prédécès sont deux rédactions à éviter ; préférer un pourcentage."
+  },
+  {
+   "cle": "i40",
+   "type": "ordre",
+   "competence": "Clause bénéficiaire",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Remettez dans l'ordre la démarche du conseiller sur la clause bénéficiaire en rendez-vous.",
+    "elements": [
+     "Demander à voir la clause actuelle, pas seulement le nom du bénéficiaire",
+     "Poser la question : « Si vous disparaissiez demain, qui recevrait ce contrat ? »",
+     "Situer les régimes avant et après 70 ans en citant la source et sa date",
+     "Faire relire par le notaire toute clause complexe",
+     "Consigner la clause retenue au dossier et la réexaminer au point annuel"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ]
+   },
+   "explication": "Lire la clause, questionner le souhait, situer les régimes, faire relire par le notaire, consigner et réexaminer."
+  }
+ ]
+}
