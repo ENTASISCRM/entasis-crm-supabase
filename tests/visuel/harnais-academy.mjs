@@ -336,6 +336,9 @@ const versionAdmin = (corps) => {
 
 // ── Tables lues en direct (rien de sensible) ─────────────────────────────────
 export const ACADEMY_TABLES = {
+  // Lue en direct par App.jsx (formationOuverte) : l onglet Formation
+  // n existe pour un conseiller que s il y a au moins une version publiee.
+  academy_module_versions: MODULES.map((m) => ({ id: m.version_id, module_id: m.module_id, numero: 1, statut: 'publie', titre: m.titre, publie_le: m.publie_le })),
   academy_parametres: [{ id: true, seuil_reussite_defaut: 0.8, delai_j7: 7, delai_j30: 30, questions_par_quiz: 10, questions_par_revision: 5, retention_intervalles_mois: 12, inactivite_secondes: 120, pas_battement_secondes: 30 }],
   academy_modules: MODULES.map((m) => ({ id: m.module_id, slug: m.slug, titre: m.titre, theme: m.theme, niveau: m.niveau, ordre: m.ordre, archive_le: null })),
   academy_progression_lecons: [],

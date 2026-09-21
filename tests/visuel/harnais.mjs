@@ -307,7 +307,9 @@ const LEADROOM = {
 }
 
 // ── La page simulee ──────────────────────────────────────────────────────────
-export async function pageDemo(browser, { role = 'conseiller' } = {}) {
+// formationFermee : aucun module publie, l onglet Formation doit rester
+// invisible pour un conseiller (la direction le garde).
+export async function pageDemo(browser, { role = 'conseiller', formationFermee = false } = {}) {
   const profil = role === 'manager' ? PROFIL_MANAGER : (role === 'rh' ? PROFIL_RH : PROFIL_CONSEILLER)
   const equipe = EQUIPE[role] || EQUIPE.conseiller
   const tables = {
@@ -325,6 +327,7 @@ export async function pageDemo(browser, { role = 'conseiller' } = {}) {
     campagne_cibles: CIBLES,
     rh_conges: CONGES,
     ...ACADEMY_TABLES,
+    ...(formationFermee ? { academy_module_versions: [] } : {}),
   }
   // Une RPC vaut un tableau fige, ou une fonction du corps POST quand la
   // reponse depend des arguments (academy_module(p_slug), academy_lecon...).

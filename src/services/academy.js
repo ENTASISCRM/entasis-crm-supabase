@@ -122,6 +122,24 @@ export async function mesRappels() {
   return appel('mesRappels', 'academy_mes_rappels', undefined, [])
 }
 
+/**
+ * La formation est ouverte au cabinet dès qu'un module est publié. Avant,
+ * seuls la direction et l'administrateur voient l'onglet Formation : la
+ * relecture se fait sans que l'équipe découvre une rubrique vide. Lecture
+ * directe sous RLS (un collaborateur ne voit que les versions publiées) ;
+ * une erreur vaut « fermée », jamais une ouverture par défaut.
+ */
+export async function formationOuverte() {
+  try {
+    const { data, error } = await supabase.from('academy_module_versions').select('id').eq('statut', 'publie').limit(1)
+    if (error) throw error
+    return Array.isArray(data) && data.length > 0
+  } catch (e) {
+    logger.error('[academy] formationOuverte', e)
+    return false
+  }
+}
+
 /** Une leçon avec son contenu, sa mini question et la progression du lecteur. */
 export async function lireLecon(leconId) {
   if (!leconId) throw new Error('Leçon sans identifiant.')

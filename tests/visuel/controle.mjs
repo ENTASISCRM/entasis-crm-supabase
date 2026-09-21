@@ -236,6 +236,17 @@ const SCENARIOS = [
   { nom: 'formation-fiche', role: 'manager', route: '#/formation/fiche/u-conseiller', attendu: 'Conseiller Démo' },
   { nom: 'formation-administration', role: 'manager', route: '#/formation/administration', attendu: 'Fiscalité : raisonner' },
   { nom: 'formation-editeur', role: 'manager', route: '#/formation/administration/version/av4', attendu: 'Fiscalité : raisonner' },
+  {
+    // Aucun module publie : un conseiller qui suit un lien #/formation est
+    // ramene a l accueil et le menu ne montre pas l onglet ; la direction
+    // garde l acces pour relire et publier.
+    nom: 'formation-fermee-conseiller', role: 'conseiller', formationFermee: true, route: '#/formation/parcours', attendu: 'Dossiers sans mouvement',
+    actions: async (page) => {
+      const onglet = await page.locator('.nav-item, nav a, nav button').filter({ hasText: 'Formation' }).count()
+      if (onglet > 0) throw new Error('l onglet Formation est visible sans module publie')
+    },
+  },
+  { nom: 'formation-fermee-direction', role: 'manager', formationFermee: true, route: '#/formation/administration', attendu: 'Fiscalité : raisonner' },
 ]
 
 // ── Execution d un scenario ──────────────────────────────────────────────────
@@ -244,7 +255,7 @@ async function jouer(browser, scenario) {
   let page = null
   let erreursConsole = []
   try {
-    page = await pageDemo(browser, { role: scenario.role })
+    page = await pageDemo(browser, { role: scenario.role, formationFermee: scenario.formationFermee === true })
     erreursConsole = ecouterConsole(page)
     await page.goto(`${URL_BASE}/${scenario.route}`)
     await attendreRendu(page)

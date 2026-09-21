@@ -795,7 +795,7 @@ function AuthScreen() {
 /* ─────────────────────────────────────────────────────────────────────────────
    SIDEBAR
 ───────────────────────────────────────────────────────────────────────────── */
-function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,month,dossiersImmoCount,editorialCount,mobileOpen,onCloseMobile}){
+function Sidebar({profile,canSmartRh,formationOuverte,activeTab,setActiveTab,onSignOut,deals,month,dossiersImmoCount,editorialCount,mobileOpen,onCloseMobile}){
   // Acces RH delegue : drapeau profiles.rh_delegue (miroir de public.is_rh()
   // en base). Recalcule ici, la Sidebar est un composant separe du App.
   const isRhDelegue = profile?.rh_delegue === true
@@ -823,7 +823,7 @@ function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,mont
   //   manager-only de editorial_packages). Badge = packages en attente.
   // - Rémunération ouverte à tous : le composant sépare vue équipe /
   //   vue personnelle via RLS conseiller_contrats.
-  const domains = buildNavDomains({ isManager, isRhDelegue, canSmartRh, accesPnl: !!profile?.acces_pnl, adminFormation: profile?.academy_admin === true })
+  const domains = buildNavDomains({ isManager, isRhDelegue, canSmartRh, accesPnl: !!profile?.acces_pnl, adminFormation: profile?.academy_admin === true, formationOuverte: formationOuverte === true })
 
   // Compteurs affichés en badge, agrégés au niveau du domaine.
   const badgeValues = {
@@ -4936,6 +4936,10 @@ export default function App(){
   // quiz/<version>, resultats, pilotage, fiche/<id>, administration...).
   const [formationRoute,setFormationRoute]=useState(['parcours'])
   const [academyRappels,setAcademyRappels]=useState([])
+  // Vrai des qu un module est publie : avant, seule la direction voit
+  // l onglet. null tant que la reponse n est pas arrivee, pour ne pas
+  // renvoyer a l accueil un conseiller qui ouvre un lien #/formation.
+  const [formationOuverte,setFormationOuverte]=useState(null)
   const [dossiersImmoCount,setDossiersImmoCount]=useState(0)
   const [editorialPending,setEditorialPending]=useState({count:0,nextDeadline:null})
   const [reloadCallback,setReloadCallback]=useState(null) // Callback après sauvegarde deal
@@ -4991,10 +4995,14 @@ export default function App(){
   // proches, pour la cloche. Rafraichi au changement d onglet comme les
   // autres signaux secondaires ; un echec ne casse rien.
   useEffect(() => {
-    if (!profile) { setAcademyRappels([]); return }
+    if (!profile) { setAcademyRappels([]); setFormationOuverte(null); return }
     import('./services/academy')
-      .then((svc) => svc.mesRappels())
-      .then((liste) => { if (isMounted.current) setAcademyRappels(Array.isArray(liste) ? liste : []) })
+      .then((svc) => Promise.all([svc.mesRappels(), svc.formationOuverte()]))
+      .then(([liste, ouverte]) => {
+        if (!isMounted.current) return
+        setAcademyRappels(Array.isArray(liste) ? liste : [])
+        setFormationOuverte(ouverte === true)
+      })
       .catch(() => { /* signal secondaire : un echec ne doit rien casser */ })
   }, [profile, activeTab])
 
@@ -5060,6 +5068,11 @@ export default function App(){
     isRhDelegue: profile?.rh_delegue === true,
     accesPnl: profile?.acces_pnl === true,
     adminFormation: profile?.academy_admin === true,
+    // Tant que la reponse n est pas arrivee (null), l onglet compte comme
+    // accessible : un conseiller qui ouvre un lien #/formation ne doit pas
+    // etre renvoye a l accueil avant qu on sache. Le menu, lui, n affiche
+    // l onglet qu une fois la publication confirmee.
+    formationOuverte: formationOuverte !== false,
     canSmartRh: profile?.role === 'manager' || profile?.rh_delegue === true || !['STAGIAIRE', 'MANDATAIRE'].includes(String(contractType || '').toUpperCase()),
   }))
 
@@ -5151,7 +5164,7 @@ export default function App(){
     if (!visibleTabsRef.current.has(activeTab)) setActiveTab('dashboard')
     // Meme garde pour les sous vues de Clients reservees a la direction.
     if ((clientsVue === 'rattrapage' || clientsVue === 'campagnes') && profile.role !== 'manager') setClientsVue('annuaire')
-  }, [session, profile, activeTab, contractType, clientsVue])
+  }, [session, profile, activeTab, contractType, clientsVue, formationOuverte])
 
   // ── Leads — fetch + Realtime + polling de secours 60s ─────────────────────
   // Le polling est un filet de sécurité au cas où la WebSocket Realtime se
@@ -5764,7 +5777,7 @@ export default function App(){
 
   // ── B1 : navigation en domaines (source unique lib/navigation.js) ──────
   // (visibleTabsRef est rempli plus haut, avant les early returns.)
-  const navDomains = buildNavDomains({ isManager, isRhDelegue, canSmartRh, accesPnl: !!profile?.acces_pnl, adminFormation: profile?.academy_admin === true })
+  const navDomains = buildNavDomains({ isManager, isRhDelegue, canSmartRh, accesPnl: !!profile?.acces_pnl, adminFormation: profile?.academy_admin === true, formationOuverte: formationOuverte === true })
   // Vues accessibles → palette ⌘K : même source que la sidebar, fin de la
   // liste MANAGER_ONLY maintenue à la main dans CommandPalette.
   const palettePages = {}
@@ -5892,6 +5905,7 @@ export default function App(){
       <Sidebar
         profile={effectiveProfile}
         canSmartRh={canSmartRh}
+        formationOuverte={formationOuverte}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onSignOut={signOut}

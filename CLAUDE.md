@@ -525,7 +525,10 @@ Le domaine **Formation** du menu (`#/formation/...`) : Mon parcours,
 Catalogue, module, lecteur de leçon, quiz, Mes résultats pour tout le
 cabinet ; Pilotage des formations, fiche collaborateur, matrice de
 compétences et Administration du contenu pour la direction et les profils
-`academy_admin`. Écrit sur la branche `claude/entasis-academy`, **jamais
+`academy_admin`. **Tant qu'aucun module n'est publié, l'onglet n'existe
+que pour la direction** (`formationOuverte()` dans le service, lecture
+sous RLS de `academy_module_versions`) : Louis relit et publie sans que
+l'équipe découvre une rubrique vide. Écrit sur la branche `claude/entasis-academy`, **jamais
 appliqué en production** : les migrations `supabase/migrations/20260921_academy_*`
 portent l'en tête « NON APPLIQUÉE EN PRODUCTION » et ont été appliquées sur
 le projet DEV `entasis-crm-DEV` (`leuqchrianpasianwmjg`) seulement.
