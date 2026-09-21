@@ -12,7 +12,6 @@ import {
   estStructure,
   sumFraisEmprunteur,
   estAssuranceEmprunteur,
-  advisorMetrics,
   monthFromDate,
   alignedMonthForDeal, estSimpleRdv, entonnoirLeads, compterPipeline } from './metrics';
 
