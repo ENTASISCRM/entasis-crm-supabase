@@ -2565,3 +2565,31 @@ mark.surlignage {
 .kpi-card-click:hover .kpi-open, .kpi-card-click:focus-visible .kpi-open {
   opacity: 1; transform: translateX(2px); color: var(--gold-dk);
 }
+
+/* ─── Rendu Markdown assaini (RenduMarkdown) ───────────────────────────────
+   Contenu des leçons de l'Academy et explications de corrigé. Même esprit que
+   .edito-md (EditorialHub), en composant réutilisable : titres courts, corps
+   14px aéré, citation sur filet doré, code sur fond gris. Jetons de :root
+   seulement, pas de couleur en dur. */
+.md-rendu { font-size: 14px; line-height: 1.6; color: var(--t1); overflow-wrap: anywhere; }
+.md-rendu > :first-child { margin-top: 0; }
+.md-rendu > :last-child { margin-bottom: 0; }
+.md-rendu h1, .md-rendu h2 { font-size: 16px; font-weight: 700; margin: 20px 0 8px; color: var(--t1); letter-spacing: -0.01em; }
+.md-rendu h3 { font-size: 14.5px; font-weight: 600; margin: 16px 0 6px; color: var(--t1); }
+.md-rendu h4, .md-rendu h5, .md-rendu h6 { font-size: 13px; font-weight: 600; margin: 12px 0 4px; color: var(--t2); text-transform: uppercase; letter-spacing: 0.04em; }
+.md-rendu p { margin: 8px 0; }
+.md-rendu ul, .md-rendu ol { margin: 8px 0; padding-left: 22px; }
+.md-rendu li { margin: 4px 0; }
+.md-rendu li > p { margin: 2px 0; }
+.md-rendu strong { font-weight: 600; color: var(--t1); }
+.md-rendu a { color: var(--gold-dk); text-decoration: underline; text-underline-offset: 2px; }
+.md-rendu a:hover { color: var(--navy); }
+.md-rendu blockquote { border-left: 3px solid var(--gold-line); margin: 10px 0; padding: 4px 14px; background: var(--gold-subtle); border-radius: 0 var(--rad-sm) var(--rad-sm) 0; color: var(--t2); }
+.md-rendu code { font-family: var(--font-mono, ui-monospace, monospace); font-size: 12.5px; background: var(--bg); border: 1px solid var(--bd); border-radius: 4px; padding: 1px 5px; }
+.md-rendu pre { background: var(--bg); border: 1px solid var(--bd); border-radius: var(--rad); padding: 10px 12px; margin: 10px 0; overflow-x: auto; }
+.md-rendu pre code { background: none; border: none; padding: 0; font-size: 12.5px; line-height: 1.5; }
+.md-rendu table { border-collapse: collapse; font-size: 13px; margin: 10px 0; width: 100%; }
+.md-rendu th, .md-rendu td { border: 1px solid var(--bd-strong); padding: 6px 10px; text-align: left; vertical-align: top; }
+.md-rendu th { font-weight: 600; color: var(--t2); background: var(--bg); }
+.md-rendu hr { border: none; border-top: 1px solid var(--bd-strong); margin: 18px 0; }
+.md-rendu img { max-width: 100%; height: auto; border-radius: var(--rad-sm); }
