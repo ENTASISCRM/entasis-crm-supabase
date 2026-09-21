@@ -11,6 +11,10 @@
 -- Le projet DEV n a pas pg_cron : le bloc ne fait rien si l extension est
 -- absente, la migration reste applicable partout. Idempotent : le job est
 -- retire puis recree.
+--
+-- Appliquee EN PRODUCTION le 21 septembre 2026 apres accord de Louis :
+-- version 20260921133012, nom academy_4_purge_planifiee. Job pg_cron
+-- academy-purge-intervalles, 40 3 * * *.
 do $do$
 begin
   if not exists (select 1 from pg_extension where extname = 'pg_cron') then

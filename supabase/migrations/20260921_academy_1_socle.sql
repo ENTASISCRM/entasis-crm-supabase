@@ -31,12 +31,11 @@
 -- academy_version_immuable et ses cousins sur les lecons et les questions) ;
 -- le seul passage autorise est publie vers archive.
 --
--- NON APPLIQUEE EN PRODUCTION. Appliquee sur le projet de developpement
--- entasis-crm-DEV (leuqchrianpasianwmjg) le 21 septembre 2026 pour les
--- scenarios d acceptation (scripts/academy/tests-sql). Le jour du feu vert
--- de Louis : appliquer par MCP apply_migration, relire
--- supabase_migrations.schema_migrations et renommer ce fichier avec la
--- version enregistree.
+-- Appliquee sur le projet de developpement entasis-crm-DEV
+-- (leuqchrianpasianwmjg) le 21 septembre 2026 pour les scenarios
+-- d acceptation (scripts/academy/tests-sql), puis EN PRODUCTION le
+-- 21 septembre 2026 apres accord de Louis : version 20260921130243,
+-- nom academy_1_socle dans supabase_migrations.schema_migrations.
 
 -- ── 1. Droit d administration formation ────────────────────────────────────
 -- L ajout de colonne prend un verrou exclusif sur profiles, table que

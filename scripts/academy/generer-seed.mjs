@@ -59,8 +59,13 @@ out(`-- Entasis Academy, migration 3 : le catalogue seme.
 -- jamais mis a jour ; un parcours existant garde ses modules. Relancer ne
 -- duplique rien et n ecrase aucune edition de l administrateur.
 --
--- NON APPLIQUEE EN PRODUCTION. Appliquee sur entasis-crm-DEV
--- (leuqchrianpasianwmjg) le 21 septembre 2026.
+-- Appliquee sur entasis-crm-DEV (leuqchrianpasianwmjg) le 21 septembre
+-- 2026, puis EN PRODUCTION le meme jour apres accord de Louis, un fichier
+-- par migration (noms academy_3_seed_01 a _13 dans schema_migrations,
+-- versions 20260921131206 a 20260921133002), contenu verifie au md5.
+-- Cet en tete a ete mis a jour apres l application : le md5 des fichiers
+-- ne correspond plus a celui des statements enregistres, le corps est
+-- identique.
 `)
 
 for (const m of modules) {

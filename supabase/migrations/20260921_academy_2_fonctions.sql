@@ -21,8 +21,9 @@
 -- « Aujourd hui » se lit en Europe/Paris (academy_aujourdhui) : une revision
 -- due le 22 ne bascule pas a 2 h du matin selon l heure de connexion.
 --
--- NON APPLIQUEE EN PRODUCTION. Appliquee sur entasis-crm-DEV
--- (leuqchrianpasianwmjg) le 21 septembre 2026.
+-- Appliquee sur entasis-crm-DEV (leuqchrianpasianwmjg) le 21 septembre
+-- 2026, puis EN PRODUCTION le meme jour apres accord de Louis : version
+-- 20260921130815, nom academy_2_fonctions.
 
 -- ── 0. Complement de schema ────────────────────────────────────────────────
 -- La reponse de la mini question de fin de lecon ne se lit pas par le

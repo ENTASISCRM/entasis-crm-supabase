@@ -528,10 +528,14 @@ compétences et Administration du contenu pour la direction et les profils
 `academy_admin`. **Tant qu'aucun module n'est publié, l'onglet n'existe
 que pour la direction** (`formationOuverte()` dans le service, lecture
 sous RLS de `academy_module_versions`) : Louis relit et publie sans que
-l'équipe découvre une rubrique vide. Écrit sur la branche `claude/entasis-academy`, **jamais
-appliqué en production** : les migrations `supabase/migrations/20260921_academy_*`
-portent l'en tête « NON APPLIQUÉE EN PRODUCTION » et ont été appliquées sur
-le projet DEV `entasis-crm-DEV` (`leuqchrianpasianwmjg`) seulement.
+l'équipe découvre une rubrique vide. Écrit sur la branche `claude/entasis-academy`,
+validé sur le projet DEV `entasis-crm-DEV` (`leuqchrianpasianwmjg`), puis
+**mis en production le 21 septembre 2026** sur décision de Louis : les
+migrations `supabase/migrations/20260921_academy_*` portent chacune la
+version enregistrée dans `schema_migrations` en en tête (socle
+20260921130243, fonctions 20260921130815, puis les treize seeds et la
+purge planifiée). Le catalogue y est en brouillon, rien n'est publié ni
+affecté : l'équipe ne voit pas encore l'onglet.
 
 Ce qu'il faut savoir avant d'y toucher :
 
@@ -588,10 +592,12 @@ tout annuler) ; côté écran `npm run test:visuel` avec les onze scénarios
 catalogue se régénère par `node scripts/academy/generer-seed.mjs` depuis
 `scripts/academy/catalogue/*.json`.
 
-Avant une mise en production : renommer les fichiers de migration avec la
-version enregistrée par `schema_migrations`, poser `academy_admin` sur les
-profils concernés, relire les douze modules, publier un par un avec le nom
-du relecteur, puis affecter les parcours.
+Ce qui reste à faire par Louis : relire les douze modules dans
+Administration, publier un par un avec le nom du relecteur (le premier
+module publié ouvre l'onglet à toute l'équipe), affecter les parcours,
+poser `academy_admin` sur un profil s'il veut déléguer le contenu. La
+relecture à froid du 21 septembre (quatre lentilles contre la base de
+production) est journalisée dans `scripts/academy/tests-sql/LISEZMOI.md`.
 
 ## Les projets Supabase
 
