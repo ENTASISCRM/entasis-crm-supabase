@@ -110,7 +110,18 @@ describe('AdministrationVue', () => {
     expect(html).toContain('Nouveau parcours')
   })
 
-  it('journal : la date à Paris, l auteur et le détail en code court', () => {
+  it('paramètres : les réglages numériques et la notice « Données suivies », en attente de sa valeur au premier rendu', () => {
+    const html = renderToStaticMarkup(<AdministrationVue vue={vue} erreur={null} ongletInitial="parametres" onNaviguer={() => {}} onRecharger={() => {}} />)
+    expect(html).toContain('id="aca-prm-retention_intervalles_mois"')
+    expect(html).toContain('value="12"')
+    expect(html).toMatch(/<label[^>]*for="aca-prm-notice_donnees"[^>]*>Notice « Données suivies »<\/label>/)
+    // adminVue ne porte pas notice_donnees : le textarea attend academy_mon_parcours.
+    expect(html).toMatch(/<textarea[^>]*id="aca-prm-notice_donnees"[^>]*disabled=""/)
+    expect(html).toContain('Chargement de la notice…')
+    expect(html).toContain('Enregistrer les paramètres')
+  })
+
+  it('journal : la date à Paris, l’auteur et le détail en code court', () => {
     const html = renderToStaticMarkup(<AdministrationVue vue={vue} erreur={null} ongletInitial="journal" onNaviguer={() => {}} onRecharger={() => {}} />)
     expect(html).toContain('21/09/2026 à 09h30')
     expect(html).toContain('Camille Exemple')

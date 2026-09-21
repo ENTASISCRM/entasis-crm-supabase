@@ -104,7 +104,7 @@ const BORD = /^[ .,;:!?'"«»()]+|[ .,;:!?'"«»()]+$/g
 
 /** La saisie d’un texte à trou telle que la base la compare aux réponses acceptées. */
 export function normaliserSaisie(v) {
-  // L apostrophe typographique du contenu vaut l apostrophe droite du clavier.
+  // L apostrophe typographique du contenu vaut l’apostrophe droite du clavier.
   let s = texte(v).toLowerCase().replace(/\u2019/g, "'")
   let sortie = ''
   for (const ch of s) {
@@ -208,6 +208,17 @@ export function xpSession(nbBons, nbCartes, parfaite, premiere) {
   const bons = Math.max(0, Math.floor(Number(nbBons) || 0))
   const cartes = Math.max(0, Math.min(bons, Math.floor(Number(nbCartes) || 0)))
   return (bons - cartes) * 10 + cartes * 5 + (parfaite ? 20 : 0) + (premiere ? 10 : 0)
+}
+
+/**
+ * Vrai quand academy_repondre refuse parce que la session est déjà finie
+ * (« Session terminee ») ou que l’item n’en fait pas partie : il n’y a plus
+ * rien à réessayer, la session passe au bilan. Comparé sans accent ni casse,
+ * comme la base écrit ses messages.
+ */
+export function erreurSessionClose(e) {
+  const m = normaliserSaisie(e?.message ?? e)
+  return m.includes('session terminee') || m.includes('ne fait pas partie de la session')
 }
 
 /**

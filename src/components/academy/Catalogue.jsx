@@ -72,6 +72,7 @@ function Carte({ m, titresParSlug, aujourdhui, onNaviguer }) {
   const nbItems = Number(m.nb_items) || 0
   const vus = Math.min(nbItems, Number(m.items_vus) || 0)
   const dus = Number(m.items_dus) || 0
+  const vide = nbItems === 0
   const meta = [
     pluriel(nbItems, 'exercice', 'exercices'),
     m.duree_minutes ? `${m.duree_minutes} min` : null,
@@ -99,7 +100,8 @@ function Carte({ m, titresParSlug, aujourdhui, onNaviguer }) {
         </span>
         <span className="ac-badges">
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => onNaviguer?.(`#/formation/module/${m.slug}`)}>Voir le deck</button>
-          <button type="button" className="btn btn-primary btn-sm" onClick={() => onNaviguer?.(`#/formation/entrainement/${m.version_id}`)}>S’entraîner</button>
+          <button type="button" className="btn btn-primary btn-sm" disabled={vide} title={vide ? 'Aucun exercice dans ce deck' : undefined}
+            onClick={() => onNaviguer?.(`#/formation/entrainement/${m.version_id}`)}>S’entraîner</button>
         </span>
       </div>
     </article>
@@ -132,7 +134,7 @@ export function CatalogueVue({ modules, recherche, filtres, aujourdhui, onRecher
         <div>
           <div className="section-kicker">Formation</div>
           <div className="section-title">Catalogue</div>
-          <div className="section-sub">Tous les decks publiés. Une session, c est douze exercices corrigés au fur et à mesure ; trois couronnes valident le deck.</div>
+          <div className="section-sub">Tous les decks publiés. Une session, c’est douze exercices corrigés au fur et à mesure ; trois couronnes valident le deck.</div>
         </div>
       </div>
 

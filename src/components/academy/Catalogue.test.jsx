@@ -112,4 +112,13 @@ describe('CatalogueVue', () => {
     const html = renderToStaticMarkup(<CatalogueVue modules={[]} recherche="" filtres={FILTRES} aujourdhui={AUJOURDHUI} />)
     expect(html).toContain('Aucun deck publié')
   })
+
+  it('un deck sans exercice : S entraîner désactivé avec l’aide, Voir le deck reste actif', () => {
+    const html = rendre({ modules: [{ ...modules[2], nb_items: 0 }] })
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*title="Aucun exercice dans ce deck"[^>]*>S’entraîner<\/button>/)
+    expect(html).toContain('0 exercice')
+    expect(html).not.toMatch(/disabled=""[^>]*>Voir le deck/)
+    // Les decks avec des exercices gardent un bouton actif.
+    expect(rendre()).not.toMatch(/disabled=""[^>]*>S’entraîner/)
+  })
 })

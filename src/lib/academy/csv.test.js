@@ -40,7 +40,7 @@ describe('lignesCsvPilotage', () => {
       colonnes: expect.any(Array), lignes: [],
     })
   })
-  it('chaque valeur est une chaîne, l échappement (protection formule) se fait dans csv-format', () => {
+  it('chaque valeur est une chaîne, l’échappement (protection formule) se fait dans csv-format', () => {
     const { lignes } = lignesCsvPilotage([ligne({ nom: '=Durand; Camille' })])
     expect(lignes[0].every((v) => typeof v === 'string')).toBe(true)
     expect(lignes[0][0]).toBe('=Durand; Camille')

@@ -24,7 +24,7 @@ import { STATUTS, classeBadge , modulesPubliesDuParcours, libelleParcoursAffecta
 import { jourParis, dateHeureParis } from '../../lib/academy/format'
 import {
   adminVue, creerModule, nouvelleVersion, archiverVersion, enregistrerParcours,
-  affecter, modifierEcheance, retirerAffectation, enregistrerParametres,
+  affecter, modifierEcheance, retirerAffectation, enregistrerParametres, monParcours,
 } from '../../services/academy'
 import { confirmDialog } from '../ui/confirm'
 import SubTabs from '../ui/SubTabs'
@@ -339,7 +339,7 @@ function ModaleParcours({ parcours, modules, onFermer, onRecharger }) {
           </div>
           <div className="form-group">
             <span className="form-label">Modules, dans l’ordre</span>
-            {f.modules.length === 0 && <div className="form-hint">Aucun module pour l instant.</div>}
+            {f.modules.length === 0 && <div className="form-hint">Aucun module pour l’instant.</div>}
             <div className="aca-modules-parcours">
               {f.modules.map((m, i) => (
                 <div className="aca-module-parcours" key={i}>
@@ -671,6 +671,18 @@ function OngletParametres({ parametres, onRecharger }) {
   const [f, setF] = useState(() => Object.fromEntries(CHAMPS_PARAMETRES.map((c) => [c.cle, String(parametres?.[c.cle] ?? '')])))
   const [enCours, setEnCours] = useState(false)
   const [enregistreLe, setEnregistreLe] = useState(null)
+  // academy_admin_vue rend les paramètres SANS notice_donnees (texte long) :
+  // la valeur courante vient de academy_mon_parcours, chargée à l’ouverture
+  // de l’onglet. null tant qu’elle n’est pas arrivée : on n’écrase rien.
+  const [notice, setNotice] = useState(null)
+  const [erreurNotice, setErreurNotice] = useState(null)
+  useEffect(() => {
+    let vivant = true
+    monParcours()
+      .then((p) => { if (vivant) setNotice(String(p?.notice_donnees ?? '')) })
+      .catch((e) => { if (vivant) setErreurNotice(messageErreur(e)) })
+    return () => { vivant = false }
+  }, [])
 
   async function enregistrer() {
     if (enCours) return
@@ -684,6 +696,11 @@ function OngletParametres({ parametres, onRecharger }) {
       patch[c.cle] = c.step < 1 ? v : Math.round(v)
     }
     if (patch.delai_j30 <= patch.delai_j7) { toast.error('La seconde révision vient après la première'); return }
+    if (notice !== null) {
+      const texte = String(notice).trim()
+      if (!texte) { toast.error('La notice « Données suivies » ne peut pas être vide'); return }
+      patch.notice_donnees = texte
+    }
     setEnCours(true)
     try {
       await enregistrerParametres(patch)
@@ -711,6 +728,18 @@ function OngletParametres({ parametres, onRecharger }) {
         ))}
       </div>
       <div className="form-hint">Les seuils déjà posés sur une version publiée ne bougent pas : ils font partie de la version.</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="aca-prm-notice_donnees">Notice « Données suivies »</label>
+        {erreurNotice ? (
+          <div className="notice notice-error" role="alert">{erreurNotice}</div>
+        ) : (
+          <textarea id="aca-prm-notice_donnees" className="form-textarea" rows={6}
+            value={notice ?? ''} disabled={enCours || notice === null}
+            placeholder={notice === null ? 'Chargement de la notice…' : undefined}
+            onChange={(e) => setNotice(e.target.value)} />
+        )}
+        <div className="form-hint">Le texte que chaque collaborateur lit depuis « Données suivies » : ce que la formation enregistre de son entraînement. Les destinataires et la durée de conservation s’affichent à la suite, ils ne se saisissent pas ici.</div>
+      </div>
       <div className="aca-pied">
         <button type="button" className="btn btn-primary" onClick={enregistrer} disabled={enCours}>{enCours ? 'Enregistrement…' : 'Enregistrer les paramètres'}</button>
         <span className="aca-statut" role="status" aria-live="polite">{enregistreLe ? 'Enregistré' : ''}</span>
@@ -727,7 +756,7 @@ function OngletJournal({ journal }) {
       <div className="card">
         <div className="table-empty-state">
           <div className="empty-title">Aucun geste enregistré</div>
-          <div className="empty-sub">Chaque création, publication, archivage ou affectation s inscrit ici, avec son auteur.</div>
+          <div className="empty-sub">Chaque création, publication, archivage ou affectation s’inscrit ici, avec son auteur.</div>
         </div>
       </div>
     )

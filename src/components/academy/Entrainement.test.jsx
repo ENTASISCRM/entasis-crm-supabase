@@ -29,7 +29,7 @@ const rien = () => {}
 const vue = (props) => renderToStaticMarkup(
   <EntrainementVue
     titre="Le PER et la retraite" phase="jeu" item={ITEMS.choix} rang={1} total={12} rejeu={false}
-    valeur={null} resultat={null} envoi={false} erreurReponse={null} fin={null} erreurFin={null} nbARejouer={0}
+    valeur={null} resultat={null} envoi={false} erreurReponse={null} erreurDefinitive={false} fin={null} erreurFin={null} nbARejouer={0}
     onChange={rien} onVerifier={rien} onContinuer={rien} onRejouer={rien} onReessayer={rien} onReessayerFin={rien}
     onQuitter={rien} onEncore={rien} onRetourDeck={rien} {...props}
   />,
@@ -62,7 +62,8 @@ describe('EntrainementVue, le déroulé', () => {
     expect(html).toContain('>Quitter<')
     expect(html).toContain('Le PER et la retraite')
     expect(html).toContain('width:8%')
-    expect(html).toContain('class="ae-sr">Exercice 1 sur 12<')
+    expect(html).toContain('class="ae-sr" aria-live="polite">Exercice 1 sur 12<')
+    expect(html).toContain('class="ae-corps" tabindex="-1"')
     expect(html).toContain('>Choix unique<')
     expect(html).toContain('<legend class="ae-enonce">Le PER se débloque à quel moment ?</legend>')
     expect((html.match(/type="radio"/g) || []).length).toBe(3)
@@ -110,7 +111,7 @@ describe('EntrainementVue, le déroulé', () => {
     expect(html).toContain('1. Écouter et reformuler\n2. Expliquer sans promettre\n3. Tracer par écrit')
   })
 
-  it('échec réseau : message role alert, Réessayer, la réponse saisie reste cochée', () => {
+  it('échec réseau : message role alert, Réessayer, la réponse saisie reste cochée et la saisie est verrouillée', () => {
     const html = vue({ valeur: 2, erreurReponse: 'Connexion impossible, le réseau ne répond pas.' })
     expect(html).toContain('role="alert"')
     expect(html).toContain('Connexion impossible')
@@ -118,6 +119,25 @@ describe('EntrainementVue, le déroulé', () => {
     expect(html).toContain('>Réessayer</button>')
     expect(html).toContain('class="ae-choix is-on"')
     expect(html).not.toContain('>Vérifier<')
+    expect(html).not.toContain('Retour au deck')
+    // La base a peut être déjà la réponse : les contrôles sont désactivés.
+    expect((html.match(/type="radio"[^>]*disabled=""/g) || []).length).toBe(3)
+  })
+
+  it('échec réseau sur une saisie : le champ texte est désactivé, la valeur reste', () => {
+    const html = vue({ item: ITEMS.trou_saisie, valeur: 'sept', erreurReponse: 'Connexion impossible, le réseau ne répond pas.' })
+    expect(html).toMatch(/<input[^>]*type="text"[^>]*disabled=""/)
+    expect(html).toContain('value="sept"')
+  })
+
+  it('refus de la base (pas une coupure) : Retour au deck remplace Réessayer', () => {
+    const html = vue({ valeur: 2, erreurReponse: 'Accès refusé.', erreurDefinitive: true })
+    expect(html).toContain('role="alert"')
+    expect(html).toContain('Accès refusé.')
+    expect(html).toContain('>Retour au deck</button>')
+    expect(html).not.toContain('>Réessayer</button>')
+    expect(html).not.toContain('Ta réponse est conservée.')
+    expect((html.match(/type="radio"[^>]*disabled=""/g) || []).length).toBe(3)
   })
 
   it('en rejeu : le kicker On y revient et un vert qui reste compté faux', () => {
@@ -156,6 +176,7 @@ describe('EntrainementVue, les écrans', () => {
     expect(html).toContain('role="alert"')
     expect(html).toContain('il ne manque que le bilan')
     expect(html).toContain('>Réessayer</button>')
+    expect(html).toContain('>Retour au deck</button>')
   })
 
   it('écran de fin : XP, bons sur total, série, première du jour, couronnes, deck validé, erreurs, boutons', () => {
@@ -337,7 +358,7 @@ describe('TrouChoix', () => {
 })
 
 describe('TrouSaisie', () => {
-  it('initial : un champ texte étiqueté, l aide en indication', () => {
+  it('initial : un champ texte étiqueté, l’aide en indication', () => {
     const html = exo(TrouSaisie, { payload: ITEMS.trou_saisie.payload, valeur: '' })
     expect(html).toMatch(/<label for="[^"]+" class="ae-saisie-label">Ta réponse<\/label>/)
     expect(html).toContain('type="text"')

@@ -546,9 +546,14 @@ Ce qu'il faut savoir avant d'y toucher :
   Vercel : tirage et mélange des choix (`academy_demarrer_entrainement`),
   correction (`academy_repondre`, `academy_verifier_reponse`), répétition
   espacée, XP, série et couronnes (`academy_terminer_entrainement`). Les
-  corrigés (`academy_items_corriges`) n'ont aucune policy, `revoke all`
-  pour `authenticated`. Les réponses sont des **indices présentés** : le
-  serveur mélange et mémorise l'ordre dans `academy_entrainements.items`.
+  corrigés (`academy_items_corriges`), les items (`academy_items`) et les
+  sessions (`academy_entrainements`) n'ont aucune policy, `revoke all`
+  pour `authenticated`, administration comprise : tout se lit par les
+  fonctions. Les réponses sont des **indices présentés** : le serveur
+  mélange et mémorise l'ordre dans `academy_entrainements.items`, et un
+  exercice d'ordre ou d'association est déjà mélangé à l'enregistrement
+  (`academy_melanger_item`, générateur de decks à graine stable), sinon
+  l'ordre d'auteur trahirait le corrigé (relecture adversariale du 21/09).
 * **Le temps actif ne vient jamais du client** : chaque réponse vaut un
   battement serveur (`now()`), les durées sont des unions d'intervalles.
   `academy_duree_active` et `academy_duree_version` ne sont pas
@@ -573,7 +578,7 @@ Ce qu'il faut savoir avant d'y toucher :
 Pour tester : DEV, migrations 1 à 7 dans l'ordre (les seeds 3 sont ceux
 des leçons, désormais sans usage ; les seeds 7 sont les decks, un fichier
 par deck, idempotents) ; `scripts/academy/tests-sql/acceptation-entrainement.sql`
-(un bloc `DO`, sept étapes, se termine par `TESTS OK`) ; côté écran
+(un bloc `DO`, dix étapes, se termine par `TESTS OK`) ; côté écran
 `npm run test:visuel` (scénarios `formation-*`). Les decks se régénèrent
 par `node scripts/academy/generer-decks.mjs` depuis
 `scripts/academy/decks/*.json` (la trame : écrite d'après les deux pages

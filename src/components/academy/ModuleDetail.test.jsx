@@ -110,4 +110,13 @@ describe('ModuleDetailVue (deck)', () => {
     expect(html).toContain('badge badge-progress">En cours')
     expect(html).toContain('Aucune session terminée sur ce deck.')
   })
+
+  it('un deck sans exercice : le gros bouton est désactivé et le dit', () => {
+    const html = rendre({ ...module, nb_items: 0, items_vus: 0, items_dus: 0, competences: [], sessions: [] })
+    expect(html).toMatch(/<button[^>]*class="btn btn-primary ac-btn-grand"[^>]*disabled=""[^>]*title="Aucun exercice dans ce deck"[^>]*>Démarrer une session<\/button>/)
+    expect(html).toContain('Aucun exercice dans ce deck : rien à jouer pour l’instant.')
+    expect(html).not.toContain('corrigés un par un')
+    // Avec des exercices, rien n est désactivé.
+    expect(rendre(module)).not.toMatch(/ac-btn-grand"[^>]*disabled=""/)
+  })
 })

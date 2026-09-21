@@ -48,7 +48,7 @@ describe('MonParcoursVue (Aujourd hui)', () => {
     expect(html).toContain('>4 jours<')
     expect(html).toContain('meilleure série : 9 jours')
     expect(html).toContain('badge badge-urgent">En danger')
-    expect(html).toContain('Une session aujourd hui et la série continue.')
+    expect(html).toContain('Une session aujourd’hui et la série continue.')
     expect(html).toContain('class="ac-flamme eteinte"')
     expect(html).not.toMatch(/[\u{1F300}-\u{1FAFF}]/u)
   })
@@ -117,14 +117,32 @@ describe('MonParcoursVue (Aujourd hui)', () => {
     expect(html).toContain('Validé le 30/08/2026')
   })
 
-  it('sans affectation, l état vide renvoie au catalogue et la série reste visible', () => {
+  it('sans affectation, l’état vide renvoie au catalogue et la série reste visible', () => {
     const vide = { aujourdhui: AUJOURDHUI, serie: { serie: 0, meilleure: 0, objectif_quotidien: 1, sessions_aujourdhui: 0, objectif_atteint: false, en_danger: false }, xp: { total: 0, aujourdhui: 0, semaine: 0 }, items_dus: 0, affectations: [], dernieres_reussites: [] }
     const html = rendre(vide)
     expect(html).toContain('Rien ne t est encore affecté : le catalogue est ouvert')
     expect(html).toContain('Ouvrir le catalogue')
     expect(html).toContain('>0 jour<')
-    expect(html).toContain('Une session terminée aujourd hui lance ta série.')
+    expect(html).toContain('Une session terminée aujourd’hui lance ta série.')
     expect(html).toContain('aucun exercice en attente de révision')
     expect(html).not.toContain('S’entraîner')
+  })
+
+  it('une version archivée : badge Version remplacée et renvoi au catalogue à la place de S entraîner', () => {
+    const p = { ...parcours, affectations: [{ ...parcours.affectations[2], version_statut: 'archive' }] }
+    const html = rendre(p)
+    expect(html).toContain('badge badge-normal">Version remplacée')
+    expect(html).toContain('>Deck remplacé, voir le catalogue</button>')
+    expect(html).not.toContain('S’entraîner')
+    expect(html).not.toContain('#/formation/entrainement/')
+    expect(html).toContain('>Voir le deck</button>')
+  })
+
+  it('un deck sans exercice : S entraîner désactivé avec l’aide', () => {
+    const p = { ...parcours, affectations: [{ ...parcours.affectations[2], nb_items: 0, items_vus: 0 }] }
+    const html = rendre(p)
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*title="Aucun exercice dans ce deck"[^>]*>S’entraîner<\/button>/)
+    expect(html).toContain('class="ac-muet">Aucun exercice dans ce deck<')
+    expect(html).not.toContain('Version remplacée')
   })
 })

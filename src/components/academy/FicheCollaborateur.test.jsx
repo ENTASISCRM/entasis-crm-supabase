@@ -144,21 +144,23 @@ describe('FicheVue', () => {
     expect(html).not.toContain('canvas')
   })
 
-  it('montre le formulaire de coaching au manager, avec le commentaire existant', () => {
+  it('montre le formulaire de coaching au manager, avec le commentaire existant, visible par la direction seulement', () => {
     const html = rendre(MANAGER, { commentaire: 'Nouvelle piste' })
     expect(html).toContain('Bon rythme, revoir la clause démembrée.')
+    expect(html).toContain('Visibles par la direction seulement')
     expect(html).toContain('id="acp-coaching-texte"')
     expect(html).toContain('form-textarea')
     expect(html).toContain('Ajouter le commentaire')
     expect(html).toContain('Nouvelle piste')
   })
 
-  it('cache le formulaire de coaching à un conseiller sur sa propre fiche, mais montre les commentaires', () => {
+  it('cache tout le bloc de coaching à un conseiller sur sa propre fiche : la base ne lui rend pas les commentaires', () => {
     const html = rendre(CONSEILLER)
     expect(html).toContain('Camille Durand')
     expect(html).toContain('Ta fiche de formation')
     expect(html).toContain('Retour à Aujourd hui')
-    expect(html).toContain('Bon rythme, revoir la clause démembrée.')
+    expect(html).not.toContain('Commentaires de coaching')
+    expect(html).not.toContain('Bon rythme, revoir la clause démembrée.')
     expect(html).not.toContain('acp-coaching-texte')
     expect(html).not.toContain('Ajouter le commentaire')
   })

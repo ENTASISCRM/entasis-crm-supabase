@@ -121,8 +121,8 @@ export function MesResultatsVue({ resultats, aujourdhui, onNaviguer }) {
         <Entete />
         <div className="card">
           <div className="table-empty-state">
-            <div className="empty-title">Aucune session pour l instant</div>
-            <div className="empty-sub">Lance une session de douze exercices sur un deck : chaque session s inscrit ici avec sa date, ses bonnes réponses et son XP.</div>
+            <div className="empty-title">Aucune session pour l’instant</div>
+            <div className="empty-sub">Lance une session de douze exercices sur un deck : chaque session s’inscrit ici avec sa date, ses bonnes réponses et son XP.</div>
             <button type="button" className="btn btn-primary btn-sm" style={{ marginTop: 14 }} onClick={() => onNaviguer?.('#/formation/parcours')}>
               Voir Aujourd hui
             </button>
@@ -140,7 +140,7 @@ export function MesResultatsVue({ resultats, aujourdhui, onNaviguer }) {
       <Entete sousTitre={`${pluriel(sessions.length, 'session terminée', 'sessions terminées')} · ${bons} bonnes réponses sur ${total} · ${xpTotal} XP`} />
 
       <div className="kpi-grid">
-        <Kpi kicker="Série en cours" valeur={pluriel(serie, 'jour', 'jours')} avant={<Flamme eteinte={serie === 0} />} sous={serie === 0 ? 'une session aujourd hui la relance' : 'jours consécutifs avec une session'} />
+        <Kpi kicker="Série en cours" valeur={pluriel(serie, 'jour', 'jours')} avant={<Flamme eteinte={serie === 0} />} sous={serie === 0 ? 'une session aujourd’hui la relance' : 'jours consécutifs avec une session'} />
         <Kpi kicker="Meilleure série" valeur={pluriel(meilleure, 'jour', 'jours')} sous="ton record" />
         <Kpi kicker="XP total" valeur={xpTotal} sous="10 XP par bonne réponse, 5 par carte sue, bonus session parfaite et première du jour" />
         <Kpi kicker="À consolider" valeur={faibles.length} sous={faibles.length ? 'exercices à force basse' : 'aucun exercice fragile'} />

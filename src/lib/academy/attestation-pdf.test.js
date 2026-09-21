@@ -56,7 +56,7 @@ describe('texteAttestation', () => {
 
 describe('dates, score, fichier', () => {
   it('lit la date a Paris, jamais par decoupage de la chaine', () => {
-    // 23h30 UTC le 21, c est deja le 22 a Paris.
+    // 23h30 UTC le 21, c’est deja le 22 a Paris.
     expect(jourParis('2026-09-21T23:30:00Z')).toBe('22 septembre 2026')
     expect(dateFichier('2026-09-21T23:30:00Z')).toBe('2026-09-22')
     expect(jourParis('2026-12-24')).toBe('24 décembre 2026')

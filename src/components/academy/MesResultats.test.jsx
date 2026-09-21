@@ -81,7 +81,7 @@ describe('MesResultatsVue', () => {
 
   it('état vide', () => {
     const html = rendre({ serie: 0, meilleure: 0, xp_total: 0, sessions: [], semaines: [], items_faibles: [] })
-    expect(html).toContain('Aucune session pour l instant')
+    expect(html).toContain('Aucune session pour l’instant')
     expect(html).toContain('Voir Aujourd hui')
   })
 })

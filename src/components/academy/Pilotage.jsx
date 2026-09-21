@@ -87,7 +87,7 @@ const couronnesMoyenne = (ligne) => {
 const prenomDe = (nom) => String(nom || '').trim().split(/\s+/)[0] || ''
 
 // La période d’une puce, calculée depuis le jour rendu par la base (jamais
-// depuis l’horloge du navigateur) : « 7 jours » couvre aujourd hui et les six
+// depuis l’horloge du navigateur) : « 7 jours » couvre aujourd’hui et les six
 // jours qui précèdent.
 function periodePuce(p, aujourdhui) {
   if (!p.jours) return { cle: p.cle, depuis: null, jusqua: null }

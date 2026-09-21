@@ -148,7 +148,7 @@ function CompteurMots({ texte }) {
   const n = compterMots(texte)
   let classe = 'aca-mots'
   let mention = `viser ${MEMO_MOTS.min} à ${MEMO_MOTS.max}`
-  if (n === 0) mention = 'aucun mémo pour l instant'
+  if (n === 0) mention = 'aucun mémo pour l’instant'
   else if (n < MEMO_MOTS.min) { classe += ' aca-mots-court'; mention = `un peu court, viser ${MEMO_MOTS.min} à ${MEMO_MOTS.max}` }
   else if (n > MEMO_MOTS.max) { classe += ' aca-mots-long'; mention = `un peu long, viser ${MEMO_MOTS.min} à ${MEMO_MOTS.max}` }
   else classe += ' aca-mots-bon'
@@ -267,7 +267,7 @@ function FormulaireVersion({ version, lectureSeule, onRecharger }) {
             <div className="aca-apercu-titre">Aperçu</div>
             {String(f.memo_md || '').trim()
               ? <RenduMarkdown markdown={f.memo_md} />
-              : <div className="aca-apercu-vide">Rien à afficher pour l instant.</div>}
+              : <div className="aca-apercu-vide">Rien à afficher pour l’instant.</div>}
           </div>
         </div>
         <CompteurMots texte={f.memo_md} />

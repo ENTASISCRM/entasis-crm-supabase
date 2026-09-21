@@ -11,20 +11,23 @@
 //
 // Reprise : le jeton uuid rend l’ouverture rejouable, et une session
 // ouverte depuis moins de deux heures revient avec ses reponses_deja, qu on
-// saute. Un échec réseau sur une réponse laisse la saisie en place et
-// propose de réessayer ; academy_repondre est idempotent par item.
+// saute. Un échec réseau sur une réponse verrouille la saisie (la base a pu
+// enregistrer la première réponse) et propose de réessayer ; academy_repondre
+// est idempotent par item. Un refus « Session terminee » ou « ne fait pas
+// partie de la session » envoie au bilan (terminer rend le résumé déjà
+// calculé) ; tout autre refus renvoie au deck.
 //
 // Conteneur (réseau, état) et vue (props seulement) séparés : la vue et
 // chaque exercice se testent avec renderToStaticMarkup.
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { useEffect, useReducer, useRef, useState } from 'react'
-import { demarrerEntrainement, repondre, terminerEntrainement } from '../../services/academy'
+import { demarrerEntrainement, repondre, terminerEntrainement, estErreurReseau } from '../../services/academy'
 import { messageErreur } from '../../lib/ui-shared'
 import { confirmDialog } from '../ui/confirm'
 import { SkeletonText } from '../ui/Skeleton'
 import {
-  reponseVide, reponseComplete, reponseAEnvoyer, rendreBonneReponse, estBonneReponse, itemsAJouer, jetonSession,
+  reponseVide, reponseComplete, reponseAEnvoyer, rendreBonneReponse, estBonneReponse, itemsAJouer, jetonSession, erreurSessionClose,
 } from '../../lib/academy/exercices'
 import { libelleCouronnes, libelleType } from '../../lib/academy/statuts'
 import Choix from './exercices/Choix'
@@ -69,20 +72,34 @@ function Bandeau({ item, resultat, rejeu, boutonRef }) {
   )
 }
 
-function Deroule({ titre, item, rang, total, rejeu, valeur, resultat, envoi, erreurReponse, onChange, onVerifier, onContinuer, onReessayer, onQuitter }) {
+function Deroule({ titre, item, rang, total, rejeu, valeur, resultat, envoi, erreurReponse, erreurDefinitive, onChange, onVerifier, onContinuer, onReessayer, onQuitter, onRetourDeck }) {
   const boutonRef = useRef(null)
+  const corpsRef = useRef(null)
   useEffect(() => { if (resultat) boutonRef.current?.focus() }, [resultat])
+
+  // À chaque nouvel exercice, le focus part sur son premier contrôle (ou sur
+  // le corps, tabIndex -1) : au clavier comme au lecteur d’écran, on ne reste
+  // pas sur le bouton Continuer qui vient de disparaître.
+  const itemId = item?.item_id
+  useEffect(() => {
+    const corps = corpsRef.current
+    if (!corps) return
+    const premier = corps.querySelector('input:not([disabled]), button:not([disabled]), textarea:not([disabled])')
+    ;(premier || corps).focus()
+  }, [itemId, rejeu])
 
   const Exercice = COMPOSANTS[item?.type]
   const complete = !!item && reponseComplete(item.type, valeur, item.payload)
-  const verrouille = !!resultat || !!envoi
+  // Tant qu’une erreur de réponse est affichée, la saisie reste figée : la
+  // base a peut être enregistré la première réponse, « conservée » doit être vrai.
+  const verrouille = !!resultat || !!envoi || !!erreurReponse
   const pct = total > 0 ? Math.round((100 * rang) / total) : 0
   const compteur = `${rejeu ? 'On y revient · ' : ''}Exercice ${rang} sur ${total}`
 
   const soumettre = (e) => {
     e.preventDefault()
     if (resultat) onContinuer?.()
-    else if (erreurReponse) onReessayer?.()
+    else if (erreurReponse) { if (!erreurDefinitive) onReessayer?.() }
     else if (complete && !envoi) onVerifier?.()
   }
   const surTouche = (e) => {
@@ -101,12 +118,12 @@ function Deroule({ titre, item, rang, total, rejeu, valeur, resultat, envoi, err
         <span className="ae-compteur" aria-hidden="true">{rang}/{total}</span>
       </div>
       <div className="ae-progress" aria-hidden="true"><div className="ae-progress-fill" style={{ width: `${pct}%` }} /></div>
-      <span className="ae-sr">{compteur}</span>
+      <span className="ae-sr" aria-live="polite">{compteur}</span>
       {rejeu && <div className="ae-revient-kicker">On y revient</div>}
       {item && <div className="ae-type">{libelleType(item.type)}</div>}
 
       {Exercice ? (
-        <div key={`${item.item_id}-${rejeu ? 'r' : 'p'}`} className="ae-corps">
+        <div key={`${item.item_id}-${rejeu ? 'r' : 'p'}`} ref={corpsRef} className="ae-corps" tabIndex={-1}>
           <Exercice payload={item.payload} valeur={valeur} onChange={onChange} verrouille={verrouille} resultat={resultat} />
         </div>
       ) : (
@@ -116,8 +133,17 @@ function Deroule({ titre, item, rang, total, rejeu, valeur, resultat, envoi, err
       {erreurReponse && !resultat && (
         <div className="ae-bandeau is-erreur notice notice-error" role="alert">
           <div>{erreurReponse}</div>
-          <div className="ae-bandeau-sous">Ta réponse est conservée.</div>
-          <button type="submit" className="btn btn-outline ae-btn-large">Réessayer</button>
+          {erreurDefinitive ? (
+            <>
+              <div className="ae-bandeau-sous">Les réponses déjà corrigées sont enregistrées. Reviens sur le deck pour relancer une session.</div>
+              <button type="button" className="btn btn-outline ae-btn-large" onClick={onRetourDeck}>Retour au deck</button>
+            </>
+          ) : (
+            <>
+              <div className="ae-bandeau-sous">Ta réponse est conservée.</div>
+              <button type="submit" className="btn btn-outline ae-btn-large">Réessayer</button>
+            </>
+          )}
         </div>
       )}
 
@@ -221,9 +247,11 @@ function EcranFin({ titre, fin, onEncore, onRetourDeck }) {
  * item : l’item en cours (type, payload) ; rang et total : la progression
  * affichée ; rejeu : vrai pendant « On y revient » ; resultat : l’objet
  * rendu par repondre, ou null ; fin : l’objet rendu par terminerEntrainement.
+ * erreurReponse : le message d’un échec de repondre ; erreurDefinitive : vrai
+ * quand réessayer ne servirait à rien (refus de la base, pas une coupure).
  */
 export function EntrainementVue({
-  titre, phase, item, rang, total, rejeu, valeur, resultat, envoi, erreurReponse, fin, erreurFin, nbARejouer,
+  titre, phase, item, rang, total, rejeu, valeur, resultat, envoi, erreurReponse, erreurDefinitive, fin, erreurFin, nbARejouer,
   onChange, onVerifier, onContinuer, onRejouer, onReessayer, onReessayerFin, onQuitter, onEncore, onRetourDeck,
 }) {
   if (phase === 'fin') return <div className="ae"><EcranFin titre={titre} fin={fin} onEncore={onEncore} onRetourDeck={onRetourDeck} /></div>
@@ -236,6 +264,7 @@ export function EntrainementVue({
               <div>{erreurFin}</div>
               <div className="ae-bandeau-sous">Tes réponses sont enregistrées : il ne manque que le bilan.</div>
               <button type="button" className="btn btn-outline ae-btn-large" onClick={onReessayerFin}>Réessayer</button>
+              <button type="button" className="btn btn-ghost ae-btn-large" onClick={onRetourDeck}>Retour au deck</button>
             </div>
           ) : (
             <><div className="ae-kicker">Bilan en cours</div><SkeletonText lines={4} /></>
@@ -249,7 +278,8 @@ export function EntrainementVue({
     <div className="ae">
       <Deroule
         titre={titre} item={item} rang={rang} total={total} rejeu={rejeu} valeur={valeur} resultat={resultat} envoi={envoi}
-        erreurReponse={erreurReponse} onChange={onChange} onVerifier={onVerifier} onContinuer={onContinuer} onReessayer={onReessayer} onQuitter={onQuitter}
+        erreurReponse={erreurReponse} erreurDefinitive={erreurDefinitive} onChange={onChange} onVerifier={onVerifier} onContinuer={onContinuer}
+        onReessayer={onReessayer} onQuitter={onQuitter} onRetourDeck={onRetourDeck}
       />
     </div>
   )
@@ -259,7 +289,7 @@ export function EntrainementVue({
 
 const INITIAL = {
   entrainement: null, erreur: null, phase: 'chargement', file: [], position: 0, rejeu: false,
-  valeur: null, resultat: null, envoi: false, erreurReponse: null, rates: [], fin: null, erreurFin: null, essaiFin: 0,
+  valeur: null, resultat: null, envoi: false, erreurReponse: null, erreurDefinitive: false, rates: [], fin: null, erreurFin: null, essaiFin: 0,
 }
 
 function reduire(s, a) {
@@ -277,27 +307,31 @@ function reduire(s, a) {
     case 'echec_chargement':
       return { ...s, phase: 'erreur', erreur: a.erreur }
     case 'saisie':
-      return s.resultat || s.envoi ? s : { ...s, valeur: a.valeur }
+      // Une erreur affichée fige la saisie : la base a peut être déjà la réponse.
+      return s.resultat || s.envoi || s.erreurReponse ? s : { ...s, valeur: a.valeur }
     case 'envoi':
-      return { ...s, envoi: true, erreurReponse: null }
+      return { ...s, envoi: true, erreurReponse: null, erreurDefinitive: false }
     case 'corrigee': {
       const item = s.file[s.position]
       const rates = !a.resultat.correcte && !s.rejeu && item ? [...s.rates, { ...item, corrige: a.resultat }] : s.rates
-      return { ...s, envoi: false, erreurReponse: null, resultat: a.resultat, rates }
+      return { ...s, envoi: false, erreurReponse: null, erreurDefinitive: false, resultat: a.resultat, rates }
     }
     case 'echec_reponse':
-      return { ...s, envoi: false, erreurReponse: a.erreur }
+      return { ...s, envoi: false, erreurReponse: a.erreur, erreurDefinitive: !!a.definitive }
+    case 'session_close':
+      // La base dit la session finie : plus rien à réessayer, on demande le bilan.
+      return { ...s, envoi: false, erreurReponse: null, erreurDefinitive: false, resultat: null, phase: 'terminaison' }
     case 'continuer': {
       if (!s.resultat) return s
       const suivant = s.position + 1
       if (suivant < s.file.length) {
-        return { ...s, position: suivant, valeur: reponseVide(s.file[suivant].type), resultat: null, erreurReponse: null }
+        return { ...s, position: suivant, valeur: reponseVide(s.file[suivant].type), resultat: null, erreurReponse: null, erreurDefinitive: false }
       }
       if (!s.rejeu && s.rates.length > 0) return { ...s, phase: 'revient', resultat: null }
       return { ...s, phase: 'terminaison', resultat: null }
     }
     case 'rejouer':
-      return { ...s, phase: 'jeu', rejeu: true, file: s.rates, position: 0, valeur: reponseVide(s.rates[0]?.type), resultat: null, erreurReponse: null }
+      return { ...s, phase: 'jeu', rejeu: true, file: s.rates, position: 0, valeur: reponseVide(s.rates[0]?.type), resultat: null, erreurReponse: null, erreurDefinitive: false }
     case 'terminee':
       return { ...s, phase: 'fin', fin: a.fin, erreurFin: null }
     case 'echec_fin':
@@ -353,20 +387,29 @@ export default function Entrainement({ versionId, onNaviguer }) {
       const r = await repondre(entrainementId, item.item_id, reponseAEnvoyer(item.type, valeur))
       if (vivantRef.current) dispatch({ type: 'corrigee', resultat: r || { correcte: false, bonne_reponse: null, explication: '' } })
     } catch (e) {
-      if (vivantRef.current) dispatch({ type: 'echec_reponse', erreur: messageErreur(e) })
+      if (!vivantRef.current) return
+      if (estErreurReseau(e)) dispatch({ type: 'echec_reponse', erreur: messageErreur(e), definitive: false })
+      else if (erreurSessionClose(e)) dispatch({ type: 'session_close' })
+      else dispatch({ type: 'echec_reponse', erreur: messageErreur(e), definitive: true })
     }
   }
 
   function changer(valeur) {
+    if (s.erreurReponse) return
     dispatch({ type: 'saisie', valeur })
     // Une carte se corrige dès qu’elle est jugée : pas de bouton Vérifier.
     if (item?.type === 'carte' && reponseComplete('carte', valeur, item.payload)) verifier(valeur)
   }
 
   async function quitter() {
+    // La reprise n’est promise que s’il reste des exercices à jouer sur une
+    // session que la base n’a pas refusée ; en rejeu, tout est déjà répondu.
+    const reprisePossible = s.phase === 'jeu' && !s.rejeu && !s.erreurDefinitive
     const ok = await confirmDialog({
       title: 'Quitter la session ?',
-      message: 'Elle reste reprenable pendant deux heures : tu retrouveras les exercices restants en revenant sur le deck.',
+      message: reprisePossible
+        ? 'Elle reste reprenable pendant deux heures : tu retrouveras les exercices restants en revenant sur le deck.'
+        : 'Les réponses déjà corrigées sont enregistrées.',
       confirmLabel: 'Quitter',
       cancelLabel: 'Continuer la session',
     })
@@ -392,7 +435,7 @@ export default function Entrainement({ versionId, onNaviguer }) {
   return (
     <EntrainementVue
       titre={titre} phase={s.phase} item={item} rang={s.position + 1} total={s.file.length} rejeu={s.rejeu}
-      valeur={s.valeur} resultat={s.resultat} envoi={s.envoi} erreurReponse={s.erreurReponse}
+      valeur={s.valeur} resultat={s.resultat} envoi={s.envoi} erreurReponse={s.erreurReponse} erreurDefinitive={s.erreurDefinitive}
       fin={s.fin} erreurFin={s.erreurFin} nbARejouer={s.rates.length}
       onChange={changer}
       onVerifier={() => verifier()}

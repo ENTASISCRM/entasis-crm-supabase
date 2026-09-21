@@ -48,37 +48,37 @@ begin
 7. **Documents à récupérer, 5 min** : un maximum de documents pour lancer l’analyse : dernier avis d’imposition (foyer complet) ; tableau d’actifs ou liste des placements ; relevés AV, PER, PEA, comptes titres ; bilan et liasse fiscale si entrepreneur ; relevé de carrière, tableau de retraite, mutuelle et prévoyance ; situation locative (baux, crédits, loyers perçus).
 $academy_deck$, competence = coalesce(nullif($academy_deck$Dérouler les sept étapes du rendez vous d’audit patrimonial standard, dans l’ordre et dans le temps imparti$academy_deck$, ''), competence), updated_at = now() where id = v_ver;
   insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
-  values (v_ver, 1, $academy_deck$ordre$academy_deck$, $academy_deck$Les sept étapes$academy_deck$, 1, $academy_deck${"enonce":"Remets les sept étapes de la trame dans l’ordre.","elements":["Accueil et cadrage","Situation personnelle et familiale","Situation professionnelle et revenus","Patrimoine actuel","Objectifs du client","Premiers axes de recommandation","Documents à récupérer"]}$academy_deck$::jsonb)
+  values (v_ver, 1, $academy_deck$ordre$academy_deck$, $academy_deck$Les sept étapes$academy_deck$, 1, $academy_deck${"enonce":"Remets les sept étapes de la trame dans l’ordre.","elements":["Accueil et cadrage","Documents à récupérer","Objectifs du client","Situation professionnelle et revenus","Premiers axes de recommandation","Patrimoine actuel","Situation personnelle et familiale"]}$academy_deck$::jsonb)
   returning id into v_item;
-  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"ordre":[0,1,2,3,4,5,6]}$academy_deck$::jsonb, $academy_deck$Accueil, situation personnelle, situation professionnelle, patrimoine, objectifs, axes, documents.$academy_deck$);
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"ordre":[0,6,3,5,2,4,1]}$academy_deck$::jsonb, $academy_deck$Accueil, situation personnelle, situation professionnelle, patrimoine, objectifs, axes, documents.$academy_deck$);
   insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
-  values (v_ver, 2, $academy_deck$ordre$academy_deck$, $academy_deck$Les sept étapes$academy_deck$, 2, $academy_deck${"enonce":"Remets dans l’ordre les quatre premières étapes.","elements":["Accueil et cadrage","Situation personnelle et familiale","Situation professionnelle et revenus","Patrimoine actuel"]}$academy_deck$::jsonb)
+  values (v_ver, 2, $academy_deck$ordre$academy_deck$, $academy_deck$Les sept étapes$academy_deck$, 2, $academy_deck${"enonce":"Remets dans l’ordre les quatre premières étapes.","elements":["Situation personnelle et familiale","Accueil et cadrage","Situation professionnelle et revenus","Patrimoine actuel"]}$academy_deck$::jsonb)
   returning id into v_item;
-  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"ordre":[0,1,2,3]}$academy_deck$::jsonb, $academy_deck$On cadre, puis la famille, puis le professionnel, puis le patrimoine.$academy_deck$);
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"ordre":[1,0,2,3]}$academy_deck$::jsonb, $academy_deck$On cadre, puis la famille, puis le professionnel, puis le patrimoine.$academy_deck$);
   insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
-  values (v_ver, 3, $academy_deck$ordre$academy_deck$, $academy_deck$Les sept étapes$academy_deck$, 2, $academy_deck${"enonce":"Remets dans l’ordre les trois dernières étapes.","elements":["Objectifs du client","Premiers axes de recommandation","Documents à récupérer"]}$academy_deck$::jsonb)
+  values (v_ver, 3, $academy_deck$ordre$academy_deck$, $academy_deck$Les sept étapes$academy_deck$, 2, $academy_deck${"enonce":"Remets dans l’ordre les trois dernières étapes.","elements":["Premiers axes de recommandation","Objectifs du client","Documents à récupérer"]}$academy_deck$::jsonb)
   returning id into v_item;
-  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"ordre":[0,1,2]}$academy_deck$::jsonb, $academy_deck$Objectifs, premiers axes, puis les documents pour lancer l’analyse.$academy_deck$);
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"ordre":[1,0,2]}$academy_deck$::jsonb, $academy_deck$Objectifs, premiers axes, puis les documents pour lancer l’analyse.$academy_deck$);
   insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
-  values (v_ver, 4, $academy_deck$ordre$academy_deck$, $academy_deck$Le patrimoine actuel$academy_deck$, 2, $academy_deck${"enonce":"Remets dans l’ordre de la trame les points de l’étape Patrimoine actuel.","elements":["Immobilier","Financier","Situation bancaire et crédits","Épargne retraite et prévoyance","Transmission en cours ou anticipée"]}$academy_deck$::jsonb)
+  values (v_ver, 4, $academy_deck$ordre$academy_deck$, $academy_deck$Le patrimoine actuel$academy_deck$, 2, $academy_deck${"enonce":"Remets dans l’ordre de la trame les points de l’étape Patrimoine actuel.","elements":["Immobilier","Situation bancaire et crédits","Transmission en cours ou anticipée","Financier","Épargne retraite et prévoyance"]}$academy_deck$::jsonb)
   returning id into v_item;
-  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"ordre":[0,1,2,3,4]}$academy_deck$::jsonb, $academy_deck$Immobilier, financier, bancaire, retraite et prévoyance, transmission.$academy_deck$);
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"ordre":[0,3,1,4,2]}$academy_deck$::jsonb, $academy_deck$Immobilier, financier, bancaire, retraite et prévoyance, transmission.$academy_deck$);
   insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
-  values (v_ver, 5, $academy_deck$association$academy_deck$, $academy_deck$Les durées$academy_deck$, 1, $academy_deck${"enonce":"Associe chaque étape à sa durée.","gauche":["Accueil et cadrage","Patrimoine actuel","Objectifs du client","Documents à récupérer"],"droite":["5 min","15 min","10 min","5 min"]}$academy_deck$::jsonb)
+  values (v_ver, 5, $academy_deck$association$academy_deck$, $academy_deck$Les durées$academy_deck$, 1, $academy_deck${"enonce":"Associe chaque étape à sa durée.","gauche":["Accueil et cadrage","Patrimoine actuel","Objectifs du client"],"droite":["10 min","5 min","15 min"]}$academy_deck$::jsonb)
   returning id into v_item;
-  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"paires":[[0,0],[1,1],[2,2],[3,3]]}$academy_deck$::jsonb, $academy_deck$Accueil 5, patrimoine 15, objectifs 10, documents 5.$academy_deck$);
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"paires":[[0,1],[1,2],[2,0]]}$academy_deck$::jsonb, $academy_deck$Accueil 5 minutes, patrimoine 15, objectifs 10.$academy_deck$);
   insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
-  values (v_ver, 6, $academy_deck$association$academy_deck$, $academy_deck$Les durées$academy_deck$, 2, $academy_deck${"enonce":"Associe chaque étape à sa durée.","gauche":["Situation personnelle et familiale","Situation professionnelle et revenus","Premiers axes de recommandation"],"droite":["10 min","10 min","5 min"]}$academy_deck$::jsonb)
+  values (v_ver, 6, $academy_deck$multi$academy_deck$, $academy_deck$Les durées$academy_deck$, 2, $academy_deck${"enonce":"Coche les étapes qui durent cinq minutes.","choix":["Accueil et cadrage","Situation personnelle et familiale","Premiers axes de recommandation","Documents à récupérer","Patrimoine actuel"]}$academy_deck$::jsonb)
   returning id into v_item;
-  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"paires":[[0,0],[1,1],[2,2]]}$academy_deck$::jsonb, $academy_deck$Dix minutes pour chacune des deux situations, cinq pour les axes.$academy_deck$);
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"indices":[0,2,3]}$academy_deck$::jsonb, $academy_deck$Trois étapes de cinq minutes : accueil, premiers axes, documents.$academy_deck$);
   insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
-  values (v_ver, 7, $academy_deck$association$academy_deck$, $academy_deck$Ce qu’on demande à chaque étape$academy_deck$, 2, $academy_deck${"enonce":"Associe chaque point à son étape.","gauche":["Régime matrimonial","Revenus annuels nets imposables","Encours de crédits","Dernier avis d’imposition"],"droite":["Situation personnelle et familiale","Situation professionnelle et revenus","Patrimoine actuel","Documents à récupérer"]}$academy_deck$::jsonb)
+  values (v_ver, 7, $academy_deck$association$academy_deck$, $academy_deck$Ce qu’on demande à chaque étape$academy_deck$, 2, $academy_deck${"enonce":"Associe chaque point à son étape.","gauche":["Régime matrimonial","Revenus annuels nets imposables","Encours de crédits","Dernier avis d’imposition"],"droite":["Documents à récupérer","Situation personnelle et familiale","Situation professionnelle et revenus","Patrimoine actuel"]}$academy_deck$::jsonb)
   returning id into v_item;
-  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"paires":[[0,0],[1,1],[2,2],[3,3]]}$academy_deck$::jsonb, $academy_deck$Le régime matrimonial est familial, les revenus sont professionnels, les crédits sont du patrimoine, l avis est un document.$academy_deck$);
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"paires":[[0,1],[1,2],[2,3],[3,0]]}$academy_deck$::jsonb, $academy_deck$Le régime matrimonial est familial, les revenus sont professionnels, les crédits sont du patrimoine, l’avis est un document.$academy_deck$);
   insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
-  values (v_ver, 8, $academy_deck$association$academy_deck$, $academy_deck$Les premiers axes$academy_deck$, 2, $academy_deck${"enonce":"Associe chaque exemple à son axe de recommandation.","gauche":["Création de holding","Arbitrage d’un contrat","LMNP","Épargne pro ou perso"],"droite":["Structuration à l’IS","Ouverture ou arbitrage de contrats","Optimisation immobilière","Selon la nature des flux"]}$academy_deck$::jsonb)
+  values (v_ver, 8, $academy_deck$association$academy_deck$, $academy_deck$Les premiers axes$academy_deck$, 2, $academy_deck${"enonce":"Associe chaque exemple à son axe de recommandation.","gauche":["Création de holding","Arbitrage d’un contrat","LMNP","Épargne pro ou perso"],"droite":["Structuration à l’IS","Selon la nature des flux","Ouverture ou arbitrage de contrats","Optimisation immobilière"]}$academy_deck$::jsonb)
   returning id into v_item;
-  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"paires":[[0,0],[1,1],[2,2],[3,3]]}$academy_deck$::jsonb, $academy_deck$Les quatre axes de la trame : IS et holding, contrats, immobilier, épargne selon les flux.$academy_deck$);
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"paires":[[0,0],[1,2],[2,3],[3,1]]}$academy_deck$::jsonb, $academy_deck$Les quatre axes de la trame : IS et holding, contrats, immobilier, épargne selon les flux.$academy_deck$);
   insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
   values (v_ver, 9, $academy_deck$multi$academy_deck$, $academy_deck$Ce qu’on demande à chaque étape$academy_deck$, 2, $academy_deck${"enonce":"Coche tout ce qui appartient à l’étape Situation personnelle et familiale.","choix":["État civil","Régime matrimonial","Statut professionnel","Objectifs familiaux","Encours de crédits","Résident fiscal en France ou non"]}$academy_deck$::jsonb)
   returning id into v_item;
@@ -134,7 +134,7 @@ $academy_deck$, competence = coalesce(nullif($academy_deck$Dérouler les sept é
   insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
   values (v_ver, 22, $academy_deck$choix$academy_deck$, $academy_deck$L’accueil et le cadrage$academy_deck$, 2, $academy_deck${"enonce":"Que confirme t on à la fin de l’accueil ?","choix":["Le montant à investir","Le temps disponible et la disponibilité pour un futur rendez vous","Le choix de la compagnie","Le régime matrimonial"]}$academy_deck$::jsonb)
   returning id into v_item;
-  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":1}$academy_deck$::jsonb, $academy_deck$Le temps disponible aujourd hui et la disponibilité du client pour la suite.$academy_deck$);
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":1}$academy_deck$::jsonb, $academy_deck$Le temps disponible aujourd’hui et la disponibilité du client pour la suite.$academy_deck$);
   insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
   values (v_ver, 23, $academy_deck$choix$academy_deck$, $academy_deck$Ce qu’on demande à chaque étape$academy_deck$, 2, $academy_deck${"enonce":"À quelle étape demande t on si le client est résident fiscal français ?","choix":["Accueil et cadrage","Situation personnelle et familiale","Situation professionnelle et revenus","Patrimoine actuel"]}$academy_deck$::jsonb)
   returning id into v_item;
@@ -192,7 +192,7 @@ $academy_deck$, competence = coalesce(nullif($academy_deck$Dérouler les sept é
   returning id into v_item;
   insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"vrai":true}$academy_deck$::jsonb, $academy_deck$5 + 10 + 10 + 15 + 10 + 5 + 5 = 60 minutes.$academy_deck$);
   insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
-  values (v_ver, 37, $academy_deck$vrai_faux$academy_deck$, $academy_deck$L’accueil et le cadrage$academy_deck$, 2, $academy_deck${"enonce":"À l’accueil, on présente l indépendance, le sur mesure et l’accompagnement long terme du cabinet."}$academy_deck$::jsonb)
+  values (v_ver, 37, $academy_deck$vrai_faux$academy_deck$, $academy_deck$L’accueil et le cadrage$academy_deck$, 2, $academy_deck${"enonce":"À l’accueil, on présente l’indépendance, le sur mesure et l’accompagnement long terme du cabinet."}$academy_deck$::jsonb)
   returning id into v_item;
   insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"vrai":true}$academy_deck$::jsonb, $academy_deck$Ce sont les trois marqueurs de l’approche à présenter.$academy_deck$);
   insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
@@ -238,7 +238,7 @@ $academy_deck$, competence = coalesce(nullif($academy_deck$Dérouler les sept é
   insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
   values (v_ver, 48, $academy_deck$trou_saisie$academy_deck$, $academy_deck$Les durées$academy_deck$, 1, $academy_deck${"phrase":"Le patrimoine actuel dure ___ minutes.","aide":"un nombre"}$academy_deck$::jsonb)
   returning id into v_item;
-  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"reponses":["15","quinze"]}$academy_deck$::jsonb, $academy_deck$Quinze minutes, l étape la plus longue.$academy_deck$);
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"reponses":["15","quinze"]}$academy_deck$::jsonb, $academy_deck$Quinze minutes, l’étape la plus longue.$academy_deck$);
   insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
   values (v_ver, 49, $academy_deck$trou_saisie$academy_deck$, $academy_deck$Le patrimoine actuel$academy_deck$, 2, $academy_deck${"phrase":"Contrats Madelin ou ___ bis.","aide":"un nombre"}$academy_deck$::jsonb)
   returning id into v_item;
@@ -248,7 +248,7 @@ $academy_deck$, competence = coalesce(nullif($academy_deck$Dérouler les sept é
   returning id into v_item;
   insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"reponses":["7","sept"]}$academy_deck$::jsonb, $academy_deck$Sept étapes.$academy_deck$);
   insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
-  values (v_ver, 51, $academy_deck$trou_saisie$academy_deck$, $academy_deck$Les premiers axes$academy_deck$, 2, $academy_deck${"phrase":"Structuration à l ___, création de holding.","aide":"deux lettres"}$academy_deck$::jsonb)
+  values (v_ver, 51, $academy_deck$trou_saisie$academy_deck$, $academy_deck$Les premiers axes$academy_deck$, 2, $academy_deck${"phrase":"Structuration à l’___, création de holding.","aide":"deux lettres"}$academy_deck$::jsonb)
   returning id into v_item;
   insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"reponses":["IS","is","impot sur les societes","impôt sur les sociétés"]}$academy_deck$::jsonb, $academy_deck$Structuration à l’IS.$academy_deck$);
   insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)

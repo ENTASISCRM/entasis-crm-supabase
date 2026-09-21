@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  TYPES, reponseVide, reponseComplete, reponseAEnvoyer, normaliserSaisie, rendreBonneReponse,
+  TYPES, reponseVide, reponseComplete, reponseAEnvoyer, normaliserSaisie, rendreBonneReponse, erreurSessionClose,
   estBonneReponse, etatChoix, xpSession, itemsAJouer, enonceCourt, jetonSession,
 } from './exercices'
 
@@ -259,8 +259,22 @@ describe('enonceCourt et jetonSession', () => {
   })
 })
 
-describe('normaliserSaisie et l apostrophe typographique', () => {
-  it('rend égales l apostrophe droite et l apostrophe typographique', async () => {
+describe('erreurSessionClose, les refus de la base qui ferment la session', () => {
+  it('reconnaît « Session terminee » et « ne fait pas partie de la session », avec ou sans accent', () => {
+    expect(erreurSessionClose(new Error('Session terminee'))).toBe(true)
+    expect(erreurSessionClose({ message: 'Session terminée' })).toBe(true)
+    expect(erreurSessionClose('Cet item ne fait pas partie de la session')).toBe(true)
+  })
+  it('laisse passer les autres erreurs', () => {
+    expect(erreurSessionClose(new Error('Failed to fetch'))).toBe(false)
+    expect(erreurSessionClose({ message: 'Session introuvable' })).toBe(false)
+    expect(erreurSessionClose(null)).toBe(false)
+    expect(erreurSessionClose('')).toBe(false)
+  })
+})
+
+describe('normaliserSaisie et l’apostrophe typographique', () => {
+  it('rend égales l’apostrophe droite et l’apostrophe typographique', async () => {
     const { normaliserSaisie } = await import('./exercices.js')
     expect(normaliserSaisie('l’avis d’imposition')).toBe(normaliserSaisie("l'avis d'imposition"))
   })

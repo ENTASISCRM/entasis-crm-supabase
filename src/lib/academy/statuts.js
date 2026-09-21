@@ -98,7 +98,7 @@ const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`
  *   'Validé'                          module validé, quelle que soit la date
  *   ''                                sans échéance
  *   'Échéance dépassée de N jour(s)'  en retard
- *   'À rendre aujourd hui'            le jour même
+ *   'À rendre aujourd’hui'            le jour même
  *   'À rendre dans N jour(s)'         à venir
  */
 export function libelleEcheance(affectation, aujourdhui) {
@@ -107,7 +107,7 @@ export function libelleEcheance(affectation, aujourdhui) {
   if (!e) return ''
   const n = joursEntre(aujourdhui, e)
   if (n < 0) return `Échéance dépassée de ${pluriel(-n, 'jour')}`
-  if (n === 0) return 'À rendre aujourd hui'
+  if (n === 0) return 'À rendre aujourd’hui'
   return `À rendre dans ${pluriel(n, 'jour')}`
 }
 
@@ -115,7 +115,7 @@ export function libelleEcheance(affectation, aujourdhui) {
 export const revisionFaite = (r) => r?.tentative_id != null || r?.resultat != null
 
 /**
- * Vrai si la révision est à faire aujourd hui : pas encore faite, et
+ * Vrai si la révision est à faire aujourd’hui : pas encore faite, et
  * échéance atteinte. Le drapeau `due` posé par la RPC est honoré, mais on
  * recalcule toujours depuis la date pour ne pas dépendre de l’heure du
  * serveur au moment de la lecture.

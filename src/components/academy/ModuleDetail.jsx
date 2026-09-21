@@ -80,6 +80,7 @@ export function ModuleDetailVue({ module, profile, aujourdhui, onNaviguer, onAtt
   const competences = Array.isArray(m.competences) ? m.competences : []
   const sessions = Array.isArray(m.sessions) ? m.sessions : []
   const reprise = !!m.entrainement_ouvert
+  const vide = nbItems === 0
   const memo = String(m.memo_md || '').trim()
   const parSession = Math.min(12, nbItems || 12)
 
@@ -127,10 +128,15 @@ export function ModuleDetailVue({ module, profile, aujourdhui, onNaviguer, onAtt
           </div>
         </div>
         <div className="ac-maitrise-droite">
-          <button type="button" className="btn btn-primary ac-btn-grand" onClick={() => onNaviguer?.(`#/formation/entrainement/${m.version_id}`)}>
+          <button type="button" className="btn btn-primary ac-btn-grand" disabled={vide} title={vide ? 'Aucun exercice dans ce deck' : undefined}
+            onClick={() => onNaviguer?.(`#/formation/entrainement/${m.version_id}`)}>
             {reprise ? 'Reprendre la session' : 'Démarrer une session'}
           </button>
-          <div className="ac-muet">{reprise ? 'Une session est en cours, tu reprends où tu t es arrêté.' : `${parSession} exercices, corrigés un par un, les erreurs rejouées à la fin.`}</div>
+          <div className="ac-muet">
+            {vide ? 'Aucun exercice dans ce deck : rien à jouer pour l’instant.'
+              : reprise ? 'Une session est en cours, tu reprends où tu t es arrêté.'
+                : `${parSession} exercices, corrigés un par un, les erreurs rejouées à la fin.`}
+          </div>
         </div>
       </section>
 

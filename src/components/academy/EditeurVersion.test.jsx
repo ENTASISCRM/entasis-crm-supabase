@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 // Le rendu markdown a besoin d un DOM (DOMPurify) : sans jsdom, on le
-// remplace par un rendu brut. Ce que l’on teste ici, c est l’éditeur.
+// remplace par un rendu brut. Ce que l’on teste ici, c’est l’éditeur.
 vi.mock('../ui/RenduMarkdown', () => ({
   default: ({ markdown }) => <div className="rendu-markdown-simule">{markdown}</div>,
 }))
@@ -87,7 +87,7 @@ describe('EditeurVersionVue, un brouillon', () => {
     const long = rendre(version({ memo_md: 'mot '.repeat(300) }))
     expect(long).toMatch(/aca-mots aca-mots-long[^>]*>300 mots · un peu long/)
     const vide = rendre(version({ memo_md: '' }))
-    expect(vide).toContain('0 mot · aucun mémo pour l instant')
+    expect(vide).toContain('0 mot · aucun mémo pour l’instant')
     expect(vide).toContain('sans mémo')
     expect(vide).toContain('Pas de mémo : conseillé avant de publier')
   })

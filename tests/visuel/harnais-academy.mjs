@@ -16,6 +16,10 @@
 // Tout est invente : decks, exercices, personnes, scores. Aucune donnee
 // reelle, aucune remuneration.
 
+// La meme normalisation que la base (academy_normaliser) pour corriger une
+// saisie : le lib est en ESM, node l importe tel quel.
+import { normaliserSaisie } from '../../src/lib/academy/exercices.js'
+
 const JOUR = 86400000
 const iso = (decalageJours, heure = '09:00:00') => {
   const d = new Date(Date.now() + decalageJours * JOUR)
@@ -55,7 +59,7 @@ const MEMO_MD = `## Les cinq temps
 Un accompagnement Entasis se déroule en cinq temps, toujours dans le même ordre :
 
 1. **Le premier appel** : on écoute, on ne vend rien.
-2. **La découverte** : la situation, les objectifs, l horizon.
+2. **La découverte** : la situation, les objectifs, l’horizon.
 3. **La proposition** : une solution, expliquée avec ses limites.
 4. **La signature** : le dossier complet, la fiche client à jour.
 5. **Le suivi** : un point à trois mois, puis chaque année.
@@ -207,7 +211,7 @@ const CORRIGE = {
   ai5: { bonne: [1, 3, 4, 0, 2], test: (r) => Array.isArray(r) && r.map(Number).join(',') === '1,3,4,0,2' },
   ai6: { bonne: [[0, 1], [1, 2], [2, 0]], test: (r) => Array.isArray(r) && [...r].map((p) => `${p[0]}-${p[1]}`).sort().join(',') === '0-1,1-2,2-0' },
   ai7: { bonne: 0, test: (r) => Number(r) === 0 },
-  ai8: { bonne: ['année', 'an'], test: (r) => ['annee', 'an'].includes(String(r || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()) },
+  ai8: { bonne: ['année', 'an'], test: (r) => ['année', 'an'].map(normaliserSaisie).includes(normaliserSaisie(r)) },
   ai9: { bonne: {}, test: (r) => r && r.su === true },
   ai10: { bonne: true, test: (r) => r === true },
   ai11: { bonne: 0, test: (r) => Number(r) === 0 },

@@ -120,14 +120,12 @@
     "gauche": [
      "Accueil et cadrage",
      "Patrimoine actuel",
-     "Objectifs du client",
-     "Documents à récupérer"
+     "Objectifs du client"
     ],
     "droite": [
      "5 min",
      "15 min",
-     "10 min",
-     "5 min"
+     "10 min"
     ]
    },
    "corrige": {
@@ -143,50 +141,34 @@
      [
       2,
       2
-     ],
-     [
-      3,
-      3
      ]
     ]
    },
-   "explication": "Accueil 5, patrimoine 15, objectifs 10, documents 5."
+   "explication": "Accueil 5 minutes, patrimoine 15, objectifs 10."
   },
   {
    "cle": "i06",
-   "type": "association",
+   "type": "multi",
    "competence": "Les durées",
    "difficulte": 2,
    "payload": {
-    "enonce": "Associe chaque étape à sa durée.",
-    "gauche": [
+    "enonce": "Coche les étapes qui durent cinq minutes.",
+    "choix": [
+     "Accueil et cadrage",
      "Situation personnelle et familiale",
-     "Situation professionnelle et revenus",
-     "Premiers axes de recommandation"
-    ],
-    "droite": [
-     "10 min",
-     "10 min",
-     "5 min"
+     "Premiers axes de recommandation",
+     "Documents à récupérer",
+     "Patrimoine actuel"
     ]
    },
    "corrige": {
-    "paires": [
-     [
-      0,
-      0
-     ],
-     [
-      1,
-      1
-     ],
-     [
-      2,
-      2
-     ]
+    "indices": [
+     0,
+     2,
+     3
     ]
    },
-   "explication": "Dix minutes pour chacune des deux situations, cinq pour les axes."
+   "explication": "Trois étapes de cinq minutes : accueil, premiers axes, documents."
   },
   {
    "cle": "i07",
@@ -228,7 +210,7 @@
      ]
     ]
    },
-   "explication": "Le régime matrimonial est familial, les revenus sont professionnels, les crédits sont du patrimoine, l avis est un document."
+   "explication": "Le régime matrimonial est familial, les revenus sont professionnels, les crédits sont du patrimoine, l’avis est un document."
   },
   {
    "cle": "i08",
@@ -590,7 +572,7 @@
    "corrige": {
     "index": 1
    },
-   "explication": "Le temps disponible aujourd hui et la disponibilité du client pour la suite."
+   "explication": "Le temps disponible aujourd’hui et la disponibilité du client pour la suite."
   },
   {
    "cle": "i23",
@@ -846,7 +828,7 @@
    "competence": "L’accueil et le cadrage",
    "difficulte": 2,
    "payload": {
-    "enonce": "À l’accueil, on présente l indépendance, le sur mesure et l’accompagnement long terme du cabinet."
+    "enonce": "À l’accueil, on présente l’indépendance, le sur mesure et l’accompagnement long terme du cabinet."
    },
    "corrige": {
     "vrai": true
@@ -1022,7 +1004,7 @@
      "quinze"
     ]
    },
-   "explication": "Quinze minutes, l étape la plus longue."
+   "explication": "Quinze minutes, l’étape la plus longue."
   },
   {
    "cle": "i49",
@@ -1063,7 +1045,7 @@
    "competence": "Les premiers axes",
    "difficulte": 2,
    "payload": {
-    "phrase": "Structuration à l ___, création de holding.",
+    "phrase": "Structuration à l’___, création de holding.",
     "aide": "deux lettres"
    },
    "corrige": {

@@ -6,8 +6,9 @@
 // d’un autre). Elle dit ce qui s’est passé et quand : série et XP,
 // progression par deck (couronnes, exercices vus et dus), sessions avec
 // leur score, exercices à consolider, frise des événements, XP et temps
-// actif par semaine. Les commentaires de coaching sont réservés au manager :
-// un conseiller qui regarde sa fiche les lit, il n’en écrit pas.
+// actif par semaine. Les commentaires de coaching sont visibles par la
+// direction seulement : la fonction SQL ne les rend pas au collaborateur qui
+// regarde sa fiche, l’écran ne lui montre donc pas le bloc.
 //
 // Conteneur (chargement) et vue (props) séparés, comme partout dans
 // l’Academy : la vue se rend en test sans base. Aucune donnée de
@@ -155,7 +156,7 @@ export function FicheVue({
             <div className="card card-p acp-kpi" title="Exercices dont la révision espacée est arrivée à échéance et qui ne sont pas encore sus par cœur">
               <div className="acp-kpi-kicker">Exercices dus</div>
               <div className="acp-kpi-valeur">{nombre(donnees.items_dus)}</div>
-              <div className="acp-kpi-sous">À revoir aujourd hui, tous decks confondus.</div>
+              <div className="acp-kpi-sous">À revoir aujourd’hui, tous decks confondus.</div>
             </div>
           </div>
 
@@ -346,26 +347,26 @@ export function FicheVue({
             )}
           </div>
 
-          <div className="acp-bloc">
-            <div className="acp-bloc-tete">
-              <div>
-                <div className="acp-bloc-titre">Commentaires de coaching</div>
-                <div className="acp-bloc-sous">{profile?.role === 'manager' ? 'Visibles par la direction et par la personne' : 'Notes laissées par la direction'}</div>
+          {profile?.role === 'manager' && (
+            <div className="acp-bloc">
+              <div className="acp-bloc-tete">
+                <div>
+                  <div className="acp-bloc-titre">Commentaires de coaching</div>
+                  <div className="acp-bloc-sous">Visibles par la direction seulement, jamais par la personne</div>
+                </div>
               </div>
-            </div>
-            {commentaires.length === 0 ? (
-              <div className="form-hint" style={{ color: 'var(--t2)' }}>Aucun commentaire pour l instant.</div>
-            ) : (
-              <ul className="acp-commentaires">
-                {commentaires.map((c) => (
-                  <li key={c.id} className="acp-commentaire">
-                    <div className="acp-commentaire-meta">{c.auteur || 'Direction'} · {dateHeureParis(c.created_at)}</div>
-                    <div className="acp-commentaire-texte">{c.texte}</div>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {profile?.role === 'manager' && (
+              {commentaires.length === 0 ? (
+                <div className="form-hint" style={{ color: 'var(--t2)' }}>Aucun commentaire pour l’instant.</div>
+              ) : (
+                <ul className="acp-commentaires">
+                  {commentaires.map((c) => (
+                    <li key={c.id} className="acp-commentaire">
+                      <div className="acp-commentaire-meta">{c.auteur || 'Direction'} · {dateHeureParis(c.created_at)}</div>
+                      <div className="acp-commentaire-texte">{c.texte}</div>
+                    </li>
+                  ))}
+                </ul>
+              )}
               <form className="acp-form-coaching" onSubmit={(e) => { e.preventDefault(); onAjouterCommentaire?.() }}>
                 <label className="form-label" htmlFor="acp-coaching-texte">Nouveau commentaire</label>
                 <textarea id="acp-coaching-texte" className="form-textarea" rows={3} value={commentaire}
@@ -375,8 +376,8 @@ export function FicheVue({
                   {enregistrement ? 'Enregistrement…' : 'Ajouter le commentaire'}
                 </button>
               </form>
-            )}
-          </div>
+            </div>
+          )}
         </>
       ) : null}
     </div>
@@ -410,7 +411,7 @@ export default function FicheCollaborateur({ profile, profileId, onNaviguer }) {
     if (!texte || enregistrement) return
     const ok = await confirmDialog({
       title: 'Ajouter ce commentaire de coaching ?',
-      message: `Il sera visible par ${donnees?.profil?.full_name || 'la personne'} sur sa fiche.`,
+      message: `Il restera visible par la direction seulement : ${donnees?.profil?.full_name || 'la personne'} ne le verra pas sur sa fiche.`,
       confirmLabel: 'Ajouter',
     })
     if (!ok) return

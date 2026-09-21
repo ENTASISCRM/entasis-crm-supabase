@@ -38,7 +38,7 @@ describe('enRetard', () => {
   it('le jour même de l’échéance, ce n’est pas encore un retard', () => {
     expect(enRetard(aff({ echeance: AUJOURDHUI }), AUJOURDHUI)).toBe(false)
   })
-  it('le lendemain de l’échéance, c est un retard', () => {
+  it('le lendemain de l’échéance, c’est un retard', () => {
     expect(enRetard(aff({ echeance: AUJOURDHUI }), ajouterJours(AUJOURDHUI, 1))).toBe(true)
   })
   it('un module validé n’est jamais en retard', () => {
@@ -67,8 +67,8 @@ describe('libelleEcheance', () => {
   it('un module validé dit Validé, même avec une échéance dépassée', () => {
     expect(libelleEcheance(aff({ echeance: '2026-01-01', statut: 'valide' }), AUJOURDHUI)).toBe('Validé')
   })
-  it('le jour même : à rendre aujourd hui', () => {
-    expect(libelleEcheance(aff({ echeance: AUJOURDHUI }), AUJOURDHUI)).toBe('À rendre aujourd hui')
+  it('le jour même : à rendre aujourd’hui', () => {
+    expect(libelleEcheance(aff({ echeance: AUJOURDHUI }), AUJOURDHUI)).toBe('À rendre aujourd’hui')
   })
   it('compte les jours restants, au singulier puis au pluriel', () => {
     expect(libelleEcheance(aff({ echeance: '2026-09-22' }), AUJOURDHUI)).toBe('À rendre dans 1 jour')

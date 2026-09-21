@@ -24,6 +24,7 @@ import { SkeletonCards } from '../ui/Skeleton'
 const OBJECTIFS = [1, 2, 3]
 const pluriel = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`
 const jour = (v) => (v ? String(v).slice(0, 10) : '')
+const SANS_EXERCICE = 'Aucun exercice dans ce deck'
 
 function Entete({ sousTitre }) {
   return (
@@ -43,9 +44,9 @@ function Serie({ serie }) {
   const meilleure = Number(serie?.meilleure) || 0
   const danger = serie?.en_danger === true
   let sous
-  if (danger) sous = 'Une session aujourd hui et la série continue.'
-  else if (jours === 0) sous = 'Une session terminée aujourd hui lance ta série.'
-  else if (serie?.objectif_atteint) sous = 'Série assurée pour aujourd hui.'
+  if (danger) sous = 'Une session aujourd’hui et la série continue.'
+  else if (jours === 0) sous = 'Une session terminée aujourd’hui lance ta série.'
+  else if (serie?.objectif_atteint) sous = 'Série assurée pour aujourd’hui.'
   else sous = 'Termine une session pour garder la flamme.'
   return (
     <div className={`card card-p ac-jour-carte${danger ? ' danger' : ''}`}>
@@ -108,6 +109,10 @@ function Deck({ a, aujourdhui, onNaviguer }) {
   const vus = Math.min(nbItems, Number(a.items_vus) || 0)
   const dus = Number(a.items_dus) || 0
   const valide = a.statut === 'valide'
+  // Une version archivée ne se joue plus : le catalogue porte la version qui
+  // la remplace. Un deck sans exercice ne se joue pas non plus.
+  const remplace = a.version_statut === 'archive'
+  const vide = nbItems === 0
   return (
     <article className={`card card-p ac-deck${retard ? ' retard' : ''}`}>
       <div className="ac-deck-haut">
@@ -126,14 +131,23 @@ function Deck({ a, aujourdhui, onNaviguer }) {
       <div className="ac-badges">
         <span className={classeBadge(a.statut)}>{STATUTS[a.statut] || 'Non commencé'}</span>
         {retard && <span className="badge badge-urgent">En retard</span>}
+        {remplace && <span className="badge badge-normal">Version remplacée</span>}
         {echeance && <span className="ac-muet">{echeance}</span>}
       </div>
       <div className="ac-deck-pied">
-        <button type="button" className={`btn ${valide && dus === 0 ? 'btn-outline' : 'btn-primary'}`}
-          onClick={() => onNaviguer?.(`#/formation/entrainement/${a.version_id}`)}>
-          S’entraîner
-        </button>
+        {remplace ? (
+          <button type="button" className="btn btn-outline" onClick={() => onNaviguer?.('#/formation/catalogue')}>
+            Deck remplacé, voir le catalogue
+          </button>
+        ) : (
+          <button type="button" className={`btn ${valide && dus === 0 ? 'btn-outline' : 'btn-primary'}`}
+            disabled={vide} title={vide ? SANS_EXERCICE : undefined}
+            onClick={() => onNaviguer?.(`#/formation/entrainement/${a.version_id}`)}>
+            S’entraîner
+          </button>
+        )}
         <button type="button" className="btn btn-ghost btn-sm" onClick={() => onNaviguer?.(`#/formation/module/${a.slug}`)}>Voir le deck</button>
+        {vide && !remplace && <span className="ac-muet">{SANS_EXERCICE}</span>}
       </div>
     </article>
   )
@@ -179,7 +193,7 @@ export function MonParcoursVue({ parcours, aujourdhui, onNaviguer, onObjectif })
         <Objectif serie={serie} onObjectif={onObjectif} />
         <div className="card card-p ac-jour-carte">
           <div className="ac-kpi-kicker">XP</div>
-          <div className="ac-kpi-valeur">{Number(xp.aujourdhui) || 0} <span className="ac-kpi-unite">aujourd hui</span></div>
+          <div className="ac-kpi-valeur">{Number(xp.aujourdhui) || 0} <span className="ac-kpi-unite">aujourd’hui</span></div>
           <div className="ac-kpi-sous">{Number(xp.semaine) || 0} XP cette semaine · {Number(xp.total) || 0} au total</div>
         </div>
         <div className="card card-p ac-jour-carte">
@@ -211,7 +225,7 @@ export function MonParcoursVue({ parcours, aujourdhui, onNaviguer, onObjectif })
       <section className="ac-bloc" aria-labelledby="ac-mp-reussites">
         <h3 id="ac-mp-reussites" className="ac-bloc-titre">Dernières réussites</h3>
         {reussites.length === 0 ? (
-          <div className="ac-muet">Aucun deck validé pour l instant. Un deck se valide à trois couronnes : tous ses exercices sus au moins deux fois.</div>
+          <div className="ac-muet">Aucun deck validé pour l’instant. Un deck se valide à trois couronnes : tous ses exercices sus au moins deux fois.</div>
         ) : (
           <ul className="ac-liste-plate">
             {reussites.map((r) => {

@@ -46,6 +46,44 @@ const entete = `-- Entasis Academy, migration 7 : les decks d exercices (mode en
 -- depuis leurs lecons verifiees, sans fait nouveau.
 `
 
+// Un exercice d ordre ou d association ne se seme jamais dans l ordre
+// d auteur : une lecture de la table ne doit pas donner la reponse. Le
+// melange est seede par le slug et la cle de l item pour que deux
+// generations donnent le meme fichier (rejeu, md5).
+function graine(texte) {
+  let h = 2166136261
+  for (const c of texte) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0 }
+  return h
+}
+function aleatoire(seed) {
+  let a = seed >>> 0
+  return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296 }
+}
+function permutation(n, rnd) {
+  const p = Array.from({ length: n }, (_, k) => k)
+  for (let i = n - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [p[i], p[j]] = [p[j], p[i]] }
+  // Jamais l identite quand il y a au moins deux elements.
+  if (n > 1 && p.every((v, k) => v === k)) { [p[0], p[1]] = [p[1], p[0]] }
+  return p
+}
+function melanger(slug, it) {
+  const cle = it.type === 'ordre' ? 'elements' : (it.type === 'association' ? 'droite' : null)
+  if (!cle) return it
+  const liste = Array.isArray(it.payload?.[cle]) ? it.payload[cle] : []
+  if (liste.length < 2) return it
+  const perm = permutation(liste.length, aleatoire(graine(`${slug}:${it.cle}`)))
+  const payload = { ...it.payload, [cle]: perm.map((k) => liste[k]) }
+  const corrige = { ...(it.corrige || {}) }
+  if (it.type === 'ordre') {
+    const ordre = Array.isArray(corrige.ordre) ? corrige.ordre : liste.map((_, k) => k)
+    corrige.ordre = ordre.map((k) => perm.indexOf(k))
+  } else {
+    const paires = Array.isArray(corrige.paires) ? corrige.paires : liste.map((_, k) => [k, k])
+    corrige.paires = paires.map(([g, d]) => [g, perm.indexOf(d)])
+  }
+  return { ...it, payload, corrige }
+}
+
 const fichiers = []
 decks.forEach((d, index) => {
   if (!Array.isArray(d.items) || d.items.length < 12) throw new Error(`${d.slug} : moins de 12 items`)
@@ -82,7 +120,7 @@ begin
     return;
   end if;
   update public.academy_module_versions set memo_md = ${q(d.memo_md || '')}, competence = coalesce(nullif(${q(d.competence || '')}, ''), competence), updated_at = now() where id = v_ver;`)
-  d.items.forEach((it, i) => {
+  d.items.map((it) => melanger(d.slug, it)).forEach((it, i) => {
     lignes.push(`  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
   values (v_ver, ${i + 1}, ${q(it.type)}, ${q(it.competence || '')}, ${Math.min(3, Math.max(1, n(it.difficulte, 2)))}, ${j(it.payload)})
   returning id into v_item;

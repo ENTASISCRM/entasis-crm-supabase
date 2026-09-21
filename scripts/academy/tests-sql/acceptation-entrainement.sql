@@ -5,6 +5,13 @@
 -- base, le message porte le resume. Un controle qui echoue leve « ECHEC ... ».
 -- Identites simulees comme PostgREST (role authenticated + request.jwt.claims).
 -- Profils DEV fictifs : camille, noe (advisor), martin borgis (manager).
+--
+-- Relecture adversariale du 21 septembre 2026 : les items et les sessions ne
+-- se lisent plus en direct (tout passe par les fonctions), un exercice
+-- d ordre ou d association est melange a l enregistrement, une session
+-- incomplete ne se termine pas, un deck valide dont les forces retombent
+-- passe « a revoir », un corrige ambigu (doublons) ne se publie pas, et les
+-- affectations non validees suivent la nouvelle version publiee.
 
 do $tests$
 declare
@@ -16,7 +23,7 @@ declare
   v_rep jsonb; v_bonne jsonb; v_premier_choix uuid; v_force int; v_carte int := 0; v_bons int; v_xp_attendu int;
   resume text := '';
   -- verification unitaire
-  v_u jsonb;
+  v_u jsonb; v_msg text; v_premier boolean := true;
 begin
   -- ── 0. academy_verifier_reponse, type par type (droits postgres) ────────
   v_u := public.academy_verifier_reponse('choix', '{"choix":["a","b","c","d"]}', '[2,0,1,3]', '{"index":0}', '1');
@@ -59,13 +66,24 @@ begin
   perform public.academy_enregistrer_item(v_version, null, '{"type":"trou_choix","competence":"Patrimoine","payload":{"phrase":"Contrats Madelin ou ___ bis.","choix":["154","83","62","39"]},"corrige":{"index":0},"explication":"154 bis."}'::jsonb);
   perform public.academy_enregistrer_item(v_version, null, '{"type":"trou_saisie","competence":"Durees","payload":{"phrase":"La trame dure ___ heure.","aide":"un chiffre"},"corrige":{"reponses":["1","une"]},"explication":"Une heure."}'::jsonb);
   perform public.academy_enregistrer_item(v_version, null, '{"type":"carte","competence":"Etapes","payload":{"recto":"Etape 7 ?","verso":"Documents a recuperer (5 min)"},"corrige":{},"explication":"Derniere etape."}'::jsonb);
+  -- Les items ne se lisent plus en direct, meme par un manager : comptage et
+  -- controle du melange avec les droits postgres (ordre et association sont
+  -- stockes melanges, corrige coherent avec le payload).
+  execute 'reset role';
   select count(*) into v_nb from public.academy_items where version_id = v_version;
   if v_nb <> 12 then raise exception 'ECHEC : % items crees', v_nb; end if;
+  select i.payload, c.corrige into v_pay, v_corr from public.academy_items i join public.academy_items_corriges c on c.item_id = i.id where i.version_id = v_version and i.type = 'ordre';
+  if v_pay -> 'elements' = '["Accueil","Situation","Patrimoine","Objectifs"]'::jsonb or v_corr -> 'ordre' = '[0,1,2,3]'::jsonb then raise exception 'ECHEC : exercice d ordre stocke dans l ordre d auteur (%)', v_pay -> 'elements'; end if;
+  if (v_pay -> 'elements' ->> (v_corr -> 'ordre' ->> 0)::int) <> 'Accueil' or (v_pay -> 'elements' ->> (v_corr -> 'ordre' ->> 3)::int) <> 'Objectifs' then raise exception 'ECHEC : corrige d ordre incoherent (% / %)', v_pay -> 'elements', v_corr; end if;
+  select i.payload, c.corrige into v_pay, v_corr from public.academy_items i join public.academy_items_corriges c on c.item_id = i.id where i.version_id = v_version and i.type = 'association';
+  if v_pay -> 'droite' = '["5 min","15 min","10 min"]'::jsonb then raise exception 'ECHEC : association stockee dans l ordre d auteur'; end if;
+  if (v_pay -> 'droite' ->> (v_corr -> 'paires' -> 0 ->> 1)::int) <> '5 min' or (v_corr -> 'paires' -> 2 ->> 0)::int <> 2 or (v_pay -> 'droite' ->> (v_corr -> 'paires' -> 2 ->> 1)::int) <> '10 min' then raise exception 'ECHEC : corrige d association incoherent (% / %)', v_pay -> 'droite', v_corr; end if;
+  execute 'set local role authenticated';
   v_json := public.academy_publier_version(v_version, 'Relecteur de test', null, false);
   if (select statut from public.academy_module_versions where id = v_version) <> 'publie' then raise exception 'ECHEC publication'; end if;
   v_nb := public.academy_affecter(array[c_camille, c_noe], v_module, null, public.academy_aujourdhui() + 7, true);
   if v_nb <> 2 then raise exception 'ECHEC affectation : %', v_nb; end if;
-  resume := resume || '1 deck de 12 items publie et affecte OK; ';
+  resume := resume || '1 deck de 12 items (ordre et association melanges) publie et affecte OK; ';
 
   -- ── 2. Camille : ce qu elle ne voit pas ─────────────────────────────────
   perform set_config('request.jwt.claims', json_build_object('sub', c_camille, 'role', 'authenticated')::text, true);
@@ -78,9 +96,16 @@ begin
   v_erreur := false;
   begin insert into public.academy_entrainements (profile_id, version_id, jeton_client) values (c_camille, v_version, gen_random_uuid()); exception when insufficient_privilege then v_erreur := true; end;
   if not v_erreur then raise exception 'ECHEC : un conseiller cree une session en direct'; end if;
-  select count(*) into v_nb from public.academy_items where version_id = v_version;
-  if v_nb <> 12 then raise exception 'ECHEC : camille ne lit pas les items publies (%)', v_nb; end if;
-  resume := resume || '2 corriges, forces et sessions inaccessibles en direct OK; ';
+  v_erreur := false;
+  begin perform 1 from public.academy_items limit 1; exception when insufficient_privilege then v_erreur := true; end;
+  if not v_erreur then raise exception 'ECHEC : un conseiller lit academy_items en direct'; end if;
+  v_erreur := false;
+  begin perform 1 from public.academy_entrainements limit 1; exception when insufficient_privilege then v_erreur := true; end;
+  if not v_erreur then raise exception 'ECHEC : un conseiller lit academy_entrainements en direct'; end if;
+  -- Le deck lui reste accessible par la fonction.
+  v_json := public.academy_module('deck-test-entrainement');
+  if (v_json ->> 'nb_items')::int <> 12 then raise exception 'ECHEC : le deck ne se lit pas par la fonction (%)', v_json ->> 'nb_items'; end if;
+  resume := resume || '2 items, corriges, forces et sessions inaccessibles en direct OK; ';
 
   -- ── 3. Session 1 : tirage, idempotence, reponses (une fausse), fin ──────
   v_json := public.academy_demarrer_entrainement(v_version, '0dddddd0-0000-4000-8000-000000000001');
@@ -113,6 +138,11 @@ begin
     end if;
     execute 'set local role authenticated';
     v_res := public.academy_repondre(v_ent, v_item, v_rep);
+    if v_premier then
+      v_premier := false; v_msg := '';
+      begin v_res2 := public.academy_terminer_entrainement(v_ent); exception when others then v_msg := sqlerrm; end;
+      if v_msg not like 'Session incomplete%' then raise exception 'ECHEC : une session d une reponse sur douze se termine (%)', v_msg; end if;
+    end if;
     if v_item = v_premier_choix then
       if (v_res ->> 'correcte')::boolean then raise exception 'ECHEC : reponse fausse acceptee'; end if;
       if (v_res ->> 'force')::int <> 0 then raise exception 'ECHEC force apres echec : %', v_res ->> 'force'; end if;
@@ -146,7 +176,7 @@ begin
   v_erreur := false;
   begin v_res2 := public.academy_repondre(v_ent, v_premier_choix, '0'::jsonb); exception when others then v_erreur := true; end;
   -- une reponse deja enregistree est rendue meme apres la fin ; un nouvel item serait refuse
-  resume := resume || '3 session 1 : tirage sans corrige, idempotence, 11/12, XP, serie, une couronne OK; ';
+  resume := resume || '3 session 1 : tirage sans corrige, incomplete refusee, idempotence, 11/12, XP, serie, une couronne OK; ';
 
   -- ── 4. Sessions 2 et 3 : toutes bonnes, jusqu a la validation ───────────
   for k in 2..3 loop
@@ -185,8 +215,12 @@ begin
 
   -- ── 5. Noe : cloisonnement ──────────────────────────────────────────────
   perform set_config('request.jwt.claims', json_build_object('sub', c_noe, 'role', 'authenticated')::text, true);
-  if (select count(*) from public.academy_entrainements) <> 0 then raise exception 'ECHEC : noe voit des sessions'; end if;
+  v_erreur := false;
+  begin perform 1 from public.academy_entrainements limit 1; exception when insufficient_privilege then v_erreur := true; end;
+  if not v_erreur then raise exception 'ECHEC : noe lit les sessions en direct'; end if;
   if (select count(*) from public.academy_forces) <> 0 then raise exception 'ECHEC : noe voit des forces'; end if;
+  v_json := public.academy_mes_resultats();
+  if jsonb_array_length(v_json -> 'sessions') <> 0 then raise exception 'ECHEC : noe voit des sessions de camille'; end if;
   v_erreur := false;
   begin v_res := public.academy_terminer_entrainement(v_ent); exception when others then v_erreur := true; end;
   if not v_erreur then raise exception 'ECHEC : noe termine la session de camille'; end if;
@@ -210,9 +244,13 @@ begin
   if jsonb_array_length(v_json -> 'sessions') <> 3 or (v_json ->> 'xp_total')::int < 300 then raise exception 'ECHEC fiche'; end if;
   v_json := public.academy_version_admin(v_version);
   if jsonb_array_length(v_json -> 'items') <> 12 or (v_json -> 'items' -> 0 -> 'statistiques' ->> 'reponses')::int <> 3 then raise exception 'ECHEC version admin : %', v_json -> 'items' -> 0 -> 'statistiques'; end if;
+  -- L immutabilite d une version publiee est un trigger : on le teste avec les
+  -- droits postgres, puisque la table ne s ecrit plus en direct de toute facon.
+  execute 'reset role';
   v_erreur := false;
   begin update public.academy_items set competence = 'Modifie' where version_id = v_version; exception when check_violation then v_erreur := true; end;
   if not v_erreur then raise exception 'ECHEC : item d une version publiee modifie'; end if;
+  execute 'set local role authenticated';
   v_erreur := false;
   begin perform public.academy_enregistrer_item(v_version, null, '{"type":"carte","payload":{"recto":"x","verso":"y"},"corrige":{}}'::jsonb); exception when check_violation then v_erreur := true; end;
   if not v_erreur then raise exception 'ECHEC : ajout d item sur une version publiee'; end if;
@@ -224,10 +262,14 @@ begin
   if (select memo_md from public.academy_module_versions where id = v_v2) not like '%Memo%' then raise exception 'ECHEC copie du memo'; end if;
   execute 'set local role authenticated';
   v_json := public.academy_publier_version(v_v2, 'Relecteur v2', null, true);
-  if (v_json ->> 'nouvelles_affectations')::int <> 2 then raise exception 'ECHEC nouvelles affectations : %', v_json; end if;
+  -- Noe n avait pas valide : son affectation suit la v2. Camille avait valide :
+  -- elle garde la v1 et l option « imposer » lui cree une affectation v2.
+  if (v_json ->> 'nouvelles_affectations')::int <> 1 then raise exception 'ECHEC nouvelles affectations : %', v_json; end if;
   if (select statut from public.academy_module_versions where id = v_version) <> 'archive' then raise exception 'ECHEC archivage v1'; end if;
   if not exists (select 1 from public.academy_validations where profile_id = c_camille and version_id = v_version) then raise exception 'ECHEC : validation v1 perdue'; end if;
-  resume := resume || '6 pilotage, matrice, fiche, admin, immutabilite, version 2 OK; ';
+  if exists (select 1 from public.academy_affectations where profile_id = c_noe and version_id = v_version) or not exists (select 1 from public.academy_affectations where profile_id = c_noe and version_id = v_v2 and statut = 'non_commence') then raise exception 'ECHEC : l affectation de noe n a pas suivi la v2'; end if;
+  if not exists (select 1 from public.academy_affectations where profile_id = c_camille and version_id = v_version and statut = 'valide') or not exists (select 1 from public.academy_affectations where profile_id = c_camille and version_id = v_v2) then raise exception 'ECHEC : affectations de camille apres la v2'; end if;
+  resume := resume || '6 pilotage, matrice, fiche, admin, immutabilite, version 2 et affectations suivies OK; ';
 
   -- ── 7. Un deck de moins de 12 items ne se publie pas ───────────────────
   v_mod := public.academy_creer_module('deck-trop-court', 'Deck court', 'methode', 'decouverte');
@@ -236,6 +278,29 @@ begin
   begin v_json := public.academy_publier_version((v_mod ->> 'version_id')::uuid, 'R', null, false); exception when others then v_erreur := true; end;
   if not v_erreur then raise exception 'ECHEC : un deck d un item a ete publie'; end if;
   resume := resume || '7 deck trop court refuse OK; ';
+
+  -- ── 8. Un corrige ambigu (deux choix identiques) ne se publie pas ──────
+  v_mod := public.academy_creer_module('deck-doublons', 'Deck a doublons', 'methode', 'decouverte');
+  for k in 1..11 loop
+    perform public.academy_enregistrer_item((v_mod ->> 'version_id')::uuid, null, jsonb_build_object('type', 'carte', 'payload', jsonb_build_object('recto', 'r' || k, 'verso', 'v' || k), 'corrige', '{}'::jsonb));
+  end loop;
+  perform public.academy_enregistrer_item((v_mod ->> 'version_id')::uuid, null, '{"type":"choix","payload":{"enonce":"Doublon ?","choix":["oui","oui","non","peut etre"]},"corrige":{"index":0},"explication":"x"}'::jsonb);
+  v_msg := '';
+  begin v_json := public.academy_publier_version((v_mod ->> 'version_id')::uuid, 'R', null, false); exception when others then v_msg := sqlerrm; end;
+  if v_msg not like 'Un exercice porte deux choix%' then raise exception 'ECHEC : un deck a doublons a ete publie (%)', v_msg; end if;
+  resume := resume || '8 doublons refuses a la publication OK; ';
+
+  -- ── 9. Un deck valide dont les forces retombent passe « a revoir » ─────
+  execute 'reset role';
+  update public.academy_forces set force = 0, prochaine_le = now() - interval '10 days' where profile_id = c_camille and item_id in (select id from public.academy_items where version_id = v_version);
+  if public.academy_recalculer_statut(c_camille, v_version) <> 'a_revoir' then raise exception 'ECHEC : deck valide aux forces retombees pas « a revoir »'; end if;
+  if not exists (select 1 from public.academy_validations where profile_id = c_camille and version_id = v_version) then raise exception 'ECHEC : validation perdue au passage a revoir'; end if;
+  resume := resume || '9 valide puis a revoir OK; ';
+
+  -- ── 10. La purge des intervalles tourne (rien d assez vieux, zero ligne) ─
+  v_nb := public.academy_purger_intervalles();
+  if v_nb <> 0 then raise exception 'ECHEC purge : % intervalles purges', v_nb; end if;
+  resume := resume || '10 purge OK; ';
 
   execute 'reset role';
   raise exception 'TESTS OK (transaction annulee volontairement) : %', resume;

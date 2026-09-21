@@ -41,6 +41,15 @@ Les choix, éléments et colonne de droite sont **mélangés par le serveur**
 à l'ouverture de la session ; l'ordre présenté est mémorisé dans
 `academy_entrainements.items` et le client répond en indices présentés.
 
+Deux verrous de plus (relecture adversariale du 21 septembre 2026) : un
+exercice d'ordre ou d'association est **mélangé une seconde fois à
+l'enregistrement** (`academy_melanger_item`, jamais l'identité ; le
+générateur de decks fait de même avec une graine stable), car l'ordre
+d'auteur des éléments suffirait à deviner le corrigé ; et `academy_items`
+comme `academy_entrainements` **ne se lisent plus en direct** (`revoke all`
+pour `authenticated`, administration comprise) : tout passe par les
+fonctions `security definer`, qui ne rendent jamais la permutation mémorisée.
+
 Chaque item porte une `competence` (courte) qui sert aux notions faibles du
 pilotage, une `difficulte` 1 à 3, et `archive_le`.
 

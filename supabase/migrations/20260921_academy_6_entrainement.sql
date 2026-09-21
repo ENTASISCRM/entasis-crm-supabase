@@ -114,6 +114,15 @@ alter table public.academy_sessions alter column lecon_id drop not null;
 alter table public.academy_sessions add column if not exists entrainement_id uuid;
 alter table public.academy_intervalles alter column lecon_id drop not null;
 
+-- Les durees archivees par jour se totalisent par version, plus par lecon :
+-- la purge doit conserver le temps des entrainements (table vide en
+-- production a ce jour).
+alter table public.academy_durees_jour drop constraint if exists academy_durees_jour_pkey;
+alter table public.academy_durees_jour drop constraint if exists academy_durees_jour_lecon_id_fkey;
+alter table public.academy_durees_jour drop column if exists lecon_id;
+alter table public.academy_durees_jour alter column version_id set not null;
+alter table public.academy_durees_jour add primary key (profile_id, version_id, jour);
+
 -- updated_at
 do $do$
 declare t text;
@@ -203,17 +212,12 @@ begin
 end
 $do$;
 
-drop policy if exists academy_items_select on public.academy_items;
-create policy academy_items_select on public.academy_items
-  for select to authenticated
-  using ((select public.is_staff()) and exists (
-    select 1 from public.academy_module_versions v
-    where v.id = version_id and (v.statut = 'publie' or (select public.est_admin_academy()))));
-drop policy if exists academy_items_write_admin on public.academy_items;
-create policy academy_items_write_admin on public.academy_items
-  for all to authenticated
-  using ((select public.est_admin_academy())) with check ((select public.est_admin_academy()));
-
+-- Les items et les sessions ne se lisent que par les fonctions security
+-- definer : en direct, l ordre d auteur des elements et la permutation
+-- memorisee suffiraient a deduire le corrige des exercices d ordre et
+-- d association (relecture du 21 septembre). L administration edite par
+-- academy_enregistrer_item, jamais par la table.
+revoke all on public.academy_items from anon, authenticated;
 revoke all on public.academy_items_corriges from anon, authenticated;
 
 drop policy if exists academy_forces_select on public.academy_forces;
@@ -222,11 +226,7 @@ create policy academy_forces_select on public.academy_forces
   using (profile_id = (select auth.uid()) or (select public.est_admin_academy()));
 revoke insert, update, delete on public.academy_forces from authenticated;
 
-drop policy if exists academy_entrainements_select on public.academy_entrainements;
-create policy academy_entrainements_select on public.academy_entrainements
-  for select to authenticated
-  using (profile_id = (select auth.uid()) or (select public.est_admin_academy()));
-revoke insert, update, delete on public.academy_entrainements from authenticated;
+revoke all on public.academy_entrainements from anon, authenticated;
 
 revoke all on public.academy_entrainement_reponses from anon, authenticated;
 
@@ -322,6 +322,10 @@ begin
    where i.version_id = p_version and i.archive_le is null;
   if v_couronnes >= 3 then
     v_statut := case when v_total > 0 and v_retard * 3 > v_total then 'a_revoir' else 'valide' end;
+  elsif exists (select 1 from public.academy_validations x where x.profile_id = p_profile and x.version_id = p_version) then
+    -- La validation est une preuve durable : des forces retombees
+    -- rendent le deck « a revoir », jamais « en cours ».
+    v_statut := 'a_revoir';
   elsif v_sessions > 0 then
     v_statut := 'en_cours';
   else
@@ -594,7 +598,7 @@ declare
 begin
   perform set_config('academy.serveur', 'on', true);
   select * into v_prm from public.academy_parametres where id = true;
-  select * into v_version from public.academy_module_versions where id = p_version_id and (statut = 'publie' or public.est_admin_academy());
+  select * into v_version from public.academy_module_versions where id = p_version_id and (statut = 'publie' or (statut = 'brouillon' and public.est_admin_academy()));
   if v_version is null then raise exception 'Module introuvable ou non publie' using errcode = 'P0002'; end if;
 
   -- Idempotence par jeton.
@@ -659,7 +663,7 @@ begin
     v_ok := v_idx is not null and v_idx = v_pos;
   elsif p_type = 'vrai_faux' then
     v_bonne := to_jsonb(coalesce((p_corrige ->> 'vrai')::boolean, false));
-    begin v_ok := (p_reponse #>> '{}')::boolean = (v_bonne #>> '{}')::boolean; exception when others then v_ok := false; end;
+    begin v_ok := coalesce((p_reponse #>> '{}')::boolean = (v_bonne #>> '{}')::boolean, false); exception when others then v_ok := false; end;
   elsif p_type = 'multi' then
     -- indices originaux attendus -> presentes
     select coalesce(array_agg((o.pos - 1)::int order by o.pos), '{}') into v_attendu
@@ -725,7 +729,7 @@ begin
   end if;
 
   v_res := public.academy_verifier_reponse(i.type, i.payload, v_ordre, coalesce(c.corrige, '{}'::jsonb), p_reponse);
-  v_ok := (v_res ->> 'correcte')::boolean;
+  v_ok := coalesce((v_res ->> 'correcte')::boolean, false);
   insert into public.academy_entrainement_reponses (entrainement_id, item_id, rang, reponse, correcte)
   values (e.id, p_item_id, v_rang, p_reponse, v_ok) on conflict (entrainement_id, item_id) do nothing;
 
@@ -774,6 +778,9 @@ begin
     into v_bons, v_total, v_cartes
     from public.academy_entrainement_reponses r join public.academy_items i on i.id = r.item_id where r.entrainement_id = e.id;
   if v_total = 0 then raise exception 'Aucune reponse dans cette session' using errcode = 'P0001'; end if;
+  if v_total < jsonb_array_length(e.items) then
+    raise exception 'Session incomplete : % exercices sur % ont une reponse', v_total, jsonb_array_length(e.items) using errcode = 'P0001';
+  end if;
 
   select not exists (select 1 from public.academy_entrainements x where x.profile_id = v_uid and x.terminee_le is not null and (x.terminee_le at time zone 'Europe/Paris')::date = v_auj)
     into v_premiere;
@@ -807,6 +814,8 @@ begin
     insert into public.academy_validations (profile_id, version_id, tentative_id) values (v_uid, e.version_id, null)
     on conflict (profile_id, version_id) do nothing;
     v_valide := true;
+    -- Deux validations dans la meme seconde ne tirent pas le meme numero.
+    perform pg_advisory_xact_lock(hashtext('academy_attestations'));
     select 'EA-' || to_char(now(), 'YYYY') || '-' || lpad((count(*) + 1)::text, 4, '0') into v_numero
       from public.academy_attestations where delivree_le >= date_trunc('year', now());
     insert into public.academy_attestations (numero, profile_id, version_id, tentative_id, score, total)
@@ -876,14 +885,54 @@ begin
 end;
 $function$;
 
+-- Un exercice d ordre ou d association ne se stocke jamais dans l ordre
+-- d auteur : les elements (ou la colonne de droite) sont permutes au hasard
+-- a l enregistrement et le corrige suit, pour qu une lecture de la table ne
+-- donne pas la reponse. Le corrige recu liste des indices ORIGINAUX (l ordre
+-- d auteur) ; il est reecrit en indices stockes.
+create or replace function public.academy_melanger_item(p_type text, p_payload jsonb, p_corrige jsonb)
+returns jsonb language plpgsql volatile set search_path to 'public'
+as $function$
+declare v_n int; v_perm int[]; v_payload jsonb := coalesce(p_payload, '{}'::jsonb); v_corrige jsonb := coalesce(p_corrige, '{}'::jsonb); v_cle text;
+begin
+  v_cle := case p_type when 'ordre' then 'elements' when 'association' then 'droite' else null end;
+  if v_cle is null then return jsonb_build_object('payload', v_payload, 'corrige', v_corrige); end if;
+  v_n := jsonb_array_length(coalesce(v_payload -> v_cle, '[]'::jsonb));
+  if v_n < 2 then return jsonb_build_object('payload', v_payload, 'corrige', v_corrige); end if;
+  select array_agg(k order by random()) into v_perm from generate_series(0, v_n - 1) k;
+  -- Jamais l identite : une lecture de la table ne doit pas donner la reponse.
+  if v_perm = (select array_agg(k) from generate_series(0, v_n - 1) k) then
+    v_perm := array[v_perm[2], v_perm[1]] || v_perm[3:];
+  end if;
+  -- perm[q] = indice original de l element place en position q (1-based en SQL).
+  v_payload := v_payload || jsonb_build_object(v_cle, (select jsonb_agg(v_payload -> v_cle -> v_perm[q] order by q) from generate_series(1, v_n) q));
+  if p_type = 'ordre' then
+    v_corrige := v_corrige || jsonb_build_object('ordre', (
+      select coalesce(jsonb_agg(array_position(v_perm, (x)::int) - 1 order by o.pos), '[]'::jsonb)
+        from jsonb_array_elements_text(coalesce(v_corrige -> 'ordre', (select jsonb_agg(k) from generate_series(0, v_n - 1) k))) with ordinality o(x, pos)));
+  else
+    v_corrige := v_corrige || jsonb_build_object('paires', (
+      select coalesce(jsonb_agg(jsonb_build_array((pr -> 0)::int, array_position(v_perm, (pr -> 1)::int) - 1) order by (pr -> 0)::int), '[]'::jsonb)
+        from jsonb_array_elements(coalesce(v_corrige -> 'paires', '[]'::jsonb)) pr));
+  end if;
+  return jsonb_build_object('payload', v_payload, 'corrige', v_corrige);
+end;
+$function$;
+
 create or replace function public.academy_enregistrer_item(p_version_id uuid, p_item_id uuid, p_patch jsonb)
 returns uuid language plpgsql security definer set search_path to 'public'
 as $function$
-declare v_uid uuid := public.academy_exiger_admin(); v_id uuid; v_statut text; v_type text;
+declare v_uid uuid := public.academy_exiger_admin(); v_id uuid; v_statut text; v_type text; v_mix jsonb;
 begin
   select statut into v_statut from public.academy_module_versions where id = p_version_id;
   if v_statut is distinct from 'brouillon' then raise exception 'Seul un brouillon se modifie' using errcode = 'check_violation'; end if;
   v_type := p_patch ->> 'type';
+  if p_item_id is not null and v_type is null then select type into v_type from public.academy_items where id = p_item_id; end if;
+  -- Ordre et association : melange a l enregistrement (payload et corrige ensemble).
+  if v_type in ('ordre', 'association') and p_patch ? 'payload' then
+    v_mix := public.academy_melanger_item(v_type, p_patch -> 'payload', coalesce(p_patch -> 'corrige', '{}'::jsonb));
+    p_patch := p_patch || jsonb_build_object('payload', v_mix -> 'payload', 'corrige', v_mix -> 'corrige');
+  end if;
   if p_item_id is null then
     if v_type is null or v_type not in ('choix', 'vrai_faux', 'multi', 'ordre', 'association', 'trou_choix', 'trou_saisie', 'carte') then
       raise exception 'Type d exercice inconnu' using errcode = 'P0001';
@@ -978,6 +1027,16 @@ begin
      and i.type <> 'carte' and not exists (select 1 from public.academy_items_corriges c where c.item_id = i.id and c.corrige <> '{}'::jsonb);
   if v_nb_items < coalesce(v_prm.questions_par_quiz, 12) then raise exception 'Il faut au moins % exercices pour une session de %', v_prm.questions_par_quiz, v_prm.questions_par_quiz using errcode = 'P0001'; end if;
   if v_nb_sans_corrige > 0 then raise exception '% exercice(s) sans corrige', v_nb_sans_corrige using errcode = 'P0001'; end if;
+  -- Un corrige ambigu ne se publie pas : deux elements ou deux choix
+  -- identiques rendraient une bonne reponse fausse une fois sur deux.
+  if exists (
+    select 1 from public.academy_items i where i.version_id = p_version_id and i.archive_le is null and (
+      (select count(*) <> count(distinct x) from jsonb_array_elements_text(coalesce(i.payload -> 'choix', '[]'::jsonb)) x)
+      or (select count(*) <> count(distinct x) from jsonb_array_elements_text(coalesce(i.payload -> 'elements', '[]'::jsonb)) x)
+      or (select count(*) <> count(distinct x) from jsonb_array_elements_text(coalesce(i.payload -> 'droite', '[]'::jsonb)) x)
+      or (select count(*) <> count(distinct x) from jsonb_array_elements_text(coalesce(i.payload -> 'gauche', '[]'::jsonb)) x))) then
+    raise exception 'Un exercice porte deux choix ou deux elements identiques : corrigez le avant de publier' using errcode = 'P0001';
+  end if;
 
   select id into v_ancienne from public.academy_module_versions where module_id = v.module_id and statut = 'publie' and id <> p_version_id;
   update public.academy_module_versions
@@ -986,6 +1045,14 @@ begin
   if v_ancienne is not null then
     update public.academy_module_versions set statut = 'archive', archive_le = now(), updated_at = now() where id = v_ancienne;
     perform public.academy_evenement(null, 'version_archivee', v_ancienne, jsonb_build_object('remplacee_par', p_version_id));
+    -- Les affectations non validees suivent la nouvelle version : personne ne
+    -- reste affecte a un deck qu on ne peut plus jouer.
+    update public.academy_affectations set version_id = p_version_id, updated_at = now()
+     where version_id = v_ancienne and statut <> 'valide'
+       and not exists (select 1 from public.academy_affectations b where b.profile_id = public.academy_affectations.profile_id and b.version_id = p_version_id);
+    for a in select profile_id from public.academy_affectations where version_id = p_version_id loop
+      perform public.academy_recalculer_statut(a.profile_id, p_version_id);
+    end loop;
     if p_imposer_nouvelle_formation then
       for a in select distinct profile_id, obligatoire, parcours_id from public.academy_affectations where version_id = v_ancienne loop
         insert into public.academy_affectations (profile_id, module_id, version_id, parcours_id, obligatoire, echeance, affecte_par)
@@ -1211,19 +1278,19 @@ begin
 end;
 $function$;
 
--- ── 9. Purge : les intervalles d entrainement n ont pas de lecon ───────────
+-- ── 9. Purge : les durees se totalisent par version et par jour ──────────
 create or replace function public.academy_purger_intervalles()
 returns integer language plpgsql security definer set search_path to 'public'
 as $function$
 declare v_limite timestamptz; v_nb integer;
 begin
   select now() - make_interval(months => retention_intervalles_mois) into v_limite from public.academy_parametres where id = true;
-  insert into public.academy_durees_jour (profile_id, lecon_id, version_id, jour, secondes)
-  select i.profile_id, i.lecon_id, s.version_id, (i.debut at time zone 'Europe/Paris')::date, sum(extract(epoch from (i.fin - i.debut)))::int
+  insert into public.academy_durees_jour (profile_id, version_id, jour, secondes)
+  select i.profile_id, s.version_id, (i.debut at time zone 'Europe/Paris')::date, sum(extract(epoch from (i.fin - i.debut)))::int
     from public.academy_intervalles i join public.academy_sessions s on s.id = i.session_id
-   where i.fin < v_limite and i.lecon_id is not null
-   group by i.profile_id, i.lecon_id, s.version_id, (i.debut at time zone 'Europe/Paris')::date
-  on conflict (profile_id, jour, lecon_id) do update set secondes = public.academy_durees_jour.secondes + excluded.secondes;
+   where i.fin < v_limite
+   group by i.profile_id, s.version_id, (i.debut at time zone 'Europe/Paris')::date
+  on conflict (profile_id, version_id, jour) do update set secondes = public.academy_durees_jour.secondes + excluded.secondes;
   delete from public.academy_intervalles where fin < v_limite;
   get diagnostics v_nb = row_count;
   return v_nb;
@@ -1243,12 +1310,15 @@ begin
     execute format('revoke execute on function public.%s from public, anon', f);
     execute format('grant execute on function public.%s to authenticated', f);
   end loop;
-  foreach f in array array['academy_normaliser(text)', 'academy_delai_force(integer)', 'academy_couronnes(uuid, uuid)', 'academy_items_dus(uuid, uuid)', 'academy_recalculer_statut(uuid, uuid)',
+  foreach f in array array['academy_normaliser(text)', 'academy_delai_force(integer)', 'academy_couronnes(uuid, uuid)', 'academy_items_dus(uuid, uuid)', 'academy_recalculer_statut(uuid, uuid)', 'academy_melanger_item(text, jsonb, jsonb)',
     'academy_duree_version(uuid, uuid)', 'academy_presenter_item(uuid, jsonb)', 'academy_presenter_entrainement(uuid)', 'academy_verifier_reponse(text, jsonb, jsonb, jsonb, jsonb)', 'academy_purger_intervalles()'] loop
     execute format('revoke execute on function public.%s from public, anon, authenticated', f);
   end loop;
 end
 $do$;
 
--- Une session vaut douze exercices par defaut.
+-- Une session vaut douze exercices par defaut, et la notice decrit ce que le
+-- mode entrainement enregistre.
 update public.academy_parametres set questions_par_quiz = 12 where id = true and questions_par_quiz = 5;
+update public.academy_parametres set notice_donnees = 'Entasis Academy enregistre, pour chaque collaborateur : les sessions d exercices (debut, fin, score, XP), chaque reponse donnee et si elle etait juste, la force et la date de prochaine revision de chaque exercice, la serie de jours et l objectif quotidien, et le temps actif compte a chaque reponse (une session laissee ouverte ne compte pas). Aucune frappe, aucune capture, aucune webcam. Ces donnees servent au suivi pedagogique. Elles sont lisibles par vous, par la direction et par l administrateur de la formation ; les commentaires de coaching ne le sont que par la direction. Les intervalles bruts d activite sont purges chaque nuit apres la duree de retention fixee par le cabinet (douze mois), seul un total par jour est conserve.'
+ where id = true and notice_donnees like 'Entasis Academy enregistre, pour chaque collaborateur : les lecons%';
