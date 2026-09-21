@@ -5856,13 +5856,14 @@ export default function App(){
         onOpen: () => setActiveTab('pilotage-rh'),
       })
     }
-    // Entasis Academy : regroupes (« 3 révisions dues »), jamais un item par
-    // lecon ; la date est l echeance la plus ancienne, donc dans le passe
-    // quand c est du, ce qui compte comme non lu.
+    // Entasis Academy : regroupes (« 12 exercices à réviser »), jamais un
+    // item par exercice ; la date est l echeance la plus ancienne, donc dans
+    // le passe quand c est du, ce qui compte comme non lu.
     for (const r of academyRappels) {
-      const libelle = r.type === 'revisions_dues' ? `${r.nombre} révision${r.nombre > 1 ? 's' : ''} de formation due${r.nombre > 1 ? 's' : ''}`
-        : r.type === 'affectations_en_retard' ? `${r.nombre} formation${r.nombre > 1 ? 's' : ''} en retard`
-          : `${r.nombre} formation${r.nombre > 1 ? 's' : ''} à rendre sous 7 jours`
+      const libelle = r.type === 'items_dus' ? `${r.nombre} exercice${r.nombre > 1 ? 's' : ''} de formation à réviser`
+        : r.type === 'serie_en_danger' ? `Ta série de ${r.nombre} jour${r.nombre > 1 ? 's' : ''} tombe ce soir sans session`
+          : r.type === 'affectations_en_retard' ? `${r.nombre} deck${r.nombre > 1 ? 's' : ''} de formation en retard`
+            : `${r.nombre} deck${r.nombre > 1 ? 's' : ''} de formation à rendre sous 7 jours`
       out.push({
         id: `academy-${r.type}`,
         date: r.echeance ? `${String(r.echeance).slice(0, 10)}T08:00:00` : new Date().toISOString(),

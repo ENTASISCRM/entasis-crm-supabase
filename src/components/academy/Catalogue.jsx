@@ -1,11 +1,14 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// CATALOGUE : tous les modules publiés, en cartes, avec recherche et filtres
+// CATALOGUE : tous les decks publiés, en cartes, avec recherche et filtres
 //
-// La recherche passe par correspond() (accents ignorés, ordre des mots
+// Chaque carte dit le thème et le niveau, le nombre d’exercices, la durée,
+// les couronnes déjà gagnées et ce qu’il reste à revoir ; un seul bouton
+// compte, « S’entraîner », qui ouvre une session sans passer par la page du
+// deck. La recherche passe par correspond() (accents ignorés, ordre des mots
 // libre, tolérance à une lettre) sur le titre, l objectif, la compétence et
 // le thème. Les puces filtrent par thème, niveau, durée, statut et
 // obligation ; une seule valeur par famille, un second clic la retire. Les
-// prérequis arrivent en slugs : on affiche le titre du module correspondant
+// prérequis arrivent en slugs : on affiche le titre du deck correspondant
 // quand il est dans la liste, le slug sinon.
 //
 // Conteneur (listerCatalogue) et présentation séparés ; la vue est contrôlée
@@ -19,6 +22,7 @@ import { correspond } from '../../lib/recherche'
 import { jourISO } from '../../lib/ma-journee'
 import { classeBadge, enRetard, STATUTS } from '../../lib/academy/statuts'
 import { NIVEAUX, libelleNiveau, libelleTheme } from '../../lib/academy/format'
+import { Couronnes } from './Couronnes'
 import { SkeletonCards } from '../ui/Skeleton'
 
 const DUREES = [
@@ -31,12 +35,12 @@ const FILTRES_VIDES = { theme: null, niveau: null, duree: null, statut: null, ob
 
 const pluriel = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`
 
-// Le statut d un module pour le collaborateur : celui de son affectation,
-// sinon déduit de ce qu il a fait en consultation libre.
+// Le statut d’un deck pour le collaborateur : celui de son affectation,
+// sinon déduit de ce qu’il a fait en consultation libre.
 function statutModule(m) {
   if (m?.affectation?.statut) return m.affectation.statut
   if (m?.valide_le) return 'valide'
-  if (Number(m?.lecons_terminees) > 0) return 'en_cours'
+  if (Number(m?.items_vus) > 0) return 'en_cours'
   return 'non_commence'
 }
 
@@ -65,28 +69,38 @@ function Carte({ m, titresParSlug, aujourdhui, onNaviguer }) {
   const statut = statutModule(m)
   const retard = m.affectation ? enRetard({ ...m.affectation, statut }, aujourdhui) : false
   const prerequis = (Array.isArray(m.prerequis) ? m.prerequis : []).map((s) => titresParSlug[s] || s)
+  const nbItems = Number(m.nb_items) || 0
+  const vus = Math.min(nbItems, Number(m.items_vus) || 0)
+  const dus = Number(m.items_dus) || 0
   const meta = [
-    pluriel(Number(m.nb_lecons) || 0, 'leçon', 'leçons'),
+    pluriel(nbItems, 'exercice', 'exercices'),
     m.duree_minutes ? `${m.duree_minutes} min` : null,
     prerequis.length ? `prérequis : ${prerequis.join(', ')}` : null,
   ].filter(Boolean).join(' · ')
-  const reprendre = statut === 'en_cours' || statut === 'a_revoir'
   return (
     <article className="card card-p ac-carte">
       <div className="ac-carte-kicker">{[libelleTheme(m.theme), libelleNiveau(m.niveau)].filter(Boolean).join(' · ')}</div>
-      <div className="ac-carte-titre">{m.titre}</div>
+      <div className="ac-deck-haut">
+        <div className="ac-carte-titre ac-croissance">{m.titre}</div>
+        <Couronnes n={m.couronnes} />
+      </div>
       {m.objectif && <div className="section-sub">{m.objectif}</div>}
       <div className="ac-carte-meta">{meta}</div>
+      <div className="ac-deck-chiffres">
+        <span>{vus} sur {nbItems} {nbItems > 1 ? 'vus' : 'vu'}</span>
+        <span className={dus > 0 ? 'ac-du' : ''}>{dus > 0 ? `${dus} à revoir` : 'rien à revoir'}</span>
+        {Number(m.xp) > 0 && <span>{m.xp} XP</span>}
+      </div>
       <div className="ac-carte-pied">
         <span className="ac-badges">
           <span className={classeBadge(statut)}>{STATUTS[statut] || 'Non commencé'}</span>
           {retard && <span className="badge badge-urgent">En retard</span>}
           {m.affectation?.obligatoire && <span className="badge badge-normal">Obligatoire</span>}
         </span>
-        <button type="button" className={`btn btn-sm ${reprendre ? 'btn-primary' : 'btn-outline'}`}
-          onClick={() => onNaviguer?.(`#/formation/module/${m.slug}`)}>
-          {reprendre ? 'Reprendre' : 'Ouvrir'}
-        </button>
+        <span className="ac-badges">
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => onNaviguer?.(`#/formation/module/${m.slug}`)}>Voir le deck</button>
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => onNaviguer?.(`#/formation/entrainement/${m.version_id}`)}>S’entraîner</button>
+        </span>
       </div>
     </article>
   )
@@ -118,13 +132,13 @@ export function CatalogueVue({ modules, recherche, filtres, aujourdhui, onRecher
         <div>
           <div className="section-kicker">Formation</div>
           <div className="section-title">Catalogue</div>
-          <div className="section-sub">Tous les modules publiés. Ouvre un module pour lire ses leçons, puis passe son quiz.</div>
+          <div className="section-sub">Tous les decks publiés. Une session, c est douze exercices corrigés au fur et à mesure ; trois couronnes valident le deck.</div>
         </div>
       </div>
 
       <div className="table-toolbar ac-outils">
         <input className="search-input" type="search" value={recherche || ''} onChange={(e) => onRecherche?.(e.target.value)}
-          placeholder="Chercher un module : titre, objectif, compétence, thème" aria-label="Chercher un module" />
+          placeholder="Chercher un deck : titre, objectif, compétence, thème" aria-label="Chercher un deck" />
         {filtresActifs && (
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => { onRecherche?.(''); onFiltres?.({ ...FILTRES_VIDES }) }}>
             Effacer les filtres
@@ -141,20 +155,20 @@ export function CatalogueVue({ modules, recherche, filtres, aujourdhui, onRecher
       </div>
 
       <div className="ac-compteur" role="status" aria-live="polite">
-        {pluriel(liste.length, 'module', 'modules')}, {visibles.length} {visibles.length > 1 ? 'affichés' : 'affiché'}
+        {pluriel(liste.length, 'deck', 'decks')}, {visibles.length} {visibles.length > 1 ? 'affichés' : 'affiché'}
       </div>
 
       {liste.length === 0 ? (
         <div className="card">
           <div className="table-empty-state">
-            <div className="empty-title">Aucun module publié</div>
-            <div className="empty-sub">La direction publie les modules depuis l administration de la formation.</div>
+            <div className="empty-title">Aucun deck publié</div>
+            <div className="empty-sub">La direction publie les decks depuis l’administration de la formation.</div>
           </div>
         </div>
       ) : visibles.length === 0 ? (
         <div className="card">
           <div className="table-empty-state">
-            <div className="empty-title">Aucun module ne correspond</div>
+            <div className="empty-title">Aucun deck ne correspond</div>
             <div className="empty-sub">Essaie un autre mot, ou retire un filtre.</div>
           </div>
         </div>

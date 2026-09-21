@@ -1,0 +1,181 @@
+/* Entasis Academy, la session d entraînement : préfixe ae-, jetons de :root
+   seulement (styles.css), aucune couleur en dur.
+
+   Les conseillers s entraînent sur iPhone : une seule colonne, gros
+   boutons (44 px de haut au minimum), rien qui déborde en largeur, et la
+   barre d action reste visible en bas de l écran sur téléphone.
+
+   Classes partagées reprises telles quelles : btn btn-primary btn-outline
+   btn-ghost btn-sm, card card-p, badge badge-signed, notice notice-error
+   notice-gold, form-input, skeleton (SkeletonText), et les couronnes du
+   composant Couronnes (ac-couronnes, dans academy.css). */
+
+/* ─── Conteneur plein écran ─────────────────────────────────────────────── */
+.ae { max-width: 640px; margin: 0 auto; width: 100%; min-width: 0; }
+.ae .btn { height: auto; min-height: 44px; }
+.ae .btn-sm { min-height: 36px; }
+.ae-btn-large { min-height: 52px; padding: 0 22px; font-size: 15px; border-radius: var(--rad-md); }
+.ae-deroule, .ae-ecran { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.ae-sr {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ─── Haut de session : Quitter, titre, compteur, progression ───────────── */
+.ae-haut { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ae-haut-titre { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: var(--t2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ae-compteur { font-size: 12.5px; font-weight: 600; color: var(--t2); font-variant-numeric: tabular-nums; }
+.ae-progress { height: 8px; background: var(--bd); border-radius: 999px; overflow: hidden; }
+.ae-progress-fill { height: 100%; background: var(--gold); border-radius: 999px; transition: width var(--tr); }
+.ae-type { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--t3); }
+.ae-revient-kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold-dk); }
+.ae-kicker { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); }
+
+/* ─── Corps d un exercice ───────────────────────────────────────────────── */
+.ae-corps { min-width: 0; }
+.ae-exo { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.ae-enonce { font-size: 18px; font-weight: 600; color: var(--t1); line-height: 1.4; padding: 0; margin: 0; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.ae-aide { font-size: 13px; color: var(--t2); margin: 0; line-height: 1.5; }
+.ae-choix-liste { display: flex; flex-direction: column; gap: 10px; }
+.ae-choix {
+  display: flex; align-items: center; gap: 12px; min-height: 52px;
+  padding: 12px 14px; border: 1px solid var(--bd-strong); border-radius: var(--rad-md);
+  background: var(--card); cursor: pointer; font-size: 15px; color: var(--t1); line-height: 1.4;
+  box-shadow: var(--sh-xs); transition: background var(--tr-fast), border-color var(--tr-fast);
+}
+.ae-choix:hover { border-color: var(--t3); }
+.ae-choix:focus-within { outline: 2px solid var(--gold); outline-offset: 2px; }
+.ae-choix input { flex-shrink: 0; width: 20px; height: 20px; margin: 0; accent-color: var(--gold-dk); }
+.ae-choix-texte { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.ae-choix.is-on { background: var(--gold-subtle); border-color: var(--gold); }
+.ae-choix.is-juste, .ae-pile-item.is-juste, .ae-paire.is-juste { background: var(--signed-bg); border-color: var(--signed); }
+.ae-choix.is-faux, .ae-pile-item.is-faux, .ae-paire.is-faux { background: var(--cancelled-bg); border-color: var(--cancelled); }
+.ae-choix.is-attendu { border-color: var(--signed); border-style: dashed; }
+.ae-choix-marque { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--t2); white-space: nowrap; flex-shrink: 0; }
+.is-juste > .ae-choix-marque { color: var(--signed); }
+.is-faux > .ae-choix-marque { color: var(--cancelled); }
+.ae-vrai-faux .ae-choix-liste { flex-direction: row; }
+.ae-vrai-faux .ae-choix { flex: 1; justify-content: center; min-height: 64px; font-size: 17px; font-weight: 600; }
+.ae-vrai-faux .ae-choix-texte { flex: 0 0 auto; }
+.ae-vrai-faux .ae-choix-marque { margin-left: 0; }
+
+/* Tuiles : les éléments à placer (ordre) et les colonnes (association). */
+.ae-tuiles { display: flex; flex-wrap: wrap; gap: 8px; }
+.ae-tuile {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 10px 14px; max-width: 100%;
+  border: 1px solid var(--bd-strong); border-radius: var(--rad-md); background: var(--card);
+  font-family: inherit; font-size: 14.5px; color: var(--t1); text-align: left; line-height: 1.35; cursor: pointer;
+  box-shadow: var(--sh-xs); overflow-wrap: anywhere; transition: background var(--tr-fast), border-color var(--tr-fast), transform var(--tr-fast);
+}
+.ae-tuile:hover:not(:disabled) { border-color: var(--t3); transform: translateY(-1px); }
+.ae-tuile:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.ae-tuile:disabled { opacity: 0.55; cursor: default; }
+.ae-tuile.is-attente { background: var(--gold-subtle); border-color: var(--gold); }
+
+/* Ordre : la pile numérotée. */
+.ae-pile { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; min-height: 8px; }
+.ae-pile-item {
+  display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 10px 12px;
+  border: 1px solid var(--gold-line); border-radius: var(--rad-md); background: var(--gold-subtle); font-size: 14.5px; color: var(--t1); line-height: 1.35;
+}
+.ae-pile-numero { flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: var(--navy); color: var(--t-inv); font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.ae-pile-texte { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.ae-pile-actions { display: flex; }
+
+/* Association : les paires posées, puis deux colonnes. */
+.ae-paires { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ae-paire {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 44px; padding: 8px 12px;
+  border: 1px solid var(--gold-line); border-radius: var(--rad-md); background: var(--gold-subtle); font-size: 14px; color: var(--t1); line-height: 1.35;
+}
+.ae-paire-gauche { font-weight: 600; }
+.ae-paire-sep { color: var(--t3); }
+.ae-paire-droite { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.ae-paire-defaire { margin-left: auto; }
+.ae-colonnes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: start; }
+.ae-colonne { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.ae-colonne .ae-tuile { width: 100%; }
+
+/* Phrase à trou et saisie. */
+.ae-phrase { font-size: 18px; font-weight: 500; color: var(--t1); line-height: 1.6; margin: 0; overflow-wrap: anywhere; }
+.ae-trou {
+  display: inline-block; min-width: 4ch; padding: 0 8px; border-bottom: 2px solid var(--gold); color: var(--t3);
+  font-weight: 600; text-align: center; line-height: 1.4;
+}
+.ae-trou.is-rempli { color: var(--t1); }
+.ae-trou.is-juste { color: var(--signed); border-color: var(--signed); }
+.ae-trou.is-faux { color: var(--cancelled); border-color: var(--cancelled); }
+.ae-saisie-label { font-size: 12px; font-weight: 600; color: var(--t2); }
+.ae .ae-saisie { height: 52px; font-size: 17px; }
+.ae .ae-saisie.is-juste { border-color: var(--signed); background: var(--signed-bg); }
+.ae .ae-saisie.is-faux { border-color: var(--cancelled); background: var(--cancelled-bg); }
+
+/* Carte mémoire. */
+.ae-carte {
+  display: flex; flex-direction: column; gap: 10px; min-height: 180px; padding: 22px;
+  border: 1px solid var(--bd-strong); border-radius: var(--rad-lg); background: var(--card); box-shadow: var(--sh-sm);
+}
+.ae-carte.is-verso { background: var(--gold-subtle); border-color: var(--gold-line); }
+.ae-carte-kicker { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--t3); }
+.ae-carte-recto-rappel { font-size: 13px; color: var(--t2); line-height: 1.4; }
+.ae-carte-face { font-size: 19px; font-weight: 600; color: var(--t1); line-height: 1.45; overflow-wrap: anywhere; }
+.ae-carte-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ae-carte-actions .btn { flex: 1; }
+.ae-carte-question { width: 100%; font-size: 14px; font-weight: 600; color: var(--t2); }
+
+/* ─── Bandeau de correction et actions ──────────────────────────────────── */
+.ae-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ae-actions .btn { flex: 1; }
+.ae-bandeau {
+  display: flex; flex-direction: column; gap: 8px; padding: 16px;
+  border: 1px solid transparent; border-radius: var(--rad-lg); color: var(--t1);
+}
+.ae-bandeau.is-vert { background: var(--signed-bg); border-color: var(--signed); }
+.ae-bandeau.is-rouge { background: var(--cancelled-bg); border-color: var(--cancelled); }
+.ae-bandeau-titre { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.is-vert > .ae-bandeau-titre { color: var(--signed); }
+.is-rouge > .ae-bandeau-titre { color: var(--cancelled); }
+.ae-bandeau-sous { font-size: 13px; color: var(--t2); line-height: 1.5; }
+.ae-bandeau-etiquette { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--t2); }
+.ae-bandeau-lignes { font-size: 15px; font-weight: 600; color: var(--t1); line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; }
+.ae-bandeau-explication { font-size: 14px; color: var(--t1); line-height: 1.5; }
+.ae-bandeau .btn { margin-top: 4px; }
+.ae-bandeau.is-erreur { gap: 8px; }
+
+/* ─── Écrans : on y revient, bilan ──────────────────────────────────────── */
+.ae-centre { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 24px 0 8px; }
+.ae-centre .btn { align-self: stretch; }
+.ae-grand { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: var(--t1); line-height: 1.1; }
+.ae-texte { font-size: 15px; color: var(--t2); line-height: 1.55; margin: 0; max-width: 460px; }
+.ae-xp { font-size: 44px; font-weight: 800; letter-spacing: -0.03em; color: var(--gold-dk); line-height: 1; font-variant-numeric: tabular-nums; margin-top: 6px; }
+.ae-score { font-size: 16px; font-weight: 600; color: var(--t1); }
+.ae-fin-grille { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ae-fin-carte { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ae-kpi-kicker { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--t3); }
+.ae-kpi-valeur { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: var(--t1); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.ae-kpi-sous { font-size: 12.5px; color: var(--t2); line-height: 1.4; }
+.ae-fin-carte .badge { align-self: flex-start; }
+.ae-couronnes-ligne { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ae-couronnes-ligne .ac-couronnes.grande { margin: 0; }
+.ae-couronnes-fleche { font-size: 12px; font-weight: 600; color: var(--t3); }
+.ae-valide { display: flex; flex-direction: column; gap: 4px; }
+.ae-valide-titre { font-size: 16px; font-weight: 700; }
+.ae-erreurs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ae-erreurs li { display: flex; flex-direction: column; gap: 2px; padding-bottom: 10px; border-bottom: 0.5px solid var(--bd); }
+.ae-erreurs li:last-child { border-bottom: 0; padding-bottom: 0; }
+.ae-erreur-competence { font-size: 12px; font-weight: 600; color: var(--gold-dk); }
+.ae-erreur-enonce { font-size: 14px; color: var(--t1); line-height: 1.4; overflow-wrap: anywhere; }
+.ae-parfait { font-size: 15px; font-weight: 600; color: var(--signed); text-align: center; }
+.ae-actions-fin { flex-direction: column; }
+.ae-actions-fin .btn { width: 100%; }
+
+/* ─── Téléphone ─────────────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  .ae { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+  .ae-enonce { font-size: 17px; }
+  .ae-fin-grille { grid-template-columns: 1fr; }
+  .ae-actions { position: sticky; bottom: 0; padding: 10px 0 calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--bg); }
+  .ae-actions .btn, .ae-bandeau .btn { width: 100%; }
+  .ae-carte-actions .btn { flex: 1 1 100%; }
+  .ae-vrai-faux .ae-choix-liste { flex-direction: row; }
+}

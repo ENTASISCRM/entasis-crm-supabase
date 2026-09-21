@@ -65,12 +65,32 @@
 .acp-rien { color: var(--t2); font-style: italic; }
 .acp-actions { display: flex; gap: 4px; flex-wrap: wrap; }
 
+/* ── Couronnes ─────────────────────────────────────────────────────────── */
+/* Les couronnes sont celles de Couronnes.jsx (academy.css, préfixe ac-) ;
+   ici on les réduit pour tenir dans une pastille de deck ou une cellule. */
+.acp-deck .ac-couronne, .acp-cellule .ac-couronne { width: 13px; height: 13px; }
+.acp-deck .ac-couronnes, .acp-cellule .ac-couronnes { gap: 1px; }
+
+/* Une pastille par deck dans le tableau : titre court, couronnes, statut. */
+.acp-decks { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
+.acp-deck {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 3px 8px; border-radius: var(--rad-sm);
+  background: rgba(0,0,0,0.03); border: 0.5px solid var(--bd);
+  font-size: 12px; color: var(--t1);
+}
+.acp-deck-titre { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.acp-deck-statut { margin-left: auto; }
+.acp-deck-statut.badge { font-size: 10px; padding: 1px 6px; }
+.acp-deck-valide { border-color: var(--signed-bd); background: var(--signed-bg); }
+.acp-deck-a_revoir { border-color: var(--progress-bd); background: var(--progress-bg); }
+
 /* ── Matrice collaborateurs × compétences ─────────────────────────────── */
 .acp-matrice-wrap { overflow-x: auto; }
 .acp-matrice th { white-space: normal; min-width: 120px; }
 .acp-matrice th .cell-sub { text-transform: none; letter-spacing: 0; font-weight: 500; }
 .acp-cellule {
-  display: inline-block; padding: 3px 9px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 7px; padding: 3px 9px; border-radius: 999px;
   font-size: 11.5px; font-weight: 600; white-space: nowrap;
   border: 0.5px solid transparent;
 }
@@ -110,9 +130,12 @@
 }
 .acp-module-titre { font-size: 13.5px; font-weight: 600; color: var(--t1); }
 .acp-module-competence { font-size: 12px; color: var(--t2); margin-top: 2px; }
+.acp-module-couronnes { margin-top: 6px; }
 .acp-module-statut { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--t2); }
 .acp-module-meta { font-size: 12px; color: var(--t2); text-align: right; }
 .acp-module-meta.retard { color: var(--cancelled); font-weight: 600; }
+.acp-module-chiffres { flex-basis: 100%; font-size: 12px; color: var(--t2); }
+.acp-module-chiffres .badge { font-size: 10px; padding: 1px 6px; }
 
 /* La frise : une pastille par type d événement, le libellé dit le type, la
    couleur ne fait que l accompagner. */
@@ -125,10 +148,10 @@
   border: 2px solid var(--card); box-shadow: 0 0 0 1px var(--bd-strong);
 }
 .acp-frise-pastille.affectation_creee { background: var(--t3); }
-.acp-frise-pastille.lecon_terminee { background: var(--gold); }
-.acp-frise-pastille.tentative_soumise { background: var(--navy); }
+.acp-frise-pastille.session_terminee { background: var(--gold); }
 .acp-frise-pastille.module_valide { background: var(--signed); }
-.acp-frise-pastille.revision_faite { background: var(--gold); }
+.acp-frise-pastille.version_publiee { background: var(--navy); }
+.acp-frise-pastille.version_archivee { background: var(--bd-strong); }
 .acp-frise-pastille.autre { background: var(--t3); }
 .acp-frise-libelle { font-size: 13px; font-weight: 600; color: var(--t1); }
 .acp-frise-detail { font-size: 12px; color: var(--t2); margin-top: 2px; }
@@ -136,7 +159,8 @@
 
 /* Temps actif par semaine, en barres CSS pures (pas de chart.js sur la fiche). */
 .acp-barres { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
-.acp-barre { display: grid; grid-template-columns: 130px 1fr 64px; gap: 10px; align-items: center; font-size: 12.5px; color: var(--t2); }
+.acp-barre { display: grid; grid-template-columns: 130px 1fr 64px 150px; gap: 10px; align-items: center; font-size: 12.5px; color: var(--t2); }
+.acp-barre-xp { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .acp-barre-piste { height: 8px; background: rgba(0,0,0,0.05); border-radius: 999px; overflow: hidden; }
 .acp-barre-remplissage { height: 100%; background: var(--gold); border-radius: 999px; }
 .acp-barre-valeur { text-align: right; font-variant-numeric: tabular-nums; color: var(--t1); font-weight: 600; }
@@ -164,5 +188,6 @@
   .acp-module { grid-template-columns: 1fr; }
   .acp-module-meta { text-align: left; }
   .acp-barre { grid-template-columns: 100px 1fr 56px; }
+  .acp-barre-xp { grid-column: 1 / -1; text-align: left; }
   .acp-periode .form-input { width: 130px; }
 }

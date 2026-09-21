@@ -1,22 +1,23 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// PILOTAGE DES FORMATIONS : la vue direction d Entasis Academy
+// PILOTAGE DES FORMATIONS : la vue direction d’Entasis Academy
 //
-// Ce que la direction veut savoir, dans l ordre où elle le demande : qui est
-// actif, où en sont les obligations, qui est en retard, ce que les réponses
-// aux quiz montrent par compétence, et quelles notions faire travailler en
-// collectif. Chaque indicateur porte son dénominateur et sa définition : un
-// « 12 sur 15 » se discute, un « 80 % » seul se croit.
+// Ce que la direction veut savoir, dans l’ordre où elle le demande : qui
+// s’entraîne, où en sont les obligations, qui est en retard, ce que les
+// sessions montrent deck par deck (couronnes), et quelles notions faire
+// travailler en collectif. Chaque indicateur porte son dénominateur et sa
+// définition : un « 12 sur 15 » se discute, un « 80 % » seul se croit.
 //
-// Ce que l écran refuse : une note d engagement, un classement, une
+// Ce que l’écran refuse : une note d’engagement, un classement, une
 // qualification automatique. La colonne « À examiner » liste des faits
-// (un quiz soumis en douze secondes, trois échecs sur un module), jamais un
-// verdict. Une absence de tentative s écrit « Non évalué », jamais 0 %.
+// (une session de douze exercices terminée en trente secondes, trois
+// sessions sous 50 %), jamais un verdict. Une absence de session s’écrit
+// « Non évalué », jamais 0 %.
 //
 // Le conteneur Pilotage charge `pilotage(depuis, jusqua)` et `matrice()` ;
 // la vue PilotageVue reçoit tout par props et se teste sans base. Les
-// modales d écriture (affecter, échéance) demandent confirmation, la relance
-// n envoie rien : elle propose un texte à copier. Aucune donnée de
-// rémunération, la fonction SQL n en rend pas et l écran n en demande pas.
+// modales d’écriture (affecter, échéance) demandent confirmation, la relance
+// n’envoie rien : elle propose un texte à copier. Aucune donnée de
+// rémunération, la fonction SQL n’en rend pas et l’écran n’en demande pas.
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
@@ -25,11 +26,12 @@ import { messageErreur } from '../../lib/ui-shared'
 import { ajouterJours } from '../../lib/sequences'
 import { exporterCsv, suffixeDate } from '../../lib/export-csv'
 import { formatDuree, jourParis, dateHeureParis, pourcentage } from '../../lib/academy/format'
-import { joursEntre , modulesPubliesDuParcours, libelleParcoursAffectable } from '../../lib/academy/statuts'
+import { STATUTS, classeBadge, joursEntre, libelleCouronnes, modulesPubliesDuParcours, libelleParcoursAffectable } from '../../lib/academy/statuts'
 import { lignesCsvPilotage } from '../../lib/academy/csv'
 import { pilotage, matrice, fiche, adminVue, affecter, modifierEcheance } from '../../services/academy'
 import { confirmDialog } from '../ui/confirm'
 import { SkeletonCards, SkeletonTable } from '../ui/Skeleton'
+import { Couronnes } from './Couronnes'
 import './academy-pilotage.css'
 
 const GraphiquesPilotage = lazy(() => import('./GraphiquesPilotage'))
@@ -54,31 +56,38 @@ const STATUTS_FILTRE = [
 const FILTRES_VIDES = { collaborateur: '', parcours: '', module: '', statut: '' }
 const TRI_INITIAL = { cle: 'nom', sens: 'asc' }
 
-// Au delà, une cellule de la matrice dit « (ancien) » : le dernier score date.
+// Au delà, une cellule de la matrice dit « (ancien) » : la dernière session date.
 const ANCIEN_JOURS = 90
+const COURONNES_MAX = 5
 
 const CELLULES = {
   acquis: { libelle: 'Acquis', classe: 'acp-cellule-acquis' },
   a_renforcer: { libelle: 'À renforcer', classe: 'acp-cellule-renforcer' },
   non_evalue: { libelle: 'Non évalué', classe: 'acp-cellule-non' },
 }
-const TYPES_TENTATIVE = { quiz: 'quiz', revision_j7: 'révision J+7', revision_j30: 'révision J+30' }
 
 const pluriel = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`
 const nombre = (v) => Number(v) || 0
 const estDirection = (profile) => profile?.role === 'manager' || profile?.academy_admin === true
 
-// Les parcours d une ligne arrivent en titres, parfois en objets : on ne garde
+// Un nombre de couronnes toujours entre 0 et 5, entier.
+const couronnesDe = (v) => Math.max(0, Math.min(COURONNES_MAX, Math.floor(nombre(v))))
+
+// Les parcours d’une ligne arrivent en titres, parfois en objets : on ne garde
 // que les titres.
 const titresParcours = (ligne) => (Array.isArray(ligne?.parcours) ? ligne.parcours : [])
   .map((p) => (typeof p === 'string' ? p : p?.titre))
   .filter(Boolean)
+const decksDe = (ligne) => (Array.isArray(ligne?.decks) ? ligne.decks : []).filter(Boolean)
+const couronnesMoyenne = (ligne) => {
+  const decks = decksDe(ligne)
+  return decks.length === 0 ? -1 : decks.reduce((t, d) => t + couronnesDe(d.couronnes), 0) / decks.length
+}
 
 const prenomDe = (nom) => String(nom || '').trim().split(/\s+/)[0] || ''
-const scorePct = (s) => (s && nombre(s.total) > 0 ? Math.round((100 * nombre(s.score)) / nombre(s.total)) : null)
 
-// La période d une puce, calculée depuis le jour rendu par la base (jamais
-// depuis l horloge du navigateur) : « 7 jours » couvre aujourd hui et les six
+// La période d’une puce, calculée depuis le jour rendu par la base (jamais
+// depuis l’horloge du navigateur) : « 7 jours » couvre aujourd hui et les six
 // jours qui précèdent.
 function periodePuce(p, aujourdhui) {
   if (!p.jours) return { cle: p.cle, depuis: null, jusqua: null }
@@ -91,12 +100,11 @@ function libellePeriode(periode, donnees) {
   if (!depuis && !jusqua) return 'depuis le début'
   if (depuis && jusqua) return `du ${jourParis(depuis)} au ${jourParis(jusqua)}`
   if (depuis) return `depuis le ${jourParis(depuis)}`
-  return `jusqu au ${jourParis(jusqua)}`
+  return `jusqu’au ${jourParis(jusqua)}`
 }
 
-// Les filtres s appliquent côté client. Le filtre module s appuie sur la
-// matrice : le pilotage ne détaille pas les affectations par module, la
-// matrice sait qui a soumis une tentative sur quelle version.
+// Les filtres s’appliquent côté client. Le filtre deck s’appuie sur la
+// matrice : elle sait qui a terminé au moins une session sur quelle version.
 function filtrerLignes(lignes, filtres, matriceD) {
   let liste = Array.isArray(lignes) ? lignes : []
   const f = filtres || FILTRES_VIDES
@@ -118,13 +126,15 @@ function filtrerLignes(lignes, filtres, matriceD) {
 const CLES_TRI = {
   nom: (l) => String(l.nom || ''),
   parcours: (l) => titresParcours(l).join(', '),
+  decks: (l) => couronnesMoyenne(l),
   modules: (l) => pourcentage(l.modules_valides, l.modules_affectes),
-  derniere_activite: (l) => String(l.derniere_activite || ''),
+  serie: (l) => nombre(l.serie),
+  xp_7j: (l) => nombre(l.xp_7j),
+  sessions_periode: (l) => nombre(l.sessions_periode),
+  derniere_session: (l) => String(l.derniere_session || ''),
   temps_actif_s: (l) => nombre(l.temps_actif_s),
-  premier_score: (l) => scorePct(l.premier_score) ?? -1,
-  dernier_score: (l) => scorePct(l.dernier_score) ?? -1,
+  items_dus: (l) => nombre(l.items_dus),
   retards: (l) => nombre(l.retards),
-  prochaine_revision: (l) => String(l.prochaine_revision || '9999-12-31'),
 }
 
 function trierLignes(lignes, tri) {
@@ -142,13 +152,14 @@ function trierLignes(lignes, tri) {
 function texteRelance(ligne) {
   const restants = Math.max(0, nombre(ligne.modules_affectes) - nombre(ligne.modules_valides))
   const retards = nombre(ligne.retards)
+  const dus = nombre(ligne.items_dus)
   const lignes = [
     `Bonjour ${prenomDe(ligne.nom)},`,
     '',
-    `il vous reste ${pluriel(restants, 'module', 'modules')} à valider${retards > 0 ? `, dont ${retards} en retard` : ''}.`,
+    `il vous reste ${pluriel(restants, 'deck', 'decks')} à valider${retards > 0 ? `, dont ${retards} en retard` : ''}.`,
   ]
-  if (ligne.prochaine_revision) lignes.push(`Votre prochaine révision est prévue le ${jourParis(ligne.prochaine_revision)}.`)
-  lignes.push('', 'Vous pouvez reprendre depuis la rubrique Formation du CRM, à votre rythme.', '', 'Bonne journée,', 'La direction')
+  if (dus > 0) lignes.push(`${pluriel(dus, 'exercice attend', 'exercices attendent')} votre révision.`)
+  lignes.push('', 'Une session dure cinq minutes, depuis la rubrique Formation du CRM, à votre rythme.', '', 'Bonne journée,', 'La direction')
   return lignes.join('\n')
 }
 
@@ -195,9 +206,9 @@ function BarreFiltres({ donnees, matriceD, filtres, onFiltre, periode, onPeriode
           <option value="">Tous les parcours</option>
           {parcours.map((p) => <option key={p} value={p}>{p}</option>)}
         </select>
-        <select className="filter-select" aria-label="Module" value={filtres.module} onChange={(e) => poser({ module: e.target.value })}
-          title="Collaborateurs ayant au moins une tentative soumise sur ce module">
-          <option value="">Tous les modules</option>
+        <select className="filter-select" aria-label="Deck" value={filtres.module} onChange={(e) => poser({ module: e.target.value })}
+          title="Collaborateurs ayant terminé au moins une session sur ce deck">
+          <option value="">Tous les decks</option>
           {modules.map((m) => <option key={m.version_id} value={m.version_id}>{m.titre}</option>)}
         </select>
         <select className="filter-select" aria-label="Statut" value={filtres.statut} onChange={(e) => poser({ statut: e.target.value })}>
@@ -209,7 +220,7 @@ function BarreFiltres({ donnees, matriceD, filtres, onFiltre, periode, onPeriode
         )}
       </div>
       {filtres.module && (
-        <div className="acp-filtres-note">Filtre module : collaborateurs ayant au moins une tentative soumise sur ce module.</div>
+        <div className="acp-filtres-note">Filtre deck : collaborateurs ayant terminé au moins une session sur ce deck.</div>
       )}
     </div>
   )
@@ -217,37 +228,44 @@ function BarreFiltres({ donnees, matriceD, filtres, onFiltre, periode, onPeriode
 
 // ─── Indicateurs ───────────────────────────────────────────────────────────
 
+// La série moyenne arrive en numérique à une décimale : « 2,5 jours ».
+const serieMoyenneTexte = (v) => {
+  const n = Number(v)
+  if (!Number.isFinite(n)) return '0'
+  return n.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 1 })
+}
+
 function Indicateurs({ indicateurs, definitions }) {
   const i = indicateurs || {}
   const d = definitions || {}
-  const num = nombre(i.premiere_reussite_num)
-  const den = nombre(i.premiere_reussite_den)
   const cartes = [
     {
       cle: 'actifs', kicker: 'Actifs sur la période', valeur: `${nombre(i.actifs_periode)} sur ${nombre(i.affectes)}`,
-      sous: d.actifs_periode || 'Collaborateurs affectés ayant eu au moins une activité acceptée sur la période, rapportés aux collaborateurs affectés.',
+      sous: d.actifs_periode || 'Collaborateurs affectés ayant terminé au moins une session sur la période, rapportés aux collaborateurs affectés.',
     },
     {
       cle: 'obligatoires', kicker: 'Obligatoires validées', valeur: `${nombre(i.obligatoires_validees)} sur ${nombre(i.obligatoires_total)}`,
-      sous: d.obligatoires || 'Affectations obligatoires validées rapportées aux affectations obligatoires.',
+      sous: d.obligatoires || 'Affectations obligatoires validées (trois couronnes) rapportées aux affectations obligatoires.',
     },
     {
       cle: 'echues', kicker: 'Échues non validées', valeur: String(nombre(i.echues_non_validees)), effectif: `sur ${nombre(i.echues_total)} échues`,
-      sous: d.echues || 'Affectations dont l échéance est passée et qui ne sont pas validées. Les échéances absentes ne comptent pas.',
+      sous: d.echues || 'Affectations dont l’échéance est passée et qui ne sont pas validées. Les échéances absentes ne comptent pas.',
     },
     {
-      cle: 'premiere', kicker: 'Réussite au premier essai',
-      valeur: den > 0 ? `${pourcentage(num, den)} %` : 'Non évalué',
-      effectif: den > 0 ? `${num} sur ${den}` : 'aucune première tentative',
-      sous: d.premiere_reussite || 'Premières tentatives de quiz réussies rapportées aux premières tentatives soumises sur la période.',
+      cle: 'sessions', kicker: 'Sessions sur la période', valeur: String(nombre(i.sessions_periode)),
+      sous: d.sessions || 'Sessions d’entraînement terminées sur la période, tous decks confondus.',
+    },
+    {
+      cle: 'serie', kicker: 'Série moyenne', valeur: serieMoyenneTexte(i.serie_moyenne), effectif: 'jours',
+      sous: d.serie || 'Jours consécutifs avec au moins une session terminée, en Europe/Paris, en moyenne sur les collaborateurs affectés.',
+    },
+    {
+      cle: 'dus', kicker: 'Exercices dus', valeur: String(nombre(i.items_dus)), effectif: 'tout le cabinet',
+      sous: d.items_dus || 'Exercices dont la révision espacée est arrivée à échéance et qui ne sont pas encore sus par cœur.',
     },
     {
       cle: 'temps', kicker: 'Temps actif estimé', valeur: formatDuree(i.temps_actif_s),
-      sous: d.temps_actif || 'Somme des intervalles d activité acceptés, fusionnés par personne. Une lecture sans interaction n est pas comptée.',
-    },
-    {
-      cle: 'revisions', kicker: 'Révisions en attente', valeur: String(nombre(i.revisions_en_attente)),
-      sous: 'Révisions J+7 et J+30 dues à ce jour et non faites.',
+      sous: d.temps_actif || 'Somme des intervalles d’activité acceptés, fusionnés par personne. Chaque réponse vaut un battement.',
     },
   ]
   return (
@@ -271,18 +289,20 @@ function Indicateurs({ indicateurs, definitions }) {
 const COLONNES = [
   { cle: 'nom', libelle: 'Collaborateur' },
   { cle: 'parcours', libelle: 'Parcours' },
-  { cle: 'modules', libelle: 'Modules' },
-  { cle: 'derniere_activite', libelle: 'Dernière activité' },
+  { cle: 'decks', libelle: 'Decks' },
+  { cle: 'modules', libelle: 'Validés / affectés' },
+  { cle: 'serie', libelle: 'Série' },
+  { cle: 'xp_7j', libelle: 'XP 7 j' },
+  { cle: 'sessions_periode', libelle: 'Sessions' },
+  { cle: 'derniere_session', libelle: 'Dernière session' },
   { cle: 'temps_actif_s', libelle: 'Temps actif' },
-  { cle: 'premier_score', libelle: 'Premier score' },
-  { cle: 'dernier_score', libelle: 'Dernier score' },
+  { cle: 'items_dus', libelle: 'Exercices dus' },
   { cle: 'retards', libelle: 'Retards' },
-  { cle: 'prochaine_revision', libelle: 'Prochaine révision' },
   { cle: null, libelle: 'À examiner' },
   { cle: null, libelle: 'Actions' },
 ]
 
-// Un bouton dans l en tête, pas un onClick sur le th : le tri se fait au clavier.
+// Un bouton dans l’en tête, pas un onClick sur le th : le tri se fait au clavier.
 function ThTri({ colonne, tri, onTri }) {
   if (!colonne.cle) return <th scope="col">{colonne.libelle}</th>
   const actif = tri.cle === colonne.cle
@@ -296,24 +316,29 @@ function ThTri({ colonne, tri, onTri }) {
   )
 }
 
-function Score({ s }) {
-  if (!s || s.total == null) return <span className="acp-rien">Non évalué</span>
-  const details = [s.titre, s.type ? TYPES_TENTATIVE[s.type] || s.type : null, s.le ? jourParis(s.le) : null].filter(Boolean).join(' · ')
+// Une pastille par deck : titre court, couronnes, statut. Le titre entier
+// est dans le title de la pastille.
+function PastilleDeck({ deck }) {
+  const statut = STATUTS[deck.statut] || deck.statut || ''
+  const titre = String(deck.titre || 'Deck')
   return (
-    <>
-      <span className="cell-mono">{nombre(s.score)}/{nombre(s.total)}</span>
-      {details && <div className="cell-sub">{details}</div>}
-    </>
+    <li className={`acp-deck acp-deck-${deck.statut || 'inconnu'}`} title={`${titre} · ${libelleCouronnes(deck.couronnes)}${statut ? ` · ${statut}` : ''}`}>
+      <span className="acp-deck-titre">{titre}</span>
+      <Couronnes n={deck.couronnes} />
+      {statut && <span className={`acp-deck-statut ${classeBadge(deck.statut)}`}>{statut}</span>}
+    </li>
   )
 }
 
 function LignePersonne({ ligne, onFiche, onAffecter, onEcheance, onRelance }) {
   const parcours = titresParcours(ligne)
+  const decks = decksDe(ligne)
   const affectes = nombre(ligne.modules_affectes)
   const valides = nombre(ligne.modules_valides)
   const pct = pourcentage(valides, affectes)
   const retards = nombre(ligne.retards)
-  const dues = nombre(ligne.revisions_dues)
+  const dus = nombre(ligne.items_dus)
+  const serie = nombre(ligne.serie)
   const faits = Array.isArray(ligne.a_examiner) ? ligne.a_examiner.filter(Boolean) : []
   return (
     <tr>
@@ -323,21 +348,24 @@ function LignePersonne({ ligne, onFiche, onAffecter, onEcheance, onRelance }) {
       </td>
       <td>{parcours.length > 0 ? parcours.join(', ') : <span className="acp-rien">Aucun parcours</span>}</td>
       <td>
+        {decks.length > 0
+          ? <ul className="acp-decks">{decks.map((d) => <PastilleDeck key={d.version_id || d.titre} deck={d} />)}</ul>
+          : <span className="acp-rien">Aucun deck</span>}
+      </td>
+      <td>
         <span className="cell-mono">{valides} / {affectes}</span>
         <div className="team-bar-wrap">
           <div className="team-bar-track"><div className="team-bar-fill signed" style={{ width: `${pct}%` }} /></div>
           <span className="team-bar-pct">{pct} %</span>
         </div>
       </td>
-      <td className="cell-mono">{ligne.derniere_activite ? dateHeureParis(ligne.derniere_activite) : <span className="acp-rien">Aucune</span>}</td>
+      <td className="cell-mono">{serie > 0 ? pluriel(serie, 'jour', 'jours') : <span className="acp-rien">0</span>}</td>
+      <td className="cell-mono">{nombre(ligne.xp_7j)}</td>
+      <td className="cell-mono">{nombre(ligne.sessions_periode)}</td>
+      <td className="cell-mono">{ligne.derniere_session ? dateHeureParis(ligne.derniere_session) : <span className="acp-rien">Aucune</span>}</td>
       <td className="cell-mono">{formatDuree(ligne.temps_actif_s)}</td>
-      <td><Score s={ligne.premier_score} /></td>
-      <td><Score s={ligne.dernier_score} /></td>
+      <td className="cell-mono">{dus > 0 ? <span className="badge badge-progress">{dus}</span> : '0'}</td>
       <td>{retards > 0 ? <span className="badge badge-urgent">{pluriel(retards, 'en retard', 'en retard')}</span> : <span className="cell-mono">0</span>}</td>
-      <td>
-        {ligne.prochaine_revision ? <span className="cell-mono">{jourParis(ligne.prochaine_revision)}</span> : <span className="acp-rien">Aucune</span>}
-        {dues > 0 && <div className="cell-sub">{pluriel(dues, 'due', 'dues')}</div>}
-      </td>
       <td>
         {faits.length > 0
           ? <ul className="acp-faits">{faits.map((f, i) => <li key={i}>{f}</li>)}</ul>
@@ -363,7 +391,7 @@ function TableauPersonnes({ lignes, total, tri, onTri, onFiche, onAffecter, onEc
           <div className="acp-bloc-titre">Par collaborateur</div>
           <div className="acp-bloc-sous">
             {lignes.length === total ? pluriel(total, 'collaborateur', 'collaborateurs') : `${lignes.length} sur ${pluriel(total, 'collaborateur', 'collaborateurs')}`}
-            {' · le CSV reprend les lignes affichées'}
+            {' · XP 7 j’et série à ce jour, sessions et temps actif sur la période · le CSV reprend les lignes affichées'}
           </div>
         </div>
         <div className="acp-outils">
@@ -383,7 +411,7 @@ function TableauPersonnes({ lignes, total, tri, onTri, onFiche, onAffecter, onEc
                     <div className="empty-title">{total === 0 ? 'Aucun collaborateur affecté' : 'Aucun collaborateur ne correspond aux filtres'}</div>
                     <div className="empty-sub">
                       {total === 0
-                        ? 'Affectez un parcours ou un module depuis l administration des contenus : les personnes apparaîtront ici.'
+                        ? 'Affectez un parcours ou un deck depuis l’administration des contenus : les personnes apparaîtront ici.'
                         : 'Élargissez la période ou effacez un filtre.'}
                     </div>
                   </div>
@@ -399,17 +427,19 @@ function TableauPersonnes({ lignes, total, tri, onTri, onFiche, onAffecter, onEc
   )
 }
 
-// ─── Matrice collaborateurs × compétences ──────────────────────────────────
+// ─── Matrice collaborateurs × decks ────────────────────────────────────────
 
 function Cellule({ cellule, aujourdhui }) {
   const statut = CELLULES[cellule?.statut] || CELLULES.non_evalue
   const ancien = !!(cellule?.derniere_le && aujourdhui && joursEntre(cellule.derniere_le, aujourdhui) > ANCIEN_JOURS)
+  const couronnes = couronnesDe(cellule?.couronnes)
   const title = cellule?.derniere_le
-    ? `dernier score ${cellule.dernier_pct == null ? 'inconnu' : `${nombre(cellule.dernier_pct)} %`} le ${jourParis(cellule.derniere_le)}`
-    : 'aucune tentative soumise'
+    ? `dernier score ${cellule.dernier_pct == null ? 'inconnu' : `${nombre(cellule.dernier_pct)} %`} le ${jourParis(cellule.derniere_le)}, ${libelleCouronnes(couronnes)}`
+    : 'aucune session terminée'
   return (
     <span className={`acp-cellule ${statut.classe}${ancien ? ' acp-cellule-ancien' : ''}`} title={title}>
-      {statut.libelle}{ancien ? ' (ancien)' : ''}
+      <Couronnes n={couronnes} />
+      <span className="acp-cellule-libelle">{statut.libelle}{ancien ? ' (ancien)' : ''}</span>
     </span>
   )
 }
@@ -422,15 +452,15 @@ function Matrice({ matriceD, aujourdhui, filtres }) {
     <div className="acp-bloc">
       <div className="acp-bloc-tete">
         <div>
-          <div className="acp-bloc-titre">Compétences par collaborateur</div>
-          <div className="acp-bloc-sous">Ce que les réponses ont montré, module par module. Une cellule ne juge pas la personne.</div>
+          <div className="acp-bloc-titre">Couronnes par collaborateur et par deck</div>
+          <div className="acp-bloc-sous">Ce que les sessions ont montré, deck par deck : couronnes de 0 à 5 et statut. Une cellule ne juge pas la personne.</div>
         </div>
       </div>
       {competences.length === 0 || lignes.length === 0 ? (
         <div className="card">
           <div className="table-empty-state">
-            <div className="empty-title">{competences.length === 0 ? 'Aucun module publié' : 'Aucun collaborateur affecté'}</div>
-            <div className="empty-sub">La matrice se remplit dès qu un module publié est affecté et qu un quiz est soumis.</div>
+            <div className="empty-title">{competences.length === 0 ? 'Aucun deck publié' : 'Aucun collaborateur affecté'}</div>
+            <div className="empty-sub">La matrice se remplit dès qu’un deck publié est affecté et qu’une session est terminée.</div>
           </div>
         </div>
       ) : (
@@ -465,11 +495,11 @@ function Matrice({ matriceD, aujourdhui, filtres }) {
       <div className="acp-legende" aria-label="Légende de la matrice">
         {Object.keys(CELLULES).map((k) => (
           <span key={k}>
-            <span className={`acp-cellule ${CELLULES[k].classe}`}>{CELLULES[k].libelle}</span>
+            <span className={`acp-cellule ${CELLULES[k].classe}`}><span className="acp-cellule-libelle">{CELLULES[k].libelle}</span></span>
             {seuils[k] || ''}
           </span>
         ))}
-        <span><span className="acp-cellule acp-cellule-non acp-cellule-ancien">(ancien)</span>dernière tentative de plus de {ANCIEN_JOURS} jours</span>
+        <span><span className="acp-cellule acp-cellule-non acp-cellule-ancien"><span className="acp-cellule-libelle">(ancien)</span></span>dernière session de plus de {ANCIEN_JOURS} jours</span>
       </div>
     </div>
   )
@@ -494,7 +524,7 @@ function Notions({ notions }) {
         <div className="card">
           <div className="table-empty-state">
             <div className="empty-title">Pas encore assez de réponses</div>
-            <div className="empty-sub">Une notion s affiche dès que trois réponses ont été données sur la période.</div>
+            <div className="empty-sub">Une notion s’affiche dès que trois réponses ont été données sur la période.</div>
           </div>
         </div>
       ) : (
@@ -532,7 +562,7 @@ export function PilotageVue({
       <div className="card">
         <div className="table-empty-state">
           <div className="acp-garde-titre">Réservé à la direction</div>
-          <div className="form-hint" style={{ marginTop: 8 }}>Le pilotage des formations est réservé au manager et à l administrateur formation. Ton parcours est dans l onglet Mon parcours.</div>
+          <div className="form-hint" style={{ marginTop: 8 }}>Le pilotage des formations est réservé au manager et à l’administrateur formation. Ton entraînement est dans l’onglet Aujourd hui.</div>
         </div>
       </div>
     )
@@ -559,7 +589,7 @@ export function PilotageVue({
 
       {enChargement ? (
         <>
-          <SkeletonCards n={6} />
+          <SkeletonCards n={7} />
           <div style={{ height: 22 }} />
           <SkeletonTable rows={6} cols={8} />
         </>
@@ -641,7 +671,7 @@ function ModaleAffecter({ ligne, onFermer, onFait }) {
     if (enCours || !choisi) return
     const ok = await confirmDialog({
       title: `Affecter « ${choisi.titre} » à ${ligne.nom} ?`,
-      message: `${mode === 'parcours' ? 'Parcours' : 'Module'}${echeance ? `, échéance le ${jourParis(echeance)}` : ', sans échéance'}${obligatoire ? ', obligatoire' : ', facultatif'}. Une affectation déjà existante n est pas dupliquée.`,
+      message: `${mode === 'parcours' ? 'Parcours' : 'Module'}${echeance ? `, échéance le ${jourParis(echeance)}` : ', sans échéance'}${obligatoire ? ', obligatoire' : ', facultatif'}. Une affectation déjà existante n’est pas dupliquée.`,
       confirmLabel: 'Affecter',
     })
     if (!ok) return
@@ -677,7 +707,7 @@ function ModaleAffecter({ ligne, onFermer, onFait }) {
         <>
           <div className="form-group">
             <span className="form-label">Quoi</span>
-            <div className="acp-puces" role="group" aria-label="Type d affectation">
+            <div className="acp-puces" role="group" aria-label="Type d’affectation">
               <button type="button" className={`acp-puce${mode === 'parcours' ? ' on' : ''}`} aria-pressed={mode === 'parcours'} onClick={() => setMode('parcours')}>Un parcours</button>
               <button type="button" className={`acp-puce${mode === 'module' ? ' on' : ''}`} aria-pressed={mode === 'module'} onClick={() => setMode('module')}>Un module publié</button>
             </div>
@@ -692,7 +722,7 @@ function ModaleAffecter({ ligne, onFermer, onFait }) {
                 ))}
               </select>
               {parcours.length === 0 && <div className="form-hint">Aucun parcours actif.</div>}
-              {choisi && !parcoursAffectable && <div className="form-hint">Publiez au moins un module de ce parcours avant de l affecter.</div>}
+              {choisi && !parcoursAffectable && <div className="form-hint">Publiez au moins un module de ce parcours avant de l’affecter.</div>}
             </div>
           ) : (
             <div className="form-group">
@@ -701,14 +731,14 @@ function ModaleAffecter({ ligne, onFermer, onFait }) {
                 <option value="">Choisir un module</option>
                 {modules.map((m) => <option key={m.id} value={m.id}>{m.titre}</option>)}
               </select>
-              {modules.length === 0 && <div className="form-hint">Aucun module publié : publiez une version depuis l administration.</div>}
+              {modules.length === 0 && <div className="form-hint">Aucun module publié : publiez une version depuis l’administration.</div>}
             </div>
           )}
           <div className="form-row form-row-2">
             <div className="form-group">
               <label className="form-label" htmlFor="acp-affecter-echeance">Échéance</label>
               <input id="acp-affecter-echeance" className="form-input" type="date" value={echeance} onChange={(e) => setEcheance(e.target.value)} />
-              <div className="form-hint">Facultative. Sans échéance, aucun retard n est compté.</div>
+              <div className="form-hint">Facultative. Sans échéance, aucun retard n’est compté.</div>
             </div>
             <div className="form-group">
               <span className="form-label">Caractère</span>
@@ -753,8 +783,8 @@ function ModaleEcheance({ ligne, onFermer, onFait }) {
   async function valider() {
     if (enCours || !choisie) return
     const ok = await confirmDialog({
-      title: `Modifier l échéance de « ${choisie.titre} » ?`,
-      message: `${ligne.nom} : ${echeance ? `nouvelle échéance le ${jourParis(echeance)}` : 'plus d échéance'}, ${obligatoire ? 'obligatoire' : 'facultatif'}.`,
+      title: `Modifier l’échéance de « ${choisie.titre} » ?`,
+      message: `${ligne.nom} : ${echeance ? `nouvelle échéance le ${jourParis(echeance)}` : 'plus d’échéance'}, ${obligatoire ? 'obligatoire' : 'facultatif'}.`,
       confirmLabel: 'Enregistrer',
     })
     if (!ok) return
@@ -799,7 +829,7 @@ function ModaleEcheance({ ligne, onFermer, onFait }) {
               <div className="form-group">
                 <label className="form-label" htmlFor="acp-echeance-date">Échéance</label>
                 <input id="acp-echeance-date" className="form-input" type="date" value={echeance} onChange={(e) => setEcheance(e.target.value)} />
-                <div className="form-hint">Vider la date retire l échéance.</div>
+                <div className="form-hint">Vider la date retire l’échéance.</div>
               </div>
               <div className="form-group">
                 <span className="form-label">Caractère</span>
@@ -819,7 +849,7 @@ function ModaleEcheance({ ligne, onFermer, onFait }) {
 function ModaleRelance({ ligne, onFermer }) {
   const texte = texteRelance(ligne)
   const restants = Math.max(0, nombre(ligne.modules_affectes) - nombre(ligne.modules_valides))
-  const objet = `Formation : ${pluriel(restants, 'module', 'modules')} à valider`
+  const objet = `Formation : ${pluriel(restants, 'deck', 'decks')} à valider`
 
   async function copier() {
     try {

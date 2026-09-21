@@ -1,7 +1,7 @@
-// Attestation interne de l Academy. jsPDF ne se teste pas ici (import
+// Attestation interne de l’Academy. jsPDF ne se teste pas ici (import
 // dynamique au clic) ; on verrouille la formulation du corps, qui est la
 // seule source du texte imprime, la date lue a Paris, le nom du fichier, et
-// l absence de toute mention de remuneration.
+// l’absence de toute mention de remuneration.
 
 import { describe, it, expect } from 'vitest'
 import {
@@ -21,7 +21,7 @@ const DONNEES = {
 }
 
 describe('texteAttestation', () => {
-  it('ecrit le corps complet dans l ordre : atteste, competence, score, date, numero, relecteur', () => {
+  it('ecrit le corps complet dans l’ordre : atteste, competence, score, date, numero, relecteur', () => {
     expect(texteAttestation(DONNEES)).toEqual([
       'Entasis Conseil atteste que Camille Exemple a suivi et validé le module de formation interne « Le PER individuel, du recueil à la souscription ».',
       'Compétence travaillée : Expliquer la fiscalité à l\'entrée et à la sortie d\'un PER.',
@@ -46,7 +46,7 @@ describe('texteAttestation', () => {
     ])
   })
 
-  it('ne parle jamais de remuneration, et la mention interne dit ce que le document n est pas', () => {
+  it('ne parle jamais de remuneration, et la mention interne dit ce que le document n’est pas', () => {
     const tout = [...texteAttestation(DONNEES), MENTION_INTERNE].join(' ')
     expect(tout).not.toMatch(/r[ée]mun[ée]ration|commission|marge|honoraires/i)
     expect(MENTION_INTERNE).toMatch(/^Document interne à Entasis Conseil\./)

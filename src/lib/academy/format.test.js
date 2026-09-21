@@ -8,7 +8,7 @@ describe('formatDuree', () => {
     expect(formatDuree(null)).toBe('0 min')
     expect(formatDuree(-5)).toBe('0 min')
   })
-  it('arrondit à la minute sous l heure', () => {
+  it('arrondit à la minute sous l’heure', () => {
     expect(formatDuree(30)).toBe('1 min')
     expect(formatDuree(120)).toBe('2 min')
     expect(formatDuree(150)).toBe('3 min')
@@ -23,11 +23,11 @@ describe('formatDuree', () => {
 })
 
 describe('jourParis et dateHeureParis', () => {
-  it('affiche un horodatage UTC au jour de Paris, heure d été comprise', () => {
+  it('affiche un horodatage UTC au jour de Paris, heure d’été comprise', () => {
     expect(jourParis('2026-09-21T22:30:00Z')).toBe('22/09/2026')
     expect(dateHeureParis('2026-09-21T22:30:00Z')).toBe('22/09/2026 à 00h30')
   })
-  it('respecte l heure d hiver', () => {
+  it('respecte l’heure d’hiver', () => {
     expect(jourParis('2026-12-21T23:30:00+00:00')).toBe('22/12/2026')
     expect(dateHeureParis('2026-12-21T23:30:00+00:00')).toBe('22/12/2026 à 00h30')
     expect(dateHeureParis('2026-12-21T08:05:00+00:00')).toBe('21/12/2026 à 09h05')
@@ -46,7 +46,7 @@ describe('jourParis et dateHeureParis', () => {
 })
 
 describe('pourcentage', () => {
-  it('arrondit à l entier et rend 0 sur un dénominateur nul', () => {
+  it('arrondit à l’entier et rend 0 sur un dénominateur nul', () => {
     expect(pourcentage(1, 3)).toBe(33)
     expect(pourcentage(2, 3)).toBe(67)
     expect(pourcentage(5, 5)).toBe(100)

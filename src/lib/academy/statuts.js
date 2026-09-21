@@ -4,14 +4,14 @@
 // Spec docs/superpowers/specs/2026-09-21-entasis-academy-design.md, §3.4 :
 // une affectation porte un statut (non_commence, en_cours, a_revoir,
 // valide) et le retard est un indicateur distinct, calculé depuis
-// l échéance. Rien ici ne touche au réseau ni à React : la date du jour est
+// l’échéance. Rien ici ne touche au réseau ni à React : la date du jour est
 // toujours un paramètre `aujourdhui` (ISO AAAA MM JJ), ce qui rend chaque
 // règle testable à date fixe.
 //
 // Les dates arrivent en `date` Postgres (AAAA MM JJ) ; par prudence on ne
-// garde que le jour d un éventuel horodatage. Les différences se comptent
+// garde que le jour d’un éventuel horodatage. Les différences se comptent
 // en jours calendaires, à minuit local, avec un arrondi qui absorbe le
-// changement d heure (voir joursDeRetard dans ma-journee.js).
+// changement d’heure (voir joursDeRetard dans ma-journee.js).
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { jourISO } from '../ma-journee'
@@ -23,6 +23,34 @@ export const STATUTS = {
   valide: 'Validé',
 }
 
+/** Les huit types d’exercice d’un deck, dans l’ordre des formulaires d’administration. */
+export const LIBELLE_TYPES = {
+  choix: 'Choix unique',
+  vrai_faux: 'Vrai ou faux',
+  multi: 'Choix multiples',
+  ordre: 'Remettre dans l’ordre',
+  association: 'Associer',
+  trou_choix: 'Texte à trou',
+  trou_saisie: 'Texte à compléter',
+  carte: 'Carte mémoire',
+}
+
+/** Le libellé d’un type d’exercice, la clé telle quelle pour un type inconnu. */
+export function libelleType(type) {
+  return LIBELLE_TYPES[type] || String(type || '')
+}
+
+/**
+ * « Aucune couronne », « 1 couronne », « 2 couronnes »… Les couronnes vont
+ * de 0 à 5 (academy_couronnes) ; une valeur hors bornes est ramenée dedans,
+ * une valeur illisible vaut zéro.
+ */
+export function libelleCouronnes(n) {
+  const c = Math.max(0, Math.min(5, Math.floor(Number(n) || 0)))
+  if (c === 0) return 'Aucune couronne'
+  return `${c} couronne${c > 1 ? 's' : ''}`
+}
+
 const BADGES = {
   non_commence: 'badge badge-normal',
   en_cours: 'badge badge-progress',
@@ -30,12 +58,12 @@ const BADGES = {
   valide: 'badge badge-signed',
 }
 
-/** La classe CSS du badge d un statut, badge normal pour un statut inconnu. */
+/** La classe CSS du badge d’un statut, badge normal pour un statut inconnu. */
 export function classeBadge(statut) {
   return BADGES[statut] || BADGES.non_commence
 }
 
-// Le jour d une valeur : un Date injecté passe par jourISO (jour local,
+// Le jour d’une valeur : un Date injecté passe par jourISO (jour local,
 // comme partout dans le CRM), une chaîne date ou horodatage garde son jour,
 // une valeur vide donne null.
 const jour = (v) => {
@@ -45,8 +73,8 @@ const jour = (v) => {
 
 /**
  * Jours calendaires entre deux dates, positif si `jusqua` est après
- * `depuis`. Minuit local des deux côtés et arrondi : le passage à l heure
- * d été ou d hiver ne fait ni perdre ni gagner un jour.
+ * `depuis`. Minuit local des deux côtés et arrondi : le passage à l’heure
+ * d’été ou d’hiver ne fait ni perdre ni gagner un jour.
  */
 export function joursEntre(depuis, jusqua) {
   const a = new Date(jour(depuis) + 'T00:00:00')
@@ -56,7 +84,7 @@ export function joursEntre(depuis, jusqua) {
 
 const estValide = (a) => a?.statut === 'valide'
 
-/** Vrai si l échéance est dépassée et le module pas validé. Sans échéance : jamais. */
+/** Vrai si l’échéance est dépassée et le module pas validé. Sans échéance : jamais. */
 export function enRetard(affectation, aujourdhui) {
   const e = jour(affectation?.echeance)
   if (!e || estValide(affectation)) return false
@@ -66,7 +94,7 @@ export function enRetard(affectation, aujourdhui) {
 const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`
 
 /**
- * Le texte d échéance affiché sous un module :
+ * Le texte d’échéance affiché sous un module :
  *   'Validé'                          module validé, quelle que soit la date
  *   ''                                sans échéance
  *   'Échéance dépassée de N jour(s)'  en retard
@@ -83,13 +111,13 @@ export function libelleEcheance(affectation, aujourdhui) {
   return `À rendre dans ${pluriel(n, 'jour')}`
 }
 
-/** Une révision est faite dès qu une tentative ou un résultat lui est attaché. */
+/** Une révision est faite dès qu’une tentative ou un résultat lui est attaché. */
 export const revisionFaite = (r) => r?.tentative_id != null || r?.resultat != null
 
 /**
  * Vrai si la révision est à faire aujourd hui : pas encore faite, et
  * échéance atteinte. Le drapeau `due` posé par la RPC est honoré, mais on
- * recalcule toujours depuis la date pour ne pas dépendre de l heure du
+ * recalcule toujours depuis la date pour ne pas dépendre de l’heure du
  * serveur au moment de la lecture.
  */
 export function revisionDue(revision, aujourdhui) {
@@ -107,11 +135,11 @@ const parEcheance = (a, b) => {
   return ea < eb ? -1 : 1
 }
 
-// Les leçons sont finies quand il n en reste aucune à ouvrir.
+// Les leçons sont finies quand il n’en reste aucune à ouvrir.
 const leconsFinies = (a) =>
   !a.prochaine_lecon || (Number(a.nb_lecons) > 0 && Number(a.lecons_terminees) >= Number(a.nb_lecons))
 
-// L item de la prochaine action pour une affectation : la leçon à
+// L’item de la prochaine action pour une affectation : la leçon à
 // reprendre, ou le quiz quand toutes les leçons sont terminées.
 function itemAffectation(a) {
   const base = { id: a.id, titre: a.titre, slug: a.slug, version_id: a.version_id }
@@ -126,14 +154,14 @@ function itemAffectation(a) {
 }
 
 /**
- * La seule chose à faire maintenant, dans l ordre des priorités :
+ * La seule chose à faire maintenant, dans l’ordre des priorités :
  *   1. une révision due, la plus ancienne
  *   2. un module en retard, le plus en retard
  *   3. un module en cours ou à revoir, échéance la plus proche
  *   4. un module non commencé, échéance la plus proche puis obligatoire
  *   5. rien : null
  *
- * `parcours` est l objet rendu par academy_mon_parcours.
+ * `parcours` est l’objet rendu par academy_mon_parcours.
  */
 export function prochaineAction(parcours, aujourdhui) {
   const revisions = Array.isArray(parcours?.revisions) ? parcours.revisions : []
@@ -174,9 +202,9 @@ export function progressionPct(affectation) {
 }
 
 /**
- * Les modules d un parcours qui ont une version publiée : seuls ceux là
- * s affectent. Un parcours dont aucun module n est publié donne zéro
- * affectation, il faut le dire avant le clic plutôt qu après.
+ * Les modules d’un parcours qui ont une version publiée : seuls ceux là
+ * s’affectent. Un parcours dont aucun module n’est publié donne zéro
+ * affectation, il faut le dire avant le clic plutôt qu’après.
  * @param {{modules?: Array<{module_id: string}>}} parcours
  * @param {Array<{id: string, versions?: Array<{statut: string}>}>} modules
  * @returns {{ publies: number, total: number }}
@@ -189,7 +217,7 @@ export function modulesPubliesDuParcours(parcours, modules) {
   return { publies: liste.filter((pm) => publie.has(pm.module_id)).length, total: liste.length }
 }
 
-/** Le libellé d un parcours dans un sélecteur d affectation. */
+/** Le libellé d’un parcours dans un sélecteur d’affectation. */
 export function libelleParcoursAffectable(parcours, modules) {
   const { publies, total } = modulesPubliesDuParcours(parcours, modules)
   if (total === 0) return `${parcours.titre} (aucun module)`

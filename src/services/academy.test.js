@@ -1,9 +1,10 @@
-// Service Entasis Academy. Ce que ces tests verrouillent : la position de
-// lecture s ecrit sur la bonne table avec la bonne cle de conflit et se
-// termine par .select('id') (un refus silencieux de la RLS doit lever), les
-// fonctions SQL recoivent leurs parametres sous le nom attendu par la base,
-// le rejeu ne concerne que les coupures reseau, et une liste vide reste une
-// liste.
+// Service Entasis Academy. Ce que ces tests verrouillent : les fonctions SQL
+// recoivent leurs parametres sous le nom attendu par la base (une session
+// d entrainement se joue par demarrerEntrainement, repondre et
+// terminerEntrainement), le rejeu ne concerne que les coupures reseau et
+// seules les ecritures idempotentes en beneficient, les ecritures directes
+// se terminent par .select('id') (un refus silencieux de la RLS doit
+// lever), et une liste vide reste une liste.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
@@ -43,7 +44,10 @@ vi.mock('../lib/logger', () => ({
 
 const { logger } = await import('../lib/logger')
 const svc = await import('./academy')
-const { sauverPosition, ouvrirTentative, avecRetry, estErreurReseau, mesRappels, listerCatalogue, commenterCoaching, enregistrerParametres } = svc
+const {
+  avecRetry, estErreurReseau, mesRappels, listerCatalogue, commenterCoaching, enregistrerParametres,
+  demarrerEntrainement, repondre, terminerEntrainement, mesResultats, objectifQuotidien, enregistrerItem,
+} = svc
 
 beforeEach(() => {
   appels.length = 0
@@ -53,54 +57,121 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-describe('sauverPosition', () => {
-  it('met a jour la ligne existante sur academy_progression_lecons et se termine par select id', async () => {
-    reponses = [{ data: [{ id: 'p1' }], error: null }]
-    const lignes = await sauverPosition('l1', 'v1', { bloc: 3 })
-    expect(lignes).toEqual([{ id: 'p1' }])
-    expect(appels).toHaveLength(1)
-    const b = appels[0]
-    expect(b.table).toBe('academy_progression_lecons')
-    const patch = b.etapes.find(([n]) => n === 'update')[1]
-    expect(patch.position).toEqual({ bloc: 3 })
-    expect(Object.keys(patch).sort()).toEqual(['position', 'updated_at'])
-    expect(b.etapes).toContainEqual(['eq', 'profile_id', 'u1'])
-    expect(b.etapes).toContainEqual(['eq', 'lecon_id', 'l1'])
-    expect(b.etapes[b.etapes.length - 1]).toEqual(['select', 'id'])
-  })
-
-  it('cree la ligne quand elle manque, avec la cle de conflit profile_id,lecon_id', async () => {
-    reponses = [{ data: [], error: null }, { data: [{ id: 'p2' }], error: null }]
-    const lignes = await sauverPosition('l1', 'v1', { bloc: 1 })
-    expect(lignes).toEqual([{ id: 'p2' }])
-    expect(appels).toHaveLength(2)
-    const b = appels[1]
-    expect(b.table).toBe('academy_progression_lecons')
-    const [, ligne, options] = b.etapes.find(([n]) => n === 'upsert')
-    expect(ligne).toEqual({ profile_id: 'u1', lecon_id: 'l1', version_id: 'v1', position: { bloc: 1 } })
-    expect(options.onConflict).toBe('profile_id,lecon_id')
-    expect(b.etapes[b.etapes.length - 1]).toEqual(['select', 'id'])
-  })
-
-  it('leve quand la base ne touche aucune ligne, et le journalise', async () => {
-    reponses = [{ data: [], error: null }]
-    await expect(sauverPosition('l1', 'v1', {})).rejects.toThrow(/refusé/)
-    expect(logger.error).toHaveBeenCalledWith('[academy] sauverPosition', expect.any(Error))
-  })
-
-  it('ne touche pas la base sans session', async () => {
-    utilisateur = null
-    await expect(sauverPosition('l1', 'v1', {})).rejects.toThrow(/Session expirée/)
-    expect(appels).toHaveLength(0)
-  })
-})
-
 describe('fonctions SQL', () => {
-  it('ouvrirTentative appelle academy_ouvrir_tentative avec p_version_id, p_type et p_jeton', async () => {
-    reponses = [{ data: { tentative_id: 't1', questions: [] }, error: null }]
-    const t = await ouvrirTentative('v1', 'quiz', 'j1')
-    expect(t).toEqual({ tentative_id: 't1', questions: [] })
-    expect(rpcs).toEqual([['academy_ouvrir_tentative', { p_version_id: 'v1', p_type: 'quiz', p_jeton: 'j1' }]])
+  it('demarrerEntrainement appelle academy_demarrer_entrainement avec p_version_id et p_jeton', async () => {
+    const session = { entrainement_id: 'e1', version_id: 'v1', titre: 'Le PER', slug: 'per', items: [], reponses_deja: [] }
+    reponses = [{ data: session, error: null }]
+    expect(await demarrerEntrainement('v1', 'j1')).toEqual(session)
+    expect(rpcs).toEqual([['academy_demarrer_entrainement', { p_version_id: 'v1', p_jeton: 'j1' }]])
+  })
+
+  it('demarrerEntrainement refuse de partir sans deck ou sans jeton', async () => {
+    await expect(demarrerEntrainement(null, 'j1')).rejects.toThrow(/identifiant/)
+    await expect(demarrerEntrainement('v1', '')).rejects.toThrow(/jeton/)
+    expect(rpcs).toHaveLength(0)
+  })
+
+  it('repondre appelle academy_repondre avec la session, l item et la reponse telle quelle', async () => {
+    const correction = { correcte: true, bonne_reponse: 2, explication: 'Parce que.', force: 1, deja: false }
+    reponses = [{ data: correction, error: null }]
+    expect(await repondre('e1', 'i1', 2)).toEqual(correction)
+    expect(rpcs).toEqual([['academy_repondre', { p_entrainement_id: 'e1', p_item_id: 'i1', p_reponse: 2 }]])
+
+    await repondre('e1', 'i2', [[0, 1], [1, 0]])
+    expect(rpcs[1][1].p_reponse).toEqual([[0, 1], [1, 0]])
+    await repondre('e1', 'i3', { su: false })
+    expect(rpcs[2][1].p_reponse).toEqual({ su: false })
+    await repondre('e1', 'i4', undefined)
+    expect(rpcs[3][1].p_reponse).toBeNull()
+  })
+
+  it('repondre refuse une reponse sans session ou sans item, sans toucher la base', async () => {
+    await expect(repondre(null, 'i1', 0)).rejects.toThrow(/sans session/)
+    await expect(repondre('e1', null, 0)).rejects.toThrow(/sans session/)
+    expect(rpcs).toHaveLength(0)
+  })
+
+  it('repondre rejoue une coupure reseau puis rend la correction (avecRetry)', async () => {
+    vi.useFakeTimers()
+    try {
+      reponses = [
+        { data: null, error: new TypeError('Failed to fetch') },
+        { data: { correcte: false, bonne_reponse: 1, explication: '', force: 0, deja: false }, error: null },
+      ]
+      const promesse = repondre('e1', 'i1', 0)
+      await vi.advanceTimersByTimeAsync(800)
+      const r = await promesse
+      expect(r.correcte).toBe(false)
+      expect(rpcs).toHaveLength(2)
+      expect(rpcs.every(([n]) => n === 'academy_repondre')).toBe(true)
+      expect(logger.error).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('repondre ne rejoue pas une erreur de la base et la journalise', async () => {
+    reponses = [{ data: null, error: new Error('Session terminee') }]
+    await expect(repondre('e1', 'i1', 0)).rejects.toThrow(/Session terminee/)
+    expect(rpcs).toHaveLength(1)
+    expect(logger.error).toHaveBeenCalledWith('[academy] repondre', expect.any(Error))
+  })
+
+  it('terminerEntrainement appelle academy_terminer_entrainement et rend le resume', async () => {
+    const resume = { entrainement_id: 'e1', nb_bons: 10, nb_total: 12, xp: 110, serie: 3, couronnes_avant: 1, couronnes_apres: 2, valide: false, attestation: null, erreurs: [] }
+    reponses = [{ data: resume, error: null }]
+    expect(await terminerEntrainement('e1')).toEqual(resume)
+    expect(rpcs).toEqual([['academy_terminer_entrainement', { p_entrainement_id: 'e1' }]])
+    await expect(terminerEntrainement('')).rejects.toThrow(/identifiant/)
+  })
+
+  it('terminerEntrainement rejoue lui aussi une coupure reseau', async () => {
+    vi.useFakeTimers()
+    try {
+      reponses = [
+        { data: null, error: new TypeError('Load failed') },
+        { data: { nb_bons: 1, nb_total: 1 }, error: null },
+      ]
+      const promesse = terminerEntrainement('e1')
+      await vi.advanceTimersByTimeAsync(800)
+      expect(await promesse).toEqual({ nb_bons: 1, nb_total: 1 })
+      expect(rpcs).toHaveLength(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('mesResultats appelle academy_mes_resultats sans parametre', async () => {
+    const resultats = { serie: 2, meilleure: 5, xp_total: 300, sessions: [], semaines: [], items_faibles: [] }
+    reponses = [{ data: resultats, error: null }]
+    expect(await mesResultats()).toEqual(resultats)
+    expect(rpcs).toEqual([['academy_mes_resultats', undefined]])
+  })
+
+  it('objectifQuotidien envoie un entier, 1 par defaut, et accepte un retour vide', async () => {
+    reponses = [{ data: null, error: null }]
+    expect(await objectifQuotidien(3)).toBeNull()
+    expect(await objectifQuotidien('2')).toBeNull()
+    expect(await objectifQuotidien('abc')).toBeNull()
+    expect(rpcs).toEqual([
+      ['academy_objectif_quotidien', { p_objectif: 3 }],
+      ['academy_objectif_quotidien', { p_objectif: 2 }],
+      ['academy_objectif_quotidien', { p_objectif: 1 }],
+    ])
+  })
+
+  it('enregistrerItem cree (item null) ou modifie un exercice par academy_enregistrer_item', async () => {
+    reponses = [{ data: 'i9', error: null }]
+    const patch = { type: 'choix', competence: 'Sortie du PER', difficulte: 1, payload: { enonce: 'Q', choix: ['a', 'b'] }, corrige: { index: 1 }, explication: 'b.' }
+    expect(await enregistrerItem('v1', null, patch)).toBe('i9')
+    await enregistrerItem('v1', 'i9', { archive: true })
+    await enregistrerItem('v1', 'i9')
+    expect(rpcs).toEqual([
+      ['academy_enregistrer_item', { p_version_id: 'v1', p_item_id: null, p_patch: patch }],
+      ['academy_enregistrer_item', { p_version_id: 'v1', p_item_id: 'i9', p_patch: { archive: true } }],
+      ['academy_enregistrer_item', { p_version_id: 'v1', p_item_id: 'i9', p_patch: {} }],
+    ])
+    await expect(enregistrerItem(null, null, patch)).rejects.toThrow(/identifiant/)
   })
 
   it('mesRappels et listerCatalogue rendent un tableau vide quand la base rend null', async () => {
