@@ -61,6 +61,9 @@ const RattrapageFiches = lazy(() => import('./components/clients/RattrapageFiche
 const DoublonsClients = lazy(() => import('./components/clients/DoublonsClients'))
 const Rentabilite = lazy(() => import('./components/Rentabilite'))
 const Campagnes = lazy(() => import('./components/Campagnes'))
+// Entasis Academy : la formation interne, chargee a la demande (marked et
+// chart.js restent hors du paquet de connexion).
+const Academy = lazy(() => import('./components/academy/Academy'))
 const ClientView = lazy(() => import('./components/clients/ClientView'))
 // Conformite embarque jspdf : lazy pour rester hors du bundle de login.
 const Conformite = lazy(() => import('./components/Conformite'))
@@ -194,6 +197,7 @@ const Icon = {
   Kanban:    ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><rect x="2" y="3" width="4" height="14" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".8"/><rect x="8" y="3" width="4" height="10" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".6"/><rect x="14" y="3" width="4" height="12" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".5"/></svg>,
   Money:     ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="10" rx="2" stroke="currentColor" strokeWidth="1.4" opacity=".85"/><circle cx="10" cy="10" r="2.6" stroke="currentColor" strokeWidth="1.4" opacity=".7"/><path d="M5 8v4M15 8v4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".45"/></svg>,
   Editorial: ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><path d="M4.5 15.5l1-3.5 8-8a1.77 1.77 0 012.5 2.5l-8 8-3.5 1z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill="none" opacity=".85"/><path d="M11.5 6l2.5 2.5" stroke="currentColor" strokeWidth="1.2" opacity=".5"/><path d="M3.5 18.5h13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".4"/></svg>,
+  Formation: ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><path d="M10 3.5l8 3.5-8 3.5-8-3.5 8-3.5z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill="none" opacity=".85"/><path d="M5 9v4.5c0 1.2 2.2 2.5 5 2.5s5-1.3 5-2.5V9" stroke="currentColor" strokeWidth="1.4" fill="none" opacity=".7"/><path d="M18 7v4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".7"/></svg>,
   Outils:    ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.4" fill="none" opacity=".8"/><path d="M10 2v3M10 15v3M2 10h3M15 10h3M4.2 4.2l2.1 2.1M13.7 13.7l2.1 2.1M4.2 15.8l2.1-2.1M13.7 6.3l2.1-2.1" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" opacity=".6"/></svg>,
   LinkedIn:  ()=><svg className="nav-item-icon" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.3" fill="none" opacity=".8"/><path d="M7 9v4M7 7v.01" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" opacity=".7"/><path d="M10 13v-2.5c0-1 .5-1.5 1.5-1.5s1.5.5 1.5 1.5V13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity=".7"/></svg>,
   Search:    ({size=13})=><svg width={size} height={size} viewBox="0 0 13 13" fill="none" aria-hidden="true"><circle cx="5.6" cy="5.6" r="4" stroke="currentColor" strokeWidth="1.4" fill="none"/><path d="M8.6 8.6L11.5 11.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
@@ -791,7 +795,7 @@ function AuthScreen() {
 /* ─────────────────────────────────────────────────────────────────────────────
    SIDEBAR
 ───────────────────────────────────────────────────────────────────────────── */
-function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,month,dossiersImmoCount,editorialCount,mobileOpen,onCloseMobile}){
+function Sidebar({profile,canSmartRh,formationOuverte,activeTab,setActiveTab,onSignOut,deals,month,dossiersImmoCount,editorialCount,mobileOpen,onCloseMobile}){
   // Acces RH delegue : drapeau profiles.rh_delegue (miroir de public.is_rh()
   // en base). Recalcule ici, la Sidebar est un composant separe du App.
   const isRhDelegue = profile?.rh_delegue === true
@@ -819,7 +823,7 @@ function Sidebar({profile,canSmartRh,activeTab,setActiveTab,onSignOut,deals,mont
   //   manager-only de editorial_packages). Badge = packages en attente.
   // - Rémunération ouverte à tous : le composant sépare vue équipe /
   //   vue personnelle via RLS conseiller_contrats.
-  const domains = buildNavDomains({ isManager, isRhDelegue, canSmartRh, accesPnl: !!profile?.acces_pnl })
+  const domains = buildNavDomains({ isManager, isRhDelegue, canSmartRh, accesPnl: !!profile?.acces_pnl, adminFormation: profile?.academy_admin === true, formationOuverte: formationOuverte === true })
 
   // Compteurs affichés en badge, agrégés au niveau du domaine.
   const badgeValues = {
@@ -1001,7 +1005,7 @@ async function genererFicheParrainage(profile){
 // portent déjà l'identité visuelle de chaque écran.
 // Ecrans ou les actions commerciales de la barre du haut ont un sens
 const ECRANS_COMMERCIAUX = ['dashboard','pipeline','dossiers','clients','multi-equipement','leads','agenda','forecast']
-const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers','multi-equipement':'Multi-équipement',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers',team:'Équipe',leads:'Leads','ucs-structures':'UCS Produits Structurés',allocations:'Allocations types',partenaires:'Partenaires · annuaire',immobilier:'Immobilier · dossiers transmis',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH',connexions:'Connexions au CRM','recrutement':'Recrutement',conformite:'Conformité',editorial:'Agent éditorial',cockpit:'Cockpit ratios',rentabilite:'Chiffres & Rentabilité'}
+const PAGE_TITLES={dashboard:'Vue d\'ensemble',pipeline:'Pipeline commercial',clients:'Clients & dossiers','multi-equipement':'Multi-équipement',forecast:'Management / Prévisionnel',agenda:'Agenda & Relances',market:'Marchés financiers',team:'Équipe',leads:'Leads','ucs-structures':'UCS Produits Structurés',allocations:'Allocations types',partenaires:'Partenaires · annuaire',immobilier:'Immobilier · dossiers transmis',remuneration:'Rémunération',outils:'Outils CGP','smart-rh':'Smart RH · congés','pilotage-rh':'Pilotage RH',connexions:'Connexions au CRM','recrutement':'Recrutement',conformite:'Conformité',editorial:'Agent éditorial',cockpit:'Cockpit ratios',rentabilite:'Chiffres & Rentabilité',formation:'Formation · Entasis Academy'}
 
 function TopBar({activeTab,month,setMonth,onNewDeal,onRefresh,onMobileMenu,profile,onHelp,notifications,notifScope}){
   return (
@@ -4927,6 +4931,15 @@ export default function App(){
   // (l ancien onglet Dossiers, absorbe ici — meme donnees, un chemin de moins).
   const [clientsVue,setClientsVue]=useState('annuaire')
   const [leadsVue,setLeadsVue]=useState('entrants')
+  // Entasis Academy : la route interne du domaine Formation, lue depuis le
+  // hash apres #/formation/ (parcours, catalogue, module/<slug>, lecon/<id>,
+  // quiz/<version>, resultats, pilotage, fiche/<id>, administration...).
+  const [formationRoute,setFormationRoute]=useState(['parcours'])
+  const [academyRappels,setAcademyRappels]=useState([])
+  // Vrai des qu un module est publie : avant, seule la direction voit
+  // l onglet. null tant que la reponse n est pas arrivee, pour ne pas
+  // renvoyer a l accueil un conseiller qui ouvre un lien #/formation.
+  const [formationOuverte,setFormationOuverte]=useState(null)
   const [dossiersImmoCount,setDossiersImmoCount]=useState(0)
   const [editorialPending,setEditorialPending]=useState({count:0,nextDeadline:null})
   const [reloadCallback,setReloadCallback]=useState(null) // Callback après sauvegarde deal
@@ -4976,6 +4989,21 @@ export default function App(){
         if (isMounted.current) setCongesEnAttente((list || []).filter(c => c.statut === 'en_attente'))
       })
       .catch(() => { /* signal secondaire : un échec ne doit rien casser */ })
+  }, [profile, activeTab])
+
+  // Entasis Academy : revisions dues, affectations en retard et echeances
+  // proches, pour la cloche. Rafraichi au changement d onglet comme les
+  // autres signaux secondaires ; un echec ne casse rien.
+  useEffect(() => {
+    if (!profile) { setAcademyRappels([]); setFormationOuverte(null); return }
+    import('./services/academy')
+      .then((svc) => Promise.all([svc.mesRappels(), svc.formationOuverte()]))
+      .then(([liste, ouverte]) => {
+        if (!isMounted.current) return
+        setAcademyRappels(Array.isArray(liste) ? liste : [])
+        setFormationOuverte(ouverte === true)
+      })
+      .catch(() => { /* signal secondaire : un echec ne doit rien casser */ })
   }, [profile, activeTab])
 
   // Raccourcis clavier globaux : Ctrl/Cmd+K ouvre la palette, « / » focus la
@@ -5039,6 +5067,12 @@ export default function App(){
     isManager: profile?.role === 'manager',
     isRhDelegue: profile?.rh_delegue === true,
     accesPnl: profile?.acces_pnl === true,
+    adminFormation: profile?.academy_admin === true,
+    // Tant que la reponse n est pas arrivee (null), l onglet compte comme
+    // accessible : un conseiller qui ouvre un lien #/formation ne doit pas
+    // etre renvoye a l accueil avant qu on sache. Le menu, lui, n affiche
+    // l onglet qu une fois la publication confirmee.
+    formationOuverte: formationOuverte !== false,
     canSmartRh: profile?.role === 'manager' || profile?.rh_delegue === true || !['STAGIAIRE', 'MANDATAIRE'].includes(String(contractType || '').toUpperCase()),
   }))
 
@@ -5078,6 +5112,15 @@ export default function App(){
           }
         }
         if (tab === 'leads') setLeadsVue(parts[1] === 'live' ? 'live' : 'entrants')
+        if (tab === 'formation') {
+          // Les vues de direction ne se posent que pour qui y a droit ; un
+          // conseiller qui suit ce lien retombe sur son parcours.
+          const direction = profile?.role === 'manager' || profile?.academy_admin === true
+          const reste = parts.slice(1)
+          const tete = reste[0] || 'parcours'
+          const reserve = ['pilotage', 'fiche', 'administration'].includes(tete)
+          setFormationRoute(reserve && !direction && !(tete === 'fiche' && reste[1] === profile?.id) ? ['parcours'] : (reste.length ? reste : ['parcours']))
+        }
       }
       // Libéré après le commit du batch : l'effet écrivain (ci-dessous) voit
       // encore le drapeau levé et ne réécrit pas le hash qu'on vient de lire.
@@ -5101,6 +5144,7 @@ export default function App(){
       else next = '#/clients'
     }
     if (activeTab === 'leads') next = leadsVue === 'live' ? '#/leads/live' : '#/leads'
+    if (activeTab === 'formation') next = '#/formation/' + formationRoute.map(encodeURIComponent).join('/')
     if (window.location.hash !== next) {
       // Première écriture en replaceState (pas d'entrée d'historique parasite
       // au chargement) ; ensuite chaque navigation pousse une entrée → le
@@ -5109,7 +5153,7 @@ export default function App(){
       else window.history.replaceState(null, '', next)
     }
     wroteHashOnce.current = true
-  }, [session, profile, activeTab, clientsVue, selectedClientId, leadsVue])
+  }, [session, profile, activeTab, clientsVue, selectedClientId, leadsVue, formationRoute])
 
   // Si l'onglet actif devient inaccessible après coup — contractType arrive
   // en async et peut retirer Smart RH d'un stagiaire, un rôle peut changer —
@@ -5120,7 +5164,7 @@ export default function App(){
     if (!visibleTabsRef.current.has(activeTab)) setActiveTab('dashboard')
     // Meme garde pour les sous vues de Clients reservees a la direction.
     if ((clientsVue === 'rattrapage' || clientsVue === 'campagnes') && profile.role !== 'manager') setClientsVue('annuaire')
-  }, [session, profile, activeTab, contractType, clientsVue])
+  }, [session, profile, activeTab, contractType, clientsVue, formationOuverte])
 
   // ── Leads — fetch + Realtime + polling de secours 60s ─────────────────────
   // Le polling est un filet de sécurité au cas où la WebSocket Realtime se
@@ -5733,7 +5777,7 @@ export default function App(){
 
   // ── B1 : navigation en domaines (source unique lib/navigation.js) ──────
   // (visibleTabsRef est rempli plus haut, avant les early returns.)
-  const navDomains = buildNavDomains({ isManager, isRhDelegue, canSmartRh, accesPnl: !!profile?.acces_pnl })
+  const navDomains = buildNavDomains({ isManager, isRhDelegue, canSmartRh, accesPnl: !!profile?.acces_pnl, adminFormation: profile?.academy_admin === true, formationOuverte: formationOuverte === true })
   // Vues accessibles → palette ⌘K : même source que la sidebar, fin de la
   // liste MANAGER_ONLY maintenue à la main dans CommandPalette.
   const palettePages = {}
@@ -5812,6 +5856,22 @@ export default function App(){
         onOpen: () => setActiveTab('pilotage-rh'),
       })
     }
+    // Entasis Academy : regroupes (« 3 révisions dues »), jamais un item par
+    // lecon ; la date est l echeance la plus ancienne, donc dans le passe
+    // quand c est du, ce qui compte comme non lu.
+    for (const r of academyRappels) {
+      const libelle = r.type === 'revisions_dues' ? `${r.nombre} révision${r.nombre > 1 ? 's' : ''} de formation due${r.nombre > 1 ? 's' : ''}`
+        : r.type === 'affectations_en_retard' ? `${r.nombre} formation${r.nombre > 1 ? 's' : ''} en retard`
+          : `${r.nombre} formation${r.nombre > 1 ? 's' : ''} à rendre sous 7 jours`
+      out.push({
+        id: `academy-${r.type}`,
+        date: r.echeance ? `${String(r.echeance).slice(0, 10)}T08:00:00` : new Date().toISOString(),
+        couleur: 'var(--gold)',
+        titre: libelle,
+        detail: Array.isArray(r.titres) ? r.titres.slice(0, 3).join(' · ') : null,
+        onOpen: () => { setFormationRoute(['parcours']); setActiveTab('formation') },
+      })
+    }
     if (isManager && editorialPending.count > 0) {
       out.push({
         id: 'editorial',
@@ -5845,6 +5905,7 @@ export default function App(){
       <Sidebar
         profile={effectiveProfile}
         canSmartRh={canSmartRh}
+        formationOuverte={formationOuverte}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onSignOut={signOut}
@@ -5866,12 +5927,14 @@ export default function App(){
             <SubTabs
               ariaLabel={`Vues ${activeDomain.label}`}
               tabs={activeDomain.views.map(v => ({ key: viewId(v), label: v.label, badge: subBadges[v.badgeKey] || 0 }))}
-              active={activeTab === 'clients' ? `clients:${selectedClientId ? 'annuaire' : clientsVue}` : activeTab === 'leads' ? `leads:${leadsVue}` : activeTab}
+              active={activeTab === 'clients' ? `clients:${selectedClientId ? 'annuaire' : clientsVue}` : activeTab === 'leads' ? `leads:${leadsVue}` : activeTab === 'formation' ? `formation:${['parcours','catalogue','resultats','pilotage','administration'].includes(formationRoute[0]) ? formationRoute[0] : (formationRoute[0] === 'fiche' ? 'pilotage' : 'catalogue')}` : activeTab}
               onChange={(id) => {
                 if (id.startsWith('clients:')) {
                   setActiveTab('clients'); setSelectedClientId(null); setClientsVue(id.split(':')[1])
                 } else if (id.startsWith('leads:')) {
                   setActiveTab('leads'); setLeadsVue(id.split(':')[1])
+                } else if (id.startsWith('formation:')) {
+                  setActiveTab('formation'); setFormationRoute([id.split(':')[1]])
                 } else {
                   setActiveTab(id)
                 }
@@ -5973,6 +6036,7 @@ export default function App(){
           {activeTab==='editorial'&&isManager&&<EditorialHub onPendingChange={(n)=>setEditorialPending(p=>({...p,count:n}))}/>}
           {activeTab==='remuneration'&&<Remuneration profile={profile} deals={deals} month={month}/>}
           {activeTab==='outils'&&<OutilsCGP profile={profile}/>}
+          {activeTab==='formation'&&<Academy profile={profile} route={formationRoute} onNaviguer={(hash)=>{ window.location.hash = hash }}/>}
           {activeTab==='conformite'&&<Conformite profile={profile}/>}
           {activeTab==='multi-equipement'&&<MultiEquipement profile={profile} onCreateDeal={startCreateForClient}/>}
           {activeTab==='cockpit'&&<CockpitRatios profile={profile}/>}

@@ -519,11 +519,94 @@ session est recyclée : celle du changement de contrat de Quentin n'est
 jamais partie. C'est pour cela que le contrat se choisit désormais par ses
 dates. Pour toute échéance lointaine, doubler d'un rappel simple.
 
+## Entasis Academy, la formation interne (21 septembre 2026)
+
+Le domaine **Formation** du menu (`#/formation/...`) : Mon parcours,
+Catalogue, module, lecteur de leçon, quiz, Mes résultats pour tout le
+cabinet ; Pilotage des formations, fiche collaborateur, matrice de
+compétences et Administration du contenu pour la direction et les profils
+`academy_admin`. **Tant qu'aucun module n'est publié, l'onglet n'existe
+que pour la direction** (`formationOuverte()` dans le service, lecture
+sous RLS de `academy_module_versions`) : Louis relit et publie sans que
+l'équipe découvre une rubrique vide. Écrit sur la branche `claude/entasis-academy`,
+validé sur le projet DEV `entasis-crm-DEV` (`leuqchrianpasianwmjg`), puis
+**mis en production le 21 septembre 2026** sur décision de Louis : les
+migrations `supabase/migrations/20260921_academy_*` portent chacune la
+version enregistrée dans `schema_migrations` en en tête (socle
+20260921130243, fonctions 20260921130815, puis les treize seeds et la
+purge planifiée). Le catalogue y est en brouillon, rien n'est publié ni
+affecté : l'équipe ne voit pas encore l'onglet.
+
+Ce qu'il faut savoir avant d'y toucher :
+
+* **Toute la logique sensible est en SQL** (`security definer`, `set
+  search_path`, `revoke execute from public, anon`), pas dans une fonction
+  Vercel : correction des quiz, tirage des questions, ouverture et fin des
+  sessions, battements, validation, attestation, révisions J+7 et J+30. La
+  table `academy_corriges` n'a aucune policy et `revoke all` pour
+  `authenticated` : un client ne lit jamais une bonne réponse avant
+  d'avoir soumis. `academy_intervalles` et `academy_reponses` sont dans le
+  même cas.
+* **Le temps actif ne vient jamais du client.** Le navigateur envoie un
+  battement toutes les 30 s (`academy_battement`) quand l'onglet est
+  visible et qu'une activité a été détectée depuis moins de 120 s ; le
+  serveur prolonge ou ouvre un intervalle avec `now()`. Les durées
+  affichées sont des unions d'intervalles (`academy_duree_active`), pas des
+  sommes. Une notice de données est affichée au collaborateur ; les
+  intervalles de plus de douze mois se purgent par `academy_purger_intervalles()`
+  (service role seulement, pas de cron posé) après résumé dans
+  `academy_durees_jour`.
+* **Une version publiée est immuable** (`academy_version_immuable`,
+  `academy_contenu_fige`) et indélébile ; on crée une nouvelle version
+  (`academy_nouvelle_version`), on l'édite, on la publie avec le nom du
+  relecteur. Publier n'est pas valider le contenu métier : le catalogue
+  semé est **en brouillon** et attend la relecture de Louis avant toute
+  publication.
+* **Le trigger `academy_progression_garde`** empêche le client de marquer
+  une leçon terminée : seule la RPC le fait, sous le réglage local
+  `academy.serveur = on`. `academy_progression_lecons` n'accorde à
+  `authenticated` que `update (position, updated_at)` ; le service fait donc
+  un `update` puis un `upsert ignoreDuplicates`, jamais un upsert direct
+  (PostgREST poserait toutes les colonnes dans le `ON CONFLICT`).
+* **`prevent_role_escalation()` a été réécrit** depuis le texte de
+  production du 21 septembre avec deux lignes pour `academy_admin`. Avant
+  d'appliquer en production, repartir de `pg_get_functiondef` et n'y
+  reporter que ces deux lignes.
+* Les fonctions SQL renvoient du `jsonb` déjà assemblé ; le service
+  `src/services/academy.js` est une fonction par contrat, les libs pures
+  sont dans `src/lib/academy/` (statuts, révisions, battement, quiz,
+  format, csv, attestation PDF). Le composant `src/components/academy/Academy.jsx`
+  reçoit `{ profile, route, onNaviguer }`, la route étant le hash après
+  `#/formation/`.
+* **Les identifiants d'un quiz sont des index dans l'ordre présenté** (le
+  serveur mélange les choix et mémorise l'ordre dans `academy_tentatives.questions`).
+  La soumission est idempotente par `jeton_client`.
+
+Pour tester : appliquer sur DEV, dans l'ordre, `20260921_academy_1_socle.sql`,
+`20260921_academy_2_fonctions.sql`, puis les treize `20260921_academy_3_seed_*.sql`
+(un module par fichier, idempotents sur le slug) ; jouer
+`scripts/academy/tests-sql/acceptation.sql` (un seul bloc `DO`, quatorze
+étapes, se termine volontairement par `raise exception 'TESTS OK ...'` pour
+tout annuler) ; côté écran `npm run test:visuel` avec les onze scénarios
+`formation-*` (données dans `tests/visuel/harnais-academy.mjs`). Le
+catalogue se régénère par `node scripts/academy/generer-seed.mjs` depuis
+`scripts/academy/catalogue/*.json`.
+
+Ce qui reste à faire par Louis : relire les douze modules dans
+Administration, publier un par un avec le nom du relecteur (le premier
+module publié ouvre l'onglet à toute l'équipe), affecter les parcours,
+poser `academy_admin` sur un profil s'il veut déléguer le contenu. La
+relecture à froid du 21 septembre (quatre lentilles contre la base de
+production) est journalisée dans `scripts/academy/tests-sql/LISEZMOI.md`.
+
 ## Les projets Supabase
 
 * **CRM** : `tvgbblbceqvdtqnbeoik`. Tables principales `deals`, `clients`,
   `profiles`, `conseiller_contrats`, `contrats`, `conformite_dossiers`,
   `campagnes`, `campagne_cibles`.
+* **CRM DEV** : `entasis-crm-DEV`, `leuqchrianpasianwmjg`, une copie de
+  travail sans donnée réelle (profils fictifs) où s'appliquent les migrations
+  avant la production. Elle n'a pas `pg_cron`.
 * **Lead Room** : `mtqowhjshvgkpkhnpilb`, application séparée avec **ses
   propres comptes**. Un conseiller a donc deux mots de passe distincts,
   source récurrente d'appels au support. Le bouton « Recevoir un lien

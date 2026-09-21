@@ -1,0 +1,323 @@
+{
+ "numero": 1,
+ "slug": "methode-entasis",
+ "titre": "La méthode Entasis",
+ "theme": "methode",
+ "niveau": "decouverte",
+ "competence": "Préparer et structurer la découverte, l'analyse et le suivi",
+ "objectif": "À l'issue du module, le conseiller conduit un premier entretien sans proposer de solution, structure une étude en diagnostic, objectifs hiérarchisés et stratégie chiffrée, et organise un suivi dans la durée coordonné avec les autres professionnels du client.",
+ "duree_minutes": 15,
+ "prerequis": [],
+ "lecons": [
+  {
+   "slug": "l1",
+   "titre": "L'écoute : comprendre avant de proposer",
+   "duree_minutes": 4,
+   "objectif_observable": "Conduire un premier entretien de découverte qui recueille la situation, les projets, l'horizon et le rapport au risque du client, sans évoquer de solution.",
+   "corps_markdown": "## Explication simple\n\nLa méthode Entasis tient en trois temps : l'écoute, l'étude, l'accompagnement. Le premier temps est l'écoute. Il prend la forme d'un premier entretien de 30 minutes, confidentiel et sans engagement, au cabinet, en visio ou par téléphone. Son but est de comprendre, non de proposer : la situation de la personne, ses projets, son rapport au risque.\n\nCette étape rejoint une obligation du professionnel qui délivre un conseil en investissement. L'AMF rappelle qu'avant tout conseil, le professionnel doit recueillir des informations sur la situation financière du client, dont sa capacité à subir des pertes, sur ses connaissances et son expérience, et sur ses objectifs, notamment son horizon et sa tolérance au risque. Si le client ne communique pas ces informations, le conseiller doit s'abstenir de tout conseil.\n\nConcrètement, le bilan patrimonial couvre les actifs, les passifs, les revenus, la fiscalité, le régime matrimonial, les clauses bénéficiaires et les objectifs de vie. Le conseiller ne cite aucune solution tant que cette photographie n'est pas complète. La règle de la maison se résume ainsi : une stratégie d'ensemble, pas une collection de produits.\n\n## Exemple\n\nCas fictif. Madame Vasseur, 47 ans, chirurgienne-dentiste à Neuilly-sur-Seine, arrive au premier entretien avec une idée précise : « On m'a dit qu'il fallait que je fasse de l'immobilier pour payer moins d'impôt. » Le conseiller ne répond ni oui ni non. Il note la demande et la met de côté : « Nous y reviendrons. Avant cela, j'ai besoin de comprendre où vous en êtes. » Il l'interroge sur son activité, ses revenus, ce qu'elle possède déjà, ses projets à cinq ans et à quinze ans, sa réaction si un placement baissait. Au fil de l'échange, elle mentionne qu'elle envisage de céder son cabinet dans huit ans et qu'elle n'a pas revu sa prévoyance depuis son installation. À la fin de l'entretien, le conseiller résume ce qu'il a compris et lui demande de confirmer. La question fiscale sera traitée dans l'étude, à sa juste place.\n\n## Erreur fréquente\n\nRépondre à la demande de produit dès qu'elle est formulée. Le client arrive souvent avec une solution en tête, entendue chez un confrère ou lue en ligne. Le conseiller débutant se met à expliquer le mécanisme du produit demandé. L'entretien devient une présentation commerciale. Les projets, l'horizon, la capacité de perte ne sont jamais recueillis. Deux conséquences : la recommandation qui suivra sera fragile, et le conseiller aura pris une position de vendeur, exactement ce que le cabinet refuse d'être.\n\n## En rendez-vous\n\nOuvrez l'entretien par le cadre : « Ce premier échange sert à comprendre votre situation et vos projets. Je ne vous proposerai rien aujourd'hui. » Quand la demande de produit arrive, accueillez-la, notez-la, reportez-la : « C'est noté, nous l'examinerons dans l'étude. » Posez des questions ouvertes : « Qu'est-ce qui vous amène ? », « À quoi doit servir cette épargne ? », « Dans combien de temps ? », « Comment réagiriez-vous si la valeur baissait ? » Reformulez régulièrement. Terminez par un résumé oral que le client valide, puis annoncez la suite : l'analyse patrimoniale complète et une date de restitution. Consignez l'échange dans la fiche client. La trame de découverte et les champs obligatoires à remplir sont [a completer par le cabinet].\n\n## Trois points à retenir\n\n1. Le premier entretien sert à comprendre, jamais à proposer.\n2. Situation, projets, horizon et rapport au risque sont recueillis avant tout conseil. Sans ces informations, pas de recommandation.\n3. Une demande de produit se note et se reporte à l'étude, sans être ni acceptée ni rejetée sur le moment.\n",
+   "mini_question": {
+    "cle": "q01",
+    "type": "qcm",
+    "lecon": "l1",
+    "competence": "Préparer la découverte",
+    "enonce": "Cas fictif. Un dirigeant ouvre le premier entretien par : « Quel placement me conseillez-vous ? » Quelle réponse correspond à la méthode Entasis ?",
+    "choix": [
+     "Présenter l'assurance vie, enveloppe souple qui convient à la plupart des situations.",
+     "Lui demander d'utiliser le simulateur en ligne et de revenir avec le résultat.",
+     "Expliquer que la recommandation viendra après l'écoute et l'étude, puis poser des questions sur sa situation et ses projets.",
+     "Refuser de poursuivre tant qu'il n'a pas signé un document d'entrée en relation."
+    ],
+    "bonne_reponse": 2,
+    "explication": "L'écoute précède toute proposition. Le conseiller accueille la demande, la note, puis recueille situation, projets, horizon et rapport au risque. Sans ces informations, aucun conseil ne peut être formulé. Voir la leçon 1, « En rendez-vous ».",
+    "difficulte": "1"
+   },
+   "sources": [
+    {
+     "titre": "S'informer sur : Pourquoi mon banquier me pose-t-il toutes ces questions ?",
+     "url": "https://www.amf-france.org/sites/institutionnel/files/private/2024-02/pourquoi-mon-banquier-me-pose-t-il-toutes-ces-questions-2024.pdf",
+     "emetteur": "Autorité des marchés financiers (AMF)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "Guide daté de juillet 2023, mis en ligne en février 2024",
+     "ce_qu_elle_etablit": "Avant tout conseil, le professionnel doit s'assurer que le produit est adapté à la situation financière, aux objectifs, à l'horizon, au niveau de risque acceptable, aux connaissances et à l'expérience du client. Le client peut refuser de répondre, mais le professionnel ne pourra alors pas délivrer de conseil."
+    },
+    {
+     "titre": "S'informer sur : Les conseillers en investissements financiers (CIF)",
+     "url": "https://www.amf-france.org/sites/institutionnel/files/contenu_simple/guide/guide_pedagogique/S'informer%20sur%20%20Les%20conseillers%20en%20investissements%20financiers%20(CIF).pdf",
+     "emetteur": "Autorité des marchés financiers (AMF)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "Guide daté de juin 2019",
+     "ce_qu_elle_etablit": "Le CIF doit questionner le client avant tout conseil sur sa situation financière (dont la capacité à subir des pertes), ses connaissances et son expérience, ses objectifs, son horizon et sa tolérance au risque. Si le client ne communique pas ces informations, le CIF doit s'abstenir de tout conseil."
+    }
+   ]
+  },
+  {
+   "slug": "l2",
+   "titre": "L'étude : de l'analyse à la feuille de route",
+   "duree_minutes": 4,
+   "objectif_observable": "Construire une analyse patrimoniale dans l'ordre diagnostic, objectifs hiérarchisés, stratégie, et présenter chaque recommandation avec sa simulation chiffrée, ses contraintes et son scénario défavorable.",
+   "corps_markdown": "## Explication simple\n\nLe deuxième temps de la méthode est l'étude. Le conseiller reprend les informations recueillies à l'écoute et produit une analyse patrimoniale complète, suivie d'une feuille de route argumentée. La règle du cabinet est simple : chaque recommandation s'appuie sur une simulation chiffrée.\n\nL'étude répond à trois questions, dans l'ordre. Où en est le client ? C'est le diagnostic : revenus, fiscalité, actifs, dettes, couvertures, organisation de la détention. Où veut-il aller ? Ce sont les objectifs de vie, hiérarchisés, avec leur horizon. Comment y aller ? C'est la stratégie. Les solutions n'apparaissent qu'à ce stade, comme des moyens au service d'un objectif.\n\nCe cadre rejoint ce que le régulateur attend d'un conseil en investissement : formaliser le conseil dans un rapport écrit qui détaille et justifie les propositions, leurs avantages et leurs risques, au regard de la situation, de l'expérience et des objectifs du client. L'AMF précise aussi que le professionnel doit envisager avec le client un scénario défavorable, pas seulement le scénario espéré. Une feuille de route qui ne nomme pas les risques n'est pas argumentée, elle est incomplète.\n\nLe format de restitution, la trame d'analyse et les outils de simulation utilisés au cabinet sont [a completer par le cabinet].\n\n## Exemple\n\nCas fictif. Monsieur Adjani, 55 ans, gérant majoritaire d'une SARL de transport à Gennevilliers, souhaite préparer sa retraite et réduire son impôt. L'écoute a révélé un point aveugle : en cas d'arrêt de travail, ses revenus chuteraient fortement et il n'a aucune prévoyance. L'étude hiérarchise donc : protéger ses revenus d'abord, puis organiser l'épargne retraite, puis traiter la fiscalité. Chaque volet est chiffré : coût mensuel d'une couverture, effort d'épargne soutenable, effet fiscal estimé avec un plafond de déduction à vérifier sur la source officielle au moment du rendez-vous. La feuille de route présente, pour chaque piste, l'objectif servi, la contrainte (par exemple l'épargne retraite bloquée jusqu'à la retraite, hors cas de déblocage anticipé prévus par la loi) et le scénario défavorable. Le client découvre que sa demande initiale, réduire l'impôt, arrive en troisième position, et comprend pourquoi.\n\n## Erreur fréquente\n\nConfondre l'étude avec une fiche produit. Le conseiller débutant rédige trois pages sur le fonctionnement d'une enveloppe et une ligne sur le client. Le document décrit un produit, il n'argumente pas une stratégie. Autre travers : chiffrer uniquement le scénario favorable, ou reprendre de mémoire un chiffre de plafond ou d'abattement. Un chiffre réglementaire cité sans source officielle datée n'a pas sa place dans une feuille de route.\n\n## En rendez-vous\n\nLe rendez-vous de restitution suit l'ordre de l'étude. Commencez par le diagnostic : « Voici ce que j'ai compris de votre situation. » Faites valider. Passez aux objectifs hiérarchisés : « Voici les priorités que nous avons identifiées ensemble. » Puis seulement la stratégie et les moyens. Pour chaque recommandation, dites l'objectif servi, le chiffre, la contrainte et le risque. Montrez le scénario défavorable sans le minimiser. Concluez par les décisions à prendre et les documents à réunir, et fixez la prochaine étape. Les documents remis au client à cette étape et le circuit de relecture interne avant envoi sont [a completer par le cabinet].\n\n## Trois points à retenir\n\n1. L'étude suit un ordre : diagnostic, objectifs hiérarchisés, stratégie, puis moyens.\n2. Chaque recommandation est reliée à un objectif, chiffrée, et présentée avec ses contraintes, ses risques et un scénario défavorable.\n3. Aucun chiffre réglementaire n'est cité de mémoire : source officielle datée, ou mention « à vérifier ».\n",
+   "mini_question": {
+    "cle": "q05",
+    "type": "qcm",
+    "lecon": "l2",
+    "competence": "Structurer l'analyse",
+    "enonce": "Qu'est-ce qui rend une feuille de route « argumentée » au sens de la méthode Entasis ?",
+    "choix": [
+     "Elle relie chaque recommandation à un objectif du client, s'appuie sur une simulation chiffrée et nomme les contraintes, les risques et un scénario défavorable.",
+     "Elle cite pour chaque solution le nom du contrat et de son gestionnaire.",
+     "Elle propose au moins trois solutions concurrentes pour laisser le choix au client.",
+     "Elle indique le rendement attendu de chaque solution sur dix ans."
+    ],
+    "bonne_reponse": 0,
+    "explication": "Argumenter, c'est relier la recommandation à un objectif, la chiffrer et en montrer les limites. Le nom d'un contrat ou un rendement annoncé ne constituent pas une argumentation. Un rendement ne peut apparaître que comme une hypothèse explicitement non garantie, accompagnée d'un scénario défavorable ; présenté seul et comme acquis, il devient une promesse commerciale. Voir la leçon 2, « Explication simple » et « Erreur fréquente ».",
+    "difficulte": "2"
+   },
+   "sources": [
+    {
+     "titre": "S'informer sur : Les conseillers en investissements financiers (CIF)",
+     "url": "https://www.amf-france.org/sites/institutionnel/files/contenu_simple/guide/guide_pedagogique/S'informer%20sur%20%20Les%20conseillers%20en%20investissements%20financiers%20(CIF).pdf",
+     "emetteur": "Autorité des marchés financiers (AMF)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "Guide daté de juin 2019",
+     "ce_qu_elle_etablit": "Le conseil est formalisé dans un rapport écrit, dit déclaration d'adéquation, qui détaille et justifie les propositions, leurs avantages et leurs risques au regard de la situation financière, de l'expérience, des connaissances et des objectifs du client. Une lettre de mission est remise avant tout conseil."
+    },
+    {
+     "titre": "S'informer sur : Pourquoi mon banquier me pose-t-il toutes ces questions ?",
+     "url": "https://www.amf-france.org/sites/institutionnel/files/private/2024-02/pourquoi-mon-banquier-me-pose-t-il-toutes-ces-questions-2024.pdf",
+     "emetteur": "Autorité des marchés financiers (AMF)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "Guide daté de juillet 2023, mis en ligne en février 2024",
+     "ce_qu_elle_etablit": "Rendement et risque sont liés ; pour permettre au client de mesurer la perte possible, le professionnel doit envisager avec lui l'évolution de ses investissements dans un scénario défavorable."
+    },
+    {
+     "titre": "Plan d'épargne retraite individuel (PER)",
+     "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F34982",
+     "emetteur": "Service-Public.gouv.fr",
+     "date_consultation": "2026-09-21",
+     "date_validite": "page vérifiée le 18 juin 2026",
+     "ce_qu_elle_etablit": "En principe le PER individuel est bloqué jusqu'à la retraite ; l'épargne ne peut être récupérée de façon anticipée que dans les seuls cas listés par la page (décès du conjoint ou partenaire, invalidité, surendettement, expiration des droits au chômage, liquidation judiciaire, acquisition de la résidence principale)."
+    }
+   ]
+  },
+  {
+   "slug": "l3",
+   "titre": "L'accompagnement : le conseil dans la durée",
+   "duree_minutes": 4,
+   "objectif_observable": "Organiser le suivi d'un client : préparer et conduire un point annuel qui détecte les changements de vie, coordonner notaire, avocat fiscaliste et expert-comptable avec l'accord du client, et tracer chaque échange.",
+   "corps_markdown": "## Explication simple\n\nLe troisième temps est l'accompagnement. Le cabinet le formule ainsi : un conseiller dédié, un point annuel formel, des ajustements au fil de votre vie. La philosophie sous-jacente est claire : un patrimoine solide ne tient jamais à un geste spectaculaire, il repose sur une suite d'ajustements justes, discrets, pensés dans la durée.\n\nLe suivi n'est pas une politesse commerciale. L'AMF rappelle que le professionnel est tenu de mettre régulièrement à jour les informations concernant le client, notamment en cas de changement de situation familiale, personnelle ou professionnelle, afin de vérifier que ce qui est en place reste adapté. Un mariage, une naissance, une cession d'entreprise, un héritage, une baisse de revenus : chacun de ces événements peut rendre une stratégie obsolète.\n\nL'accompagnement a une deuxième dimension : la coordination. Autour de chaque famille, le cabinet réunit notaire, avocat fiscaliste et expert-comptable, et pilote une stratégie unique. Le conseiller Entasis ne remplace aucun de ces professionnels. Il orchestre, avec l'accord du client, pour que les décisions de chacun s'inscrivent dans la même architecture.\n\nLa périodicité réelle du point annuel, son contenu type et la façon de le tracer dans le CRM sont [a completer par le cabinet].\n\n## Exemple\n\nCas fictif. Madame Ferrand, 61 ans, avocate à Paris 17e, a mis en place il y a trois ans une stratégie centrée sur la préparation de sa retraite. Lors du point annuel, elle annonce deux nouveautés : sa fille vient d'avoir un enfant, et elle envisage de cesser son activité deux ans plus tôt que prévu. Le conseiller ne se contente pas de noter. Il reprend le bilan : l'horizon a changé, la question de la transmission apparaît. Il propose de mettre à jour l'analyse, demande à Madame Ferrand l'autorisation d'échanger avec son notaire sur la clause bénéficiaire et les donations envisagées, et fixe une date de restitution. Le point annuel a fait son travail : il a détecté un changement avant que la stratégie ne devienne inadaptée.\n\n## Erreur fréquente\n\nTransformer le point annuel en rendez-vous de vente. Le conseiller arrive avec une nouvelle solution à présenter, sans avoir vérifié si la situation du client a évolué. Le client comprend vite qu'on vient lui placer quelque chose, et la confiance s'érode. Autre erreur, plus silencieuse : ne pas tracer. Un appel de dix minutes où le client annonce un héritage, non consigné dans la fiche, est une information perdue pour le cabinet et un risque pour le client.\n\n## En rendez-vous\n\nPréparez le point annuel en relisant la feuille de route et les échanges de l'année. Ouvrez par la question des changements : « Qu'est-ce qui a changé dans votre vie depuis notre dernier point ? » Passez en revue famille, activité, revenus, projets, rapport au risque. Reprenez ensuite chaque brique en place et vérifiez qu'elle sert toujours son objectif. Si un changement apparaît, annoncez une mise à jour de l'étude plutôt qu'une réponse immédiate. Demandez l'accord du client avant de contacter son notaire ou son expert-comptable. Terminez par la prochaine échéance et tracez l'échange dans le CRM le jour même.\n\n## Trois points à retenir\n\n1. Le point annuel sert à détecter les changements de vie et à vérifier que la stratégie reste adaptée.\n2. Le conseiller coordonne notaire, avocat fiscaliste et expert-comptable avec l'accord du client, sans se substituer à eux.\n3. Chaque échange, même bref, est tracé le jour même.\n",
+   "mini_question": {
+    "cle": "q08",
+    "type": "qcm",
+    "lecon": "l3",
+    "competence": "Organiser le suivi",
+    "enonce": "Quel est l'objet premier du point annuel formel dans la méthode Entasis ?",
+    "choix": [
+     "Présenter une nouvelle solution chaque année pour entretenir la relation.",
+     "Renouveler les documents contractuels signés à l'entrée en relation.",
+     "Mettre à jour les données du client dans les simulateurs en ligne du site.",
+     "Vérifier que la situation, les objectifs et le rapport au risque n'ont pas changé, et que ce qui est en place reste adapté."
+    ],
+    "bonne_reponse": 3,
+    "explication": "Le point annuel détecte les changements de vie et vérifie l'adéquation de la stratégie. Arriver avec une solution à présenter transforme le suivi en rendez-vous de vente, ce que la leçon 3 identifie comme l'erreur fréquente.",
+    "difficulte": "2"
+   },
+   "sources": [
+    {
+     "titre": "S'informer sur : Pourquoi mon banquier me pose-t-il toutes ces questions ?",
+     "url": "https://www.amf-france.org/sites/institutionnel/files/private/2024-02/pourquoi-mon-banquier-me-pose-t-il-toutes-ces-questions-2024.pdf",
+     "emetteur": "Autorité des marchés financiers (AMF)",
+     "date_consultation": "2026-09-21",
+     "date_validite": "Guide daté de juillet 2023, mis en ligne en février 2024",
+     "ce_qu_elle_etablit": "Le professionnel est tenu de mettre régulièrement à jour les informations concernant le client, notamment en cas de changement de situation familiale, personnelle ou professionnelle, pour vérifier que les produits détenus restent adaptés."
+    },
+    {
+     "titre": "ORIAS, registre unique des intermédiaires en assurance, banque et finance",
+     "url": "https://www.orias.fr/",
+     "emetteur": "ORIAS",
+     "date_consultation": "2026-09-21",
+     "date_validite": "Registre tenu à jour en continu, chiffres au 31 décembre 2025 sur la page consultée",
+     "ce_qu_elle_etablit": "Le registre permet à toute personne de vérifier qu'un intermédiaire est autorisé à distribuer des produits d'assurance, bancaires ou financiers, via la fonction « Trouver un intermédiaire ». Le statut exact du cabinet et les catégories d'immatriculation à mentionner en rendez-vous relèvent de la direction."
+    }
+   ]
+  }
+ ],
+ "cas_pratique": {
+  "titre": "Le placement avant les projets",
+  "situation_markdown": "Cas fictif. Monsieur Karim Nadal, 49 ans, fonde et dirige une société de conseil en ingénierie à La Défense, douze salariés. Il a pris rendez-vous après avoir utilisé le simulateur PER du site du cabinet. Il arrive au premier entretien avec une feuille imprimée et ouvre ainsi : « J'ai 90 000 euros sur mon compte courant qui ne servent à rien. Mon expert-comptable me dit que je paie trop d'impôt. Je veux ouvrir un PER avant la fin de l'année. Ma question est simple : chez qui et pour combien ? »\n\nQuand le conseiller tente une première question sur ses projets, il coupe : « Mes projets, c'est de payer moins d'impôt. Vous êtes là pour ça, non ? »\n\nVous disposez de 30 minutes. Vous ne connaissez ni sa situation familiale, ni ses revenus exacts, ni sa couverture prévoyance, ni ce qu'il compte faire de son entreprise dans les dix ans. Vous ne savez pas si les 90 000 euros constituent toute son épargne disponible ou une partie seulement. Vous savez seulement trois choses : une somme non affectée, un objectif fiscal déclaré, une pression de calendrier.",
+  "questions": [
+   "Que répondez-vous dans la minute qui suit, et pourquoi ne répondez-vous pas à « chez qui et pour combien » ?",
+   "Quelles informations devez-vous recueillir avant toute orientation, et comment les aborder avec un client pressé ?",
+   "Que faites-vous de l'argument « mon expert-comptable dit que je paie trop d'impôt » ?",
+   "Comment concluez-vous l'entretien et que tracez-vous dans le CRM ?"
+  ],
+  "corrige_markdown": "## Question 1 : la première minute\n\nVous ne répondez pas à « chez qui et pour combien ». Non par principe, mais parce que la réponse est impossible à ce stade : vous ne connaissez ni sa situation, ni ses objectifs, ni son rapport au risque. L'AMF rappelle que sans ces informations le conseiller doit s'abstenir de tout conseil. Vous accueillez la demande, vous la notez, et vous posez le cadre : « Votre question est légitime et nous y répondrons. Pour y répondre correctement, j'ai besoin de comprendre votre situation. C'est l'objet de cet entretien. La recommandation viendra avec l'étude, chiffrée. » Vous reformulez sa contrainte de calendrier pour montrer qu'elle est entendue : « Vous souhaitez agir avant la fin de l'année, c'est noté. »\n\nCe qu'il ne faut pas faire : comparer des contrats, avancer un chiffre de déduction, ou promettre une économie d'impôt. Le plafond de déduction et la fiscalité à la sortie sont des seuils à vérifier sur la source officielle au moment du rendez-vous, jamais cités de mémoire.\n\n## Question 2 : les informations à recueillir\n\nLes éléments du bilan patrimonial : revenus (rémunération de gérant, dividendes, autres), fiscalité (tranche, revenus exceptionnels), actifs et passifs (épargne de précaution, immobilier, parts de société, dettes), régime matrimonial et clauses bénéficiaires, objectifs de vie (retraite, cession, famille). S'y ajoutent trois questions décisives pour un PER : les 90 000 euros sont-ils toute son épargne disponible ? Quelle part peut-il immobiliser jusqu'à la retraite, hors cas de déblocage anticipé prévus par la loi ? Que se passerait-il pour ses revenus s'il ne pouvait plus travailler pendant six mois ?\n\nAvec un client pressé, commencez par ce qui le concerne directement : « Pour savoir si un PER a du sens, et à quelle hauteur, je dois comprendre trois choses : ce que vous gagnez, ce dont vous pourriez avoir besoin, et à quelle échéance. » Vous transformez la découverte en condition de sa propre demande.\n\n## Question 3 : l'argument de l'expert-comptable\n\nVous ne le contestez pas et vous ne le validez pas. Vous le prenez comme une information à intégrer : « Votre expert-comptable connaît vos chiffres, c'est précieux. Avec votre accord, je le solliciterai lors de l'étude pour que nous raisonnions sur les mêmes bases. » C'est la logique multi family office : coordonner les professionnels du client autour d'une stratégie unique, sans se substituer à eux. Vous rappelez aussi que l'impôt se pilote dans une stratégie d'ensemble : la question n'est pas de payer moins d'impôt en soi, mais de savoir à quoi sert l'effort d'épargne.\n\n## Question 4 : conclure et tracer\n\nVous résumez oralement ce que vous avez compris et vous le faites valider. Vous annoncez la suite : analyse patrimoniale complète, feuille de route argumentée avec simulation chiffrée, et une date de restitution compatible avec sa contrainte de calendrier, sans promettre qu'un PER en sortira. Vous listez les documents à réunir. Vous tracez dans le CRM la demande initiale, les informations recueillies, l'accord ou non pour contacter l'expert-comptable, et la prochaine action datée. Les documents à remettre à l'entrée en relation et la trame de traçage sont [a completer par le cabinet].\n\n## Ce qui distingue une bonne réponse\n\nLe conseiller n'a ni cédé à la demande de produit, ni braqué le client. Il a relié la découverte à la demande du client, posé la coordination avec l'expert-comptable, et fixé une prochaine étape datée. Il n'a cité aucun chiffre fiscal de mémoire."
+ },
+ "questions": [
+  {
+   "cle": "q01",
+   "type": "qcm",
+   "lecon": "l1",
+   "competence": "Préparer la découverte",
+   "enonce": "Cas fictif. Un dirigeant ouvre le premier entretien par : « Quel placement me conseillez-vous ? » Quelle réponse correspond à la méthode Entasis ?",
+   "choix": [
+    "Présenter l'assurance vie, enveloppe souple qui convient à la plupart des situations.",
+    "Lui demander d'utiliser le simulateur en ligne et de revenir avec le résultat.",
+    "Expliquer que la recommandation viendra après l'écoute et l'étude, puis poser des questions sur sa situation et ses projets.",
+    "Refuser de poursuivre tant qu'il n'a pas signé un document d'entrée en relation."
+   ],
+   "bonne_reponse": 2,
+   "explication": "L'écoute précède toute proposition. Le conseiller accueille la demande, la note, puis recueille situation, projets, horizon et rapport au risque. Sans ces informations, aucun conseil ne peut être formulé. Voir la leçon 1, « En rendez-vous ».",
+   "difficulte": "1"
+  },
+  {
+   "cle": "q02",
+   "type": "vrai_faux",
+   "lecon": "l1",
+   "competence": "Préparer la découverte",
+   "enonce": "Si le client refuse de communiquer sa situation financière et ses objectifs, le conseiller peut tout de même formuler une recommandation, à condition de la limiter à des supports peu risqués.",
+   "choix": [
+    "Vrai",
+    "Faux"
+   ],
+   "bonne_reponse": 1,
+   "explication": "Faux. L'AMF rappelle que si le client ne communique pas les informations sur sa situation, ses connaissances et ses objectifs, le conseiller doit s'abstenir de tout conseil, quel que soit le niveau de risque du support. Voir la leçon 1, « Explication simple ».",
+   "difficulte": "1"
+  },
+  {
+   "cle": "q03",
+   "type": "qcm",
+   "lecon": "l1",
+   "competence": "Préparer la découverte",
+   "enonce": "Au terme du premier entretien, quel signe montre que l'écoute a été correctement menée ?",
+   "choix": [
+    "Le client a signé un bulletin de souscription.",
+    "Le conseiller a présenté les six métiers du cabinet et remis une plaquette.",
+    "Le conseiller résume la situation, les projets, l'horizon et le rapport au risque du client, et celui-ci confirme ce résumé.",
+    "L'entretien a duré plus de 30 minutes."
+   ],
+   "bonne_reponse": 2,
+   "explication": "L'écoute est réussie quand le conseiller peut restituer la situation, les projets, l'horizon et le rapport au risque et que le client valide cette restitution. Une signature ou une présentation du cabinet n'en sont pas la preuve. Voir la leçon 1, « En rendez-vous ».",
+   "difficulte": "2"
+  },
+  {
+   "cle": "q04",
+   "type": "cas_court",
+   "lecon": "l1",
+   "competence": "Préparer la découverte",
+   "enonce": "Cas fictif. Madame Roux, pharmacienne, déclare en découverte : « Je veux du rendement, mais je ne veux surtout pas perdre. » Que faites-vous ?",
+   "choix": [
+    "Noter « profil équilibré » et passer à la question suivante.",
+    "Expliquer que rendement et risque sont liés, puis retenir un profil dynamique puisqu'elle veut du rendement.",
+    "Proposer un fonds en euros pour lever le doute immédiatement.",
+    "Explorer la contradiction : demander ce qu'elle ferait si son épargne baissait de 10 % sur un an, quel montant elle peut immobiliser, et pour quel projet."
+   ],
+   "bonne_reponse": 3,
+   "explication": "Une contradiction apparente est une information à creuser, pas à trancher. Le rapport au risque se recueille par des questions concrètes sur la réaction à une baisse, la capacité de perte et l'horizon, avant toute solution. Voir la leçon 1, « En rendez-vous ».",
+   "difficulte": "2"
+  },
+  {
+   "cle": "q05",
+   "type": "qcm",
+   "lecon": "l2",
+   "competence": "Structurer l'analyse",
+   "enonce": "Qu'est-ce qui rend une feuille de route « argumentée » au sens de la méthode Entasis ?",
+   "choix": [
+    "Elle relie chaque recommandation à un objectif du client, s'appuie sur une simulation chiffrée et nomme les contraintes, les risques et un scénario défavorable.",
+    "Elle cite pour chaque solution le nom du contrat et de son gestionnaire.",
+    "Elle propose au moins trois solutions concurrentes pour laisser le choix au client.",
+    "Elle indique le rendement attendu de chaque solution sur dix ans."
+   ],
+   "bonne_reponse": 0,
+   "explication": "Argumenter, c'est relier la recommandation à un objectif, la chiffrer et en montrer les limites. Le nom d'un contrat ou un rendement annoncé ne constituent pas une argumentation. Un rendement ne peut apparaître que comme une hypothèse explicitement non garantie, accompagnée d'un scénario défavorable ; présenté seul et comme acquis, il devient une promesse commerciale. Voir la leçon 2, « Explication simple » et « Erreur fréquente ».",
+   "difficulte": "2"
+  },
+  {
+   "cle": "q06",
+   "type": "vrai_faux",
+   "lecon": "l2",
+   "competence": "Structurer l'analyse",
+   "enonce": "Une simulation chiffrée présentée au client doit aussi montrer ce qui se passe dans un scénario défavorable, et pas seulement dans le scénario espéré.",
+   "choix": [
+    "Vrai",
+    "Faux"
+   ],
+   "bonne_reponse": 0,
+   "explication": "Vrai. L'AMF indique que le professionnel doit envisager avec le client l'évolution de ses investissements dans un scénario défavorable, pour lui permettre de mesurer la perte possible. Une feuille de route qui ne montre que le scénario favorable est incomplète. Voir la leçon 2, « Explication simple ».",
+   "difficulte": "1"
+  },
+  {
+   "cle": "q07",
+   "type": "qcm",
+   "lecon": "l2",
+   "competence": "Structurer l'analyse",
+   "enonce": "Cas fictif. Après le premier entretien, le client vous écrit : « Envoyez-moi juste le bulletin de souscription, on verra l'étude plus tard. » Que faites-vous ?",
+   "choix": [
+    "Envoyer le bulletin pour ne pas perdre le client ; l'étude suivra.",
+    "Faire signer une décharge de responsabilité, puis envoyer le bulletin.",
+    "Expliquer que l'étude chiffrée protège sa décision, proposer une date de restitution proche, et tracer l'échange.",
+    "Transmettre le dossier à un collègue plus expérimenté sans répondre."
+   ],
+   "bonne_reponse": 2,
+   "explication": "Aucune recommandation ne précède l'étude. Le conseiller explique l'intérêt de l'étude pour le client, répond à la pression de calendrier par une date de restitution et trace la demande. Une décharge ne remplace pas l'analyse. Voir la leçon 2, « En rendez-vous ».",
+   "difficulte": "3"
+  },
+  {
+   "cle": "q08",
+   "type": "qcm",
+   "lecon": "l3",
+   "competence": "Organiser le suivi",
+   "enonce": "Quel est l'objet premier du point annuel formel dans la méthode Entasis ?",
+   "choix": [
+    "Présenter une nouvelle solution chaque année pour entretenir la relation.",
+    "Renouveler les documents contractuels signés à l'entrée en relation.",
+    "Mettre à jour les données du client dans les simulateurs en ligne du site.",
+    "Vérifier que la situation, les objectifs et le rapport au risque n'ont pas changé, et que ce qui est en place reste adapté."
+   ],
+   "bonne_reponse": 3,
+   "explication": "Le point annuel détecte les changements de vie et vérifie l'adéquation de la stratégie. Arriver avec une solution à présenter transforme le suivi en rendez-vous de vente, ce que la leçon 3 identifie comme l'erreur fréquente.",
+   "difficulte": "2"
+  },
+  {
+   "cle": "q09",
+   "type": "cas_court",
+   "lecon": "l3",
+   "competence": "Organiser le suivi",
+   "enonce": "Cas fictif. Lors du point annuel, Monsieur Bellan annonce qu'il vendra son entreprise dans dix-huit mois et qu'il a changé de notaire. Quelle est la bonne suite ?",
+   "choix": [
+    "Mettre à jour le bilan, demander son accord pour se coordonner avec le nouveau notaire et l'expert-comptable, et planifier une étude spécifique avant la vente.",
+    "Noter l'information et la reprendre lors du prochain point annuel.",
+    "Lui proposer dès maintenant une enveloppe pour accueillir le produit de la vente.",
+    "Lui conseiller de repousser la vente pour se laisser le temps d'organiser la fiscalité."
+   ],
+   "bonne_reponse": 0,
+   "explication": "Une cession d'entreprise change l'horizon, les revenus et la transmission. Le conseiller met à jour l'analyse et coordonne les professionnels du client, avec son accord, avant toute solution. Attendre un an ou proposer un produit immédiatement contredit la méthode. Voir la leçon 3, « Exemple ».",
+   "difficulte": "2"
+  },
+  {
+   "cle": "q10",
+   "type": "qcm",
+   "lecon": "l3",
+   "competence": "Organiser le suivi",
+   "enonce": "Quel est le rôle du conseiller Entasis vis-à-vis du notaire et de l'expert-comptable de son client ?",
+   "choix": [
+    "Les consulter uniquement en cas de désaccord avec le client.",
+    "Les coordonner autour d'une stratégie unique, avec l'accord du client, sans se substituer à leur expertise.",
+    "Les remplacer progressivement pour simplifier les échanges du client.",
+    "Leur transmettre le dossier complet du client sans avoir à le lui demander."
+   ],
+   "bonne_reponse": 1,
+   "explication": "L'approche multi family office consiste à orchestrer les professionnels déjà présents auprès du client, pas à les remplacer. Tout échange avec eux suppose l'accord préalable du client. Voir la leçon 3, « Explication simple » et « En rendez-vous ».",
+   "difficulte": "1"
+  }
+ ],
+ "a_completer_par_le_cabinet": [
+  "Trame de découverte du premier entretien et champs obligatoires à remplir dans la fiche client (leçon 1)",
+  "Documents remis au client à l'entrée en relation et statut exact sous lequel le cabinet exerce, avec les catégories d'immatriculation ORIAS à mentionner en rendez-vous (leçon 3, cas pratique)",
+  "Format de restitution de l'étude, trame d'analyse patrimoniale et outils de simulation chiffrée utilisés au cabinet (leçon 2)",
+  "Documents remis au client lors de la restitution de l'étude et circuit de relecture interne avant envoi (leçon 2)",
+  "Périodicité réelle du point annuel, contenu type et mode de traçage dans le CRM (leçon 3)",
+  "Trame de traçage d'un premier entretien dans le CRM : demande initiale, informations recueillies, accords de coordination, prochaine action datée (cas pratique)",
+  "Règle interne pour solliciter l'expert-comptable, le notaire ou l'avocat fiscaliste du client : formalisation de l'accord du client et personne habilitée à prendre contact (leçon 3, cas pratique)"
+ ],
+ "responsable_relecture": "à désigner par la direction"
+}

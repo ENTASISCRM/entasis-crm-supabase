@@ -224,6 +224,29 @@ const SCENARIOS = [
   { nom: 'smart-rh-responsable-rh', role: 'rh', route: '#/smart-rh', attendu: 'À valider' },
   { nom: 'multi-equipement', role: 'conseiller', route: '#/multi-equipement', attendu: 'Multi-équipement' },
   { nom: 'conformite', role: 'conseiller', route: '#/conformite', attendu: 'Recueils et devoirs de conseil' },
+  // Entasis Academy : les ecrans du collaborateur puis ceux de la direction.
+  // Les donnees viennent de harnais-academy.mjs (fonctions SQL simulees).
+  { nom: 'formation-parcours', role: 'conseiller', route: '#/formation/parcours', attendu: 'La méthode Entasis' },
+  { nom: 'formation-catalogue', role: 'conseiller', route: '#/formation/catalogue', attendu: 'PER et retraite' },
+  { nom: 'formation-module', role: 'conseiller', route: '#/formation/module/methode-entasis', attendu: 'Les cinq temps d un accompagnement' },
+  { nom: 'formation-lecon', role: 'conseiller', route: '#/formation/lecon/al1', attendu: 'Les cinq temps' },
+  { nom: 'formation-quiz', role: 'conseiller', route: '#/formation/quiz/av1', attendu: 'Quel est le premier temps' },
+  { nom: 'formation-resultats', role: 'conseiller', route: '#/formation/resultats', attendu: 'La méthode Entasis' },
+  { nom: 'formation-pilotage', role: 'manager', route: '#/formation/pilotage', attendu: 'Conseiller Témoin' },
+  { nom: 'formation-fiche', role: 'manager', route: '#/formation/fiche/u-conseiller', attendu: 'Conseiller Démo' },
+  { nom: 'formation-administration', role: 'manager', route: '#/formation/administration', attendu: 'Fiscalité : raisonner' },
+  { nom: 'formation-editeur', role: 'manager', route: '#/formation/administration/version/av4', attendu: 'Fiscalité : raisonner' },
+  {
+    // Aucun module publie : un conseiller qui suit un lien #/formation est
+    // ramene a l accueil et le menu ne montre pas l onglet ; la direction
+    // garde l acces pour relire et publier.
+    nom: 'formation-fermee-conseiller', role: 'conseiller', formationFermee: true, route: '#/formation/parcours', attendu: 'Dossiers sans mouvement',
+    actions: async (page) => {
+      const onglet = await page.locator('.nav-item, nav a, nav button').filter({ hasText: 'Formation' }).count()
+      if (onglet > 0) throw new Error('l onglet Formation est visible sans module publie')
+    },
+  },
+  { nom: 'formation-fermee-direction', role: 'manager', formationFermee: true, route: '#/formation/administration', attendu: 'Fiscalité : raisonner' },
 ]
 
 // ── Execution d un scenario ──────────────────────────────────────────────────
@@ -232,7 +255,7 @@ async function jouer(browser, scenario) {
   let page = null
   let erreursConsole = []
   try {
-    page = await pageDemo(browser, { role: scenario.role })
+    page = await pageDemo(browser, { role: scenario.role, formationFermee: scenario.formationFermee === true })
     erreursConsole = ecouterConsole(page)
     await page.goto(`${URL_BASE}/${scenario.route}`)
     await attendreRendu(page)
