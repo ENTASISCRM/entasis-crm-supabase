@@ -25,7 +25,7 @@ import { messageErreur } from '../../lib/ui-shared'
 import { ajouterJours } from '../../lib/sequences'
 import { exporterCsv, suffixeDate } from '../../lib/export-csv'
 import { formatDuree, jourParis, dateHeureParis, pourcentage } from '../../lib/academy/format'
-import { joursEntre } from '../../lib/academy/statuts'
+import { joursEntre , modulesPubliesDuParcours, libelleParcoursAffectable } from '../../lib/academy/statuts'
 import { lignesCsvPilotage } from '../../lib/academy/csv'
 import { pilotage, matrice, fiche, adminVue, affecter, modifierEcheance } from '../../services/academy'
 import { confirmDialog } from '../ui/confirm'
@@ -634,6 +634,8 @@ function ModaleAffecter({ ligne, onFermer, onFait }) {
   const parcours = (admin?.parcours || []).filter((p) => !p.archive_le)
   const modules = (admin?.modules || []).filter((m) => !m.archive_le && (m.versions || []).some((v) => v.statut === 'publie'))
   const choisi = mode === 'parcours' ? parcours.find((p) => p.id === parcoursId) : modules.find((m) => m.id === moduleId)
+  // Un parcours sans module publie ne donne aucune affectation.
+  const parcoursAffectable = mode !== 'parcours' || !choisi || modulesPubliesDuParcours(choisi, admin?.modules || []).publies > 0
 
   async function valider() {
     if (enCours || !choisi) return
@@ -667,7 +669,7 @@ function ModaleAffecter({ ligne, onFermer, onFait }) {
       pied={(
         <>
           <button type="button" className="btn btn-outline" onClick={onFermer} disabled={enCours}>Annuler</button>
-          <button type="button" className="btn btn-primary" onClick={valider} disabled={enCours || !choisi}>{enCours ? 'Enregistrement…' : 'Affecter'}</button>
+          <button type="button" className="btn btn-primary" onClick={valider} disabled={enCours || !choisi || !parcoursAffectable}>{enCours ? 'Enregistrement…' : 'Affecter'}</button>
         </>
       )}>
       {erreur && <div className="notice notice-error" role="alert">{erreur}</div>}
@@ -685,9 +687,12 @@ function ModaleAffecter({ ligne, onFermer, onFait }) {
               <label className="form-label" htmlFor="acp-affecter-parcours">Parcours</label>
               <select id="acp-affecter-parcours" className="form-select" value={parcoursId} onChange={(e) => setParcoursId(e.target.value)}>
                 <option value="">Choisir un parcours</option>
-                {parcours.map((p) => <option key={p.id} value={p.id}>{p.titre}{p.modules?.length ? ` (${pluriel(p.modules.length, 'module', 'modules')})` : ''}</option>)}
+                {parcours.map((p) => (
+                  <option key={p.id} value={p.id} disabled={modulesPubliesDuParcours(p, admin?.modules || []).publies === 0}>{libelleParcoursAffectable(p, admin?.modules || [])}</option>
+                ))}
               </select>
               {parcours.length === 0 && <div className="form-hint">Aucun parcours actif.</div>}
+              {choisi && !parcoursAffectable && <div className="form-hint">Publiez au moins un module de ce parcours avant de l affecter.</div>}
             </div>
           ) : (
             <div className="form-group">

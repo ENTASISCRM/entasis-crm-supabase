@@ -20,7 +20,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { messageErreur } from '../../lib/ui-shared'
-import { STATUTS, classeBadge } from '../../lib/academy/statuts'
+import { STATUTS, classeBadge , modulesPubliesDuParcours, libelleParcoursAffectable } from '../../lib/academy/statuts'
 import { jourParis, dateHeureParis } from '../../lib/academy/format'
 import {
   adminVue, creerModule, nouvelleVersion, archiverVersion, enregistrerParcours,
@@ -434,7 +434,11 @@ function FormulaireAffectation({ collaborateurs, modules, parcours, onRecharger 
   const modulesPubliables = modules.filter((m) => !m.archive_le)
   const aVersionPubliee = (m) => (m.versions || []).some((v) => v.statut === 'publie')
   const tous = choisis.length === collaborateurs.length && collaborateurs.length > 0
-  const pret = choisis.length > 0 && (cible.parcoursId || cible.moduleId) && !enCours
+  // Un parcours sans module publie ne donnerait aucune affectation : on le
+  // dit dans le selecteur et on bloque le bouton.
+  const parcoursChoisi = parcours.find((p) => p.id === cible.parcoursId)
+  const parcoursAffectable = !parcoursChoisi || modulesPubliesDuParcours(parcoursChoisi, modules).publies > 0
+  const pret = choisis.length > 0 && (cible.parcoursId || cible.moduleId) && parcoursAffectable && !enCours
 
   const basculer = (id) => setChoisis((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   const toutSelectionner = () => setChoisis(tous ? [] : collaborateurs.map((c) => c.id))
@@ -456,7 +460,8 @@ function FormulaireAffectation({ collaborateurs, modules, parcours, onRecharger 
         profileIds: choisis, moduleId: cible.moduleId || null, parcoursId: cible.parcoursId || null,
         echeance: echeance || null, obligatoire,
       })
-      toast.success(`${pluriel(Number(n) || 0, 'affectation créée', 'affectations créées')}`)
+      if (Number(n) > 0) toast.success(`${pluriel(Number(n), 'affectation créée', 'affectations créées')}`)
+      else toast('Aucune affectation créée : ces collaborateurs l avaient déjà', { icon: 'ℹ' })
       setChoisis([])
       onRecharger?.()
     } catch (e) {
@@ -495,8 +500,11 @@ function FormulaireAffectation({ collaborateurs, modules, parcours, onRecharger 
           <select id="aca-aff-parcours" className="form-select" value={cible.parcoursId} disabled={enCours}
             onChange={(e) => setCible({ parcoursId: e.target.value, moduleId: '' })}>
             <option value="">Aucun parcours</option>
-            {parcours.filter((p) => !p.archive_le).map((p) => <option key={p.id} value={p.id}>{p.titre}</option>)}
+            {parcours.filter((p) => !p.archive_le).map((p) => (
+              <option key={p.id} value={p.id} disabled={modulesPubliesDuParcours(p, modules).publies === 0}>{libelleParcoursAffectable(p, modules)}</option>
+            ))}
           </select>
+          {parcoursChoisi && !parcoursAffectable && <div className="form-hint">Publiez au moins un module de ce parcours avant de l affecter.</div>}
         </div>
         <div className="form-group">
           <label className="form-label" htmlFor="aca-aff-module">Ou un module seul</label>

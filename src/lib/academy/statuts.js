@@ -172,3 +172,28 @@ export function progressionPct(affectation) {
   const faites = Number(affectation?.lecons_terminees) || 0
   return Math.round((100 * Math.min(faites, total)) / total)
 }
+
+/**
+ * Les modules d un parcours qui ont une version publiée : seuls ceux là
+ * s affectent. Un parcours dont aucun module n est publié donne zéro
+ * affectation, il faut le dire avant le clic plutôt qu après.
+ * @param {{modules?: Array<{module_id: string}>}} parcours
+ * @param {Array<{id: string, versions?: Array<{statut: string}>}>} modules
+ * @returns {{ publies: number, total: number }}
+ */
+export function modulesPubliesDuParcours(parcours, modules) {
+  const liste = Array.isArray(parcours?.modules) ? parcours.modules : []
+  const publie = new Set((Array.isArray(modules) ? modules : [])
+    .filter((m) => (m.versions || []).some((v) => v.statut === 'publie'))
+    .map((m) => m.id))
+  return { publies: liste.filter((pm) => publie.has(pm.module_id)).length, total: liste.length }
+}
+
+/** Le libellé d un parcours dans un sélecteur d affectation. */
+export function libelleParcoursAffectable(parcours, modules) {
+  const { publies, total } = modulesPubliesDuParcours(parcours, modules)
+  if (total === 0) return `${parcours.titre} (aucun module)`
+  if (publies === 0) return `${parcours.titre} (aucun module publié)`
+  if (publies < total) return `${parcours.titre} (${publies} module${publies > 1 ? 's' : ''} publié${publies > 1 ? 's' : ''} sur ${total})`
+  return `${parcours.titre} (${total} module${total > 1 ? 's' : ''})`
+}
