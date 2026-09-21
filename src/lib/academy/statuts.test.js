@@ -193,3 +193,21 @@ describe('progressionPct', () => {
     expect(progressionPct(aff({ statut: 'valide', nb_lecons: 0, lecons_terminees: 0 }))).toBe(100)
   })
 })
+
+describe('modulesPubliesDuParcours', () => {
+  it('compte les modules du parcours qui ont une version publiée', async () => {
+    const { modulesPubliesDuParcours, libelleParcoursAffectable } = await import('./statuts.js')
+    const modules = [
+      { id: 'a', versions: [{ statut: 'publie' }, { statut: 'brouillon' }] },
+      { id: 'b', versions: [{ statut: 'brouillon' }] },
+      { id: 'c', versions: [] },
+    ]
+    const parcours = { titre: 'Intégration', modules: [{ module_id: 'a' }, { module_id: 'b' }, { module_id: 'c' }] }
+    expect(modulesPubliesDuParcours(parcours, modules)).toEqual({ publies: 1, total: 3 })
+    expect(libelleParcoursAffectable(parcours, modules)).toBe('Intégration (1 module publié sur 3)')
+    expect(libelleParcoursAffectable({ titre: 'Vide', modules: [] }, modules)).toBe('Vide (aucun module)')
+    expect(libelleParcoursAffectable({ titre: 'Brouillons', modules: [{ module_id: 'b' }] }, modules)).toBe('Brouillons (aucun module publié)')
+    expect(libelleParcoursAffectable({ titre: 'Complet', modules: [{ module_id: 'a' }] }, modules)).toBe('Complet (1 module)')
+    expect(modulesPubliesDuParcours(null, null)).toEqual({ publies: 0, total: 0 })
+  })
+})
