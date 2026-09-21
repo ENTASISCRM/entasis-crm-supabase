@@ -18,7 +18,7 @@
    immobilier, editorial) — la structure reste pure, sans dépendre des data.
 ───────────────────────────────────────────────────────────────────────────── */
 
-export function buildNavDomains({ isManager, isRhDelegue, canSmartRh, accesPnl }) {
+export function buildNavDomains({ isManager, isRhDelegue, canSmartRh, accesPnl, adminFormation }) {
   const domains = [
     {
       key: 'accueil', label: 'Accueil', icon: 'Dashboard',
@@ -102,6 +102,22 @@ export function buildNavDomains({ isManager, isRhDelegue, canSmartRh, accesPnl }
     {
       key: 'outils', label: 'Outils CGP', icon: 'Outils',
       views: [{ tab: 'outils', label: 'Outils CGP' }],
+    },
+    {
+      // Entasis Academy : la formation interne. Tout le cabinet a son
+      // parcours, son catalogue et ses resultats ; le pilotage et
+      // l administration s ouvrent a la direction et au drapeau
+      // academy_admin. La RLS et les fonctions SQL restent le vrai verrou.
+      key: 'formation', label: 'Formation', icon: 'Formation',
+      views: [
+        { tab: 'formation', sub: 'parcours', label: 'Mon parcours' },
+        { tab: 'formation', sub: 'catalogue', label: 'Catalogue' },
+        { tab: 'formation', sub: 'resultats', label: 'Mes résultats' },
+        ...((isManager || adminFormation) ? [
+          { tab: 'formation', sub: 'pilotage', label: 'Pilotage des formations' },
+          { tab: 'formation', sub: 'administration', label: 'Administration' },
+        ] : []),
+      ],
     },
   ]
   return domains.filter((d) => d.views.length > 0)

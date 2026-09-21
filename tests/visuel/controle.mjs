@@ -224,6 +224,18 @@ const SCENARIOS = [
   { nom: 'smart-rh-responsable-rh', role: 'rh', route: '#/smart-rh', attendu: 'À valider' },
   { nom: 'multi-equipement', role: 'conseiller', route: '#/multi-equipement', attendu: 'Multi-équipement' },
   { nom: 'conformite', role: 'conseiller', route: '#/conformite', attendu: 'Recueils et devoirs de conseil' },
+  // Entasis Academy : les ecrans du collaborateur puis ceux de la direction.
+  // Les donnees viennent de harnais-academy.mjs (fonctions SQL simulees).
+  { nom: 'formation-parcours', role: 'conseiller', route: '#/formation/parcours', attendu: 'La méthode Entasis' },
+  { nom: 'formation-catalogue', role: 'conseiller', route: '#/formation/catalogue', attendu: 'PER et retraite' },
+  { nom: 'formation-module', role: 'conseiller', route: '#/formation/module/methode-entasis', attendu: 'Les cinq temps d un accompagnement' },
+  { nom: 'formation-lecon', role: 'conseiller', route: '#/formation/lecon/al1', attendu: 'Les cinq temps' },
+  { nom: 'formation-quiz', role: 'conseiller', route: '#/formation/quiz/av1', attendu: 'Quel est le premier temps' },
+  { nom: 'formation-resultats', role: 'conseiller', route: '#/formation/resultats', attendu: 'La méthode Entasis' },
+  { nom: 'formation-pilotage', role: 'manager', route: '#/formation/pilotage', attendu: 'Conseiller Témoin' },
+  { nom: 'formation-fiche', role: 'manager', route: '#/formation/fiche/u-conseiller', attendu: 'Conseiller Démo' },
+  { nom: 'formation-administration', role: 'manager', route: '#/formation/administration', attendu: 'Fiscalité : raisonner' },
+  { nom: 'formation-editeur', role: 'manager', route: '#/formation/administration/version/av4', attendu: 'Fiscalité : raisonner' },
 ]
 
 // ── Execution d un scenario ──────────────────────────────────────────────────

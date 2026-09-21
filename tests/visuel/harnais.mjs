@@ -17,6 +17,8 @@
 //   const page = await pageDemo(browser, { role: 'conseiller' })   // 'manager', 'rh'
 //   await page.goto(`${url}/#/dashboard`)
 
+import { ACADEMY_TABLES, ACADEMY_RPCS } from './harnais-academy.mjs'
+
 const ANNEE = new Date().getFullYear()
 const MOIS_COURANT = new Date().getMonth() // 0 pour janvier
 const MOIS = ['JANVIER', 'FÉVRIER', 'MARS', 'AVRIL', 'MAI', 'JUIN', 'JUILLET', 'AOÛT', 'SEPTEMBRE', 'OCTOBRE', 'NOVEMBRE', 'DÉCEMBRE']
@@ -184,11 +186,11 @@ export const CONFORMITE = [
 // ── Session et profils ───────────────────────────────────────────────────────
 export const USER = { id: 'u-demo', email: 'demo@exemple.fr', aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {}, created_at: `${ANNEE}-01-01T00:00:00Z` }
 
-export const PROFIL_CONSEILLER = { id: 'u-demo', email: 'demo@exemple.fr', full_name: 'Conseiller Démo', role: 'conseiller', advisor_code: 'DEMO', is_active: true, rh_delegue: false }
-export const PROFIL_MANAGER = { id: 'u-demo', email: 'demo@exemple.fr', full_name: 'Direction Démo', role: 'manager', advisor_code: 'DIR', is_active: true, rh_delegue: true }
+export const PROFIL_CONSEILLER = { id: 'u-demo', email: 'demo@exemple.fr', full_name: 'Conseiller Démo', role: 'conseiller', advisor_code: 'DEMO', is_active: true, rh_delegue: false, academy_admin: false }
+export const PROFIL_MANAGER = { id: 'u-demo', email: 'demo@exemple.fr', full_name: 'Direction Démo', role: 'manager', advisor_code: 'DIR', is_active: true, rh_delegue: true, academy_admin: false }
 // Deleguee RH : conseillere, pas manager, mais rh_delegue a vrai. Elle doit
 // voir et tenir la file de validation des conges comme la direction.
-export const PROFIL_RH = { id: 'u-demo', email: 'demo@exemple.fr', full_name: 'Responsable RH Démo', role: 'advisor', advisor_code: 'RHD', is_active: true, rh_delegue: true }
+export const PROFIL_RH = { id: 'u-demo', email: 'demo@exemple.fr', full_name: 'Responsable RH Démo', role: 'advisor', advisor_code: 'RHD', is_active: true, rh_delegue: true, academy_admin: false }
 
 // L equipe telle que la renvoie la RPC team_directory
 const AUTRE_CONSEILLER = { id: 'u-temoin', email: 'temoin@exemple.fr', full_name: 'Conseiller Témoin', role: 'conseiller', advisor_code: 'TEMO', is_active: true, rh_delegue: false }
@@ -322,11 +324,15 @@ export async function pageDemo(browser, { role = 'conseiller' } = {}) {
     campagnes: CAMPAGNES,
     campagne_cibles: CIBLES,
     rh_conges: CONGES,
+    ...ACADEMY_TABLES,
   }
+  // Une RPC vaut un tableau fige, ou une fonction du corps POST quand la
+  // reponse depend des arguments (academy_module(p_slug), academy_lecon...).
   const rpcs = {
     team_directory: equipe,
     cabinet_totals_month: TOTAUX_CABINET,
     journal_connexions: CONNEXIONS,
+    ...ACADEMY_RPCS,
   }
 
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
@@ -376,13 +382,17 @@ export async function pageDemo(browser, { role = 'conseiller' } = {}) {
     const url = requete.url()
     const { rpc, table } = cibleDe(url)
     let corps
-    if (rpc) corps = rpcs[table] ?? []
-    else corps = filtrerPostgrest(tables[table] ?? [], url)
+    if (rpc) {
+      const reponse = rpcs[table]
+      let arguments_ = {}
+      try { arguments_ = JSON.parse(requete.postData() || '{}') } catch { /* corps absent */ }
+      corps = typeof reponse === 'function' ? reponse(arguments_) : (reponse ?? [])
+    } else corps = filtrerPostgrest(tables[table] ?? [], url)
     const accept = requete.headers()['accept'] || ''
     const objetSeul = accept.includes('vnd.pgrst.object')
-    const n = corps.length
+    const n = Array.isArray(corps) ? corps.length : 0
     const contentRange = n ? `0-${n - 1}/${n}` : `*/0`
-    return json(route, objetSeul ? (corps[0] ?? null) : corps, 200, { 'content-range': contentRange })
+    return json(route, objetSeul && Array.isArray(corps) ? (corps[0] ?? null) : corps, 200, { 'content-range': contentRange })
   })
 
   // API du site (fonctions Vercel) : remuneration et calendrier equipe ont une
