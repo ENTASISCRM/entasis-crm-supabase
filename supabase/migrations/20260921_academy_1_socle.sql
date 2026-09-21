@@ -39,6 +39,10 @@
 -- version enregistree.
 
 -- ── 1. Droit d administration formation ────────────────────────────────────
+-- L ajout de colonne prend un verrou exclusif sur profiles, table que
+-- chaque session lit : si le verrou n est pas obtenu en cinq secondes, la
+-- migration echoue proprement plutot que de bloquer le cabinet. On rejoue.
+set lock_timeout = '5s';
 alter table public.profiles
   add column if not exists academy_admin boolean not null default false;
 
@@ -140,7 +144,7 @@ create table if not exists public.academy_parametres (
   retention_intervalles_mois  integer not null default 12 check (retention_intervalles_mois between 1 and 60),
   inactivite_secondes         integer not null default 120,
   pas_battement_secondes      integer not null default 30,
-  notice_donnees              text not null default 'Entasis Academy enregistre, pour chaque collaborateur : les lecons ouvertes et terminees, la position de reprise, des battements d activite (toutes les 30 secondes, seulement quand la page est visible et apres une interaction de moins de 120 secondes), les tentatives de quiz avec les reponses donnees et le temps du quiz, les revisions. Aucune frappe, aucune capture, aucune webcam. Ces donnees servent au suivi pedagogique. Elles sont lisibles par vous et par la direction. Les intervalles bruts d activite sont purges apres la duree de retention fixee par le cabinet.',
+  notice_donnees              text not null default 'Entasis Academy enregistre, pour chaque collaborateur : les lecons ouvertes et terminees, la position de reprise, des battements d activite (toutes les 30 secondes, seulement quand la page est visible et apres une interaction de moins de 120 secondes), les tentatives de quiz avec les reponses donnees et le temps du quiz, les revisions. Aucune frappe, aucune capture, aucune webcam. Ces donnees servent au suivi pedagogique. Elles sont lisibles par vous, par la direction et par l administrateur de la formation ; les commentaires de coaching ne le sont que par la direction. Les intervalles bruts d activite sont purges chaque nuit apres la duree de retention fixee par le cabinet (douze mois), seul un total par jour est conserve.',
   updated_at                  timestamptz not null default now()
 );
 insert into public.academy_parametres (id) values (true) on conflict (id) do nothing;
@@ -561,6 +565,12 @@ begin
     new.profile_id := auth.uid();
     new.terminee_le := null;
     new.mini_question_reussie_le := null;
+    -- La version est celle de la lecon, jamais celle que le client annonce :
+    -- sinon trois lecons d un module comptees sur un autre ouvriraient son quiz.
+    select l.version_id into new.version_id from public.academy_lecons l where l.id = new.lecon_id;
+    if new.version_id is null then
+      raise exception 'Lecon introuvable' using errcode = 'P0002';
+    end if;
     return new;
   end if;
   if new.profile_id is distinct from old.profile_id
@@ -582,12 +592,18 @@ create trigger trg_academy_progression_garde
   before insert or update on public.academy_progression_lecons
   for each row execute function public.academy_progression_garde();
 
--- Journaux append only, meme pour la cle de service.
+-- Journaux append only pour toute session utilisateur. La cle de service et
+-- les migrations (auth.uid() null) gardent la main : c est ce qui permet la
+-- cascade d une suppression de profil decidee par l administration.
 create or replace function public.academy_append_only()
 returns trigger
 language plpgsql
 as $function$
 begin
+  if auth.uid() is null then
+    if TG_OP = 'DELETE' then return old; end if;
+    return new;
+  end if;
   raise exception 'Ce journal ne se modifie pas et ne s efface pas';
 end;
 $function$;

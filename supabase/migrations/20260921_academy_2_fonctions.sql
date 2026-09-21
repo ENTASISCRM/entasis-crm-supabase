@@ -35,7 +35,8 @@ grant select (id, version_id, ordre, slug, titre, objectif, duree_minutes, conte
 -- Durees archivees par jour, alimentees par la purge des intervalles bruts.
 create table if not exists public.academy_durees_jour (
   profile_id  uuid not null references public.profiles(id) on delete cascade,
-  lecon_id    uuid references public.academy_lecons(id) on delete set null,
+  -- lecon_id fait partie de la cle : une lecon effacee emporte ses durees.
+  lecon_id    uuid not null references public.academy_lecons(id) on delete cascade,
   version_id  uuid references public.academy_module_versions(id),
   jour        date not null,
   secondes    integer not null default 0,
@@ -1187,8 +1188,10 @@ begin
     'semaines', coalesce((select jsonb_agg(jsonb_build_object('semaine', s.semaine, 'temps_actif_s', s.temps) order by s.semaine)
       from (select date_trunc('week', i.debut at time zone 'Europe/Paris')::date as semaine, sum(extract(epoch from (i.fin - i.debut)))::int as temps
               from public.academy_intervalles i where i.profile_id = p_profile_id group by 1) s), '[]'::jsonb),
-    'commentaires', coalesce((select jsonb_agg(jsonb_build_object('id', c.id, 'texte', c.texte, 'created_at', c.created_at, 'auteur', pr.full_name) order by c.created_at desc)
-      from public.academy_commentaires_coaching c left join public.profiles pr on pr.id = c.auteur_id where c.profile_id = p_profile_id), '[]'::jsonb),
+    -- Les commentaires de coaching sont reserves a la direction (policy
+    -- academy_coaching_select) : l administrateur formation ne les voit pas.
+    'commentaires', case when public.is_manager() then coalesce((select jsonb_agg(jsonb_build_object('id', c.id, 'texte', c.texte, 'created_at', c.created_at, 'auteur', pr.full_name) order by c.created_at desc)
+      from public.academy_commentaires_coaching c left join public.profiles pr on pr.id = c.auteur_id where c.profile_id = p_profile_id), '[]'::jsonb) else '[]'::jsonb end,
     'temps_actif_s', public.academy_duree_active(p_profile_id, null, null)
   );
 end;
@@ -1231,7 +1234,7 @@ begin
   insert into public.academy_durees_jour (profile_id, lecon_id, version_id, jour, secondes)
   select i.profile_id, i.lecon_id, s.version_id, (i.debut at time zone 'Europe/Paris')::date, sum(extract(epoch from (i.fin - i.debut)))::int
     from public.academy_intervalles i join public.academy_sessions s on s.id = i.session_id
-   where i.fin < v_limite
+   where i.fin < v_limite and i.lecon_id is not null
    group by i.profile_id, i.lecon_id, s.version_id, (i.debut at time zone 'Europe/Paris')::date
   on conflict (profile_id, jour, lecon_id) do update set secondes = public.academy_durees_jour.secondes + excluded.secondes;
   delete from public.academy_intervalles where fin < v_limite;
@@ -1246,7 +1249,6 @@ declare f text;
 begin
   foreach f in array array[
     'academy_aujourdhui()', 'academy_exiger_staff()', 'academy_exiger_admin()', 'academy_exiger_direction()',
-    'academy_duree_active(uuid, timestamptz, timestamptz)', 'academy_duree_version(uuid, uuid)',
     'academy_catalogue()', 'academy_module(text)', 'academy_mon_parcours()', 'academy_mes_tentatives()', 'academy_mes_rappels()',
     'academy_lecon(uuid)', 'academy_ouvrir_session(uuid, uuid)', 'academy_battement(uuid)', 'academy_terminer_lecon(uuid, integer)',
     'academy_ouvrir_tentative(uuid, text, uuid)', 'academy_soumettre_tentative(uuid, jsonb)', 'academy_corrige(uuid)',
@@ -1259,8 +1261,12 @@ begin
     execute format('revoke execute on function public.%s from public, anon', f);
     execute format('grant execute on function public.%s to authenticated', f);
   end loop;
-  -- Fonctions internes et purge : personne cote navigateur.
-  foreach f in array array['academy_journaliser(text, text, jsonb)', 'academy_evenement(uuid, text, uuid, jsonb)', 'academy_recalculer_statut(uuid, uuid)', 'academy_presenter_tentative(uuid)', 'academy_purger_intervalles()'] loop
+  -- Fonctions internes et purge : personne cote navigateur. Les durees
+  -- actives n y sont appelees que par des fonctions security definer, qui
+  -- gardent leur droit : exposees, elles livreraient le temps d activite de
+  -- n importe quel collegue a tout compte authentifie.
+  foreach f in array array['academy_journaliser(text, text, jsonb)', 'academy_evenement(uuid, text, uuid, jsonb)', 'academy_recalculer_statut(uuid, uuid)', 'academy_presenter_tentative(uuid)', 'academy_purger_intervalles()',
+    'academy_duree_active(uuid, timestamptz, timestamptz)', 'academy_duree_version(uuid, uuid)'] loop
     execute format('revoke execute on function public.%s from public, anon, authenticated', f);
   end loop;
 end

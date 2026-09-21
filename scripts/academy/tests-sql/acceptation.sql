@@ -75,7 +75,14 @@ begin
   exception when insufficient_privilege then v_erreur := true;
   end;
   if not v_erreur then raise exception 'ECHEC : un conseiller insere une tentative en direct'; end if;
-  resume := resume || '3 corriges, mini_reponse, intervalles, tentatives illisibles ou inecrivables en direct OK; ';
+  -- Le temps d activite d un collegue ne se lit pas par la fonction interne
+  v_erreur := false;
+  begin
+    perform public.academy_duree_active(c_noe, null, null);
+  exception when insufficient_privilege then v_erreur := true;
+  end;
+  if not v_erreur then raise exception 'ECHEC : un conseiller appelle academy_duree_active'; end if;
+  resume := resume || '3 corriges, mini_reponse, intervalles, tentatives, duree_active illisibles ou inecrivables en direct OK; ';
 
   -- Catalogue et module
   v_json := public.academy_catalogue();
@@ -110,6 +117,13 @@ begin
   -- Position sauvee en direct (upsert autorise sur position seulement)
   update public.academy_progression_lecons set position = '{"scroll": 42}'::jsonb where lecon_id = v_l1 and profile_id = c_camille;
   if (select position ->> 'scroll' from public.academy_progression_lecons where lecon_id = v_l1 and profile_id = c_camille) <> '42' then raise exception 'ECHEC sauvegarde de position'; end if;
+  -- Une progression inseree en direct porte la version de sa lecon, pas
+  -- celle que le client annonce (v_l2 appartient a v_version ; on annonce v_l1 comme version).
+  -- Le reglage academy.serveur pose par les fonctions est local a la transaction
+  -- du test : on le remet a off, comme l est toute requete directe du navigateur.
+  perform set_config('academy.serveur', 'off', true);
+  insert into public.academy_progression_lecons (profile_id, lecon_id, version_id) values (c_camille, v_l2, v_l1) on conflict (profile_id, lecon_id) do nothing;
+  if (select version_id from public.academy_progression_lecons where lecon_id = v_l2 and profile_id = c_camille) <> v_version then raise exception 'ECHEC : version_id de progression non corrige par le trigger'; end if;
   -- Le navigateur ne peut pas se declarer termine
   v_erreur := false;
   begin
