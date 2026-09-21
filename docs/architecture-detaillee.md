@@ -490,53 +490,46 @@ CREATE TABLE dossiers_immo (
 );
 ```
 
-### 🎓 Tables Entasis Academy (formation interne, 21 septembre 2026)
+### 🎓 Tables Entasis Academy (formation interne, mode entraînement, 21 septembre 2026)
 
-Vingt et une tables préfixées `academy_`, écrites sur la branche
-`claude/entasis-academy` et appliquées sur le projet DEV seulement
-(`supabase/migrations/20260921_academy_1_socle.sql`, `_2_fonctions.sql`,
-`_3_seed_01..13.sql`). Le catalogue est semé en brouillon.
+Migrations `supabase/migrations/20260921_academy_1..7*`. Le socle (1) et
+les fonctions de la première version (2, leçons et quiz) sont remplacés
+côté fonctions par la migration 6 (mode entraînement) ; la 5 garde le
+garde fou des parcours ; la 7 sème les decks (un fichier par deck, en
+brouillon). Les tables de la première version restent sans usage.
 
 | Table | Rôle |
 |---|---|
-| `academy_parametres` | une ligne (`id = true`) : seuil, délais J7 et J30, questions par quiz, rétention, inactivité, pas des battements |
-| `academy_modules`, `academy_module_versions` | un module, ses versions (`brouillon` → `publie` → `archive`) ; une version publiée est immuable et indélébile (triggers) |
-| `academy_lecons`, `academy_questions`, `academy_corriges` | contenu d'une version ; `academy_corriges` sans policy, `revoke all` pour `authenticated` ; `academy_lecons.mini_reponse` retirée du `select` accordé |
-| `academy_parcours`, `academy_parcours_modules` | parcours ordonnés avec délai en jours par module |
-| `academy_affectations` | un collaborateur, une version, une échéance, un statut (`non_commence`, `en_cours`, `a_revoir`, `valide`) |
-| `academy_progression_lecons` | position et fin de leçon ; `authenticated` n'a que `update (position, updated_at)`, la fin passe par la RPC sous `academy.serveur = on` |
-| `academy_sessions`, `academy_intervalles`, `academy_durees_jour` | ouverture de lecture, intervalles actifs bornés par `now()` côté serveur, résumé par jour après purge |
-| `academy_tentatives`, `academy_reponses` | tirage (ordre des choix mémorisé), réponses en index présentés, idempotence par `jeton_client` |
-| `academy_validations`, `academy_attestations`, `academy_revisions` | validation d'un module, attestation `EA-AAAA-NNNN`, révisions J7 et J30 (uniques) |
-| `academy_evenements`, `academy_journal_admin`, `academy_commentaires_coaching` | historique du collaborateur, journal de l'administration, notes de coaching de la direction |
+| `academy_parametres` | une ligne : questions par session (12), rétention, inactivité, notice |
+| `academy_modules`, `academy_module_versions` | un deck et ses versions (`brouillon` → `publie` immuable → `archive`), `memo_md` |
+| `academy_items`, `academy_items_corriges` | exercices (huit types, `payload` sans la réponse) et corrigés (aucune policy, `revoke all`) |
+| `academy_forces` | répétition espacée : force 0 à 5 par (profil, item), prochaine échéance |
+| `academy_entrainements`, `academy_entrainement_reponses` | une session (items tirés et ordre présenté figés), ses réponses corrigées |
+| `academy_maitrise`, `academy_series` | couronnes et XP par (profil, version) ; série de jours et objectif quotidien |
+| `academy_parcours`, `academy_parcours_modules`, `academy_affectations` | inchangés |
+| `academy_sessions`, `academy_intervalles`, `academy_durees_jour` | temps actif (chaque réponse vaut un battement), purge nocturne |
+| `academy_validations`, `academy_attestations` | validation à trois couronnes, attestation interne |
+| `academy_evenements`, `academy_journal_admin`, `academy_commentaires_coaching` | historique, journal, coaching |
 
-Prédicats : `est_admin_academy()` (manager ou `profiles.academy_admin`),
-`academy_exiger_staff()`, `academy_exiger_admin()`,
-`academy_exiger_direction()`. `prevent_role_escalation()` protège
-`academy_admin` comme `role`.
-
-Fonctions `security definer` appelées par `src/services/academy.js` :
-lecture (`academy_catalogue`, `academy_module`, `academy_mon_parcours`,
-`academy_mes_tentatives`, `academy_mes_rappels`, `academy_lecon`), suivi
-(`academy_ouvrir_session`, `academy_battement`, `academy_terminer_lecon`),
-quiz (`academy_ouvrir_tentative`, `academy_soumettre_tentative`,
-`academy_corrige`), direction (`academy_pilotage`, `academy_fiche`,
-`academy_matrice_competences`, `academy_affecter`,
-`academy_modifier_echeance`, `academy_retirer_affectation`), administration
-(`academy_admin_vue`, `academy_version_admin`, `academy_creer_module`,
+Fonctions exposées à `authenticated` : `academy_catalogue`, `academy_module`,
+`academy_mon_parcours`, `academy_mes_resultats`, `academy_mes_rappels`,
+`academy_demarrer_entrainement`, `academy_repondre`,
+`academy_terminer_entrainement`, `academy_objectif_quotidien`,
+`academy_affecter`, `academy_modifier_echeance`, `academy_retirer_affectation`,
+`academy_admin_vue`, `academy_version_admin`, `academy_creer_module`,
 `academy_nouvelle_version`, `academy_enregistrer_version`,
-`academy_enregistrer_lecon`, `academy_enregistrer_question`,
-`academy_publier_version`, `academy_archiver_version`,
-`academy_enregistrer_parcours`), entretien (`academy_purger_intervalles`,
-service role).
+`academy_enregistrer_item`, `academy_publier_version`, `academy_archiver_version`,
+`academy_enregistrer_parcours`, `academy_pilotage`, `academy_fiche`,
+`academy_matrice_competences`. Internes : `academy_verifier_reponse`,
+`academy_presenter_item`, `academy_couronnes`, `academy_items_dus`,
+`academy_duree_active`, `academy_duree_version`, `academy_purger_intervalles`.
 
-Côté client : `src/components/academy/` (Academy, MonParcours, Catalogue,
-ModuleDetail, LecteurLecon, Quiz, MesResultats, NoticeDonnees, Pilotage,
-GraphiquesPilotage, FicheCollaborateur, Administration, EditeurVersion),
-`src/lib/academy/` (statuts, revisions, battement, quiz, format, csv,
-attestation-pdf), `src/components/ui/RenduMarkdown.jsx` (marked + DOMPurify
-sur une instance dédiée). Contrôle visuel : onze scénarios `formation-*`
-dans `tests/visuel/controle.mjs`, données dans `tests/visuel/harnais-academy.mjs`.
+Côté client : `src/components/academy/` (Academy, MonParcours « Aujourd'hui »,
+Catalogue, ModuleDetail « deck », Entrainement et `exercices/` (un composant
+par type), MesResultats, NoticeDonnees, Pilotage, GraphiquesPilotage,
+FicheCollaborateur, Administration, EditeurVersion), `src/lib/academy/`
+(statuts, exercices, format, csv, attestation-pdf), harnais visuel
+`tests/visuel/harnais-academy.mjs`.
 
 ### 🔐 Sécurité Row Level Security (RLS)
 

@@ -5,14 +5,14 @@
 // invariants de rendu et depose une capture par ecran.
 //
 // Pourquoi : les tests vitest ne testent que des fonctions. Une regle CSS qui
-// ecrase deux tiers des champs d une modale ne fait echouer aucun test, seul
+// ecrase deux tiers des champs d’une modale ne fait echouer aucun test, seul
 // un navigateur le voit. Ce script joue en CI a chaque pull request.
 //
-// Variables d environnement :
+// Variables d’environnement :
 //   CRM_URL                  adresse du serveur a controler (defaut : vite preview)
 //   PLAYWRIGHT_CHROMIUM_PATH chemin d un chromium deja installe (sinon celui de playwright)
 //   PLAYWRIGHT_MODULE_DIR    dossier contenant node_modules/playwright (vide en CI)
-//   CONTROLE_SCENARIOS       noms de scenarios separes par des virgules, pour n en jouer qu une partie
+//   CONTROLE_SCENARIOS       noms de scenarios separes par des virgules, pour n’en jouer qu’une partie
 //
 // Lancement : node tests/visuel/controle.mjs
 // Captures : tests/visuel/captures/<scenario>.png
@@ -28,7 +28,7 @@ const URL_BASE = (process.env.CRM_URL || 'http://127.0.0.1:4173').replace(/\/$/,
 const DOSSIER_CAPTURES = path.join(ICI, 'captures')
 const CHEMIN_CHROMIUM = process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined
 
-// Playwright vient du depot (CI) ou d un dossier externe (poste local sans
+// Playwright vient du depot (CI) ou d’un dossier externe (poste local sans
 // installation dans le depot).
 function chargerPlaywright() {
   const dossier = process.env.PLAYWRIGHT_MODULE_DIR
@@ -49,7 +49,7 @@ async function attendreRendu(page) {
 
 async function cliquer(page, selecteur, libelle) {
   const bouton = page.locator(selecteur).first()
-  if (await bouton.count() === 0) throw new Error(`bouton « ${libelle} » introuvable a l ecran`)
+  if (await bouton.count() === 0) throw new Error(`bouton « ${libelle} » introuvable a l’ecran`)
   await bouton.click()
 }
 
@@ -102,7 +102,7 @@ const VERIFICATIONS = [
         if (!pied) { defauts.push('.modal-box sans .modal-foot'); continue }
         const r = pied.getBoundingClientRect()
         const visible = r.height > 0 && r.width > 0 && r.top >= 0 && r.bottom <= window.innerHeight + 1
-        if (!visible) defauts.push(`.modal-foot hors de l ecran (haut ${Math.round(r.top)}, bas ${Math.round(r.bottom)}, hauteur ${Math.round(r.height)})`)
+        if (!visible) defauts.push(`.modal-foot hors de l’ecran (haut ${Math.round(r.top)}, bas ${Math.round(r.bottom)}, hauteur ${Math.round(r.height)})`)
       }
       return defauts.length ? defauts.join(' ; ') : null
     }),
@@ -120,8 +120,8 @@ const VERIFICATIONS = [
 ]
 
 // Erreurs console a ignorer : une ressource reseau qui ne charge pas parce
-// qu elle est simulee (404) ou hors du CRM (polices, hote Supabase fictif,
-// temps reel coupe). Jamais une erreur de l application elle meme.
+// qu’elle est simulee (404) ou hors du CRM (polices, hote Supabase fictif,
+// temps reel coupe). Jamais une erreur de l’application elle meme.
 function erreurConsoleIgnoree(msg, texte) {
   if (!/Failed to load resource/i.test(texte)) return false
   const url = msg.location()?.url || ''
@@ -143,8 +143,8 @@ function ecouterConsole(page) {
 
 // ── Scenarios ────────────────────────────────────────────────────────────────
 // Chaque scenario ouvre une page neuve : pas de fermeture de modale a la main
-// (la garde anti perte bloque Escape sur un dossier saisi), pas d etat herite.
-// `attendu` : un texte qui doit etre a l ecran, sinon un ecran reste sur son
+// (la garde anti perte bloque Escape sur un dossier saisi), pas d’etat herite.
+// `attendu` : un texte qui doit etre a l’ecran, sinon un ecran reste sur son
 // squelette ou vide passerait le controle en vert.
 const SCENARIOS = [
   { nom: 'accueil-conseiller', role: 'conseiller', route: '#/dashboard', attendu: 'Dossiers sans mouvement' },
@@ -175,9 +175,9 @@ const SCENARIOS = [
     },
   },
   {
-    // « Déjà signé » depuis le bloc sans mouvement : la modale s ouvre sur un
-    // dossier EXISTANT, en Signé. C est le seul écran qui joue la lecture de
-    // la fiche à l ouverture et le préremplissage des champs client.
+    // « Déjà signé » depuis le bloc sans mouvement : la modale s’ouvre sur un
+    // dossier EXISTANT, en Signé. C’est le seul écran qui joue la lecture de
+    // la fiche à l’ouverture et le préremplissage des champs client.
     nom: 'deja-signe', role: 'manager', route: '#/dashboard', attendu: 'Date de signature',
     actions: async (page) => {
       await cliquer(page, 'button:has-text("Déjà signé")', 'Déjà signé')
@@ -220,36 +220,46 @@ const SCENARIOS = [
   { nom: 'remuneration', role: 'conseiller', route: '#/remuneration', attendu: 'Rémunération' },
   { nom: 'connexions', role: 'manager', route: '#/connexions', attendu: 'Connexions au CRM' },
   { nom: 'smart-rh-direction', role: 'manager', route: '#/smart-rh', attendu: 'À valider' },
-  // La responsable RH n est pas manager : elle doit tenir la même file.
+  // La responsable RH n’est pas manager : elle doit tenir la même file.
   { nom: 'smart-rh-responsable-rh', role: 'rh', route: '#/smart-rh', attendu: 'À valider' },
   { nom: 'multi-equipement', role: 'conseiller', route: '#/multi-equipement', attendu: 'Multi-équipement' },
   { nom: 'conformite', role: 'conseiller', route: '#/conformite', attendu: 'Recueils et devoirs de conseil' },
   // Entasis Academy : les ecrans du collaborateur puis ceux de la direction.
   // Les donnees viennent de harnais-academy.mjs (fonctions SQL simulees).
-  { nom: 'formation-parcours', role: 'conseiller', route: '#/formation/parcours', attendu: 'La méthode Entasis' },
+  { nom: 'formation-parcours', role: 'conseiller', route: '#/formation/parcours', attendu: 'Aujourd hui' },
   { nom: 'formation-catalogue', role: 'conseiller', route: '#/formation/catalogue', attendu: 'PER et retraite' },
-  { nom: 'formation-module', role: 'conseiller', route: '#/formation/module/methode-entasis', attendu: 'Les cinq temps d un accompagnement' },
-  { nom: 'formation-lecon', role: 'conseiller', route: '#/formation/lecon/al1', attendu: 'Les cinq temps' },
-  { nom: 'formation-quiz', role: 'conseiller', route: '#/formation/quiz/av1', attendu: 'Quel est le premier temps' },
-  { nom: 'formation-resultats', role: 'conseiller', route: '#/formation/resultats', attendu: 'La méthode Entasis' },
+  { nom: 'formation-deck', role: 'conseiller', route: '#/formation/module/methode-entasis', attendu: 'Démarrer une session' },
+  { nom: 'formation-entrainement', role: 'conseiller', route: '#/formation/entrainement/av1', attendu: 'Vérifier' },
+  { nom: 'formation-resultats', role: 'conseiller', route: '#/formation/resultats', attendu: 'exercices à force basse' },
+  {
+    // Une reponse jouee de bout en bout : on coche, on verifie, le bandeau
+    // de correction arrive avec l’explication servie par la fonction simulee.
+    nom: 'formation-entrainement-reponse', role: 'conseiller', route: '#/formation/entrainement/av1', attendu: 'Continuer',
+    actions: async (page) => {
+      await cliquer(page, 'label:has-text("Le premier appel")', 'Le premier appel')
+      await cliquer(page, 'button:has-text("Vérifier")', 'Vérifier')
+      await page.waitForSelector('button:has-text("Continuer")', { timeout: 10000 })
+      await page.waitForTimeout(400)
+    },
+  },
   { nom: 'formation-pilotage', role: 'manager', route: '#/formation/pilotage', attendu: 'Conseiller Témoin' },
   { nom: 'formation-fiche', role: 'manager', route: '#/formation/fiche/u-conseiller', attendu: 'Conseiller Démo' },
   { nom: 'formation-administration', role: 'manager', route: '#/formation/administration', attendu: 'Fiscalité : raisonner' },
   { nom: 'formation-editeur', role: 'manager', route: '#/formation/administration/version/av4', attendu: 'Fiscalité : raisonner' },
   {
     // Aucun module publie : un conseiller qui suit un lien #/formation est
-    // ramene a l accueil et le menu ne montre pas l onglet ; la direction
-    // garde l acces pour relire et publier.
+    // ramene a l’accueil et le menu ne montre pas l’onglet ; la direction
+    // garde l’acces pour relire et publier.
     nom: 'formation-fermee-conseiller', role: 'conseiller', formationFermee: true, route: '#/formation/parcours', attendu: 'Dossiers sans mouvement',
     actions: async (page) => {
       const onglet = await page.locator('.nav-item, nav a, nav button').filter({ hasText: 'Formation' }).count()
-      if (onglet > 0) throw new Error('l onglet Formation est visible sans module publie')
+      if (onglet > 0) throw new Error('l’onglet Formation est visible sans module publie')
     },
   },
   { nom: 'formation-fermee-direction', role: 'manager', formationFermee: true, route: '#/formation/administration', attendu: 'Fiscalité : raisonner' },
 ]
 
-// ── Execution d un scenario ──────────────────────────────────────────────────
+// ── Execution d’un scenario ──────────────────────────────────────────────────
 async function jouer(browser, scenario) {
   const resultat = { nom: scenario.nom, passees: 0, echecs: [] }
   let page = null
@@ -261,7 +271,7 @@ async function jouer(browser, scenario) {
     await attendreRendu(page)
     if (scenario.actions) await scenario.actions(page)
 
-    // Assertion positive : l ecran attendu est bien la.
+    // Assertion positive : l’ecran attendu est bien la.
     if (scenario.attendu) {
       const present = await page.evaluate((t) => (document.body.innerText || '').includes(t), scenario.attendu)
       if (present) resultat.passees++
@@ -306,7 +316,7 @@ function afficherTableau(resultats) {
   return total
 }
 
-// ── Point d entree ───────────────────────────────────────────────────────────
+// ── Point d’entree ───────────────────────────────────────────────────────────
 async function principal() {
   mkdirSync(DOSSIER_CAPTURES, { recursive: true })
   const { chromium } = chargerPlaywright()
