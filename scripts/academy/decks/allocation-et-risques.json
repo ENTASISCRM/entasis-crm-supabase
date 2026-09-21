@@ -1,0 +1,834 @@
+{
+ "slug": "allocation-et-risques",
+ "titre": "Allocation et risques",
+ "competence": "Relier diversification, volatilité, horizon et capacité de perte",
+ "memo_md": "**Une allocation se lit comme un ensemble, à la date de chaque projet, et la capacité de perte prime sur la tolérance déclarée.**\n\n## Diversifier\n\n- Diversifier dilue le risque propre à chaque actif ; le risque de marché et la perte en capital demeurent.\n- L'AMF juge la diversification sur le portefeuille global : entreprise, immobilier, épargne salariale, contrats.\n- Compter les expositions, pas les lignes : cinq fonds sur les mêmes valeurs forment une seule position.\n\n## Volatilité et horizon\n\n- Une baisse ne devient une perte que si l'on vend.\n- DIC : indicateur de 1 à 7 (le niveau 1 n'est pas zéro risque), marché et crédit combinés, calculé pour la période de détention recommandée.\n- Scénarios défavorable, intermédiaire, favorable, tension : des estimations, pas un engagement.\n- Marché concentré : vingt ans n'éliminent pas le risque.\n- Une somme se répartit par projet daté, pas par contrat.\n\n## Tolérance et capacité\n\n- Tolérance : ce que le client accepte de voir bouger. Capacité : ce qu'il peut perdre sans compromettre ses projets. La capacité prime.\n- Article L. 541-8-1 : recueillir connaissances et expérience, situation financière, objectifs ; à défaut, s'abstenir. Déclaration d'adéquation écrite.\n- « Perte maximale de 10 % » mesure une tolérance : peu d'offres plafonnent la perte.\n\n## Pari sectoriel\n\n- Ni refus sec, ni exécution : écouter, étudier par poche datée, expliquer sans promettre, tracer.\n- Trois conditions : fraction limitée d'un patrimoine diversifié, horizon au moins égal à la période recommandée, perte supportable.",
+ "items": [
+  {
+   "cle": "i01",
+   "type": "choix",
+   "competence": "Diversification d'ensemble",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Quel risque la diversification permet-elle de diluer ?",
+    "choix": [
+     "Le risque commun à tout le marché, comme une récession",
+     "Le risque propre à un actif, un secteur ou un émetteur",
+     "Le risque de perte en capital",
+     "Le risque de crédit mesuré par le DIC"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "La diversification dilue le risque propre à chaque actif ; le risque de marché et le risque de perte en capital demeurent."
+  },
+  {
+   "cle": "i02",
+   "type": "choix",
+   "competence": "Diversification d'ensemble",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Un client détient cinq fonds chez trois assureurs. En ouvrant leurs documents, vous voyez qu'ils investissent tous surtout sur les grandes valeurs technologiques américaines. Que concluez-vous ?",
+    "choix": [
+     "Il est diversifié : cinq fonds et trois établissements",
+     "Il est concentré : les cinq lignes forment une seule position",
+     "Il est diversifié dès lors que les frais des fonds diffèrent",
+     "Il faut comparer les performances de chaque fonds avant de conclure"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "La diversification se juge sur les expositions réelles, pas sur le nombre de lignes ou d'établissements."
+  },
+  {
+   "cle": "i03",
+   "type": "choix",
+   "competence": "Diversification d'ensemble",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Un dirigeant de transport détient toutes les parts de sa société, ses locaux via une société civile, sa résidence et un appartement locatif. Il veut placer 120 000 euros en SCPI, « c'est de la pierre, je connais ». Que proposez-vous d'abord ?",
+    "choix": [
+     "Des SCPI, puisqu'il connaît la pierre et le demande",
+     "Des classes d'actifs qu'il ne détient pas encore, avant d'envisager la place éventuelle des SCPI",
+     "Le fonds en euros seul, pour ne prendre aucun risque",
+     "Un fonds de PME de son secteur, qu'il maîtrise"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Lu dans l'ensemble, le choix ajoute de l'immobilier à un patrimoine déjà fait d'immobilier et d'une entreprise ; on complète d'abord."
+  },
+  {
+   "cle": "i04",
+   "type": "choix",
+   "competence": "Lecture du DIC",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Que combine l'indicateur de risque du document d'informations clés (DIC) ?",
+    "choix": [
+     "Le risque de marché et le risque de crédit",
+     "Le risque de marché et les frais du fonds",
+     "La volatilité et la performance passée",
+     "Le risque de liquidité et le risque de change"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "L'indicateur de risque du DIC combine le risque de marché et le risque de crédit, sur une échelle de 1 à 7."
+  },
+  {
+   "cle": "i05",
+   "type": "choix",
+   "competence": "Horizon du projet",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Un fonds affiche un risque de 5 sur 7 et une période de détention recommandée de cinq ans. Le client a besoin de la somme dans dix-huit mois pour un apport immobilier. Que lui dites-vous ?",
+    "choix": [
+     "5 sur 7 est un niveau intermédiaire, le fonds convient à ce projet",
+     "Le niveau affiché suppose cinq ans de détention ; à dix-huit mois, le risque réel est plus élevé et le support ne convient pas",
+     "Un fonds noté 4 sur 7 suffirait pour dix-huit mois",
+     "La période de détention recommandée n'a pas de portée sur le choix"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Le niveau de risque du DIC suppose la détention sur la période recommandée ; plus court, le risque réel est plus élevé."
+  },
+  {
+   "cle": "i06",
+   "type": "choix",
+   "competence": "Horizon du projet",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Une architecte de 44 ans a 90 000 euros sur un contrat d'assurance vie : 35 000 euros pour acheter ses bureaux dans trois ans, le reste pour un complément de revenus à partir de 64 ans. Comment raisonnez-vous ?",
+    "choix": [
+     "Un seul profil pour tout le contrat, selon sa tolérance déclarée",
+     "Deux poches : la première sur des supports peu volatils, la seconde avec une part d'unités de compte diversifiées",
+     "Tout en fonds en euros, le projet à trois ans l'impose",
+     "Tout en unités de compte, l'horizon de vingt ans l'autorise"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Une somme se répartit par projet daté, pas par contrat : trois ans appellent peu de volatilité, vingt ans autorisent des unités de compte."
+  },
+  {
+   "cle": "i07",
+   "type": "choix",
+   "competence": "Tolérance et capacité",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Un client se dit « très à l'aise avec le risque ». Il n'a pas d'épargne de précaution, rembourse un prêt professionnel important et ses revenus dépendent de sa seule activité. Comment qualifiez-vous sa situation ?",
+    "choix": [
+     "Tolérance et capacité élevées : une allocation dynamique est possible",
+     "Tolérance déclarée élevée mais capacité de perte limitée : la capacité prime",
+     "Tolérance faible : il se trompe sur lui-même",
+     "La question attendra qu'il demande un support précis"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Le goût du risque est une déclaration ; la situation financière, ici fragile, fixe la capacité de perte, qui prime."
+  },
+  {
+   "cle": "i08",
+   "type": "choix",
+   "competence": "Méthode et traçabilité",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Un client refuse de communiquer ses revenus, charges, actifs et dettes, mais demande une recommandation d'allocation « équilibrée ». Que faites-vous ?",
+    "choix": [
+     "Recommander sur la seule base de la tolérance qu'il déclare",
+     "S'abstenir de recommander, lui expliquer pourquoi ces informations sont demandées, et tracer l'échange",
+     "Recommander uniquement le fonds en euros par prudence",
+     "Appliquer une allocation équilibrée standard du marché"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Sans information sur la situation financière et les objectifs, le cadre applicable aux conseillers en investissements financiers impose de s’abstenir de recommander."
+  },
+  {
+   "cle": "i09",
+   "type": "choix",
+   "competence": "Tolérance et capacité",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Un questionnaire de profil propose de cocher « j'accepte une perte maximale de 10 % ». Quel point de vigilance signale l'AMF sur cette formulation ?",
+    "choix": [
+     "Aucun, cette formule protège le capital du client",
+     "Elle mesure une tolérance à la fluctuation, pas une protection : peu d'offres limitent réellement la perte à un pourcentage",
+     "Le seuil de 10 % est trop bas, il faut proposer 20 %",
+     "Il faut cocher au moins 30 % pour accéder aux unités de compte"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "L'AMF distingue volatilité, liée à la tolérance, et perte en capital, qui peut être totale ; peu d'offres plafonnent la perte."
+  },
+  {
+   "cle": "i10",
+   "type": "choix",
+   "competence": "Méthode et traçabilité",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Une cliente de 40 ans refuse tout au-delà du fonds en euros et de l'immobilier « parce que la bourse fait peur ». Son objectif : un complément de revenus à la retraite dans vingt-cinq ans. Quelle attitude respecte la méthode ?",
+    "choix": [
+     "Lui affirmer que les actions gagnent sur vingt ans, donc qu'elle se trompe",
+     "Respecter son refus sans en discuter : l'adéquation est ainsi assurée",
+     "Explorer cette perception, montrer ce que l'horizon et la répartition changent au risque, sans promesse, puis lui laisser la décision et la tracer",
+     "Lui proposer un fonds sectoriel pour commencer petit"
+    ]
+   },
+   "corrige": {
+    "index": 2
+   },
+   "explication": "Le conseiller explique et présente les possibilités de diversification adaptées à l'horizon, sans imposer ni promettre ; la décision reste à la cliente."
+  },
+  {
+   "cle": "i11",
+   "type": "vrai_faux",
+   "competence": "Diversification d'ensemble",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Une allocation correctement diversifiée supprime le risque de perte en capital."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "La diversification dilue le risque propre à chaque actif ; le risque de marché et le risque de perte en capital demeurent."
+  },
+  {
+   "cle": "i12",
+   "type": "vrai_faux",
+   "competence": "Lecture du DIC",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Le niveau 1 de l'indicateur de risque du DIC signifie que le placement est sans risque."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "Le niveau 1 est le risque le plus faible de l'échelle, ce qui ne veut pas dire absence de risque."
+  },
+  {
+   "cle": "i13",
+   "type": "vrai_faux",
+   "competence": "Horizon du projet",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Une baisse temporaire n'est pas une perte définitive tant que le client n'a pas besoin de vendre."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "La baisse devient une perte si le client doit sortir au mauvais moment ; la volatilité se lit donc avec l'horizon."
+  },
+  {
+   "cle": "i14",
+   "type": "vrai_faux",
+   "competence": "Tolérance et capacité",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Selon l'AMF, une part importante des cas d'inadéquation relevés en contrôle vient de la confusion entre tolérance au risque et capacité de perte."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "Un client peut avoir le goût du risque et une situation financière qui ne lui permet pas de perdre son capital."
+  },
+  {
+   "cle": "i15",
+   "type": "vrai_faux",
+   "competence": "Méthode et traçabilité",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Une mention d'acceptation du risque signée par le client rend adéquate une allocation que le conseiller sait inadaptée."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "Une signature ne transforme pas un conseil inadéquat en conseil adéquat."
+  },
+  {
+   "cle": "i16",
+   "type": "vrai_faux",
+   "competence": "Lecture du DIC",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Les scénarios de performance du DIC sont des estimations fondées sur les variations passées et ne constituent pas un engagement."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "Défavorable, intermédiaire, favorable et tension sont des estimations ; le scénario de tension n'est pas un plancher garanti."
+  },
+  {
+   "cle": "i17",
+   "type": "multi",
+   "competence": "Diversification d'ensemble",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Cochez tout ce qui fait partie de l'allocation d'un client, même si cela ne passe pas par le cabinet.",
+    "choix": [
+     "Les parts de sa société",
+     "Son épargne salariale investie en actions de l'employeur",
+     "Ses biens immobiliers",
+     "Le nombre d'assureurs chez qui il détient des contrats",
+     "Le rendement passé de ses fonds"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "L'AMF apprécie la diversification sur le portefeuille global : entreprise, immobilier et épargne salariale comptent, pas le nombre de lignes."
+  },
+  {
+   "cle": "i18",
+   "type": "multi",
+   "competence": "Méthode et traçabilité",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Cochez tout ce que l'article L. 541-8-1 du code monétaire et financier impose au conseiller en investissements financiers de recueillir avant tout conseil.",
+    "choix": [
+     "Les connaissances et l'expérience du client",
+     "Sa situation financière, dont sa capacité à subir des pertes",
+     "Ses objectifs, dont sa tolérance au risque",
+     "Le nom de son établissement bancaire",
+     "La performance passée de ses contrats"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "Le texte vise connaissances et expérience, situation financière et objectifs ; à défaut, le conseiller s'abstient de recommander."
+  },
+  {
+   "cle": "i19",
+   "type": "multi",
+   "competence": "Diversification d'ensemble",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cochez tout ce qui conditionne la place d'un pari sectoriel dans une stratégie d'ensemble.",
+    "choix": [
+     "Il porte sur une fraction limitée d'un patrimoine par ailleurs diversifié",
+     "Son horizon est au moins égal à la période de détention recommandée",
+     "Le client accepte de perdre l'essentiel de cette fraction sans que ses projets en souffrent",
+     "Le secteur a fortement progressé au cours des derniers mois",
+     "Un proche a obtenu un bon résultat sur ce fonds"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "Le pari s'ajoute à la stratégie s'il y a de la place ; hausse passée et témoignage d'un proche ne sont pas des conditions."
+  },
+  {
+   "cle": "i20",
+   "type": "multi",
+   "competence": "Tolérance et capacité",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Un chirurgien-dentiste de 34 ans rembourse un emprunt professionnel de 400 000 euros et se dit « très à l'aise avec le risque ». Cochez tout ce qui réduit sa capacité de perte.",
+    "choix": [
+     "L'absence d'épargne de précaution",
+     "L'emprunt professionnel en cours",
+     "Des revenus qui reposent sur sa seule activité",
+     "Son âge",
+     "Sa déclaration d'aisance avec le risque"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "La capacité de perte tient à la situation financière : réserve, dettes, dépendance des revenus ; l'aisance déclarée relève de la tolérance."
+  },
+  {
+   "cle": "i21",
+   "type": "multi",
+   "competence": "Lecture du DIC",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cochez tout ce qu'il faut lire avec le client dans le DIC avant de retenir un support.",
+    "choix": [
+     "L'indicateur de risque",
+     "La période de détention recommandée",
+     "Les scénarios défavorable et de tension",
+     "Le nom du dépositaire du fonds",
+     "La performance du dernier mois"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "On lit ensemble l'indicateur, la période recommandée comparée à la date du projet, et les scénarios, en précisant qu'ils ne promettent rien."
+  },
+  {
+   "cle": "i22",
+   "type": "ordre",
+   "competence": "Méthode et traçabilité",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Une cliente veut arbitrer tout son contrat vers un fonds sectoriel qui vient de monter. Remettez dans l'ordre la démarche du conseiller.",
+    "elements": [
+     "Écouter et reformuler l'objectif réel",
+     "Étudier par poche datée",
+     "Expliquer sans promettre : perte en capital, volatilité, frais, performance passée",
+     "Tracer dans le recueil d'informations et la déclaration d'adéquation écrite"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3
+    ]
+   },
+   "explication": "Ni refus sec ni exécution : on écoute, on étudie, on explique, puis on formalise la recommandation dans la déclaration d'adéquation."
+  },
+  {
+   "cle": "i23",
+   "type": "ordre",
+   "competence": "Diversification d'ensemble",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Remettez dans l'ordre les étapes du rendez-vous pour repérer une concentration cachée.",
+    "elements": [
+     "Dresser la carte complète du patrimoine, y compris ce qui ne se place pas",
+     "Ouvrir les documents des fonds déjà détenus",
+     "Nommer les expositions dominantes",
+     "Proposer ce qui les complète"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3
+    ]
+   },
+   "explication": "On regarde tout, on lit ce que contiennent les fonds, on nomme les expositions, puis on propose ce qui complète."
+  },
+  {
+   "cle": "i24",
+   "type": "ordre",
+   "competence": "Horizon du projet",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Remettez dans l’ordre la lecture d’un support avec le client, avant de le retenir pour un projet.",
+    "elements": [
+     "Dater le projet : « cette somme, à quelle date en aurez-vous besoin ? »",
+     "Lire l'indicateur de risque du DIC",
+     "Lire la période de détention recommandée et la comparer à la date du projet",
+     "Montrer le scénario défavorable et le scénario de tension"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3
+    ]
+   },
+   "explication": "On date le projet avant de parler de support, puis on lit le DIC : indicateur, période recommandée, scénarios."
+  },
+  {
+   "cle": "i25",
+   "type": "ordre",
+   "competence": "Tolérance et capacité",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Un jeune professionnel endetté, sans réserve, aux revenus dépendant de sa seule activité, se dit très à l’aise avec le risque et veut « du rendement ». Remettez dans l’ordre sa feuille de route.",
+    "elements": [
+     "Constater que sa capacité de perte est faible malgré la tolérance déclarée",
+     "Protéger ses revenus",
+     "Constituer une réserve disponible",
+     "Envisager une allocation exposée, le rendement venant sur un horizon qui le permet"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3
+    ]
+   },
+   "explication": "La capacité prime sur la tolérance : revenus protégés d’abord, puis réserve disponible, avant toute allocation exposée."
+  },
+  {
+   "cle": "i26",
+   "type": "association",
+   "competence": "Tolérance et capacité",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Associez chaque notion à sa définition.",
+    "gauche": [
+     "Tolérance au risque",
+     "Capacité de perte",
+     "Volatilité",
+     "Perte en capital"
+    ],
+    "droite": [
+     "Ce que le client accepte de voir bouger",
+     "Ce qu'il peut perdre sans compromettre ses projets",
+     "Amplitude des variations d'un placement",
+     "Peut être totale lorsqu'elle existe"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      3,
+      3
+     ]
+    ]
+   },
+   "explication": "La tolérance décrit le rapport au risque, la capacité la situation financière ; volatilité et perte en capital ne se confondent pas."
+  },
+  {
+   "cle": "i27",
+   "type": "association",
+   "competence": "Lecture du DIC",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Associez chaque élément du DIC à ce qu'il indique.",
+    "gauche": [
+     "Indicateur de risque",
+     "Période de détention recommandée",
+     "Scénario de tension"
+    ],
+    "droite": [
+     "Échelle de 1 à 7, risque de marché et de crédit combinés",
+     "Durée que suppose le niveau de risque affiché",
+     "Évolution extrême, pas un plancher garanti"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ]
+    ]
+   },
+   "explication": "L'indicateur note de 1 à 7, il suppose la détention sur la période recommandée, et le scénario de tension ne garantit rien."
+  },
+  {
+   "cle": "i28",
+   "type": "association",
+   "competence": "Diversification d'ensemble",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Associez chaque situation au terme qui la désigne.",
+    "gauche": [
+     "Cinq fonds investis sur les mêmes grandes valeurs technologiques",
+     "Répartir à parts égales entre les options présentées sans regarder leur contenu",
+     "Imiter les choix de son entourage",
+     "Récession, hausse des taux, crise"
+    ],
+    "droite": [
+     "Une seule position",
+     "Diversification naïve",
+     "Comportement moutonnier",
+     "Risque commun à tout le marché"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      3,
+      3
+     ]
+    ]
+   },
+   "explication": "L'AMF nomme la diversification naïve et le comportement moutonnier ; le risque de marché touche presque tout en même temps."
+  },
+  {
+   "cle": "i29",
+   "type": "association",
+   "competence": "Horizon du projet",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictifs. Associez chaque poche d'épargne à la lecture qui convient.",
+    "gauche": [
+     "35 000 euros pour acheter ses bureaux dans trois ans",
+     "Complément de revenus à partir de 64 ans, pour une cliente de 44 ans",
+     "40 000 euros pour sa fille dans deux ans, face à un fonds recommandé cinq ans",
+     "Poche retraite d'une cliente de 51 ans qui cesse son activité à 62 ans"
+    ],
+    "droite": [
+     "Supports peu volatils, potentiel modeste accepté",
+     "Une part d'unités de compte diversifiées, risque expliqué et accepté",
+     "Incompatible : l'horizon est plus court que la période recommandée",
+     "Environ onze ans : une part d'unités de compte possible, pas un secteur unique"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      3,
+      3
+     ]
+    ]
+   },
+   "explication": "Chaque poche se lit à sa date : peu de volatilité à court terme, une part d'unités de compte diversifiées à long terme."
+  },
+  {
+   "cle": "i30",
+   "type": "trou_choix",
+   "competence": "Diversification d'ensemble",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "L'AMF rappelle que la diversification s'apprécie au niveau du ___ dans sa globalité, sur la base de la situation financière et des objectifs du client.",
+    "choix": [
+     "portefeuille",
+     "contrat d'assurance vie",
+     "fonds",
+     "secteur"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "On regarde tout le patrimoine : entreprise, locaux, résidence, épargne salariale, contrats, pas seulement la somme apportée."
+  },
+  {
+   "cle": "i31",
+   "type": "trou_choix",
+   "competence": "Lecture du DIC",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Le niveau de risque affiché dans le DIC part du principe que le client conserve le produit sur la ___.",
+    "choix": [
+     "période de détention recommandée",
+     "durée du contrat d'assurance vie",
+     "année en cours",
+     "durée de vie du fonds"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Un fonds noté 5 sur 7 pour cinq ans est plus risqué que ne le dit le chiffre si l'argent ressort dans dix-huit mois."
+  },
+  {
+   "cle": "i32",
+   "type": "trou_choix",
+   "competence": "Tolérance et capacité",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "Lorsque la tolérance déclarée et la capacité de perte ne concordent pas, c'est la ___ qui prime.",
+    "choix": [
+     "capacité de perte",
+     "tolérance déclarée",
+     "demande du client",
+     "performance attendue"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Un client peut avoir le goût du risque sans pouvoir se permettre de perdre son capital ; la capacité l'emporte."
+  },
+  {
+   "cle": "i33",
+   "type": "trou_choix",
+   "competence": "Diversification d'ensemble",
+   "difficulte": 3,
+   "payload": {
+    "phrase": "Entrer sur un secteur après une progression de 60 % n'est pas un argument, c'est une information sur ___.",
+    "choix": [
+     "le prix payé",
+     "la qualité du gérant",
+     "la tendance à venir",
+     "la solidité du secteur"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "La hausse passée ne préjuge pas de la suite ; elle renseigne seulement sur le prix auquel on entre."
+  },
+  {
+   "cle": "i34",
+   "type": "trou_saisie",
+   "competence": "Lecture du DIC",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "L'indicateur de risque du DIC situe le produit sur une échelle de 1 à ___.",
+    "aide": "Un chiffre"
+   },
+   "corrige": {
+    "reponses": [
+     "7",
+     "sept"
+    ]
+   },
+   "explication": "L'échelle va du risque le plus faible, qui n'est pas une absence de risque, au plus élevé."
+  },
+  {
+   "cle": "i35",
+   "type": "trou_saisie",
+   "competence": "Méthode et traçabilité",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Le cadre applicable aux conseillers en investissements financiers prévoit que le conseil est formalisé dans une déclaration d'___ écrite.",
+    "aide": "Un mot"
+   },
+   "corrige": {
+    "reponses": [
+     "adéquation",
+     "adequation"
+    ]
+   },
+   "explication": "La recommandation est formalisée dans la déclaration d'adéquation écrite, avec ses avantages et ses risques."
+  },
+  {
+   "cle": "i36",
+   "type": "trou_saisie",
+   "competence": "Diversification d'ensemble",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "L'AMF précise que sur un marché concentré, ___ ans de détention ne suffisent pas à éliminer totalement le risque d'un placement en actions.",
+    "aide": "Un nombre"
+   },
+   "corrige": {
+    "reponses": [
+     "20",
+     "vingt"
+    ]
+   },
+   "explication": "Le temps et la diversification réduisent le risque, ils ne le suppriment pas."
+  },
+  {
+   "cle": "i37",
+   "type": "trou_saisie",
+   "competence": "Diversification d'ensemble",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "Répartir ses avoirs à parts égales entre les options présentées, sans regarder leur contenu ni ce que l'on détient déjà : l'AMF parle de diversification ___.",
+    "aide": "Un adjectif"
+   },
+   "corrige": {
+    "reponses": [
+     "naïve",
+     "naive"
+    ]
+   },
+   "explication": "La diversification naïve multiplie les lignes sans changer les expositions."
+  },
+  {
+   "cle": "i38",
+   "type": "carte",
+   "competence": "Horizon du projet",
+   "difficulte": 1,
+   "payload": {
+    "recto": "Le cadrage étroit, selon l'AMF",
+    "verso": "Regarder le risque de court terme et le projeter sur un projet de long terme."
+   },
+   "corrige": {},
+   "explication": "Un client qui consulte son contrat chaque semaine veut tout arbitrer après un mois de baisse, pour un projet à quinze ans."
+  },
+  {
+   "cle": "i39",
+   "type": "carte",
+   "competence": "Tolérance et capacité",
+   "difficulte": 2,
+   "payload": {
+    "recto": "Quelle question concrète mesure la capacité de perte, plutôt que « êtes-vous dynamique ? »",
+    "verso": "« Si cette somme perdait 30 % l'an prochain, qu'est-ce que cela changerait à vos projets ? »"
+   },
+   "corrige": {},
+   "explication": "On relie la réponse aux chiffres de la découverte : revenus, charges, dettes, réserve disponible, projets datés."
+  },
+  {
+   "cle": "i40",
+   "type": "carte",
+   "competence": "Diversification d'ensemble",
+   "difficulte": 1,
+   "payload": {
+    "recto": "Quelle question pose-t-on au client pour faire apparaître une concentration cachée ?",
+    "verso": "« Si ce secteur perdait la moitié de sa valeur, quelle part de ce que vous possédez serait touchée ? »"
+   },
+   "corrige": {},
+   "explication": "La question fait apparaître ce qui réagit aux mêmes causes : entreprise, locaux, épargne salariale, immobilier."
+  }
+ ]
+}

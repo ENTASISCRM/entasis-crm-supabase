@@ -1,0 +1,220 @@
+-- Entasis Academy, migration 7 : les decks d exercices (mode entrainement).
+--
+-- Genere par scripts/academy/generer-decks.mjs depuis scripts/academy/decks/*.json :
+-- ne pas editer a la main, regenerer. Un deck = un memo d une page et une
+-- quarantaine d exercices (huit types), tout en BROUILLON, a relire avant
+-- publication. Les corriges vont dans academy_items_corriges (illisible en
+-- direct). Idempotent : une version qui porte deja des items est ignoree.
+--
+-- Contenu : la trame du rendez vous d audit patrimonial (deux pages de
+-- Louis, 21 septembre 2026) et les douze modules du catalogue convertis
+-- depuis leurs lecons verifiees, sans fait nouveau.
+
+-- ── Deck : PER et préparation de la retraite (per-et-retraite) ──
+do $deck_per_et_retraite$
+declare v_mod uuid; v_ver uuid; v_numero integer; v_statut text; v_item uuid; v_p uuid;
+begin
+  select id into v_mod from public.academy_modules where slug = $academy_deck$per-et-retraite$academy_deck$;
+  if v_mod is null then
+    insert into public.academy_modules (slug, titre, theme, niveau, ordre)
+    values ($academy_deck$per-et-retraite$academy_deck$, $academy_deck$PER et préparation de la retraite$academy_deck$, $academy_deck$methode$academy_deck$, $academy_deck$fondamentaux$academy_deck$, 0)
+    returning id into v_mod;
+    insert into public.academy_module_versions (module_id, numero, statut, titre, objectif, competence, duree_minutes, prerequis, seuil_reussite, sources, memo_md)
+    values (v_mod, 1, 'brouillon', $academy_deck$PER et préparation de la retraite$academy_deck$, $academy_deck$$academy_deck$, $academy_deck$Expliquer mécanisme, disponibilité, fiscalité à vérifier et arbitrages$academy_deck$, 10, '[]'::jsonb, 0.80, $academy_deck$[]$academy_deck$::jsonb, '')
+    returning id into v_ver;
+  else
+    select id into v_ver from public.academy_module_versions where module_id = v_mod and statut = 'brouillon' order by numero desc limit 1;
+    if v_ver is null then
+      select coalesce(max(numero), 0) + 1 into v_numero from public.academy_module_versions where module_id = v_mod;
+      insert into public.academy_module_versions (module_id, numero, statut, titre, objectif, competence, duree_minutes, prerequis, seuil_reussite, cas_pratique, a_completer, sources, fictif, memo_md)
+      select v_mod, v_numero, 'brouillon', titre, objectif, competence, duree_minutes, prerequis, seuil_reussite, cas_pratique, a_completer, sources, fictif, ''
+        from public.academy_module_versions where module_id = v_mod order by (statut = 'publie') desc, numero desc limit 1
+      returning id into v_ver;
+    end if;
+  end if;
+  if exists (select 1 from public.academy_items where version_id = v_ver) then
+    return;
+  end if;
+  update public.academy_module_versions set memo_md = $academy_deck$**Les sommes versées sur un PER sont bloquées jusqu'à la retraite, et le conseiller l'énonce avant tout avantage fiscal.**
+
+## Mécanisme
+- Depuis le 1er octobre 2020, remplace le PERP et le Madelin.
+- Déblocage anticipé limitatif : décès du conjoint ou partenaire de Pacs, invalidité de 2e ou 3e catégorie, handicap d'un enfant, surendettement, fin des droits au chômage, cessation de mandat social depuis deux ans, liquidation judiciaire d'un non salarié, achat de la résidence principale.
+- Résidence principale : versements volontaires et épargne salariale seulement, versements obligatoires bloqués.
+- Sortie en capital (une ou plusieurs fois), en rente ou mixte. Rente choisie définitivement à l'ouverture : plus de capital.
+- Gestion pilotée par défaut. Unités de compte : risque de perte en capital.
+
+## Fiscalité
+- Versements volontaires avant 70 ans déductibles par principe, renonciation sur option.
+- Déduits : capital au barème progressif, rente comme une pension. Non déduits : capital exonéré.
+- Impôt reporté, pas effacé : l'intérêt se mesure entre la tranche actuelle et celle de la retraite.
+- Plafond sur les revenus de l'année précédente, lu sur l'avis d'imposition. Salarié 2026 : 10 % des revenus 2025 nets de frais, maximum 37 680 euros, ou 4 710 euros si plus élevé. Non salarié : à vérifier.
+- Report du plafond non utilisé sur trois ans. Mutualisation entre conjoints ou pacsés sur demande expresse.
+
+## Arbitrages
+- Ordre : protéger les revenus, épargne disponible, puis épargne longue.
+- PER : déduction et blocage. Assurance vie : disponibilité, sans déduction. Livret : liquidité et sécurité.
+- Versement calibré en dernier, sur la capacité d'épargne réelle, pas sur l'impôt à effacer.
+$academy_deck$, competence = coalesce(nullif($academy_deck$Expliquer mécanisme, disponibilité, fiscalité à vérifier et arbitrages$academy_deck$, ''), competence), updated_at = now() where id = v_ver;
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 1, $academy_deck$choix$academy_deck$, $academy_deck$Blocage et déblocage anticipé$academy_deck$, 1, $academy_deck${"enonce":"Parmi les cas de déblocage anticipé du PER, un seul n'est pas lié à un accident de la vie. Lequel ?","choix":["L'expiration des droits à l'assurance chômage","L'achat de la résidence principale","Le surendettement","La liquidation judiciaire d'un non salarié"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":1}$academy_deck$::jsonb, $academy_deck$L'achat de la résidence principale est le seul cas de déblocage anticipé qui n'est pas un accident de la vie.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 2, $academy_deck$choix$academy_deck$, $academy_deck$Blocage et déblocage anticipé$academy_deck$, 2, $academy_deck${"enonce":"Cas fictif. Un client achète sa résidence principale et demande le déblocage de tous les droits de son PER, y compris ceux issus des versements obligatoires. Que lui répondez-vous ?","choix":["Tous les droits sont déblocables, l'achat de la résidence principale est prévu par la loi","Seuls les droits issus des versements volontaires et de l'épargne salariale sont déblocables, ceux des versements obligatoires restent bloqués","Le déblocage est possible si le plan est ouvert depuis plus de deux ans","Aucun déblocage n'est possible, seule la sortie à la retraite existe"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":1}$academy_deck$::jsonb, $academy_deck$Pour l'achat de la résidence principale, les droits issus des versements obligatoires restent bloqués.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 3, $academy_deck$choix$academy_deck$, $academy_deck$Déduction et fiscalité de sortie$academy_deck$, 2, $academy_deck${"enonce":"Cas fictif. Une cliente a renoncé, sur option, à déduire ses versements volontaires. À la retraite, elle sort en capital. Comment est traitée la part du capital correspondant à ces versements ?","choix":["Elle est imposée au barème progressif","Elle est exonérée","Elle suit les règles des pensions de retraite","Elle est imposée comme les gains du plan"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":1}$academy_deck$::jsonb, $academy_deck$Quand les versements n'ont pas été déduits, la part du capital qui leur correspond est exonérée à la sortie.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 4, $academy_deck$choix$academy_deck$, $academy_deck$Plafond de déduction$academy_deck$, 1, $academy_deck${"enonce":"Sur quels revenus se calcule le plafond de déduction des versements PER ?","choix":["Les revenus professionnels de l'année du versement","Les revenus professionnels de l'année précédente","Le revenu moyen des trois dernières années","Les revenus estimés à la retraite"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":1}$academy_deck$::jsonb, $academy_deck$Le plafond de déduction se calcule sur les revenus professionnels de l'année précédente.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 5, $academy_deck$choix$academy_deck$, $academy_deck$Plafond de déduction$academy_deck$, 1, $academy_deck${"enonce":"Pour un salarié, le plafond de déduction 2026 indiqué par Service-Public retient 10 % des revenus d'activité 2025 nets de frais professionnels. Quel est son maximum ?","choix":["4 710 euros","37 680 euros","84 578 euros","92 000 euros"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":1}$academy_deck$::jsonb, $academy_deck$Le plafond salarié 2026 est de 10 % des revenus 2025 nets de frais, avec un maximum de 37 680 euros.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 6, $academy_deck$choix$academy_deck$, $academy_deck$Déduction et fiscalité de sortie$academy_deck$, 2, $academy_deck${"enonce":"Cas fictif. En rendez-vous, un client demande : « combien vais-je économiser avec mon PER ? » Quelle réponse est conforme à la méthode enseignée dans ce parcours ?","choix":["Annoncer en séance le produit du versement par sa tranche marginale","Expliquer le mécanisme, localiser la ligne « plafond épargne retraite » sur l'avis d'imposition et annoncer une simulation à deux scénarios dans l'étude","Répondre que l'économie est nulle puisque l'impôt est reporté","Reprendre le chiffre annoncé par son confrère"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":1}$academy_deck$::jsonb, $academy_deck$Aucun chiffre d'économie n'est annoncé sans simulation chiffrée, versement déduit contre non déduit, et sans source datée.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 7, $academy_deck$choix$academy_deck$, $academy_deck$Choix des enveloppes$academy_deck$, 3, $academy_deck${"enonce":"Cas fictif. Monsieur V., prévoyance en place et six mois de dépenses en épargne disponible, veut placer 40 000 euros, dont 25 000 euros destinés à des travaux dans trois ans. Il demande de tout verser sur un PER. Quelle réponse est conforme ?","choix":["Tout sur le PER, la déduction sera maximale cette année","Placer les 25 000 euros du projet sur une enveloppe disponible et une part longue sur le PER dans la limite du plafond, le tout chiffré dans l'étude","Tout sur un livret réglementé, la sécurité prime","Tout en assurance vie, qui remplace le PER"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":1}$academy_deck$::jsonb, $academy_deck$Des travaux dans trois ans ne sont pas un cas de déblocage anticipé : chaque enveloppe répond à un objectif de vie distinct.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 8, $academy_deck$choix$academy_deck$, $academy_deck$Blocage et déblocage anticipé$academy_deck$, 2, $academy_deck${"enonce":"Lequel de ces événements permet à un titulaire de demander le déblocage anticipé de son PER ?","choix":["Des travaux dans sa résidence secondaire","L'expiration de ses droits à l'assurance chômage","Le changement de son local professionnel","L'achat d'un véhicule"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":1}$academy_deck$::jsonb, $academy_deck$L'expiration des droits à l'assurance chômage figure parmi les cas de déblocage anticipé prévus par la loi.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 9, $academy_deck$choix$academy_deck$, $academy_deck$Sortie et gestion pilotée$academy_deck$, 3, $academy_deck${"enonce":"Cas fictif. À l'ouverture de son PER, un client a opté définitivement pour la rente. Dix ans plus tard, à la retraite, il souhaite un capital pour un projet. Que se passe-t-il ?","choix":["Il peut choisir une sortie mixte, capital et rente","La sortie en capital est devenue impossible","Il peut sortir en capital pour la part issue des versements volontaires","Il peut sortir en capital s'il est resté en gestion pilotée"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":1}$academy_deck$::jsonb, $academy_deck$Une option définitive pour la rente à l'ouverture rend la sortie en capital impossible.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 10, $academy_deck$choix$academy_deck$, $academy_deck$Ordre des priorités$academy_deck$, 1, $academy_deck${"enonce":"D'après le guide de l'AMF, de quoi faut-il absolument disposer avant de placer des sommes sur un PER ?","choix":["D'une épargne disponible pour ses projets de court ou moyen terme","D'un plafond de déduction entièrement reporté","D'une tranche marginale d'imposition à 41 % au moins","D'une sortie en rente choisie dès l'ouverture"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":0}$academy_deck$::jsonb, $academy_deck$Les sommes du PER étant bloquées, l'AMF impose une épargne disponible pour les projets de court ou moyen terme.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 11, $academy_deck$vrai_faux$academy_deck$, $academy_deck$Blocage et déblocage anticipé$academy_deck$, 1, $academy_deck${"enonce":"Un besoin de trésorerie passager ne fait pas partie des cas de déblocage anticipé du PER."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"vrai":true}$academy_deck$::jsonb, $academy_deck$Seuls les accidents de la vie prévus par la loi et l'achat de la résidence principale ouvrent un déblocage anticipé.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 12, $academy_deck$vrai_faux$academy_deck$, $academy_deck$Sortie et gestion pilotée$academy_deck$, 2, $academy_deck${"enonce":"À la retraite, le capital d'un PER ne peut être versé qu'en une seule fois."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"vrai":false}$academy_deck$::jsonb, $academy_deck$Le capital peut être versé en une ou plusieurs fois, ou combiné avec une rente.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 13, $academy_deck$vrai_faux$academy_deck$, $academy_deck$Plafond de déduction$academy_deck$, 1, $academy_deck${"enonce":"Deux partenaires de Pacs peuvent mutualiser leurs plafonds de déduction PER sur demande expresse."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"vrai":true}$academy_deck$::jsonb, $academy_deck$Les couples mariés ou pacsés peuvent mutualiser leurs plafonds sur demande expresse.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 14, $academy_deck$vrai_faux$academy_deck$, $academy_deck$Sortie et gestion pilotée$academy_deck$, 2, $academy_deck${"enonce":"En gestion pilotée, l'épargne du PER est sécurisée dès l'ouverture, puis investie de façon plus dynamique à l'approche de la retraite."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"vrai":false}$academy_deck$::jsonb, $academy_deck$C'est l'inverse : investissement plus dynamique au début, puis sécurisation progressive à l'approche de la retraite.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 15, $academy_deck$vrai_faux$academy_deck$, $academy_deck$Déduction et fiscalité de sortie$academy_deck$, 2, $academy_deck${"enonce":"Lorsque les versements ont été déduits, la rente versée à la retraite suit les règles des pensions de retraite."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"vrai":true}$academy_deck$::jsonb, $academy_deck$Après des versements déduits, la rente suit les règles des pensions et la part du capital le barème progressif.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 16, $academy_deck$vrai_faux$academy_deck$, $academy_deck$Ordre des priorités$academy_deck$, 3, $academy_deck${"enonce":"Un professionnel libéral affilié à la CIPAV perçoit du régime obligatoire des indemnités journalières proches de son revenu habituel, ce qui rend l'audit de prévoyance secondaire."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"vrai":false}$academy_deck$::jsonb, $academy_deck$Ces indemnités restent très inférieures au revenu habituel, d'où l'audit de prévoyance avant toute épargne bloquée.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 17, $academy_deck$multi$academy_deck$, $academy_deck$Blocage et déblocage anticipé$academy_deck$, 1, $academy_deck${"enonce":"Cochez tout ce qui constitue un cas de déblocage anticipé du PER.","choix":["Le surendettement","L'achat de la résidence principale","L'achat d'une résidence secondaire","L'invalidité de deuxième ou troisième catégorie du titulaire","Des travaux dans le local professionnel","Un projet de voyage"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"indices":[0,1,3]}$academy_deck$::jsonb, $academy_deck$Surendettement, invalidité et achat de la résidence principale sont prévus ; travaux, résidence secondaire et voyage ne le sont pas.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 18, $academy_deck$multi$academy_deck$, $academy_deck$Déduction et fiscalité de sortie$academy_deck$, 2, $academy_deck${"enonce":"Cochez tout ce qui est exact au sujet des versements volontaires déduits du revenu imposable.","choix":["Ils sont déductibles par principe s'ils sont effectués avant 70 ans","La part du capital qui leur correspond est exonérée à la sortie","La part du capital qui leur correspond est imposée au barème progressif à la sortie","L'impôt correspondant est définitivement effacé","La rente qui en découle suit les règles des pensions de retraite"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"indices":[0,2,4]}$academy_deck$::jsonb, $academy_deck$La déduction reporte l'impôt à la sortie : capital au barème progressif, rente comme une pension de retraite.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 19, $academy_deck$multi$academy_deck$, $academy_deck$Ordre des priorités$academy_deck$, 2, $academy_deck${"enonce":"Cochez tout ce qui sert à calibrer le montant d'un versement PER.","choix":["Le plafond de déduction disponible","La capacité d'épargne réelle après charges et cotisations sociales","La trésorerie professionnelle nécessaire à un indépendant","Le montant conseillé par un confrère","L'impôt que le client souhaite effacer"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"indices":[0,1,2]}$academy_deck$::jsonb, $academy_deck$Le versement se calibre en dernier sur le plafond, la tranche, la capacité d'épargne réelle et la trésorerie nécessaire.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 20, $academy_deck$multi$academy_deck$, $academy_deck$Ordre des priorités$academy_deck$, 3, $academy_deck${"enonce":"Cas fictif. Un ostéopathe libéral dispose de 2 400 euros personnels et de 11 000 euros de trésorerie professionnelle, dont 6 500 euros de cotisations à régler dans six semaines. Il n'a aucune prévoyance et veut verser 30 000 euros sur un PER. Cochez tout ce qui rend ce versement incompatible avant toute analyse fiscale.","choix":["L'absence de prévoyance","Une épargne personnelle de 2 400 euros seulement","Des cotisations sociales à régler sur la trésorerie professionnelle","Sa tranche marginale d'imposition à 41 %","Son exercice en BNC"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"indices":[0,1,2]}$academy_deck$::jsonb, $academy_deck$Un versement bloqué le priverait de toute réserve ; sa tranche et son statut relèvent de l'analyse fiscale, pas de la sécurité.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 21, $academy_deck$multi$academy_deck$, $academy_deck$Choix des enveloppes$academy_deck$, 1, $academy_deck${"enonce":"Cochez tout ce qui caractérise le PER par rapport aux autres enveloppes.","choix":["Une déduction à l'entrée","Un blocage des sommes jusqu'à la retraite","Une disponibilité de l'épargne à tout moment","Une liquidité immédiate","Une réponse à l'objectif retraite"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"indices":[0,1,4]}$academy_deck$::jsonb, $academy_deck$Le PER apporte la déduction à l'entrée et le blocage ; disponibilité et liquidité relèvent de l'assurance vie et du livret.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 22, $academy_deck$ordre$academy_deck$, $academy_deck$Ordre des priorités$academy_deck$, 1, $academy_deck${"enonce":"Remettez dans l'ordre les étapes de la feuille de route d'un client sans prévoyance ni épargne disponible qui veut verser sur un PER.","elements":["Ouvrir un PER avec des versements programmés calibrés sur la capacité d'épargne réelle","Isoler les projets de moyen terme sur une enveloppe disponible, distincte du PER","Protéger les revenus par un audit de la prévoyance","Constituer une épargne disponible sur un support liquide","Choisir le mode de gestion à partir du rapport au risque"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"ordre":[2,3,1,0,4]}$academy_deck$::jsonb, $academy_deck$Protection des revenus, épargne disponible, projets isolés, puis PER calibré en dernier et choix du mode de gestion.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 23, $academy_deck$ordre$academy_deck$, $academy_deck$Sortie et gestion pilotée$academy_deck$, 2, $academy_deck${"enonce":"Remettez dans l'ordre la présentation du PER en rendez-vous, telle que l'enseigne ce parcours.","elements":["Demander si ce blocage est compatible avec les projets des cinq prochaines années","Expliquer la gestion pilotée et le risque de perte en capital des unités de compte","Aborder seulement ensuite l'avantage fiscal","Présenter les deux modes de sortie, capital ou complément de revenu","Énoncer le blocage des sommes jusqu'à la retraite, sauf cas prévus par la loi"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"ordre":[4,0,3,1,2]}$academy_deck$::jsonb, $academy_deck$Le conseiller commence par la disponibilité, puis la sortie, puis le risque, avant tout avantage fiscal.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 24, $academy_deck$ordre$academy_deck$, $academy_deck$Déduction et fiscalité de sortie$academy_deck$, 2, $academy_deck${"enonce":"Remettez dans l'ordre chronologique le parcours fiscal d'un versement volontaire déduit.","elements":["Déduction du revenu imposable dans la limite du plafond","Versement volontaire effectué avant 70 ans","Sortie en capital ou en rente","Blocage des sommes jusqu'à la retraite","Imposition de la part correspondante au barème progressif ou comme une pension"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"ordre":[1,0,3,2,4]}$academy_deck$::jsonb, $academy_deck$La déduction à l'entrée reporte l'imposition au moment de la sortie, elle ne l'efface pas.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 25, $academy_deck$ordre$academy_deck$, $academy_deck$Ordre des priorités$academy_deck$, 3, $academy_deck${"enonce":"Cas fictif. Un indépendant dit « je veux payer moins d'impôt ». Remettez dans l'ordre la conduite du rendez-vous enseignée dans ce parcours.","elements":["Tenir un second rendez-vous pour décider","Présenter la répartition : une part disponible, une part de moyen terme, une part longue sur le PER","Faire apparaître la réserve disponible, la couverture prévoyance et les échéances à venir","Fixer une prochaine étape datée : l'envoi de l'étude chiffrée avec les deux scénarios de déduction","Reformuler la demande et demander ce qui se passerait si l'activité s'arrêtait trois mois"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"ordre":[4,2,1,3,0]}$academy_deck$::jsonb, $academy_deck$L'écoute précède l'étude, l'étude précède la solution, et la décision attend le second rendez-vous.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 26, $academy_deck$association$academy_deck$, $academy_deck$Choix des enveloppes$academy_deck$, 1, $academy_deck${"enonce":"Associez chaque enveloppe à ce qu'elle apporte.","gauche":["PER","Assurance vie","Livret réglementé"],"droite":["Disponibilité de l'épargne et fiscalité de capitalisation, sans déduction","Liquidité immédiate et sécurité du capital","Déduction à l'entrée et blocage jusqu'à la retraite"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"paires":[[0,2],[1,0],[2,1]]}$academy_deck$::jsonb, $academy_deck$Chaque enveloppe répond à un objectif de vie différent : retraite, projet à moyen terme, sécurité.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 27, $academy_deck$association$academy_deck$, $academy_deck$Déduction et fiscalité de sortie$academy_deck$, 2, $academy_deck${"enonce":"Associez chaque situation de sortie du PER à son traitement fiscal.","gauche":["Capital issu de versements déduits","Capital issu de versements non déduits","Rente issue de versements déduits","Gains du plan"],"droite":["Exonéré","Imposé au barème progressif","Règles des pensions de retraite","Régime distinct, seuil à vérifier sur la source officielle"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"paires":[[0,1],[1,0],[2,2],[3,3]]}$academy_deck$::jsonb, $academy_deck$Le choix de déduire ou non à l'entrée commande la fiscalité de sortie.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 28, $academy_deck$association$academy_deck$, $academy_deck$Plafond de déduction$academy_deck$, 2, $academy_deck${"enonce":"Associez chaque règle du plafond de déduction à son contenu.","gauche":["Report du plafond non utilisé","Mutualisation des plafonds","Année des revenus pris en compte","Revenus retenus pour un salarié"],"droite":["Sur les trois années suivantes","L'année précédant le versement","Revenus d'activité nets de frais professionnels","Couples mariés ou pacsés, sur demande expresse"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"paires":[[0,0],[1,3],[2,1],[3,2]]}$academy_deck$::jsonb, $academy_deck$Le plafond se lit sur l'avis d'imposition, reports compris, et se vérifie sur la source officielle datée.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 29, $academy_deck$association$academy_deck$, $academy_deck$Blocage et déblocage anticipé$academy_deck$, 3, $academy_deck${"enonce":"Associez chaque cas de déblocage anticipé du PER à la condition qui l'encadre.","gauche":["Achat de la résidence principale","Cessation de la fonction de mandataire social","Liquidation judiciaire","Invalidité"],"droite":["Pour un non salarié","Depuis au moins deux ans, sans contrat de travail ni pension liquidée","Deuxième ou troisième catégorie","Versements volontaires et épargne salariale seulement"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"paires":[[0,3],[1,1],[2,0],[3,2]]}$academy_deck$::jsonb, $academy_deck$Chaque cas de déblocage anticipé est encadré par une condition précise fixée par la loi.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 30, $academy_deck$trou_choix$academy_deck$, $academy_deck$Sortie et gestion pilotée$academy_deck$, 1, $academy_deck${"phrase":"Par défaut, un PER est en gestion ___ : l'épargne est investie de façon plus dynamique au début, puis sécurisée progressivement.","choix":["libre","pilotée","obligatoire","programmée"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":1}$academy_deck$::jsonb, $academy_deck$La gestion pilotée est le mode par défaut du PER.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 31, $academy_deck$trou_choix$academy_deck$, $academy_deck$Déduction et fiscalité de sortie$academy_deck$, 2, $academy_deck${"phrase":"Avec la déduction des versements, l'impôt n'est pas effacé, il est ___ à la sortie.","choix":["exonéré","reporté","mutualisé","réduit"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":1}$academy_deck$::jsonb, $academy_deck$L'intérêt réel se mesure entre la tranche d'aujourd'hui et celle de la retraite, pas sur la seule année du versement.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 32, $academy_deck$trou_choix$academy_deck$, $academy_deck$Ordre des priorités$academy_deck$, 1, $academy_deck${"phrase":"Le PER n'est jamais la première brique d'un patrimoine, il en est une brique de ___.","choix":["fond","précaution","liquidité","sécurité"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":0}$academy_deck$::jsonb, $academy_deck$L'épargne de précaution et l'épargne disponible se constituent avant l'épargne retraite.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 33, $academy_deck$trou_choix$academy_deck$, $academy_deck$Plafond de déduction$academy_deck$, 2, $academy_deck${"phrase":"Pour un salarié, le plafond de déduction 2026 retient ___ des revenus d'activité 2025 nets de frais professionnels.","choix":["10 %","11 %","15 %","41 %"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":0}$academy_deck$::jsonb, $academy_deck$Le plafond salarié est de 10 % des revenus nets de frais, avec un maximum de 37 680 euros.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 34, $academy_deck$trou_saisie$academy_deck$, $academy_deck$Plafond de déduction$academy_deck$, 1, $academy_deck${"phrase":"Le plafond de déduction non utilisé se reporte sur les ___ années suivantes.","aide":"Un chiffre."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"reponses":["3","trois"]}$academy_deck$::jsonb, $academy_deck$Le plafond non utilisé se reporte sur les trois années suivantes.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 35, $academy_deck$trou_saisie$academy_deck$, $academy_deck$Déduction et fiscalité de sortie$academy_deck$, 1, $academy_deck${"phrase":"Par principe, les versements volontaires effectués avant ___ ans sont déductibles du revenu imposable.","aide":"Un âge."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"reponses":["70","soixante-dix","soixante dix"]}$academy_deck$::jsonb, $academy_deck$Les versements volontaires effectués avant 70 ans sont déductibles par principe, renonciation possible sur option.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 36, $academy_deck$trou_saisie$academy_deck$, $academy_deck$Plafond de déduction$academy_deck$, 2, $academy_deck${"phrase":"Plafond salarié 2026 : 10 % des revenus 2025 nets de frais, avec un maximum de 37 680 euros, ou ___ euros si ce montant est plus élevé.","aide":"Le plancher, en euros."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"reponses":["4710","4 710","4.710"]}$academy_deck$::jsonb, $academy_deck$Service-Public indique un plancher de 4 710 euros pour le plafond salarié 2026.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 37, $academy_deck$trou_saisie$academy_deck$, $academy_deck$Blocage et déblocage anticipé$academy_deck$, 3, $academy_deck${"phrase":"Un mandataire social peut demander le déblocage anticipé de son PER si sa fonction a cessé depuis au moins ___ ans, sans contrat de travail ni liquidation de pension.","aide":"Un chiffre."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"reponses":["2","deux"]}$academy_deck$::jsonb, $academy_deck$La cessation de la fonction de mandataire social ouvre le déblocage après au moins deux ans.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 38, $academy_deck$carte$academy_deck$, $academy_deck$Blocage et déblocage anticipé$academy_deck$, 1, $academy_deck${"recto":"Depuis quand le PER remplace-t-il le PERP et le contrat Madelin, et par quelle loi ?","verso":"Depuis le 1er octobre 2020, en application de la loi PACTE."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${}$academy_deck$::jsonb, $academy_deck$Le PER, créé par la loi PACTE, remplace les anciens produits retraite depuis le 1er octobre 2020.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 39, $academy_deck$carte$academy_deck$, $academy_deck$Déduction et fiscalité de sortie$academy_deck$, 2, $academy_deck${"recto":"Comment se mesure l'intérêt réel de la déduction PER ?","verso":"Entre la tranche marginale d'aujourd'hui et celle estimée à la retraite, dans une simulation chiffrée."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${}$academy_deck$::jsonb, $academy_deck$L'impôt est reporté à la sortie, souvent dans une tranche plus basse ; l'écart entre les deux fait l'intérêt.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 40, $academy_deck$carte$academy_deck$, $academy_deck$Plafond de déduction$academy_deck$, 3, $academy_deck${"recto":"Plafond de déduction d'un travailleur non salarié : quelle formule décrit le BOFiP ?","verso":"10 % du bénéfice jusqu'à huit PASS, plus 15 % de la fraction entre un et huit PASS, à vérifier."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${}$academy_deck$::jsonb, $academy_deck$Le montant exact dépend du bénéfice réel et de l'année : seuil à vérifier sur la source officielle.$academy_deck$);
+end
+$deck_per_et_retraite$;

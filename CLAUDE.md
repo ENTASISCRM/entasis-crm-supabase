@@ -521,83 +521,74 @@ dates. Pour toute échéance lointaine, doubler d'un rappel simple.
 
 ## Entasis Academy, la formation interne (21 septembre 2026)
 
-Le domaine **Formation** du menu (`#/formation/...`) : Mon parcours,
-Catalogue, module, lecteur de leçon, quiz, Mes résultats pour tout le
-cabinet ; Pilotage des formations, fiche collaborateur, matrice de
-compétences et Administration du contenu pour la direction et les profils
-`academy_admin`. **Tant qu'aucun module n'est publié, l'onglet n'existe
-que pour la direction** (`formationOuverte()` dans le service, lecture
-sous RLS de `academy_module_versions`) : Louis relit et publie sans que
-l'équipe découvre une rubrique vide. Écrit sur la branche `claude/entasis-academy`,
-validé sur le projet DEV `entasis-crm-DEV` (`leuqchrianpasianwmjg`), puis
-**mis en production le 21 septembre 2026** sur décision de Louis : les
-migrations `supabase/migrations/20260921_academy_*` portent chacune la
-version enregistrée dans `schema_migrations` en en tête (socle
-20260921130243, fonctions 20260921130815, puis les treize seeds et la
-purge planifiée). Le catalogue y est en brouillon, rien n'est publié ni
-affecté : l'équipe ne voit pas encore l'onglet.
+Le domaine **Formation** du menu (`#/formation/...`). Depuis la refonte du
+21 septembre au soir, c'est un **mode entraînement façon Duolingo** : un
+module est un **deck** d'exercices (huit types : choix, vrai ou faux,
+sélection multiple, remettre dans l'ordre, associer, texte à trou à choisir
+ou à taper, carte à retourner) plus un **mémo** d'une page. Une session =
+12 exercices, correction immédiate à chaque exercice, erreurs rejouées en
+fin de session, XP, série de jours, couronnes de maîtrise (0 à 5 ; 3 =
+deck validé, attestation interne). Répétition espacée par exercice
+(`academy_forces`). Écrans : Aujourd'hui, Catalogue, deck, Entraînement
+(plein écran), Mes résultats ; Pilotage, fiche, matrice et Administration
+pour la direction et `academy_admin`. Conception :
+`docs/superpowers/specs/2026-09-21-academy-entrainement-design.md`.
+
+**Tant qu'aucun module n'est publié, l'onglet n'existe que pour la
+direction** (`formationOuverte()`). Louis a publié « La méthode Entasis »
+v1 (leçons) le 21/09 puis a demandé la refonte : cette v1 est archivée à
+la mise en ligne du mode entraînement ; sa v2 en brouillon porte le deck.
 
 Ce qu'il faut savoir avant d'y toucher :
 
 * **Toute la logique sensible est en SQL** (`security definer`, `set
   search_path`, `revoke execute from public, anon`), pas dans une fonction
-  Vercel : correction des quiz, tirage des questions, ouverture et fin des
-  sessions, battements, validation, attestation, révisions J+7 et J+30. La
-  table `academy_corriges` n'a aucune policy et `revoke all` pour
-  `authenticated` : un client ne lit jamais une bonne réponse avant
-  d'avoir soumis. `academy_intervalles` et `academy_reponses` sont dans le
-  même cas.
-* **Le temps actif ne vient jamais du client.** Le navigateur envoie un
-  battement toutes les 30 s (`academy_battement`) quand l'onglet est
-  visible et qu'une activité a été détectée depuis moins de 120 s ; le
-  serveur prolonge ou ouvre un intervalle avec `now()`. Les durées
-  affichées sont des unions d'intervalles (`academy_duree_active`), pas des
-  sommes. Une notice de données est affichée au collaborateur ; les
-  intervalles de plus de douze mois se purgent par `academy_purger_intervalles()`
-  (service role seulement, pas de cron posé) après résumé dans
-  `academy_durees_jour`.
-* **Une version publiée est immuable** (`academy_version_immuable`,
-  `academy_contenu_fige`) et indélébile ; on crée une nouvelle version
-  (`academy_nouvelle_version`), on l'édite, on la publie avec le nom du
-  relecteur. Publier n'est pas valider le contenu métier : le catalogue
-  semé est **en brouillon** et attend la relecture de Louis avant toute
-  publication.
-* **Le trigger `academy_progression_garde`** empêche le client de marquer
-  une leçon terminée : seule la RPC le fait, sous le réglage local
-  `academy.serveur = on`. `academy_progression_lecons` n'accorde à
-  `authenticated` que `update (position, updated_at)` ; le service fait donc
-  un `update` puis un `upsert ignoreDuplicates`, jamais un upsert direct
-  (PostgREST poserait toutes les colonnes dans le `ON CONFLICT`).
-* **`prevent_role_escalation()` a été réécrit** depuis le texte de
-  production du 21 septembre avec deux lignes pour `academy_admin`. Avant
-  d'appliquer en production, repartir de `pg_get_functiondef` et n'y
-  reporter que ces deux lignes.
-* Les fonctions SQL renvoient du `jsonb` déjà assemblé ; le service
-  `src/services/academy.js` est une fonction par contrat, les libs pures
-  sont dans `src/lib/academy/` (statuts, révisions, battement, quiz,
-  format, csv, attestation PDF). Le composant `src/components/academy/Academy.jsx`
-  reçoit `{ profile, route, onNaviguer }`, la route étant le hash après
-  `#/formation/`.
-* **Les identifiants d'un quiz sont des index dans l'ordre présenté** (le
-  serveur mélange les choix et mémorise l'ordre dans `academy_tentatives.questions`).
-  La soumission est idempotente par `jeton_client`.
+  Vercel : tirage et mélange des choix (`academy_demarrer_entrainement`),
+  correction (`academy_repondre`, `academy_verifier_reponse`), répétition
+  espacée, XP, série et couronnes (`academy_terminer_entrainement`). Les
+  corrigés (`academy_items_corriges`), les items (`academy_items`) et les
+  sessions (`academy_entrainements`) n'ont aucune policy, `revoke all`
+  pour `authenticated`, administration comprise : tout se lit par les
+  fonctions. Les réponses sont des **indices présentés** : le serveur
+  mélange et mémorise l'ordre dans `academy_entrainements.items`, et un
+  exercice d'ordre ou d'association est déjà mélangé à l'enregistrement
+  (`academy_melanger_item`, générateur de decks à graine stable), sinon
+  l'ordre d'auteur trahirait le corrigé (relecture adversariale du 21/09).
+* **Le temps actif ne vient jamais du client** : chaque réponse vaut un
+  battement serveur (`now()`), les durées sont des unions d'intervalles.
+  `academy_duree_active` et `academy_duree_version` ne sont pas
+  exécutables par `authenticated` (relecture du 21/09).
+* **Une version publiée est immuable** (versions, items, corrigés, mémo) ;
+  on crée une nouvelle version, on l'édite, on la publie avec le nom du
+  relecteur (au moins 12 exercices avec corrigé). Publier n'est pas
+  valider le contenu métier : les 13 decks semés sont **en brouillon**.
+* `prevent_role_escalation()` a été réécrit avec deux lignes pour
+  `academy_admin` ; repartir de `pg_get_functiondef` avant toute
+  modification.
+* Les tables des leçons, questions, tentatives et révisions de la première
+  version (migrations 1 et 2) restent en base sans être lues ; leurs
+  fonctions ont été retirées par la migration 6. Nettoyage à faire dans une
+  migration dédiée après validation de Louis.
+* Service `src/services/academy.js`, libs `src/lib/academy/` (statuts,
+  exercices, format, csv, attestation-pdf), écrans
+  `src/components/academy/` (Entrainement.jsx et `exercices/`, un
+  composant par type). `Academy.jsx` reçoit `{ profile, route, onNaviguer }`,
+  route = hash après `#/formation/`.
 
-Pour tester : appliquer sur DEV, dans l'ordre, `20260921_academy_1_socle.sql`,
-`20260921_academy_2_fonctions.sql`, puis les treize `20260921_academy_3_seed_*.sql`
-(un module par fichier, idempotents sur le slug) ; jouer
-`scripts/academy/tests-sql/acceptation.sql` (un seul bloc `DO`, quatorze
-étapes, se termine volontairement par `raise exception 'TESTS OK ...'` pour
-tout annuler) ; côté écran `npm run test:visuel` avec les onze scénarios
-`formation-*` (données dans `tests/visuel/harnais-academy.mjs`). Le
-catalogue se régénère par `node scripts/academy/generer-seed.mjs` depuis
-`scripts/academy/catalogue/*.json`.
+Pour tester : DEV, migrations 1 à 7 dans l'ordre (les seeds 3 sont ceux
+des leçons, désormais sans usage ; la 6 tient en trois fichiers, 6, 6b et
+6c, à appliquer dans cet ordre ; les seeds 7 sont les decks, un fichier
+par deck, idempotents) ; `scripts/academy/tests-sql/acceptation-entrainement.sql`
+(un bloc `DO`, dix étapes, se termine par `TESTS OK`) ; côté écran
+`npm run test:visuel` (scénarios `formation-*`). Les decks se régénèrent
+par `node scripts/academy/generer-decks.mjs` depuis
+`scripts/academy/decks/*.json` (la trame : écrite d'après les deux pages
+de Louis ; les douze autres : convertis depuis les leçons vérifiées).
 
-Ce qui reste à faire par Louis : relire les douze modules dans
-Administration, publier un par un avec le nom du relecteur (le premier
-module publié ouvre l'onglet à toute l'équipe), affecter les parcours,
-poser `academy_admin` sur un profil s'il veut déléguer le contenu. La
-relecture à froid du 21 septembre (quatre lentilles contre la base de
-production) est journalisée dans `scripts/academy/tests-sql/LISEZMOI.md`.
+Ce qui reste à faire par Louis : relire les decks dans Administration
+(mémo et exercices), publier un par un avec le nom du relecteur (le
+premier deck publié ouvre l'onglet à toute l'équipe), affecter le parcours
+Intégration (la trame y est en première position).
 
 ## Les projets Supabase
 

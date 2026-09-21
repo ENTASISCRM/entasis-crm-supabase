@@ -1,0 +1,848 @@
+{
+ "slug": "qualite-du-dossier",
+ "titre": "Qualité du dossier et vigilance",
+ "competence": "Identifier pièces manquantes, incohérences et besoin d'escalade",
+ "memo_md": "Le dossier prouve, il ne raconte pas : chaque information importante s'appuie sur une pièce datée.\n\n## Trois questions avant l'étude\n- Qui est cette personne, d'où vient l'argent, ce qu'elle veut faire.\n- Identité vérifiée sur document probant (L561-5), objet de la relation (L561-5-1), connaissance tenue à jour (L561-6).\n- Sans ces éléments : aucune opération, aucune relation (L561-8).\n- Une pièce produite après l'opération ne régularise rien. L'ancienneté du client ne dispense pas d'un dossier à jour.\n\n## Lire les incohérences\n- Croiser ce que le client dit, ce que les pièces montrent, ce que le projet suppose.\n- Quatre croisements : revenus contre avis d'imposition ; montant contre patrimoine et origine ; horizon contre besoin de liquidité ; risque déclaré contre expérience réelle.\n- Une incohérence se questionne avec neutralité et se documente : version corrigée, date, source, pièce. Corriger seul, c'est fabriquer le dossier.\n\n## Trois niveaux de réaction\n- Pièce manquante ou écart explicable : réglé avec le client.\n- Opération complexe, montant inhabituel ou sans logique économique : examen renforcé (L561-10-2) : origine et destination des fonds, objet, bénéficiaire.\n- Soupçon (infraction punie de plus d'un an d'emprisonnement, fraude fiscale) : déclaration à Tracfin (L561-15) par la personne habilitée (R561-23), inscrite sur ERMES.\n\n## Escalader\n- Rien à signer ; remontée écrite, datée, les faits sans qualification, le jour même.\n- Ne jamais informer le client d'un signalement (L561-18) : amende de 22 500 euros (L574-1).\n- « Je dois vérifier quelques éléments de mon côté avant de vous répondre. »\n",
+ "items": [
+  {
+   "cle": "i01",
+   "type": "choix",
+   "competence": "Pièces du dossier",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Avant d'entrer en relation d'affaires, que demande l'article L561-5 du Code monétaire et financier ?",
+    "choix": [
+     "Recueillir l'objet et la nature de la relation d'affaires",
+     "Identifier le client et vérifier son identité sur un document écrit à caractère probant",
+     "Examiner la cohérence des opérations avec la connaissance actualisée du client",
+     "Se renseigner sur l'origine et la destination des fonds"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "L'article L561-5 impose l'identification et la vérification de l'identité sur un document probant ; les autres obligations relèvent des articles L561-5-1, L561-6 et L561-10-2."
+  },
+  {
+   "cle": "i02",
+   "type": "choix",
+   "competence": "Origine des fonds",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Cas fictif. Une cliente explique que les 180 000 euros à investir proviennent de la vente d'un appartement. Quelle pièce documente le mieux cette origine des fonds ?",
+    "choix": [
+     "Une attestation sur l'honneur rédigée par la cliente",
+     "Un relevé de compte montrant le solde actuel",
+     "L'acte de vente ou l'attestation notariée, avec le relevé montrant l'arrivée des fonds",
+     "Le dernier avis d'imposition"
+    ]
+   },
+   "corrige": {
+    "index": 2
+   },
+   "explication": "L'origine des fonds s'appuie sur la pièce qui établit l'événement et celle qui relie cet événement aux sommes reçues."
+  },
+  {
+   "cle": "i03",
+   "type": "choix",
+   "competence": "Pièces du dossier",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Un client a remis toutes ses pièces sauf le justificatif d'origine des 150 000 euros à investir. Il propose de signer aujourd'hui et d'envoyer l'acte de vente la semaine prochaine. Que faites-vous ?",
+    "choix": [
+     "Signer aujourd'hui et noter la pièce à recevoir dans le CRM",
+     "Suspendre la souscription jusqu'à réception de la pièce, sans renoncer au dossier",
+     "Remplacer la pièce par une attestation sur l'honneur signée du client",
+     "Renoncer au dossier, le client cherche à contourner la règle"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Sans origine des fonds documentée, aucune opération ; une pièce produite après l'opération ne régularise rien, et une semaine d'attente ne justifie pas un renoncement."
+  },
+  {
+   "cle": "i04",
+   "type": "choix",
+   "competence": "Pièces du dossier",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Une SARL souhaite placer sa trésorerie. Le gérant remet sa carte d'identité et un extrait d'immatriculation datant de quatorze mois. Que manque-t-il en priorité pour entrer en relation ?",
+    "choix": [
+     "Rien, la pièce d'identité du gérant suffit pour une société",
+     "Un extrait d'immatriculation récent et l'identification des bénéficiaires effectifs",
+     "Les trois derniers bilans de la société",
+     "Le justificatif de domicile personnel du gérant uniquement"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Pour une société, le dossier comporte un extrait d'immatriculation récent, les statuts et l'identification des bénéficiaires effectifs ; les bilans relèvent de l'étude."
+  },
+  {
+   "cle": "i05",
+   "type": "choix",
+   "competence": "Détecter les incohérences",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Le questionnaire de Monsieur Lecoq indique 60 000 euros de revenus annuels, son avis d'imposition 38 000 euros. Il veut placer 250 000 euros d'économies. Quelle est la bonne suite ?",
+    "choix": [
+     "Corriger le questionnaire pour l'aligner sur l'avis d'imposition",
+     "Ignorer l'écart, il ne change pas la recommandation",
+     "Questionner le client sur l'écart et sur l'origine des 250 000 euros, puis noter la réponse et la pièce",
+     "Remonter immédiatement le dossier pour déclaration à Tracfin"
+    ]
+   },
+   "corrige": {
+    "index": 2
+   },
+   "explication": "Une incohérence se questionne avec neutralité et se documente ; corriger seul revient à fabriquer le dossier, escalader avant d'interroger le client est prématuré."
+  },
+  {
+   "cle": "i06",
+   "type": "choix",
+   "competence": "Détecter les incohérences",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Un client déclare un horizon de quinze ans pour « préparer la retraite », puis évoque un achat immobilier dans dix-huit mois qui mobilisera la majeure partie de la somme à placer. Quelle incohérence traitez-vous en priorité et avec quelle conséquence ?",
+    "choix": [
+     "Le profil de risque doit être relevé pour tenir les deux objectifs",
+     "L'horizon et le besoin de liquidité contredisent l'objectif : réinterroger le client avant toute recommandation d'enveloppe peu disponible",
+     "Aucune : deux projets différents peuvent coexister sans conséquence",
+     "Proposer un PER pour la retraite et conserver le reste sur le compte courant"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Horizon et objectif contre besoin de liquidité est l'un des quatre croisements ; aucune enveloppe à liquidité contrainte tant que l'écart n'est pas résolu."
+  },
+  {
+   "cle": "i07",
+   "type": "choix",
+   "competence": "Examen renforcé",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Un client connu du cabinet, coopératif, souhaite réaliser une opération d'un montant très supérieur à tout ce que son dossier laissait attendre, sans logique économique apparente. Que demande la loi au cabinet ?",
+    "choix": [
+     "Refuser l'opération d'office",
+     "Réaliser un examen renforcé : origine et destination des fonds, objet de l'opération, bénéficiaire, réponses documentées",
+     "Ne rien faire de particulier, le client est connu et coopératif",
+     "Effectuer automatiquement une déclaration de soupçon"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "L'article L561-10-2 impose un examen renforcé des opérations d'un montant inhabituellement élevé ou sans justification économique apparente, ni refus ni déclaration automatiques."
+  },
+  {
+   "cle": "i08",
+   "type": "choix",
+   "competence": "Escalade et confidentialité",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Monsieur Tavares veut verser 400 000 euros en trois virements depuis deux banques dont une à l'étranger, et refuse d'expliquer l'origine des fonds. Que faites-vous ?",
+    "choix": [
+     "Avancer, la compagnie d'assurance fera ses propres contrôles",
+     "Effectuer vous-même une déclaration à Tracfin depuis votre poste",
+     "Ne rien faire signer et remonter les faits par écrit au responsable désigné",
+     "Informer le client qu'un signalement sera fait s'il ne fournit pas la pièce"
+    ]
+   },
+   "corrige": {
+    "index": 2
+   },
+   "explication": "Aucune opération tant que le doute n'est pas levé, remontée écrite et factuelle ; l'obligation du cabinet ne se délègue pas à la compagnie."
+  },
+  {
+   "cle": "i09",
+   "type": "choix",
+   "competence": "Escalade et confidentialité",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Qui effectue la déclaration de soupçon à Tracfin au nom du cabinet ?",
+    "choix": [
+     "Le conseiller qui a reçu le client, dès qu'il a un doute",
+     "Le dirigeant ou le préposé habilité que le cabinet a déclaré à Tracfin et à l'AMF",
+     "La compagnie d'assurance qui reçoit les fonds",
+     "L'AMF, sur signalement du cabinet"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "L'article R561-23 réserve la déclaration aux dirigeants ou préposés habilités que le cabinet a déclarés, pas au conseiller de son propre chef."
+  },
+  {
+   "cle": "i10",
+   "type": "choix",
+   "competence": "Escalade et confidentialité",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "En fin de rendez-vous, un client dont l'origine des fonds vous inquiète sérieusement demande si tout est en ordre pour signer. Quelle réponse est conforme ?",
+    "choix": [
+     "« Tout est en ordre, nous signerons la semaine prochaine. »",
+     "« Je dois vérifier quelques éléments de mon côté avant de vous répondre, je reviens vers vous. »",
+     "« J'ai un doute sur l'origine de vos fonds, une déclaration pourrait suivre. »",
+     "« Vos virements sont suspects, je ne peux pas vous suivre. »"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Ton calme et factuel : ne pas rassurer à tort, ne pas menacer, ne pas révéler qu'un signalement est envisagé."
+  },
+  {
+   "cle": "i11",
+   "type": "vrai_faux",
+   "competence": "Pièces du dossier",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Un client suivi depuis dix ans par le cabinet, sans aucun incident, n'a pas besoin que ses pièces d'identité et sa situation soient actualisées dans le dossier."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "L'AMF est explicite : l'ancienneté de la relation ou l'absence apparente de risque ne dispense pas d'un dossier à jour."
+  },
+  {
+   "cle": "i12",
+   "type": "vrai_faux",
+   "competence": "Détecter les incohérences",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Une incohérence entre le questionnaire et une pièce du dossier signifie que le client cherche à tromper le cabinet."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "Le plus souvent, c'est une erreur de saisie, un oubli ou une information dépassée ; elle se questionne et se documente, sans accusation."
+  },
+  {
+   "cle": "i13",
+   "type": "vrai_faux",
+   "competence": "Escalade et confidentialité",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Par souci de transparence, le conseiller doit prévenir le client qu'une déclaration de soupçon a été effectuée à son sujet."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "L'article L561-18 interdit de révéler l'existence, le contenu ou les suites d'une déclaration ; la divulgation est une infraction pénale."
+  },
+  {
+   "cle": "i14",
+   "type": "vrai_faux",
+   "competence": "Pièces du dossier",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Lors d'un contrôle, la date des pièces du dossier est comparée à la date de l'opération."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "Le contrôle compare les dates : une pièce obtenue après l'opération ne répare pas un dossier incomplet au moment de l'opération."
+  },
+  {
+   "cle": "i15",
+   "type": "vrai_faux",
+   "competence": "Escalade et confidentialité",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Tant que le doute sur l'origine des fonds n'est pas levé, le cabinet n'exécute aucune opération, même si la compagnie d'assurance effectuera ses propres contrôles."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "L'article L561-8 s'applique au cabinet, dont l'obligation de vigilance ne se délègue pas à la compagnie."
+  },
+  {
+   "cle": "i16",
+   "type": "vrai_faux",
+   "competence": "Détecter les incohérences",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Une explication orale du client sur un écart du dossier ne compte que si elle est écrite dans la fiche et appuyée par une pièce."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "L'AMF rappelle que des échanges informels ne remplacent pas une actualisation formalisée et documentée des informations."
+  },
+  {
+   "cle": "i17",
+   "type": "multi",
+   "competence": "Pièces du dossier",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Cochez tout ce qui figure parmi les manquements les plus fréquents relevés par l'AMF dans sa synthèse des contrôles de juin 2026.",
+    "choix": [
+     "Dossier sans pièce d'identité",
+     "Dossier sans justificatif de domicile",
+     "Aucun élément sur l'origine des fonds",
+     "Absence de plaquette de présentation du cabinet",
+     "Absence de simulation chiffrée dans la feuille de route",
+     "Contrat non disponible chez l'assureur"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "L'AMF cite les dossiers sans pièce d'identité, sans justificatif de domicile, sans élément sur l'origine des fonds ou avec des documents obsolètes."
+  },
+  {
+   "cle": "i18",
+   "type": "multi",
+   "competence": "Détecter les incohérences",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cochez tout ce qui fait partie des croisements recommandés pour repérer une incohérence dans un dossier.",
+    "choix": [
+     "Revenus déclarés dans le questionnaire contre avis d'imposition",
+     "Montant à investir contre patrimoine déclaré et origine des fonds documentée",
+     "Horizon et objectif contre besoin de liquidité",
+     "Âge du client contre durée du contrat proposé",
+     "Frais du contrat visé contre frais des contrats concurrents",
+     "Nombre de rendez-vous contre ancienneté de la relation"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "Les quatre croisements : revenus contre avis, montant contre patrimoine et origine, horizon contre liquidité, risque déclaré contre expérience réelle."
+  },
+  {
+   "cle": "i19",
+   "type": "multi",
+   "competence": "Examen renforcé",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Cochez tout ce sur quoi le cabinet se renseigne lors d'un examen renforcé, selon l'article L561-10-2.",
+    "choix": [
+     "L'origine et la destination des fonds",
+     "L'objet de l'opération",
+     "L'identité de la personne qui bénéficie de l'opération",
+     "Le rapport au risque déclaré par le client",
+     "La résidence fiscale du client",
+     "L'expérience financière du client"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "L'examen renforcé porte sur l'origine et la destination des fonds, l'objet de l'opération et son bénéficiaire ; le reste relève du dossier de base."
+  },
+  {
+   "cle": "i20",
+   "type": "multi",
+   "competence": "Escalade et confidentialité",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cochez tout ce qui caractérise une escalade correcte d'un dossier douteux vers le responsable désigné.",
+    "choix": [
+     "Elle est faite par écrit",
+     "Elle est datée",
+     "Elle rapporte les faits observés, sans qualification ni interprétation",
+     "Elle contient votre conclusion sur l'infraction soupçonnée",
+     "Elle intervient après avoir prévenu le client",
+     "Elle se fait oralement pour gagner du temps"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "Une escalade se fait par écrit, datée, avec les faits ; ni interprétation, ni information du client, ni échange de couloir."
+  },
+  {
+   "cle": "i21",
+   "type": "multi",
+   "competence": "Origine des fonds",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Un dossier repris d'un collègue parti montre 310 000 euros arrivés il y a cinq semaines par virement d'une SCI. Cochez tout ce qui en fait un signal d'alerte.",
+    "choix": [
+     "Le montant est inhabituellement élevé au regard des revenus connus",
+     "La SCI ne figure nulle part dans la fiche client",
+     "Le client presse pour signer cette semaine",
+     "Le client exerce une profession libérale",
+     "Sa carte d'identité est expirée depuis quatre mois",
+     "Sa situation familiale diffère entre la fiche et l'avis d'imposition"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "Montant inhabituel, provenance inconnue et pression sur le calendrier appellent l'examen renforcé ; la pièce expirée et l'écart familial se traitent avec le client."
+  },
+  {
+   "cle": "i22",
+   "type": "ordre",
+   "competence": "Pièces du dossier",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Remettez dans l'ordre la gestion des pièces, du premier entretien à l'ouverture de l'étude.",
+    "elements": [
+     "Annoncer les pièces dès le premier entretien : « c'est la même règle pour tout le monde »",
+     "Envoyer la liste des pièces par écrit après le rendez-vous",
+     "Noter dans le CRM ce qui est reçu, ce qui manque et la date de chaque pièce",
+     "Ouvrir l'étude une fois l'identité et l'origine des fonds documentées"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3
+    ]
+   },
+   "explication": "Annonce orale, liste écrite, suivi daté dans le CRM, puis étude seulement quand identité et origine des fonds sont prouvées."
+  },
+  {
+   "cle": "i23",
+   "type": "ordre",
+   "competence": "Détecter les incohérences",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Remettez dans l'ordre le traitement d'une incohérence entre la fiche client et une pièce du dossier.",
+    "elements": [
+     "Surligner les écarts dans la fiche avant le rendez-vous",
+     "Aborder l'écart avec neutralité, comme un point de méthode",
+     "Reformuler la réponse du client et dire quelle pièce la documentera",
+     "Mettre à jour la fiche avec la version corrigée, la date et la source",
+     "Escalader si l'écart persiste sans explication crédible"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ]
+   },
+   "explication": "Préparer, questionner sans soupçon, reformuler, écrire avec date et source, et n'escalader que si l'écart persiste."
+  },
+  {
+   "cle": "i24",
+   "type": "ordre",
+   "competence": "Escalade et confidentialité",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Un client refuse d'expliquer l'origine de 400 000 euros. Remettez dans l'ordre ce que fait le conseiller.",
+    "elements": [
+     "Clore le rendez-vous sans rien faire signer ni promettre",
+     "Noter dans le CRM les faits tels qu'observés",
+     "Transmettre par écrit au responsable désigné, le jour même",
+     "Attendre sa réponse avant tout nouveau contact sur ce dossier"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3
+    ]
+   },
+   "explication": "Rien signé, faits notés, remontée écrite le jour même, puis silence sur le dossier jusqu'à la réponse du responsable."
+  },
+  {
+   "cle": "i25",
+   "type": "ordre",
+   "competence": "Examen renforcé",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Remettez dans l'ordre la gradation des réactions face à un dossier qui pose problème, de la plus courante à la plus grave.",
+    "elements": [
+     "Pièce manquante ou écart explicable, réglé avec le client",
+     "Opération inhabituelle ou sans logique économique : examen renforcé",
+     "Soupçon : remontée écrite au responsable désigné",
+     "Déclaration à Tracfin par la personne habilitée"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3
+    ]
+   },
+   "explication": "Premier niveau avec le client, deuxième niveau examen renforcé, troisième niveau soupçon remonté, puis déclaration par la personne habilitée."
+  },
+  {
+   "cle": "i26",
+   "type": "association",
+   "competence": "Pièces du dossier",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Associez chaque article du Code monétaire et financier à l'obligation qu'il pose.",
+    "gauche": [
+     "Article L561-5",
+     "Article L561-5-1",
+     "Article L561-6",
+     "Article L561-8"
+    ],
+    "droite": [
+     "Vérifier l'identité du client sur un document écrit à caractère probant",
+     "Recueillir l'objet et la nature de la relation d'affaires",
+     "Tenir la connaissance du client à jour et exercer une vigilance constante",
+     "N'exécuter aucune opération si ces éléments ne peuvent être obtenus"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      3,
+      3
+     ]
+    ]
+   },
+   "explication": "L561-5 identité, L561-5-1 objet de la relation, L561-6 vigilance constante, L561-8 aucune opération sans ces éléments."
+  },
+  {
+   "cle": "i27",
+   "type": "association",
+   "competence": "Escalade et confidentialité",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Associez chaque article du Code monétaire et financier à ce qu'il prévoit en matière de soupçon.",
+    "gauche": [
+     "Article L561-10-2",
+     "Article L561-15",
+     "Article L561-18",
+     "Article R561-23"
+    ],
+    "droite": [
+     "Examen renforcé des opérations complexes, inhabituelles ou sans justification économique",
+     "Déclaration à Tracfin des sommes soupçonnées de provenir d'une infraction",
+     "Confidentialité de la déclaration : interdiction d'en révéler l'existence au client",
+     "Désignation des dirigeants ou préposés habilités à déclarer"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      3,
+      3
+     ]
+    ]
+   },
+   "explication": "L561-10-2 examen renforcé, L561-15 déclaration, L561-18 confidentialité, R561-23 personnes habilitées."
+  },
+  {
+   "cle": "i28",
+   "type": "association",
+   "competence": "Détecter les incohérences",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Vous reprenez le dossier d'un collègue parti. Associez chaque écart à son classement.",
+    "gauche": [
+     "Marié, deux enfants dans la fiche ; célibataire sur l'avis d'imposition",
+     "140 000 euros de revenus dans la fiche ; 92 000 euros sur l'avis de l'année précédente",
+     "310 000 euros reçus d'une SCI inconnue du dossier, client pressé"
+    ],
+    "droite": [
+     "Erreur probable ou changement récent, à vérifier",
+     "Point à questionner, une pièce récente doit expliquer l'écart",
+     "Signal d'alerte, examen renforcé"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ]
+    ]
+   },
+   "explication": "La situation familiale est une erreur probable, l'écart de revenus un point à questionner, l'origine des fonds inconnue un signal d'alerte."
+  },
+  {
+   "cle": "i29",
+   "type": "association",
+   "competence": "Pièces du dossier",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Associez chaque élément à connaître à la pièce qui le documente.",
+    "gauche": [
+     "Identité de la personne",
+     "Revenus et fiscalité",
+     "Origine de fonds issus d'une vente immobilière",
+     "Société cliente"
+    ],
+    "droite": [
+     "Pièce d'identité en cours de validité",
+     "Dernier avis d'imposition",
+     "Acte de vente ou attestation notariée",
+     "Extrait d'immatriculation récent, statuts et bénéficiaires effectifs"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      3,
+      3
+     ]
+    ]
+   },
+   "explication": "Chaque information importante s'appuie sur une pièce datée : identité, avis d'imposition, acte notarié, extrait et bénéficiaires effectifs."
+  },
+  {
+   "cle": "i30",
+   "type": "trou_choix",
+   "competence": "Pièces du dossier",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Avant l'entrée en relation, l'identité du client est vérifiée sur un document écrit à caractère ___.",
+    "choix": [
+     "probant",
+     "officiel",
+     "récent",
+     "original"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "L'article L561-5 parle d'un document écrit à caractère probant."
+  },
+  {
+   "cle": "i31",
+   "type": "trou_choix",
+   "competence": "Escalade et confidentialité",
+   "difficulte": 3,
+   "payload": {
+    "phrase": "Face à un soupçon, le conseiller ne déclare pas lui-même : il remonte les faits par écrit ___.",
+    "choix": [
+     "au responsable désigné du cabinet",
+     "à Tracfin",
+     "à l'AMF",
+     "à la compagnie d'assurance"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Le conseiller escalade en interne ; la déclaration à Tracfin relève ensuite de la personne habilitée que le cabinet a déclarée."
+  },
+  {
+   "cle": "i32",
+   "type": "trou_choix",
+   "competence": "Détecter les incohérences",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Modifier le revenu déclaré pour qu'il colle à l'avis d'imposition, c'est ___ un dossier.",
+    "choix": [
+     "fabriquer",
+     "actualiser",
+     "compléter",
+     "sécuriser"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Corriger soi-même un chiffre ou relever un profil de risque pour justifier une allocation, c'est fabriquer un dossier."
+  },
+  {
+   "cle": "i33",
+   "type": "trou_choix",
+   "competence": "Examen renforcé",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "L'examen renforcé s'impose pour une opération particulièrement complexe, d'un montant inhabituellement élevé ou ___.",
+    "choix": [
+     "sans justification économique apparente",
+     "réalisée par une personne politiquement exposée",
+     "réglée depuis une banque à l'étranger",
+     "demandée par un nouveau client"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "L'article L561-10-2 vise la complexité, le montant inhabituel ou l'absence de justification économique ; les personnes politiquement exposées relèvent de la vigilance complémentaire."
+  },
+  {
+   "cle": "i34",
+   "type": "trou_saisie",
+   "competence": "Escalade et confidentialité",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "La divulgation d'une déclaration de soupçon est punie d'une amende de ___ euros (article L574-1).",
+    "aide": "Un montant en euros."
+   },
+   "corrige": {
+    "reponses": [
+     "22 500",
+     "22500",
+     "22.500",
+     "22 500 euros"
+    ]
+   },
+   "explication": "L'article L574-1 punit la méconnaissance de l'interdiction de divulgation d'une amende de 22 500 euros."
+  },
+  {
+   "cle": "i35",
+   "type": "trou_saisie",
+   "competence": "Escalade et confidentialité",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "Pour déclarer un soupçon, le déclarant doit être inscrit sur la plateforme de télédéclaration de Tracfin, appelée ___.",
+    "aide": "Un nom de cinq lettres."
+   },
+   "corrige": {
+    "reponses": [
+     "ERMES",
+     "Ermes",
+     "ermes"
+    ]
+   },
+   "explication": "L'inscription sur ERMES en tant que déclarant suppose une désignation formelle au sein du cabinet."
+  },
+  {
+   "cle": "i36",
+   "type": "trou_saisie",
+   "competence": "Escalade et confidentialité",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "La déclaration de soupçon vise les sommes provenant d'une infraction punie de plus de ___ d'emprisonnement.",
+    "aide": "Une durée."
+   },
+   "corrige": {
+    "reponses": [
+     "un an",
+     "1 an",
+     "un",
+     "1"
+    ]
+   },
+   "explication": "L'article L561-15 vise les infractions punies de plus d'un an d'emprisonnement, ou la fraude fiscale selon des critères fixés par décret."
+  },
+  {
+   "cle": "i37",
+   "type": "trou_saisie",
+   "competence": "Origine des fonds",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Sans identité vérifiée, objet de la relation et ___ des fonds documentés, aucune opération n'est exécutée.",
+    "aide": "Un mot : d'où vient l'argent."
+   },
+   "corrige": {
+    "reponses": [
+     "origine",
+     "Origine",
+     "l'origine",
+     "provenance"
+    ]
+   },
+   "explication": "Les trois éléments sans lesquels aucune opération : identité vérifiée, origine des fonds, objet de la relation."
+  },
+  {
+   "cle": "i38",
+   "type": "carte",
+   "competence": "Pièces du dossier",
+   "difficulte": 1,
+   "payload": {
+    "recto": "Les trois questions à se poser avant d'ouvrir l'étude",
+    "verso": "Qui est cette personne, d'où vient l'argent, ce qu'elle veut faire."
+   },
+   "corrige": {},
+   "explication": "Identité, origine des fonds, objet de la relation : les trois preuves exigées avant toute opération."
+  },
+  {
+   "cle": "i39",
+   "type": "carte",
+   "competence": "Détecter les incohérences",
+   "difficulte": 1,
+   "payload": {
+    "recto": "Les trois sources qu'un conseiller croise pour lire un dossier",
+    "verso": "Ce que le client dit, ce que les pièces montrent, ce que le projet suppose."
+   },
+   "corrige": {},
+   "explication": "Déclaration, pièce et projet doivent raconter la même histoire."
+  },
+  {
+   "cle": "i40",
+   "type": "carte",
+   "competence": "Escalade et confidentialité",
+   "difficulte": 2,
+   "payload": {
+    "recto": "La phrase à dire au client quand vous devez vérifier avant de répondre",
+    "verso": "« Je dois vérifier quelques éléments de mon côté avant de vous répondre, je reviens vers vous. »"
+   },
+   "corrige": {},
+   "explication": "Ton calme et factuel, sans argumenter, sans menacer, sans rassurer à tort, et rien à signer."
+  }
+ ]
+}

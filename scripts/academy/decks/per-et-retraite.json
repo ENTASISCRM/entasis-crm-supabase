@@ -1,0 +1,845 @@
+{
+ "slug": "per-et-retraite",
+ "titre": "PER et préparation de la retraite",
+ "competence": "Expliquer mécanisme, disponibilité, fiscalité à vérifier et arbitrages",
+ "memo_md": "**Les sommes versées sur un PER sont bloquées jusqu'à la retraite, et le conseiller l'énonce avant tout avantage fiscal.**\n\n## Mécanisme\n- Depuis le 1er octobre 2020, remplace le PERP et le Madelin.\n- Déblocage anticipé limitatif : décès du conjoint ou partenaire de Pacs, invalidité de 2e ou 3e catégorie, handicap d'un enfant, surendettement, fin des droits au chômage, cessation de mandat social depuis deux ans, liquidation judiciaire d'un non salarié, achat de la résidence principale.\n- Résidence principale : versements volontaires et épargne salariale seulement, versements obligatoires bloqués.\n- Sortie en capital (une ou plusieurs fois), en rente ou mixte. Rente choisie définitivement à l'ouverture : plus de capital.\n- Gestion pilotée par défaut. Unités de compte : risque de perte en capital.\n\n## Fiscalité\n- Versements volontaires avant 70 ans déductibles par principe, renonciation sur option.\n- Déduits : capital au barème progressif, rente comme une pension. Non déduits : capital exonéré.\n- Impôt reporté, pas effacé : l'intérêt se mesure entre la tranche actuelle et celle de la retraite.\n- Plafond sur les revenus de l'année précédente, lu sur l'avis d'imposition. Salarié 2026 : 10 % des revenus 2025 nets de frais, maximum 37 680 euros, ou 4 710 euros si plus élevé. Non salarié : à vérifier.\n- Report du plafond non utilisé sur trois ans. Mutualisation entre conjoints ou pacsés sur demande expresse.\n\n## Arbitrages\n- Ordre : protéger les revenus, épargne disponible, puis épargne longue.\n- PER : déduction et blocage. Assurance vie : disponibilité, sans déduction. Livret : liquidité et sécurité.\n- Versement calibré en dernier, sur la capacité d'épargne réelle, pas sur l'impôt à effacer.\n",
+ "items": [
+  {
+   "cle": "i01",
+   "type": "choix",
+   "competence": "Blocage et déblocage anticipé",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Parmi les cas de déblocage anticipé du PER, un seul n'est pas lié à un accident de la vie. Lequel ?",
+    "choix": [
+     "L'expiration des droits à l'assurance chômage",
+     "L'achat de la résidence principale",
+     "Le surendettement",
+     "La liquidation judiciaire d'un non salarié"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "L'achat de la résidence principale est le seul cas de déblocage anticipé qui n'est pas un accident de la vie."
+  },
+  {
+   "cle": "i02",
+   "type": "choix",
+   "competence": "Blocage et déblocage anticipé",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Un client achète sa résidence principale et demande le déblocage de tous les droits de son PER, y compris ceux issus des versements obligatoires. Que lui répondez-vous ?",
+    "choix": [
+     "Tous les droits sont déblocables, l'achat de la résidence principale est prévu par la loi",
+     "Seuls les droits issus des versements volontaires et de l'épargne salariale sont déblocables, ceux des versements obligatoires restent bloqués",
+     "Le déblocage est possible si le plan est ouvert depuis plus de deux ans",
+     "Aucun déblocage n'est possible, seule la sortie à la retraite existe"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Pour l'achat de la résidence principale, les droits issus des versements obligatoires restent bloqués."
+  },
+  {
+   "cle": "i03",
+   "type": "choix",
+   "competence": "Déduction et fiscalité de sortie",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Une cliente a renoncé, sur option, à déduire ses versements volontaires. À la retraite, elle sort en capital. Comment est traitée la part du capital correspondant à ces versements ?",
+    "choix": [
+     "Elle est imposée au barème progressif",
+     "Elle est exonérée",
+     "Elle suit les règles des pensions de retraite",
+     "Elle est imposée comme les gains du plan"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Quand les versements n'ont pas été déduits, la part du capital qui leur correspond est exonérée à la sortie."
+  },
+  {
+   "cle": "i04",
+   "type": "choix",
+   "competence": "Plafond de déduction",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Sur quels revenus se calcule le plafond de déduction des versements PER ?",
+    "choix": [
+     "Les revenus professionnels de l'année du versement",
+     "Les revenus professionnels de l'année précédente",
+     "Le revenu moyen des trois dernières années",
+     "Les revenus estimés à la retraite"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Le plafond de déduction se calcule sur les revenus professionnels de l'année précédente."
+  },
+  {
+   "cle": "i05",
+   "type": "choix",
+   "competence": "Plafond de déduction",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Pour un salarié, le plafond de déduction 2026 indiqué par Service-Public retient 10 % des revenus d'activité 2025 nets de frais professionnels. Quel est son maximum ?",
+    "choix": [
+     "4 710 euros",
+     "37 680 euros",
+     "84 578 euros",
+     "92 000 euros"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Le plafond salarié 2026 est de 10 % des revenus 2025 nets de frais, avec un maximum de 37 680 euros."
+  },
+  {
+   "cle": "i06",
+   "type": "choix",
+   "competence": "Déduction et fiscalité de sortie",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. En rendez-vous, un client demande : « combien vais-je économiser avec mon PER ? » Quelle réponse est conforme à la méthode enseignée dans ce parcours ?",
+    "choix": [
+     "Annoncer en séance le produit du versement par sa tranche marginale",
+     "Expliquer le mécanisme, localiser la ligne « plafond épargne retraite » sur l'avis d'imposition et annoncer une simulation à deux scénarios dans l'étude",
+     "Répondre que l'économie est nulle puisque l'impôt est reporté",
+     "Reprendre le chiffre annoncé par son confrère"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Aucun chiffre d'économie n'est annoncé sans simulation chiffrée, versement déduit contre non déduit, et sans source datée."
+  },
+  {
+   "cle": "i07",
+   "type": "choix",
+   "competence": "Choix des enveloppes",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Monsieur V., prévoyance en place et six mois de dépenses en épargne disponible, veut placer 40 000 euros, dont 25 000 euros destinés à des travaux dans trois ans. Il demande de tout verser sur un PER. Quelle réponse est conforme ?",
+    "choix": [
+     "Tout sur le PER, la déduction sera maximale cette année",
+     "Placer les 25 000 euros du projet sur une enveloppe disponible et une part longue sur le PER dans la limite du plafond, le tout chiffré dans l'étude",
+     "Tout sur un livret réglementé, la sécurité prime",
+     "Tout en assurance vie, qui remplace le PER"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Des travaux dans trois ans ne sont pas un cas de déblocage anticipé : chaque enveloppe répond à un objectif de vie distinct."
+  },
+  {
+   "cle": "i08",
+   "type": "choix",
+   "competence": "Blocage et déblocage anticipé",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Lequel de ces événements permet à un titulaire de demander le déblocage anticipé de son PER ?",
+    "choix": [
+     "Des travaux dans sa résidence secondaire",
+     "L'expiration de ses droits à l'assurance chômage",
+     "Le changement de son local professionnel",
+     "L'achat d'un véhicule"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "L'expiration des droits à l'assurance chômage figure parmi les cas de déblocage anticipé prévus par la loi."
+  },
+  {
+   "cle": "i09",
+   "type": "choix",
+   "competence": "Sortie et gestion pilotée",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. À l'ouverture de son PER, un client a opté définitivement pour la rente. Dix ans plus tard, à la retraite, il souhaite un capital pour un projet. Que se passe-t-il ?",
+    "choix": [
+     "Il peut choisir une sortie mixte, capital et rente",
+     "La sortie en capital est devenue impossible",
+     "Il peut sortir en capital pour la part issue des versements volontaires",
+     "Il peut sortir en capital s'il est resté en gestion pilotée"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Une option définitive pour la rente à l'ouverture rend la sortie en capital impossible."
+  },
+  {
+   "cle": "i10",
+   "type": "choix",
+   "competence": "Ordre des priorités",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "D'après le guide de l'AMF, de quoi faut-il absolument disposer avant de placer des sommes sur un PER ?",
+    "choix": [
+     "D'une épargne disponible pour ses projets de court ou moyen terme",
+     "D'un plafond de déduction entièrement reporté",
+     "D'une tranche marginale d'imposition à 41 % au moins",
+     "D'une sortie en rente choisie dès l'ouverture"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Les sommes du PER étant bloquées, l'AMF impose une épargne disponible pour les projets de court ou moyen terme."
+  },
+  {
+   "cle": "i11",
+   "type": "vrai_faux",
+   "competence": "Blocage et déblocage anticipé",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Un besoin de trésorerie passager ne fait pas partie des cas de déblocage anticipé du PER."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "Seuls les accidents de la vie prévus par la loi et l'achat de la résidence principale ouvrent un déblocage anticipé."
+  },
+  {
+   "cle": "i12",
+   "type": "vrai_faux",
+   "competence": "Sortie et gestion pilotée",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "À la retraite, le capital d'un PER ne peut être versé qu'en une seule fois."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "Le capital peut être versé en une ou plusieurs fois, ou combiné avec une rente."
+  },
+  {
+   "cle": "i13",
+   "type": "vrai_faux",
+   "competence": "Plafond de déduction",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Deux partenaires de Pacs peuvent mutualiser leurs plafonds de déduction PER sur demande expresse."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "Les couples mariés ou pacsés peuvent mutualiser leurs plafonds sur demande expresse."
+  },
+  {
+   "cle": "i14",
+   "type": "vrai_faux",
+   "competence": "Sortie et gestion pilotée",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "En gestion pilotée, l'épargne du PER est sécurisée dès l'ouverture, puis investie de façon plus dynamique à l'approche de la retraite."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "C'est l'inverse : investissement plus dynamique au début, puis sécurisation progressive à l'approche de la retraite."
+  },
+  {
+   "cle": "i15",
+   "type": "vrai_faux",
+   "competence": "Déduction et fiscalité de sortie",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Lorsque les versements ont été déduits, la rente versée à la retraite suit les règles des pensions de retraite."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "Après des versements déduits, la rente suit les règles des pensions et la part du capital le barème progressif."
+  },
+  {
+   "cle": "i16",
+   "type": "vrai_faux",
+   "competence": "Ordre des priorités",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Un professionnel libéral affilié à la CIPAV perçoit du régime obligatoire des indemnités journalières proches de son revenu habituel, ce qui rend l'audit de prévoyance secondaire."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "Ces indemnités restent très inférieures au revenu habituel, d'où l'audit de prévoyance avant toute épargne bloquée."
+  },
+  {
+   "cle": "i17",
+   "type": "multi",
+   "competence": "Blocage et déblocage anticipé",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Cochez tout ce qui constitue un cas de déblocage anticipé du PER.",
+    "choix": [
+     "Le surendettement",
+     "L'achat de la résidence principale",
+     "L'achat d'une résidence secondaire",
+     "L'invalidité de deuxième ou troisième catégorie du titulaire",
+     "Des travaux dans le local professionnel",
+     "Un projet de voyage"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     3
+    ]
+   },
+   "explication": "Surendettement, invalidité et achat de la résidence principale sont prévus ; travaux, résidence secondaire et voyage ne le sont pas."
+  },
+  {
+   "cle": "i18",
+   "type": "multi",
+   "competence": "Déduction et fiscalité de sortie",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cochez tout ce qui est exact au sujet des versements volontaires déduits du revenu imposable.",
+    "choix": [
+     "Ils sont déductibles par principe s'ils sont effectués avant 70 ans",
+     "La part du capital qui leur correspond est exonérée à la sortie",
+     "La part du capital qui leur correspond est imposée au barème progressif à la sortie",
+     "L'impôt correspondant est définitivement effacé",
+     "La rente qui en découle suit les règles des pensions de retraite"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     2,
+     4
+    ]
+   },
+   "explication": "La déduction reporte l'impôt à la sortie : capital au barème progressif, rente comme une pension de retraite."
+  },
+  {
+   "cle": "i19",
+   "type": "multi",
+   "competence": "Ordre des priorités",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cochez tout ce qui sert à calibrer le montant d'un versement PER.",
+    "choix": [
+     "Le plafond de déduction disponible",
+     "La capacité d'épargne réelle après charges et cotisations sociales",
+     "La trésorerie professionnelle nécessaire à un indépendant",
+     "Le montant conseillé par un confrère",
+     "L'impôt que le client souhaite effacer"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "Le versement se calibre en dernier sur le plafond, la tranche, la capacité d'épargne réelle et la trésorerie nécessaire."
+  },
+  {
+   "cle": "i20",
+   "type": "multi",
+   "competence": "Ordre des priorités",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Un ostéopathe libéral dispose de 2 400 euros personnels et de 11 000 euros de trésorerie professionnelle, dont 6 500 euros de cotisations à régler dans six semaines. Il n'a aucune prévoyance et veut verser 30 000 euros sur un PER. Cochez tout ce qui rend ce versement incompatible avant toute analyse fiscale.",
+    "choix": [
+     "L'absence de prévoyance",
+     "Une épargne personnelle de 2 400 euros seulement",
+     "Des cotisations sociales à régler sur la trésorerie professionnelle",
+     "Sa tranche marginale d'imposition à 41 %",
+     "Son exercice en BNC"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "Un versement bloqué le priverait de toute réserve ; sa tranche et son statut relèvent de l'analyse fiscale, pas de la sécurité."
+  },
+  {
+   "cle": "i21",
+   "type": "multi",
+   "competence": "Choix des enveloppes",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Cochez tout ce qui caractérise le PER par rapport aux autres enveloppes.",
+    "choix": [
+     "Une déduction à l'entrée",
+     "Un blocage des sommes jusqu'à la retraite",
+     "Une disponibilité de l'épargne à tout moment",
+     "Une liquidité immédiate",
+     "Une réponse à l'objectif retraite"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     4
+    ]
+   },
+   "explication": "Le PER apporte la déduction à l'entrée et le blocage ; disponibilité et liquidité relèvent de l'assurance vie et du livret."
+  },
+  {
+   "cle": "i22",
+   "type": "ordre",
+   "competence": "Ordre des priorités",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Remettez dans l'ordre les étapes de la feuille de route d'un client sans prévoyance ni épargne disponible qui veut verser sur un PER.",
+    "elements": [
+     "Protéger les revenus par un audit de la prévoyance",
+     "Constituer une épargne disponible sur un support liquide",
+     "Isoler les projets de moyen terme sur une enveloppe disponible, distincte du PER",
+     "Ouvrir un PER avec des versements programmés calibrés sur la capacité d'épargne réelle",
+     "Choisir le mode de gestion à partir du rapport au risque"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ]
+   },
+   "explication": "Protection des revenus, épargne disponible, projets isolés, puis PER calibré en dernier et choix du mode de gestion."
+  },
+  {
+   "cle": "i23",
+   "type": "ordre",
+   "competence": "Sortie et gestion pilotée",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Remettez dans l'ordre la présentation du PER en rendez-vous, telle que l'enseigne ce parcours.",
+    "elements": [
+     "Énoncer le blocage des sommes jusqu'à la retraite, sauf cas prévus par la loi",
+     "Demander si ce blocage est compatible avec les projets des cinq prochaines années",
+     "Présenter les deux modes de sortie, capital ou complément de revenu",
+     "Expliquer la gestion pilotée et le risque de perte en capital des unités de compte",
+     "Aborder seulement ensuite l'avantage fiscal"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ]
+   },
+   "explication": "Le conseiller commence par la disponibilité, puis la sortie, puis le risque, avant tout avantage fiscal."
+  },
+  {
+   "cle": "i24",
+   "type": "ordre",
+   "competence": "Déduction et fiscalité de sortie",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Remettez dans l'ordre chronologique le parcours fiscal d'un versement volontaire déduit.",
+    "elements": [
+     "Versement volontaire effectué avant 70 ans",
+     "Déduction du revenu imposable dans la limite du plafond",
+     "Blocage des sommes jusqu'à la retraite",
+     "Sortie en capital ou en rente",
+     "Imposition de la part correspondante au barème progressif ou comme une pension"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ]
+   },
+   "explication": "La déduction à l'entrée reporte l'imposition au moment de la sortie, elle ne l'efface pas."
+  },
+  {
+   "cle": "i25",
+   "type": "ordre",
+   "competence": "Ordre des priorités",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Un indépendant dit « je veux payer moins d'impôt ». Remettez dans l'ordre la conduite du rendez-vous enseignée dans ce parcours.",
+    "elements": [
+     "Reformuler la demande et demander ce qui se passerait si l'activité s'arrêtait trois mois",
+     "Faire apparaître la réserve disponible, la couverture prévoyance et les échéances à venir",
+     "Présenter la répartition : une part disponible, une part de moyen terme, une part longue sur le PER",
+     "Fixer une prochaine étape datée : l'envoi de l'étude chiffrée avec les deux scénarios de déduction",
+     "Tenir un second rendez-vous pour décider"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ]
+   },
+   "explication": "L'écoute précède l'étude, l'étude précède la solution, et la décision attend le second rendez-vous."
+  },
+  {
+   "cle": "i26",
+   "type": "association",
+   "competence": "Choix des enveloppes",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Associez chaque enveloppe à ce qu'elle apporte.",
+    "gauche": [
+     "PER",
+     "Assurance vie",
+     "Livret réglementé"
+    ],
+    "droite": [
+     "Déduction à l'entrée et blocage jusqu'à la retraite",
+     "Disponibilité de l'épargne et fiscalité de capitalisation, sans déduction",
+     "Liquidité immédiate et sécurité du capital"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ]
+    ]
+   },
+   "explication": "Chaque enveloppe répond à un objectif de vie différent : retraite, projet à moyen terme, sécurité."
+  },
+  {
+   "cle": "i27",
+   "type": "association",
+   "competence": "Déduction et fiscalité de sortie",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Associez chaque situation de sortie du PER à son traitement fiscal.",
+    "gauche": [
+     "Capital issu de versements déduits",
+     "Capital issu de versements non déduits",
+     "Rente issue de versements déduits",
+     "Gains du plan"
+    ],
+    "droite": [
+     "Imposé au barème progressif",
+     "Exonéré",
+     "Règles des pensions de retraite",
+     "Régime distinct, seuil à vérifier sur la source officielle"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      3,
+      3
+     ]
+    ]
+   },
+   "explication": "Le choix de déduire ou non à l'entrée commande la fiscalité de sortie."
+  },
+  {
+   "cle": "i28",
+   "type": "association",
+   "competence": "Plafond de déduction",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Associez chaque règle du plafond de déduction à son contenu.",
+    "gauche": [
+     "Report du plafond non utilisé",
+     "Mutualisation des plafonds",
+     "Année des revenus pris en compte",
+     "Revenus retenus pour un salarié"
+    ],
+    "droite": [
+     "Sur les trois années suivantes",
+     "Couples mariés ou pacsés, sur demande expresse",
+     "L'année précédant le versement",
+     "Revenus d'activité nets de frais professionnels"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      3,
+      3
+     ]
+    ]
+   },
+   "explication": "Le plafond se lit sur l'avis d'imposition, reports compris, et se vérifie sur la source officielle datée."
+  },
+  {
+   "cle": "i29",
+   "type": "association",
+   "competence": "Blocage et déblocage anticipé",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Associez chaque cas de déblocage anticipé du PER à la condition qui l'encadre.",
+    "gauche": [
+     "Achat de la résidence principale",
+     "Cessation de la fonction de mandataire social",
+     "Liquidation judiciaire",
+     "Invalidité"
+    ],
+    "droite": [
+     "Versements volontaires et épargne salariale seulement",
+     "Depuis au moins deux ans, sans contrat de travail ni pension liquidée",
+     "Pour un non salarié",
+     "Deuxième ou troisième catégorie"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      3,
+      3
+     ]
+    ]
+   },
+   "explication": "Chaque cas de déblocage anticipé est encadré par une condition précise fixée par la loi."
+  },
+  {
+   "cle": "i30",
+   "type": "trou_choix",
+   "competence": "Sortie et gestion pilotée",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Par défaut, un PER est en gestion ___ : l'épargne est investie de façon plus dynamique au début, puis sécurisée progressivement.",
+    "choix": [
+     "libre",
+     "pilotée",
+     "obligatoire",
+     "programmée"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "La gestion pilotée est le mode par défaut du PER."
+  },
+  {
+   "cle": "i31",
+   "type": "trou_choix",
+   "competence": "Déduction et fiscalité de sortie",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "Avec la déduction des versements, l'impôt n'est pas effacé, il est ___ à la sortie.",
+    "choix": [
+     "exonéré",
+     "reporté",
+     "mutualisé",
+     "réduit"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "L'intérêt réel se mesure entre la tranche d'aujourd'hui et celle de la retraite, pas sur la seule année du versement."
+  },
+  {
+   "cle": "i32",
+   "type": "trou_choix",
+   "competence": "Ordre des priorités",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Le PER n'est jamais la première brique d'un patrimoine, il en est une brique de ___.",
+    "choix": [
+     "fond",
+     "précaution",
+     "liquidité",
+     "sécurité"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "L'épargne de précaution et l'épargne disponible se constituent avant l'épargne retraite."
+  },
+  {
+   "cle": "i33",
+   "type": "trou_choix",
+   "competence": "Plafond de déduction",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "Pour un salarié, le plafond de déduction 2026 retient ___ des revenus d'activité 2025 nets de frais professionnels.",
+    "choix": [
+     "10 %",
+     "11 %",
+     "15 %",
+     "41 %"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Le plafond salarié est de 10 % des revenus nets de frais, avec un maximum de 37 680 euros."
+  },
+  {
+   "cle": "i34",
+   "type": "trou_saisie",
+   "competence": "Plafond de déduction",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Le plafond de déduction non utilisé se reporte sur les ___ années suivantes.",
+    "aide": "Un chiffre."
+   },
+   "corrige": {
+    "reponses": [
+     "3",
+     "trois"
+    ]
+   },
+   "explication": "Le plafond non utilisé se reporte sur les trois années suivantes."
+  },
+  {
+   "cle": "i35",
+   "type": "trou_saisie",
+   "competence": "Déduction et fiscalité de sortie",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Par principe, les versements volontaires effectués avant ___ ans sont déductibles du revenu imposable.",
+    "aide": "Un âge."
+   },
+   "corrige": {
+    "reponses": [
+     "70",
+     "soixante-dix",
+     "soixante dix"
+    ]
+   },
+   "explication": "Les versements volontaires effectués avant 70 ans sont déductibles par principe, renonciation possible sur option."
+  },
+  {
+   "cle": "i36",
+   "type": "trou_saisie",
+   "competence": "Plafond de déduction",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "Plafond salarié 2026 : 10 % des revenus 2025 nets de frais, avec un maximum de 37 680 euros, ou ___ euros si ce montant est plus élevé.",
+    "aide": "Le plancher, en euros."
+   },
+   "corrige": {
+    "reponses": [
+     "4710",
+     "4 710",
+     "4.710"
+    ]
+   },
+   "explication": "Service-Public indique un plancher de 4 710 euros pour le plafond salarié 2026."
+  },
+  {
+   "cle": "i37",
+   "type": "trou_saisie",
+   "competence": "Blocage et déblocage anticipé",
+   "difficulte": 3,
+   "payload": {
+    "phrase": "Un mandataire social peut demander le déblocage anticipé de son PER si sa fonction a cessé depuis au moins ___ ans, sans contrat de travail ni liquidation de pension.",
+    "aide": "Un chiffre."
+   },
+   "corrige": {
+    "reponses": [
+     "2",
+     "deux"
+    ]
+   },
+   "explication": "La cessation de la fonction de mandataire social ouvre le déblocage après au moins deux ans."
+  },
+  {
+   "cle": "i38",
+   "type": "carte",
+   "competence": "Blocage et déblocage anticipé",
+   "difficulte": 1,
+   "payload": {
+    "recto": "Depuis quand le PER remplace-t-il le PERP et le contrat Madelin, et par quelle loi ?",
+    "verso": "Depuis le 1er octobre 2020, en application de la loi PACTE."
+   },
+   "corrige": {},
+   "explication": "Le PER, créé par la loi PACTE, remplace les anciens produits retraite depuis le 1er octobre 2020."
+  },
+  {
+   "cle": "i39",
+   "type": "carte",
+   "competence": "Déduction et fiscalité de sortie",
+   "difficulte": 2,
+   "payload": {
+    "recto": "Comment se mesure l'intérêt réel de la déduction PER ?",
+    "verso": "Entre la tranche marginale d'aujourd'hui et celle estimée à la retraite, dans une simulation chiffrée."
+   },
+   "corrige": {},
+   "explication": "L'impôt est reporté à la sortie, souvent dans une tranche plus basse ; l'écart entre les deux fait l'intérêt."
+  },
+  {
+   "cle": "i40",
+   "type": "carte",
+   "competence": "Plafond de déduction",
+   "difficulte": 3,
+   "payload": {
+    "recto": "Plafond de déduction d'un travailleur non salarié : quelle formule décrit le BOFiP ?",
+    "verso": "10 % du bénéfice jusqu'à huit PASS, plus 15 % de la fraction entre un et huit PASS, à vérifier."
+   },
+   "corrige": {},
+   "explication": "Le montant exact dépend du bénéfice réel et de l'année : seuil à vérifier sur la source officielle."
+  }
+ ]
+}

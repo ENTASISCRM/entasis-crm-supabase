@@ -2,16 +2,17 @@
 // ENTASIS ACADEMY : le conteneur de la rubrique Formation
 //
 // App.jsx lit le hash après #/formation/ et passe la route en tableau :
-//   ['parcours'] (défaut), ['catalogue'], ['module', slug], ['lecon', id],
-//   ['quiz', versionId], ['quiz', versionId, 'revision_j7'|'revision_j30'],
-//   ['resultats'], ['pilotage'], ['fiche', profileId], ['administration', ...]
-// Ce composant choisit l écran. Pilotage, fiche d un autre et administration
+//   ['parcours'] (défaut, Aujourd hui), ['catalogue'], ['module', slug],
+//   ['entrainement', versionId], ['resultats'], ['pilotage'],
+//   ['fiche', profileId], ['administration', ...]
+// Ce composant choisit l’écran. Pilotage, fiche d’un autre et administration
 // sont réservés à la direction (manager ou drapeau academy_admin) : ce
-// n est qu un affichage, la RLS et les fonctions SQL restent le vrai verrou.
+// n’est qu’un affichage, la RLS et les fonctions SQL restent le vrai verrou.
 //
-// Le lien « Données suivies », présent sous tous les écrans, ouvre la notice
-// lue dans academy_mon_parcours (texte et rétention), chargée au premier
-// clic seulement.
+// L’entraînement se rend seul : pas de pied « Données suivies », rien qui
+// détourne d’une session de douze exercices. Sur tous les autres écrans, ce
+// lien ouvre la notice lue dans academy_mon_parcours (texte et rétention),
+// chargée au premier clic seulement.
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { useState } from 'react'
@@ -20,8 +21,7 @@ import { messageErreur } from '../../lib/ui-shared'
 import MonParcours from './MonParcours'
 import Catalogue from './Catalogue'
 import ModuleDetail from './ModuleDetail'
-import LecteurLecon from './LecteurLecon'
-import Quiz from './Quiz'
+import Entrainement from './Entrainement'
 import MesResultats from './MesResultats'
 import Pilotage from './Pilotage'
 import FicheCollaborateur from './FicheCollaborateur'
@@ -29,7 +29,6 @@ import Administration from './Administration'
 import NoticeDonnees from './NoticeDonnees'
 import './academy.css'
 
-const TYPES_REVISION = ['revision_j7', 'revision_j30']
 const estDirection = (profile) => profile?.role === 'manager' || profile?.academy_admin === true
 
 function ReserveDirection({ detail }) {
@@ -37,7 +36,7 @@ function ReserveDirection({ detail }) {
     <div className="card">
       <div className="table-empty-state">
         <div style={{ fontSize: 16, color: 'var(--t2)' }}>Réservé à la direction</div>
-        <div className="form-hint" style={{ marginTop: 8 }}>{detail || 'Cet écran est réservé au manager et à l administrateur de la formation. Ton parcours et tes résultats sont dans Formation.'}</div>
+        <div className="form-hint" style={{ marginTop: 8 }}>{detail || 'Cet écran est réservé au manager et à l’administrateur de la formation. Tes decks et tes résultats sont dans Formation.'}</div>
       </div>
     </div>
   )
@@ -46,7 +45,7 @@ function ReserveDirection({ detail }) {
 export default function Academy({ profile, route, onNaviguer }) {
   const [notice, setNotice] = useState(null)
   const r = Array.isArray(route) && route.length > 0 ? route : ['parcours']
-  const [vue, a, b] = r
+  const [vue, a] = r
   const direction = estDirection(profile)
 
   async function ouvrirNotice() {
@@ -60,6 +59,15 @@ export default function Academy({ profile, route, onNaviguer }) {
     }
   }
 
+  // La session d’entraînement occupe l’écran seule.
+  if (vue === 'entrainement') {
+    return (
+      <div className="ac ac-plein">
+        <Entrainement key={a} profile={profile} versionId={a} onNaviguer={onNaviguer} />
+      </div>
+    )
+  }
+
   let contenu
   switch (vue) {
     case 'catalogue':
@@ -67,12 +75,6 @@ export default function Academy({ profile, route, onNaviguer }) {
       break
     case 'module':
       contenu = <ModuleDetail key={a} profile={profile} slug={a} onNaviguer={onNaviguer} />
-      break
-    case 'lecon':
-      contenu = <LecteurLecon key={a} profile={profile} leconId={a} onNaviguer={onNaviguer} />
-      break
-    case 'quiz':
-      contenu = <Quiz key={`${a}-${b || 'quiz'}`} profile={profile} versionId={a} type={TYPES_REVISION.includes(b) ? b : 'quiz'} onNaviguer={onNaviguer} />
       break
     case 'resultats':
       contenu = <MesResultats profile={profile} onNaviguer={onNaviguer} />
@@ -83,7 +85,7 @@ export default function Academy({ profile, route, onNaviguer }) {
     case 'fiche':
       contenu = direction || (a && a === profile?.id)
         ? <FicheCollaborateur key={a} profile={profile} profileId={a} onNaviguer={onNaviguer} />
-        : <ReserveDirection detail="La fiche d un autre collaborateur est réservée à la direction." />
+        : <ReserveDirection detail="La fiche d’un autre collaborateur est réservée à la direction." />
       break
     case 'administration':
       contenu = direction ? <Administration profile={profile} route={r} onNaviguer={onNaviguer} /> : <ReserveDirection />

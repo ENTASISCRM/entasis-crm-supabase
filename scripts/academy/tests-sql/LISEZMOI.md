@@ -49,3 +49,33 @@ le jeu d acceptation a quatorze etapes, deux verifications ajoutees :
   suppression de profil decidee par l administration) ;
 * `set lock_timeout = '5s'` en tete du socle, et la notice de donnees dit
   qui lit quoi ; migration 4 : purge planifiee par pg_cron chaque nuit.
+
+## Mode entrainement (migration 6)
+
+`acceptation-entrainement.sql` joue, de la meme facon (un bloc, transaction
+annulee, message `TESTS OK` ou `ECHEC`), le mode entrainement : verification
+type par type de `academy_verifier_reponse`, deck de douze items cree par
+les fonctions d administration (ordre et association stockes melanges,
+corrige coherent), publication et affectation, items, corriges, forces et
+sessions inaccessibles en direct par un conseiller (le deck se lit par
+`academy_module`), tirage sans corrige et idempotent par jeton, session
+incomplete refusee, reponses corrigees en base avec une fausse volontaire,
+XP, serie, couronnes, validation a trois couronnes avec attestation,
+cloisonnement entre collegues, pilotage, matrice et fiche cote direction,
+immutabilite d une version publiee, nouvelle version dont les affectations
+non validees suivent la publication, deck trop court refuse, corrige ambigu
+(deux choix identiques) refuse, deck valide dont les forces retombent passe
+« a revoir », purge des intervalles.
+
+Ou : DEV seulement, apres les migrations 1 a 6 et les treize decks de la
+migration 7.
+
+Journal : joue le 21 septembre 2026 sur DEV, sept etapes vertes avant la
+relecture adversariale ; puis, corrections appliquees sur DEV
+(`academy_6_correctifs_relecture`, version 20260921152944) et reportees
+dans les fichiers de migration 6, 6b et 6c du depot (une seule migration
+logique en trois fichiers, chacun assez court pour l outil MCP ; corps des
+fonctions identiques octet pour octet, verifie par md5), dix etapes vertes.
+En production, les trois fichiers corriges s appliquent tels quels, dans
+l ordre ; sur DEV, le meme contenu est enregistre sous le nom unique
+`academy_6_entrainement` plus `academy_6_correctifs_relecture`.

@@ -35,13 +35,13 @@ describe('STATUTS et classeBadge', () => {
 })
 
 describe('enRetard', () => {
-  it('le jour même de l échéance, ce n est pas encore un retard', () => {
+  it('le jour même de l’échéance, ce n’est pas encore un retard', () => {
     expect(enRetard(aff({ echeance: AUJOURDHUI }), AUJOURDHUI)).toBe(false)
   })
-  it('le lendemain de l échéance, c est un retard', () => {
+  it('le lendemain de l’échéance, c’est un retard', () => {
     expect(enRetard(aff({ echeance: AUJOURDHUI }), ajouterJours(AUJOURDHUI, 1))).toBe(true)
   })
-  it('un module validé n est jamais en retard', () => {
+  it('un module validé n’est jamais en retard', () => {
     expect(enRetard(aff({ echeance: '2026-01-01', statut: 'valide' }), AUJOURDHUI)).toBe(false)
   })
   it('sans échéance, pas de retard', () => {
@@ -67,8 +67,8 @@ describe('libelleEcheance', () => {
   it('un module validé dit Validé, même avec une échéance dépassée', () => {
     expect(libelleEcheance(aff({ echeance: '2026-01-01', statut: 'valide' }), AUJOURDHUI)).toBe('Validé')
   })
-  it('le jour même : à rendre aujourd hui', () => {
-    expect(libelleEcheance(aff({ echeance: AUJOURDHUI }), AUJOURDHUI)).toBe('À rendre aujourd hui')
+  it('le jour même : à rendre aujourd’hui', () => {
+    expect(libelleEcheance(aff({ echeance: AUJOURDHUI }), AUJOURDHUI)).toBe('À rendre aujourd’hui')
   })
   it('compte les jours restants, au singulier puis au pluriel', () => {
     expect(libelleEcheance(aff({ echeance: '2026-09-22' }), AUJOURDHUI)).toBe('À rendre dans 1 jour')
@@ -78,8 +78,8 @@ describe('libelleEcheance', () => {
     expect(libelleEcheance(aff({ echeance: '2026-09-20' }), AUJOURDHUI)).toBe('Échéance dépassée de 1 jour')
     expect(libelleEcheance(aff({ echeance: '2026-09-11' }), AUJOURDHUI)).toBe('Échéance dépassée de 10 jours')
   })
-  it('compte en jours calendaires à travers un changement d heure', () => {
-    // Le passage à l heure d hiver (25 octobre 2026) ne fait pas perdre un jour
+  it('compte en jours calendaires à travers un changement d’heure', () => {
+    // Le passage à l’heure d’hiver (25 octobre 2026) ne fait pas perdre un jour
     expect(libelleEcheance(aff({ echeance: '2026-10-26' }), '2026-10-24')).toBe('À rendre dans 2 jours')
     expect(libelleEcheance(aff({ echeance: '2026-03-28' }), '2026-03-30')).toBe('Échéance dépassée de 2 jours')
   })
@@ -94,7 +94,7 @@ describe('prochaineAction', () => {
       revisions: [rev({ resultat: 'reussie', tentative_id: 't1', due: false })],
     }, AUJOURDHUI)).toBeNull()
   })
-  it('une révision due passe avant un module en retard, la plus ancienne d abord', () => {
+  it('une révision due passe avant un module en retard, la plus ancienne d’abord', () => {
     const parcours = {
       affectations: [aff({ echeance: '2026-09-01', statut: 'en_cours' })],
       revisions: [
@@ -118,7 +118,7 @@ describe('prochaineAction', () => {
       libelle: 'Reprendre la leçon 2 : Les versements', bouton: 'Reprendre',
     })
   })
-  it('un module en retard passe avant un module en cours, le plus en retard d abord', () => {
+  it('un module en retard passe avant un module en cours, le plus en retard d’abord', () => {
     const parcours = {
       affectations: [
         aff({ id: 'c', echeance: '2026-09-22', statut: 'en_cours' }),
@@ -139,7 +139,7 @@ describe('prochaineAction', () => {
       libelle: 'Passer le quiz', bouton: 'Passer le quiz',
     })
   })
-  it('un module en cours ou à revoir passe avant un module non commencé, échéance la plus proche d abord', () => {
+  it('un module en cours ou à revoir passe avant un module non commencé, échéance la plus proche d’abord', () => {
     const parcours = {
       affectations: [
         aff({ id: 'n', echeance: '2026-09-22', statut: 'non_commence' }),
@@ -160,7 +160,7 @@ describe('prochaineAction', () => {
     }
     expect(prochaineAction(parcours, AUJOURDHUI)).toMatchObject({ type: 'quiz', id: 'r', bouton: 'Passer le quiz' })
   })
-  it('entre modules non commencés : échéance la plus proche, puis obligatoire d abord, sans échéance en dernier', () => {
+  it('entre modules non commencés : échéance la plus proche, puis obligatoire d’abord, sans échéance en dernier', () => {
     const parcours = {
       affectations: [
         aff({ id: 'sans', echeance: null, obligatoire: true }),
@@ -179,11 +179,11 @@ describe('prochaineAction', () => {
 })
 
 describe('progressionPct', () => {
-  it('rend 0 quand le module n a pas de leçon', () => {
+  it('rend 0 quand le module n’a pas de leçon', () => {
     expect(progressionPct(aff({ nb_lecons: 0, lecons_terminees: 0 }))).toBe(0)
     expect(progressionPct({})).toBe(0)
   })
-  it('arrondit à l entier', () => {
+  it('arrondit à l’entier', () => {
     expect(progressionPct(aff({ nb_lecons: 3, lecons_terminees: 1 }))).toBe(33)
     expect(progressionPct(aff({ nb_lecons: 3, lecons_terminees: 2 }))).toBe(67)
     expect(progressionPct(aff({ nb_lecons: 3, lecons_terminees: 3 }))).toBe(100)

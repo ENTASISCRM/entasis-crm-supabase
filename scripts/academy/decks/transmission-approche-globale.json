@@ -1,0 +1,847 @@
+{
+ "slug": "transmission-approche-globale",
+ "titre": "Transmission et approche globale",
+ "competence": "Identifier les objectifs familiaux et les relais professionnels",
+ "memo_md": "La transmission commence par une question, pas par un dispositif : que voulez-vous qu'il advienne de votre patrimoine, pour qui, et à quel moment ?\n\n## Objectifs familiaux\n- Quatre familles : conjoint, équité entre enfants (pas forcément égalité), bien précis, ressources pour vivre.\n- L'objectif fiscal annoncé cache l'objectif familial : le faire dire.\n- Quatre questions : qui protéger, quel bien, quel équilibre, quels besoins. Reformuler, écrire, puis situation civile.\n- Aucun seuil cité de mémoire.\n\n## Réserve héréditaire\n- Un enfant : moitié. Deux : deux tiers. Trois et plus : trois quarts. Le reste : quotité disponible.\n- Partenaire de PACS et concubin : aucun droit sans testament.\n\n## Bilan préalable\n- Six volets : civil, donations passées, assurance vie, biens et dettes, entreprise, volontés écrites.\n- Abattement parent-enfant : 100 000 euros, reconstitué tous les 15 ans.\n- Don familial de sommes d'argent : 31 865 euros, argent seulement.\n- Assurance vie au décès : primes avant 70 ans, 152 500 euros par bénéficiaire ; après, 30 500 euros en tout. Conjoint et PACS exonérés.\n- Pas de bilan, pas de chiffre : second rendez-vous avec les pièces.\n\n## Relais professionnels\n- Notaire obligatoire : donation immobilière, donation-partage, donation entre époux.\n- Avocat fiscaliste : montages complexes, contrôle, contentieux.\n- Expert-comptable : valorisation de l'entreprise. Pacte Dutreil : 75 % exonérés, durées à vérifier.\n- Conseiller : note d'une page, réunion commune, calendrier. Ni acte, ni valorisation.\n- Accord écrit avant tout envoi à un tiers. Aucune validation orale d'un schéma non lu.",
+ "items": [
+  {
+   "cle": "i01",
+   "type": "choix",
+   "competence": "Objectifs familiaux",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Par quoi commence une démarche de transmission, selon la méthode du cabinet ?",
+    "choix": [
+     "Par le choix du dispositif le plus économe en droits",
+     "Par une question : que voulez-vous qu'il advienne de votre patrimoine, pour qui, et à quel moment ?",
+     "Par l'estimation du bien que la famille veut transmettre",
+     "Par un premier contact avec le notaire de famille"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "La transmission commence par une question sur les objectifs de vie de la famille, pas par un dispositif."
+  },
+  {
+   "cle": "i02",
+   "type": "multi",
+   "competence": "Objectifs familiaux",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Cochez tout ce qui fait partie des quatre familles d'objectifs de transmission.",
+    "choix": [
+     "Protéger le conjoint",
+     "Réduire les droits de succession au minimum",
+     "Orienter un bien précis vers la bonne personne",
+     "Choisir la donation la plus rapide à mettre en place",
+     "Garder assez de ressources pour vivre jusqu'au bout sans dépendre de personne"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     2,
+     4
+    ]
+   },
+   "explication": "Les quatre familles : conjoint, équité entre enfants, bien précis, ressources pour vivre ; la fiscalité n'en fait pas partie."
+  },
+  {
+   "cle": "i03",
+   "type": "vrai_faux",
+   "competence": "Objectifs familiaux",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Dans les objectifs familiaux, traiter les enfants avec équité veut nécessairement dire leur donner des parts égales."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "L'équité ne veut pas toujours dire égalité : un enfant peut préférer autre chose que le tiers d'une maison."
+  },
+  {
+   "cle": "i04",
+   "type": "ordre",
+   "competence": "Objectifs familiaux",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Remettez dans l'ordre les questions à poser en rendez-vous avant de nommer un outil.",
+    "elements": [
+     "« Qui souhaitez-vous protéger en priorité ? »",
+     "« Y a-t-il un bien que vous voulez voir aller à une personne précise ? »",
+     "« Comment voyez-vous l'équilibre entre vos enfants ? »",
+     "« De quoi avez-vous besoin pour vivre sereinement jusqu'à la fin ? »",
+     "Terminer par la situation civile complète : mariage ou PACS, régime matrimonial, enfants d'une première union"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ]
+   },
+   "explication": "Quatre questions dans cet ordre, chacune reformulée et écrite, puis la situation civile ; aucun outil avant."
+  },
+  {
+   "cle": "i05",
+   "type": "choix",
+   "competence": "Objectifs familiaux",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif : M. et Mme Aubry, deux enfants, demandent « que nos enfants n'aient pas de droits à payer ». L'aîné gère déjà l'appartement loué, la cadette vit à l'étranger et ne reviendra pas. Quel est l'objectif familial réel ?",
+    "choix": [
+     "Réduire les droits de succession, comme ils l'ont dit",
+     "L'équité entre les deux enfants et la protection de l'époux survivant",
+     "Vendre l'appartement loué avant le décès",
+     "Confier tout le patrimoine à l'aîné, qui gère déjà"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "L'objectif fiscal n'était que la porte d'entrée : la vraie question est l'équité et la protection du survivant."
+  },
+  {
+   "cle": "i06",
+   "type": "trou_choix",
+   "competence": "Objectifs familiaux",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "L'erreur fréquente de début de rendez-vous : prendre l'objectif ___ annoncé pour l'objectif familial.",
+    "choix": [
+     "fiscal",
+     "immobilier",
+     "successoral",
+     "professionnel"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Un couple qui dit « réduire les droits » veut souvent d'abord éviter un conflit ou protéger son conjoint."
+  },
+  {
+   "cle": "i07",
+   "type": "carte",
+   "competence": "Posture du conseiller",
+   "difficulte": 1,
+   "payload": {
+    "recto": "Un client demande le montant de l'abattement en rendez-vous. Que dire ?",
+    "verso": "Aucun seuil de mémoire : les chiffres seront vérifiés sur la source officielle au moment de l'étude."
+   },
+   "corrige": {},
+   "explication": "Le conseiller ne cite aucun montant d'abattement de mémoire ; les seuils se vérifient au moment de l'étude."
+  },
+  {
+   "cle": "i08",
+   "type": "choix",
+   "competence": "Réserve héréditaire",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Avec deux enfants, quelle part de la succession leur revient obligatoirement au titre de la réserve héréditaire ?",
+    "choix": [
+     "La moitié des biens",
+     "Les deux tiers des biens",
+     "Les trois quarts des biens",
+     "La totalité des biens"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "La réserve est de la moitié pour un enfant, des deux tiers pour deux, des trois quarts pour trois et plus."
+  },
+  {
+   "cle": "i09",
+   "type": "association",
+   "competence": "Réserve héréditaire",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Associez le nombre d'enfants à la réserve héréditaire correspondante.",
+    "gauche": [
+     "Un enfant",
+     "Deux enfants",
+     "Trois enfants et plus"
+    ],
+    "droite": [
+     "La moitié des biens",
+     "Les deux tiers des biens",
+     "Les trois quarts des biens"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ]
+    ]
+   },
+   "explication": "Réserve des enfants : moitié, deux tiers, trois quarts selon leur nombre ; le reste est la quotité disponible."
+  },
+  {
+   "cle": "i10",
+   "type": "trou_saisie",
+   "competence": "Réserve héréditaire",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "La part de la succession que l'on peut attribuer librement, en dehors de la réserve héréditaire, s'appelle la ___ disponible.",
+    "aide": "un mot"
+   },
+   "corrige": {
+    "reponses": [
+     "quotité",
+     "quotite",
+     "Quotité",
+     "la quotité"
+    ]
+   },
+   "explication": "Réserve pour les enfants, quotité disponible pour le reste : ce cadre dit ce qui est possible et ce qui demande un acte."
+  },
+  {
+   "cle": "i11",
+   "type": "trou_saisie",
+   "competence": "Réserve héréditaire",
+   "difficulte": 3,
+   "payload": {
+    "phrase": "Cas fictif : une veuve laisse 600 000 euros et trois enfants. Par testament, elle peut attribuer librement à une amie au plus ___ euros.",
+    "aide": "quotité disponible"
+   },
+   "corrige": {
+    "reponses": [
+     "150 000",
+     "150000",
+     "150 000 euros",
+     "150000 euros",
+     "150.000"
+    ]
+   },
+   "explication": "Trois enfants : réserve des trois quarts, soit 450 000 euros ; la quotité disponible est le quart, 150 000 euros."
+  },
+  {
+   "cle": "i12",
+   "type": "vrai_faux",
+   "competence": "Réserve héréditaire",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Sans testament ni disposition prise à son profit, le partenaire de PACS n'a aucun droit dans la succession de son partenaire."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "Le partenaire de PACS et le concubin n'ont aucun droit dans la succession sans testament."
+  },
+  {
+   "cle": "i13",
+   "type": "choix",
+   "competence": "Réserve héréditaire",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif : un couple marié, deux enfants communs, veut « tout laisser au conjoint survivant, les enfants verront après ». Quelle réponse est la plus juste ?",
+    "choix": [
+     "C'est possible sans limite, un testament suffit",
+     "En présence d'enfants, une part leur est réservée par la loi ; le souhait s'étudie dans ce cadre, avec le notaire",
+     "Il suffit de placer tout le patrimoine sur un contrat d'assurance vie au profit du conjoint",
+     "Le conjoint marié hérite automatiquement de la totalité, aucun acte n'est utile"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Deux enfants : les deux tiers des biens leur sont réservés ; le souhait s'inscrit dans ce cadre et demande un acte."
+  },
+  {
+   "cle": "i14",
+   "type": "multi",
+   "competence": "Bilan préalable",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Cochez tout ce qui fait partie des six volets du bilan de transmission.",
+    "choix": [
+     "Les donations déjà faites",
+     "Les contrats d'assurance vie, leurs clauses et l'âge de versement des primes",
+     "Le choix définitif de l'outil de transmission",
+     "Les volontés déjà écrites : testament, donation entre époux",
+     "Le montant des droits que le client accepte de payer"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     3
+    ]
+   },
+   "explication": "Six volets : civil et régime matrimonial, donations passées, assurance vie, biens et dettes, entreprise, volontés écrites."
+  },
+  {
+   "cle": "i15",
+   "type": "ordre",
+   "competence": "Bilan préalable",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Remettez dans l'ordre la démarche du cabinet face à un projet de transmission.",
+    "elements": [
+     "Annoncer la méthode : analyse patrimoniale complète avant toute recommandation",
+     "Demander les pièces : livret de famille, contrat de mariage, actes de donations, clauses d'assurance vie, titres, statuts, avis d'imposition",
+     "Établir la photographie complète sur les six volets",
+     "Bâtir la feuille de route argumentée",
+     "Évoquer les formes juridiques avec le notaire"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ]
+   },
+   "explication": "L'étude, c'est l'analyse complète puis la feuille de route ; la forme juridique se choisit ensuite avec le notaire."
+  },
+  {
+   "cle": "i16",
+   "type": "choix",
+   "competence": "Bilan préalable",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif : Mme Ferrand, 71 ans, veuve, veut donner un appartement à sa fille. Le bilan révèle une donation de 90 000 euros à son fils il y a neuf ans. Pourquoi compte-t-elle encore ?",
+    "choix": [
+     "L'abattement parent-enfant se reconstitue sur 15 ans, et elle pèse sur l'équité entre les enfants",
+     "Une donation de plus de cinq ans est remise en cause d'office",
+     "Elle ne compte plus, seul l'appartement est concerné",
+     "Le fils doit la rembourser avant toute nouvelle donation"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Une donation de moins de 15 ans pèse sur le calcul des droits ; toute donation antérieure pèse sur l'équité."
+  },
+  {
+   "cle": "i17",
+   "type": "trou_choix",
+   "competence": "Bilan préalable",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "Si le client refuse le bilan, le conseiller ne propose rien de chiffré : il propose ___.",
+    "choix": [
+     "un second rendez-vous avec les pièces",
+     "une simulation indicative en ligne",
+     "un rendez-vous directement chez le notaire",
+     "une donation limitée à l'abattement"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Pas de bilan, pas de chiffre : on propose un second rendez-vous avec les pièces, pas une solution."
+  },
+  {
+   "cle": "i18",
+   "type": "carte",
+   "competence": "Bilan préalable",
+   "difficulte": 2,
+   "payload": {
+    "recto": "Cas fictif : la clause bénéficiaire désigne encore le mari décédé, sans second rang. Quel volet du bilan l'a révélé ?",
+    "verso": "L'assurance vie : clauses bénéficiaires et âge de versement des primes, à lire avant tout geste."
+   },
+   "corrige": {},
+   "explication": "Le bilan évite de proposer un geste qui contredit un geste antérieur ou qui déséquilibre la famille."
+  },
+  {
+   "cle": "i19",
+   "type": "association",
+   "competence": "Bilan préalable",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Associez chaque pièce demandée au volet du bilan qu'elle renseigne.",
+    "gauche": [
+     "Contrat de mariage ou convention de PACS",
+     "Actes des donations antérieures",
+     "Relevés et clauses des contrats",
+     "Statuts de société"
+    ],
+    "droite": [
+     "Situation civile et régime matrimonial",
+     "Donations déjà faites",
+     "Assurance vie",
+     "Entreprise"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      3,
+      3
+     ]
+    ]
+   },
+   "explication": "Chaque pièce renseigne un volet ; chiffrer sans les avoir donne un chiffre faux qui engage la parole du cabinet."
+  },
+  {
+   "cle": "i20",
+   "type": "multi",
+   "competence": "Bilan préalable",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif : M. et Mme Marchetti, mariés sans contrat en 1984, trois enfants, veulent donner la maison de vacances avant la fin de l'année et refusent le bilan. Cochez tout ce qui doit être clarifié avant toute recommandation.",
+    "choix": [
+     "Le régime matrimonial et le mode d'acquisition de la maison, qui disent qui peut donner quoi",
+     "Le « coup de pouce » de 60 000 euros au fils aîné : déclaré ou non, par qui, à quelle date",
+     "Le bon moment indiqué par le voisin",
+     "La clause bénéficiaire et l'âge de versement des primes du contrat d'assurance vie de M. Marchetti",
+     "Les droits à payer sur 450 000 euros, à chiffrer dès ce rendez-vous"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     3
+    ]
+   },
+   "explication": "Régime, donation antérieure, contrat, divorce, benjamin, volontés écrites : tout se vérifie ; l'urgence du voisin n'est pas un objectif."
+  },
+  {
+   "cle": "i21",
+   "type": "trou_saisie",
+   "competence": "Donations et abattements",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "L'abattement sur les donations entre parent et enfant est de ___ euros, par parent et par enfant.",
+    "aide": "en chiffres"
+   },
+   "corrige": {
+    "reponses": [
+     "100 000",
+     "100000",
+     "100 000 euros",
+     "100000 euros",
+     "cent mille"
+    ]
+   },
+   "explication": "Abattement de 100 000 euros par parent et par enfant, qui se reconstitue tous les 15 ans."
+  },
+  {
+   "cle": "i22",
+   "type": "choix",
+   "competence": "Donations et abattements",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Sur quelle durée l'abattement entre parent et enfant se reconstitue-t-il ?",
+    "choix": [
+     "6 ans",
+     "10 ans",
+     "15 ans",
+     "20 ans"
+    ]
+   },
+   "corrige": {
+    "index": 2
+   },
+   "explication": "L'abattement s'applique sur une période de 15 ans : une donation vieille de dix ans n'est pas effacée."
+  },
+  {
+   "cle": "i23",
+   "type": "vrai_faux",
+   "competence": "Donations et abattements",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Le don familial de sommes d'argent de 31 865 euros s'applique aussi à la donation d'un portefeuille de titres."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "Les exonérations propres aux dons de sommes d'argent ne s'appliquent pas aux autres biens donnés."
+  },
+  {
+   "cle": "i24",
+   "type": "multi",
+   "competence": "Donations et abattements",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cochez tout ce qui passe obligatoirement par un notaire.",
+    "choix": [
+     "Une donation immobilière",
+     "Une donation-partage",
+     "La note de synthèse des objectifs et du bilan",
+     "Une donation entre époux, dite au dernier vivant",
+     "La reformulation des objectifs familiaux en rendez-vous"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     3
+    ]
+   },
+   "explication": "Donation immobilière, donation-partage et donation entre époux exigent un acte notarié ; la note et la reformulation reviennent au conseiller."
+  },
+  {
+   "cle": "i25",
+   "type": "trou_choix",
+   "competence": "Donations et abattements",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Pour un contrat d'assurance vie, la fiscalité des capitaux au décès change selon que les primes ont été versées avant ou après ___ ans.",
+    "choix": [
+     "60",
+     "65",
+     "70",
+     "80"
+    ]
+   },
+   "corrige": {
+    "index": 2
+   },
+   "explication": "Avant 70 ans : 152 500 euros par bénéficiaire ; après 70 ans : 30 500 euros en tout, puis droits de succession."
+  },
+  {
+   "cle": "i26",
+   "type": "association",
+   "competence": "Donations et abattements",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Associez chaque situation au traitement fiscal des capitaux d'assurance vie au décès.",
+    "gauche": [
+     "Primes versées avant 70 ans",
+     "Primes versées après 70 ans",
+     "Conjoint marié ou partenaire de PACS bénéficiaire"
+    ],
+    "droite": [
+     "Abattement de 152 500 euros par bénéficiaire, puis 20 % jusqu'à 700 000 euros et 31,25 % au-delà",
+     "Abattement global de 30 500 euros, puis droits de succession",
+     "Exonération"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ]
+    ]
+   },
+   "explication": "L'âge de versement des primes et la clause bénéficiaire changent la fiscalité : à lire dans le bilan."
+  },
+  {
+   "cle": "i27",
+   "type": "choix",
+   "competence": "Donations et abattements",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif : un client veut donner 80 000 euros en argent à sa fille pour un logement neuf et cite « l'exonération temporaire ». Que retenir ?",
+    "choix": [
+     "Elle ne concerne que les sommes d'argent, pour des dons faits jusqu'au 31 décembre 2026, à vérifier sur la source officielle",
+     "Elle s'applique à tout bien donné, y compris un appartement",
+     "Elle vaut pour tout don fait depuis le 1er janvier 2024, sans limite de date",
+     "Elle est acquise quel que soit l'emploi des fonds"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Dispositif temporaire, sommes d'argent seulement, employées sous six mois dans un logement neuf ou une rénovation énergétique."
+  },
+  {
+   "cle": "i28",
+   "type": "vrai_faux",
+   "competence": "Donations et abattements",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "La donation-partage se fait par acte notarié, est en principe irrévocable et doit respecter la réserve des héritiers."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "Acte notarié obligatoire, caractère en principe irrévocable, respect de la réserve : trois raisons de ne pas l'improviser."
+  },
+  {
+   "cle": "i29",
+   "type": "association",
+   "competence": "Relais professionnels",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Associez chaque professionnel à son rôle dans une transmission.",
+    "gauche": [
+     "Notaire",
+     "Avocat fiscaliste",
+     "Expert-comptable",
+     "Conseiller Entasis"
+    ],
+    "droite": [
+     "Rédige les actes authentiques : donations, testament authentique, règlement de la succession",
+     "Sécurise les montages complexes, intervient en cas de contrôle ou de contentieux",
+     "Connaît les comptes de l'entreprise et prépare sa valorisation",
+     "Tient la stratégie d'ensemble : note, réunion commune, suivi du calendrier"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      3,
+      3
+     ]
+    ]
+   },
+   "explication": "Coordonner plutôt que distribuer : chacun fait son métier, personne ne refait celui de l'autre."
+  },
+  {
+   "cle": "i30",
+   "type": "choix",
+   "competence": "Relais professionnels",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif : un dirigeant de SAS de 58 ans veut transmettre l'entreprise à celui de ses deux enfants qui y travaille. Comment répartir les rôles ?",
+    "choix": [
+     "Le conseiller estime lui-même la valeur de la société à partir du chiffre d'affaires et propose le schéma",
+     "L'expert-comptable valorise, le notaire et, si besoin, l'avocat fiscaliste sécurisent la donation et le pacte Dutreil, le conseiller coordonne",
+     "La banque de l'entreprise pilote la transmission, le cabinet se retire",
+     "L'assureur du dirigeant propose un contrat qui remplace la transmission des titres"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Le conseiller ne valorise pas une entreprise à la place de l'expert-comptable : il prépare la note et coordonne."
+  },
+  {
+   "cle": "i31",
+   "type": "multi",
+   "competence": "Relais professionnels",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cochez tout ce que contient la note d'une page que le conseiller prépare pour les professionnels.",
+    "choix": [
+     "Les objectifs recueillis",
+     "L'inventaire des actifs",
+     "Le projet d'acte de donation rédigé par le conseiller",
+     "Le calendrier souhaité et les questions ouvertes",
+     "La valorisation de l'entreprise établie par le conseiller"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     3
+    ]
+   },
+   "explication": "Objectifs, inventaire, calendrier, questions ouvertes ; ni acte ni valorisation, qui reviennent au notaire et à l'expert-comptable."
+  },
+  {
+   "cle": "i32",
+   "type": "trou_saisie",
+   "competence": "Relais professionnels",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "Le pacte Dutreil exonère de droits ___ % de la valeur des titres transmis, sous conditions d'engagements de conservation.",
+    "aide": "en chiffres"
+   },
+   "corrige": {
+    "reponses": [
+     "75",
+     "75 %",
+     "75%",
+     "soixante-quinze",
+     "soixante quinze"
+    ]
+   },
+   "explication": "Exonération de 75 % sous engagements collectif puis individuel de conservation et fonction de direction ; durées à vérifier."
+  },
+  {
+   "cle": "i33",
+   "type": "vrai_faux",
+   "competence": "Relais professionnels",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Les durées d'engagement de conservation du pacte Dutreil peuvent être citées de mémoire en rendez-vous, car elles n'ont pas changé."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "Les durées ont été modifiées par la loi de finances 2026 et se vérifient sur la source officielle au moment du rendez-vous."
+  },
+  {
+   "cle": "i34",
+   "type": "choix",
+   "competence": "Relais professionnels",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif : mariés sans contrat, trois enfants, projet de donation d'une maison de vacances, aucune entreprise. Quel professionnel n'a aucun rôle dans ce dossier ?",
+    "choix": [
+     "Le notaire, relais principal",
+     "L'avocat fiscaliste, à solliciter si un montage particulier apparaît",
+     "L'expert-comptable",
+     "Le conseiller, qui prépare la note de synthèse"
+    ]
+   },
+   "corrige": {
+    "index": 2
+   },
+   "explication": "Sans entreprise, l'expert-comptable n'a aucun rôle ; l'avocat fiscaliste ne devient utile qu'en cas de montage ou de difficulté."
+  },
+  {
+   "cle": "i35",
+   "type": "carte",
+   "competence": "Relais professionnels",
+   "difficulte": 2,
+   "payload": {
+    "recto": "Un client dit : « mon notaire s'en occupe ». Que proposer ?",
+    "verso": "Lui adresser une note de synthèse des objectifs et de la situation, puis un point à trois."
+   },
+   "corrige": {},
+   "explication": "Renvoyer sans préparer fait perdre au cabinet son rôle de coordinateur et au client la valeur de l'écoute."
+  },
+  {
+   "cle": "i36",
+   "type": "trou_choix",
+   "competence": "Posture du conseiller",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "Avant de transmettre quoi que ce soit à un tiers, le conseiller obtient ___ du client.",
+    "choix": [
+     "l'accord écrit",
+     "un accord oral donné en rendez-vous",
+     "la copie de la pièce d'identité",
+     "l'autorisation du notaire"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Aucune transmission à un tiers sans l'accord écrit du client."
+  },
+  {
+   "cle": "i37",
+   "type": "choix",
+   "competence": "Posture du conseiller",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif : au téléphone, un client dit que son notaire propose « une donation-partage avec une société civile » et demande : « Vous êtes d'accord ? » Vous n'avez ni projet d'acte ni hypothèses. Que répondre ?",
+    "choix": [
+     "« Oui, c'est un schéma classique, allez-y »",
+     "« Non, méfiez-vous, les sociétés civiles sont compliquées »",
+     "« Je demande au notaire le projet d'acte et ses hypothèses, je vérifie la cohérence avec vos objectifs et je vous propose un point à trois »",
+     "« Ce n'est pas mon rôle, voyez directement avec lui »"
+    ]
+   },
+   "corrige": {
+    "index": 2
+   },
+   "explication": "Ni validation ni contradiction à l'oral d'un schéma que l'on n'a pas lu : demander les documents, confronter aux objectifs."
+  },
+  {
+   "cle": "i38",
+   "type": "ordre",
+   "competence": "Posture du conseiller",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Remettez dans l'ordre le travail du conseiller coordinateur sur un dossier de transmission.",
+    "elements": [
+     "Recueillir et reformuler les objectifs de la famille",
+     "Établir le bilan sur les six volets",
+     "Rédiger la note d'une page pour les professionnels, avec l'accord écrit du client",
+     "Organiser la réunion commune et tenir le compte rendu",
+     "Suivre le calendrier"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ]
+   },
+   "explication": "Préparer, transmettre, suivre : objectifs, bilan, note, réunion commune, calendrier."
+  },
+  {
+   "cle": "i39",
+   "type": "ordre",
+   "competence": "Posture du conseiller",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif : les époux Marchetti attendent une réponse immédiate sur la donation de leur maison. Remettez dans l'ordre la formulation de la prochaine étape.",
+    "elements": [
+     "Reformuler l'objectif : transmettre la maison en gardant son usage, sans déséquilibre entre les trois enfants",
+     "Expliquer la méthode : l'écoute, l'étude, l'accompagnement",
+     "Demander les pièces avec leur raison : titres de propriété, justificatif du don au fils, relevé et clause du contrat",
+     "Poser la date du second rendez-vous, dans quinze jours",
+     "Annoncer le relais notaire préparé par le cabinet, sans promettre de chiffre ni d'économie fiscale"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ]
+   },
+   "explication": "Objectif reformulé, méthode expliquée, pièces demandées avec leur raison, date posée, relais annoncé, aucune économie promise."
+  },
+  {
+   "cle": "i40",
+   "type": "vrai_faux",
+   "competence": "Posture du conseiller",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Selon l'AMF, le conseil en gestion de patrimoine est une activité générique non réglementée ; seul le conseil en investissement, qui porte sur des instruments financiers, est un service réglementé."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "Ce que le conseiller peut faire dépend des statuts réglementés qu'il détient réellement ; il ne rédige pas d'acte."
+  }
+ ]
+}

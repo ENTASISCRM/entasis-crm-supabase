@@ -2,20 +2,23 @@
 // GRAPHIQUES DU PILOTAGE : trois vues chart.js, chargées à part
 //
 // Chargé en lazy par Pilotage.jsx : chart.js pèse lourd et la direction ne
-// regarde pas toujours les courbes. Chaque graphique est doublé d un tableau
-// (« Valeurs ») qui porte exactement les mêmes nombres : un lecteur d écran,
+// regarde pas toujours les courbes. Chaque graphique est doublé d’un tableau
+// (« Valeurs ») qui porte exactement les mêmes nombres : un lecteur d’écran,
 // une impression ou un doute sur une barre trouvent la valeur écrite.
 //
-// Sobre : or, navy et vert (le validé est vert partout dans le CRM), rien
-// d autre. Aucune donnée de rémunération, aucun classement de personnes : on
-// compte des modules, des minutes et des moyennes par compétence.
+// Trois vues du mode entraînement : sessions et XP par semaine (barres et
+// ligne), temps actif par semaine, taux moyen de bonnes réponses par
+// compétence de deck. Sobre : or, navy et vert (le validé est vert partout
+// dans le CRM), rien d’autre. Aucune donnée de rémunération, aucun classement
+// de personnes : on compte des sessions, des XP, des minutes et des moyennes
+// par compétence.
 // ═══════════════════════════════════════════════════════════════════════════
 
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Filler, Tooltip, Legend,
 } from 'chart.js'
 import { Bar, Chart } from 'react-chartjs-2'
-import { formatDuree, semaineLibelle } from '../../lib/academy/format'
+import { formatDuree, semaineLibelle, jourParis } from '../../lib/academy/format'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Filler, Tooltip, Legend)
 
@@ -42,22 +45,29 @@ const optionsBase = (suffixe) => ({
   },
 })
 
-// Le cumul des validations, semaine après semaine.
-function cumul(valeurs) {
-  let total = 0
-  return valeurs.map((v) => { total += Number(v) || 0; return total })
+// Sessions à gauche, XP à droite : deux échelles, sinon les XP écrasent les
+// sessions (une session vaut cent XP et plus).
+function optionsSessionsXp() {
+  const o = optionsBase()
+  o.plugins.tooltip.callbacks.label = (c) => `${c.dataset.label} : ${c.parsed.y}${c.dataset.yAxisID === 'xp' ? ' XP' : ''}`
+  o.scales.y.title = { display: true, text: 'Sessions', font: { size: 11 } }
+  o.scales.xp = {
+    position: 'right', beginAtZero: true, grid: { drawOnChartArea: false },
+    ticks: { precision: 0, font: { size: 11 } }, title: { display: true, text: 'XP', font: { size: 11 } },
+  }
+  return o
 }
 
-// Les scores par compétence arrivent en lignes (compétence, type) : on les
-// range en une ligne par compétence avec les deux types côte à côte.
-function pivoterScores(scores) {
+// Les scores par compétence arrivent en lignes (compétence, type) : seules
+// les lignes de type initial (la session, pas une révision) sont gardées, une
+// par compétence.
+function scoresInitiaux(scores) {
   const parCompetence = new Map()
   for (const s of scores || []) {
-    const cle = s.competence || 'Sans compétence'
-    if (!parCompetence.has(cle)) parCompetence.set(cle, { competence: cle, initial: null, revision: null })
-    const ligne = parCompetence.get(cle)
-    const type = s.type === 'revision' ? 'revision' : 'initial'
-    ligne[type] = { moyenne_pct: Number(s.moyenne_pct) || 0, effectif: Number(s.effectif) || 0, derniere_le: s.derniere_le }
+    if (s?.type && s.type !== 'initial') continue
+    const cle = s?.competence || 'Sans compétence'
+    if (parCompetence.has(cle)) continue
+    parCompetence.set(cle, { competence: cle, moyenne_pct: Number(s.moyenne_pct) || 0, effectif: Number(s.effectif) || 0, derniere_le: s.derniere_le })
   }
   return Array.from(parCompetence.values())
 }
@@ -85,22 +95,22 @@ function CarteGraphique({ titre, sousTitre, children, valeurs }) {
 export default function GraphiquesPilotage({ semaines, scoresCompetences, effectif, periodeLibelle }) {
   const sem = Array.isArray(semaines) ? semaines : []
   const labels = sem.map((s) => semaineLibelle(s.semaine) || String(s.semaine || ''))
+  const sessions = sem.map((s) => Number(s.sessions) || 0)
+  const xp = sem.map((s) => Number(s.xp) || 0)
   const valides = sem.map((s) => Number(s.valides) || 0)
-  const validesCumules = cumul(valides)
-  const affectations = sem.map((s) => Number(s.affectations) || 0)
   const minutes = sem.map((s) => Math.round((Number(s.temps_actif_s) || 0) / 60))
-  const scores = pivoterScores(scoresCompetences)
+  const scores = scoresInitiaux(scoresCompetences)
   const sousTitre = `${effectif} collaborateur${effectif > 1 ? 's' : ''} affecté${effectif > 1 ? 's' : ''} · ${periodeLibelle}`
 
   const donneesActivite = {
     labels,
     datasets: [
       {
-        type: 'line', label: 'Modules validés (cumul)', data: validesCumules,
+        type: 'line', label: 'XP gagnés', data: xp, yAxisID: 'xp',
         borderColor: VERT, backgroundColor: VERT, borderWidth: 2, tension: 0.3, pointRadius: 3, fill: false, order: 0,
       },
       {
-        type: 'bar', label: 'Nouvelles affectations', data: affectations,
+        type: 'bar', label: 'Sessions terminées', data: sessions, yAxisID: 'y',
         backgroundColor: AIRE, borderColor: OR, borderWidth: 1, borderRadius: 4, order: 1,
       },
     ],
@@ -112,8 +122,7 @@ export default function GraphiquesPilotage({ semaines, scoresCompetences, effect
   const donneesScores = {
     labels: scores.map((s) => s.competence),
     datasets: [
-      { label: 'Score initial (%)', data: scores.map((s) => (s.initial ? s.initial.moyenne_pct : null)), backgroundColor: NAVY, borderRadius: 4 },
-      { label: 'Score de révision (%)', data: scores.map((s) => (s.revision ? s.revision.moyenne_pct : null)), backgroundColor: OR, borderRadius: 4 },
+      { label: 'Bonnes réponses en session (%)', data: scores.map((s) => s.moyenne_pct), backgroundColor: NAVY, borderRadius: 4 },
     ],
   }
   const optionsScores = optionsBase(' %')
@@ -122,20 +131,20 @@ export default function GraphiquesPilotage({ semaines, scoresCompetences, effect
   return (
     <div className="acp-graphes">
       <CarteGraphique
-        titre="Modules validés et nouvelles affectations par semaine"
+        titre="Sessions et XP par semaine"
         sousTitre={sousTitre}
         valeurs={(
           <table className="data-table">
-            <thead><tr><th>Semaine</th><th>Validés</th><th>Validés (cumul)</th><th>Nouvelles affectations</th></tr></thead>
+            <thead><tr><th>Semaine</th><th>Sessions</th><th>XP</th><th>Decks validés</th></tr></thead>
             <tbody>
               {sem.length === 0 ? (
                 <tr><td colSpan={4} className="acp-rien">Aucune semaine sur la période</td></tr>
               ) : sem.map((s, i) => (
                 <tr key={s.semaine || i}>
                   <td>{labels[i]}</td>
+                  <td className="cell-mono">{sessions[i]}</td>
+                  <td className="cell-mono">{xp[i]}</td>
                   <td className="cell-mono">{valides[i]}</td>
-                  <td className="cell-mono">{validesCumules[i]}</td>
-                  <td className="cell-mono">{affectations[i]}</td>
                 </tr>
               ))}
             </tbody>
@@ -144,7 +153,7 @@ export default function GraphiquesPilotage({ semaines, scoresCompetences, effect
       >
         {sem.length === 0
           ? <div className="acp-rien">Aucune donnée sur la période</div>
-          : <Chart type="bar" data={donneesActivite} options={optionsBase()} aria-label="Modules validés cumulés et nouvelles affectations par semaine" />}
+          : <Chart type="bar" data={donneesActivite} options={optionsSessionsXp()} aria-label="Sessions terminées et XP gagnés par semaine" />}
       </CarteGraphique>
 
       <CarteGraphique
@@ -173,21 +182,20 @@ export default function GraphiquesPilotage({ semaines, scoresCompetences, effect
       </CarteGraphique>
 
       <CarteGraphique
-        titre="Scores initiaux et de révision par compétence"
+        titre="Taux moyen de bonnes réponses par compétence de deck"
         sousTitre={sousTitre}
         valeurs={(
           <table className="data-table">
-            <thead><tr><th>Compétence</th><th>Initial</th><th>Effectif</th><th>Révision</th><th>Effectif</th></tr></thead>
+            <thead><tr><th>Compétence</th><th>Taux moyen</th><th>Effectif</th><th>Dernière session</th></tr></thead>
             <tbody>
               {scores.length === 0 ? (
-                <tr><td colSpan={5} className="acp-rien">Aucune tentative sur la période</td></tr>
+                <tr><td colSpan={4} className="acp-rien">Aucune session sur la période</td></tr>
               ) : scores.map((s) => (
                 <tr key={s.competence}>
                   <td className="cell-primary">{s.competence}</td>
-                  <td className="cell-mono">{s.initial ? `${s.initial.moyenne_pct} %` : 'Non évalué'}</td>
-                  <td className="cell-mono">{s.initial ? s.initial.effectif : ''}</td>
-                  <td className="cell-mono">{s.revision ? `${s.revision.moyenne_pct} %` : 'Non évalué'}</td>
-                  <td className="cell-mono">{s.revision ? s.revision.effectif : ''}</td>
+                  <td className="cell-mono">{s.moyenne_pct} %</td>
+                  <td className="cell-mono">{s.effectif}</td>
+                  <td className="cell-mono">{jourParis(s.derniere_le)}</td>
                 </tr>
               ))}
             </tbody>
@@ -195,10 +203,9 @@ export default function GraphiquesPilotage({ semaines, scoresCompetences, effect
         )}
       >
         {scores.length === 0
-          ? <div className="acp-rien">Aucune tentative sur la période</div>
-          : <Bar data={donneesScores} options={optionsScores} aria-label="Scores moyens initiaux et de révision par compétence" />}
+          ? <div className="acp-rien">Aucune session sur la période</div>
+          : <Bar data={donneesScores} options={optionsScores} aria-label="Taux moyen de bonnes réponses en session par compétence de deck" />}
       </CarteGraphique>
     </div>
   )
 }
-

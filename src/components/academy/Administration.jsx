@@ -1,19 +1,19 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// ADMINISTRATION DE L ACADEMY : modules, parcours, affectations, réglages
+// ADMINISTRATION DE L’ACADEMY : modules, parcours, affectations, réglages
 //
-// L écran de la direction et de l administrateur formation. Il liste les
-// modules avec toutes leurs versions (brouillon, publié, archivé), ouvre
-// l éditeur d une version, compose les parcours à partir des modules sans les
+// L’écran de la direction et de l’administrateur formation. Il liste les
+// modules (des decks d’exercices avec leur mémo) avec toutes leurs versions
+// (brouillon, publié, archivé), ouvre l’éditeur d’une version, compose les parcours à partir des modules sans les
 // dupliquer, affecte un module ou un parcours à des collaborateurs, règle les
-// paramètres du cabinet et montre le journal des gestes d administration.
+// paramètres du cabinet et montre le journal des gestes d’administration.
 //
 // La RLS et les fonctions SQL sont le vrai verrou : cet écran se réserve à
-// la direction pour l affichage, la base refuse à tout le monde d autre.
+// la direction pour l’affichage, la base refuse à tout le monde d’autre.
 // Aucune donnée de rémunération, aucune donnée client : des contenus de
 // formation et des affectations.
 //
 // Conteneur (chargement de adminVue) et vue (tout par props) sont séparés :
-// la vue se teste en renderToStaticMarkup. L éditeur d une version vit dans
+// la vue se teste en renderToStaticMarkup. L’éditeur d’une version vit dans
 // EditeurVersion.jsx et se rend quand la route porte « version ».
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -24,7 +24,7 @@ import { STATUTS, classeBadge , modulesPubliesDuParcours, libelleParcoursAffecta
 import { jourParis, dateHeureParis } from '../../lib/academy/format'
 import {
   adminVue, creerModule, nouvelleVersion, archiverVersion, enregistrerParcours,
-  affecter, modifierEcheance, retirerAffectation, enregistrerParametres,
+  affecter, modifierEcheance, retirerAffectation, enregistrerParametres, monParcours,
 } from '../../services/academy'
 import { confirmDialog } from '../ui/confirm'
 import SubTabs from '../ui/SubTabs'
@@ -55,7 +55,7 @@ const detailCourt = (detail) => {
   return texte.length > 90 ? `${texte.slice(0, 87)}…` : texte
 }
 
-// L en tête d une modale, toujours le même dessin.
+// L’en tête d’une modale, toujours le même dessin.
 function TeteModale({ id, titre, sousTitre, onFermer }) {
   return (
     <div className="modal-head">
@@ -130,8 +130,8 @@ function ModaleNouveauModule({ onFermer, onNaviguer }) {
 function LigneVersion({ version, moduleId, moduleABrouillon, onNaviguer, onRecharger }) {
   const [enCours, setEnCours] = useState(false)
   const comptes = [
-    pluriel(version.nb_lecons || 0, 'leçon', 'leçons'),
-    pluriel(version.nb_questions || 0, 'question', 'questions'),
+    pluriel(version.nb_items || 0, 'exercice', 'exercices'),
+    version.memo ? 'mémo présent' : 'sans mémo',
     pluriel(version.affectations || 0, 'affectation', 'affectations'),
     pluriel(version.validations || 0, 'validation', 'validations'),
   ].join(' · ')
@@ -139,7 +139,7 @@ function LigneVersion({ version, moduleId, moduleABrouillon, onNaviguer, onRecha
   async function brouillon() {
     const ok = await confirmDialog({
       title: 'Créer un nouveau brouillon ?',
-      message: 'Un nouveau brouillon copie la version actuelle. La version publiée reste en ligne jusqu à la publication du brouillon.',
+      message: 'Un nouveau brouillon copie la version actuelle. La version publiée reste en ligne jusqu’à la publication du brouillon.',
       confirmLabel: 'Créer le brouillon',
     })
     if (!ok) return
@@ -296,7 +296,7 @@ function ModaleParcours({ parcours, modules, onFermer, onRecharger }) {
     if (!f.titre.trim()) { toast.error('Le titre du parcours est obligatoire'); return }
     const ids = f.modules.map((m) => m.module_id).filter(Boolean)
     if (ids.length !== f.modules.length) { toast.error('Chaque ligne du parcours doit désigner un module'); return }
-    if (new Set(ids).size !== ids.length) { toast.error('Un module ne figure qu une fois dans un parcours'); return }
+    if (new Set(ids).size !== ids.length) { toast.error('Un module ne figure qu’une fois dans un parcours'); return }
     setEnCours(true)
     try {
       await enregistrerParcours(parcours?.id || null, {
@@ -329,7 +329,7 @@ function ModaleParcours({ parcours, modules, onFermer, onRecharger }) {
               <input id="aca-p-titre" className="form-input" value={f.titre} autoFocus disabled={enCours} onChange={(e) => poser({ titre: e.target.value })} />
             </div>
             <div className="form-group">
-              <label className="form-label" htmlFor="aca-p-ordre">Ordre d affichage</label>
+              <label className="form-label" htmlFor="aca-p-ordre">Ordre d’affichage</label>
               <input id="aca-p-ordre" className="form-input" type="number" min={0} value={f.ordre} disabled={enCours} onChange={(e) => poser({ ordre: e.target.value })} />
             </div>
           </div>
@@ -338,8 +338,8 @@ function ModaleParcours({ parcours, modules, onFermer, onRecharger }) {
             <textarea id="aca-p-description" className="form-textarea" rows={3} value={f.description} disabled={enCours} onChange={(e) => poser({ description: e.target.value })} />
           </div>
           <div className="form-group">
-            <span className="form-label">Modules, dans l ordre</span>
-            {f.modules.length === 0 && <div className="form-hint">Aucun module pour l instant.</div>}
+            <span className="form-label">Modules, dans l’ordre</span>
+            {f.modules.length === 0 && <div className="form-hint">Aucun module pour l’instant.</div>}
             <div className="aca-modules-parcours">
               {f.modules.map((m, i) => (
                 <div className="aca-module-parcours" key={i}>
@@ -363,7 +363,7 @@ function ModaleParcours({ parcours, modules, onFermer, onRecharger }) {
                 </div>
               ))}
             </div>
-            <div className="form-hint">Le délai en jours pose l échéance à l affectation quand aucune date n est donnée.</div>
+            <div className="form-hint">Le délai en jours pose l’échéance à l’affectation quand aucune date n’est donnée.</div>
             <div>
               <button type="button" className="btn btn-outline btn-sm" onClick={ajouter} disabled={enCours || modulesDisponibles.length === 0}>Ajouter un module</button>
             </div>
@@ -450,7 +450,7 @@ function FormulaireAffectation({ collaborateurs, modules, parcours, onRecharger 
       : `le module « ${modules.find((m) => m.id === cible.moduleId)?.titre || ''} »`
     const ok = await confirmDialog({
       title: `Affecter ${quoi} ?`,
-      message: `${pluriel(choisis.length, 'collaborateur', 'collaborateurs')}${echeance ? `, échéance le ${jourParis(echeance)}` : ', sans échéance'}${obligatoire ? ', obligatoire' : ', facultatif'}. Une affectation déjà existante n est pas doublée.`,
+      message: `${pluriel(choisis.length, 'collaborateur', 'collaborateurs')}${echeance ? `, échéance le ${jourParis(echeance)}` : ', sans échéance'}${obligatoire ? ', obligatoire' : ', facultatif'}. Une affectation déjà existante n’est pas doublée.`,
       confirmLabel: 'Affecter',
     })
     if (!ok) return
@@ -461,7 +461,7 @@ function FormulaireAffectation({ collaborateurs, modules, parcours, onRecharger 
         echeance: echeance || null, obligatoire,
       })
       if (Number(n) > 0) toast.success(`${pluriel(Number(n), 'affectation créée', 'affectations créées')}`)
-      else toast('Aucune affectation créée : ces collaborateurs l avaient déjà', { icon: 'ℹ' })
+      else toast('Aucune affectation créée : ces collaborateurs l’avaient déjà', { icon: 'ℹ' })
       setChoisis([])
       onRecharger?.()
     } catch (e) {
@@ -504,7 +504,7 @@ function FormulaireAffectation({ collaborateurs, modules, parcours, onRecharger 
               <option key={p.id} value={p.id} disabled={modulesPubliesDuParcours(p, modules).publies === 0}>{libelleParcoursAffectable(p, modules)}</option>
             ))}
           </select>
-          {parcoursChoisi && !parcoursAffectable && <div className="form-hint">Publiez au moins un module de ce parcours avant de l affecter.</div>}
+          {parcoursChoisi && !parcoursAffectable && <div className="form-hint">Publiez au moins un module de ce parcours avant de l’affecter.</div>}
         </div>
         <div className="form-group">
           <label className="form-label" htmlFor="aca-aff-module">Ou un module seul</label>
@@ -517,7 +517,7 @@ function FormulaireAffectation({ collaborateurs, modules, parcours, onRecharger 
               </option>
             ))}
           </select>
-          <div className="form-hint">Un parcours ou un module, pas les deux. Seule une version publiée s affecte.</div>
+          <div className="form-hint">Un parcours ou un module, pas les deux. Seule une version publiée s’affecte.</div>
         </div>
       </div>
       <div className="aca-grille-2">
@@ -590,7 +590,7 @@ function OngletAffectations({ collaborateurs, modules, parcours, affectations, o
   async function retirer(a) {
     const ok = await confirmDialog({
       title: `Retirer « ${a.titre} » à ${a.nom} ?`,
-      message: 'L affectation disparaît de son parcours. Sa progression dans les leçons n est pas effacée.',
+      message: 'L’affectation disparaît de son parcours. Sa maîtrise du deck et ses sessions ne sont pas effacées.',
       confirmLabel: 'Retirer',
       danger: true,
     })
@@ -660,9 +660,9 @@ const CHAMPS_PARAMETRES = [
   { cle: 'seuil_reussite_defaut', label: 'Seuil de réussite par défaut', min: 0.5, max: 1, step: 0.05, aide: 'De 0,5 à 1, appliqué aux nouveaux modules.' },
   { cle: 'delai_j7', label: 'Première révision (jours après validation)', min: 1, step: 1 },
   { cle: 'delai_j30', label: 'Seconde révision (jours après validation)', min: 1, step: 1 },
-  { cle: 'questions_par_quiz', label: 'Questions par quiz', min: 1, max: 20, step: 1 },
+  { cle: 'questions_par_quiz', label: 'Exercices par session (et minimum pour publier)', min: 1, max: 20, step: 1 },
   { cle: 'questions_par_revision', label: 'Questions par révision', min: 1, max: 20, step: 1 },
-  { cle: 'retention_intervalles_mois', label: 'Rétention des intervalles d activité (mois)', min: 1, max: 60, step: 1, aide: 'Au delà, les intervalles bruts sont purgés ; les durées calculées restent.' },
+  { cle: 'retention_intervalles_mois', label: 'Rétention des intervalles d’activité (mois)', min: 1, max: 60, step: 1, aide: 'Au delà, les intervalles bruts sont purgés ; les durées calculées restent.' },
   { cle: 'inactivite_secondes', label: 'Inactivité avant arrêt du comptage (secondes)', min: 30, step: 10 },
   { cle: 'pas_battement_secondes', label: 'Pas des battements (secondes)', min: 10, step: 5 },
 ]
@@ -671,6 +671,18 @@ function OngletParametres({ parametres, onRecharger }) {
   const [f, setF] = useState(() => Object.fromEntries(CHAMPS_PARAMETRES.map((c) => [c.cle, String(parametres?.[c.cle] ?? '')])))
   const [enCours, setEnCours] = useState(false)
   const [enregistreLe, setEnregistreLe] = useState(null)
+  // academy_admin_vue rend les paramètres SANS notice_donnees (texte long) :
+  // la valeur courante vient de academy_mon_parcours, chargée à l’ouverture
+  // de l’onglet. null tant qu’elle n’est pas arrivée : on n’écrase rien.
+  const [notice, setNotice] = useState(null)
+  const [erreurNotice, setErreurNotice] = useState(null)
+  useEffect(() => {
+    let vivant = true
+    monParcours()
+      .then((p) => { if (vivant) setNotice(String(p?.notice_donnees ?? '')) })
+      .catch((e) => { if (vivant) setErreurNotice(messageErreur(e)) })
+    return () => { vivant = false }
+  }, [])
 
   async function enregistrer() {
     if (enCours) return
@@ -684,6 +696,11 @@ function OngletParametres({ parametres, onRecharger }) {
       patch[c.cle] = c.step < 1 ? v : Math.round(v)
     }
     if (patch.delai_j30 <= patch.delai_j7) { toast.error('La seconde révision vient après la première'); return }
+    if (notice !== null) {
+      const texte = String(notice).trim()
+      if (!texte) { toast.error('La notice « Données suivies » ne peut pas être vide'); return }
+      patch.notice_donnees = texte
+    }
     setEnCours(true)
     try {
       await enregistrerParametres(patch)
@@ -711,6 +728,18 @@ function OngletParametres({ parametres, onRecharger }) {
         ))}
       </div>
       <div className="form-hint">Les seuils déjà posés sur une version publiée ne bougent pas : ils font partie de la version.</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="aca-prm-notice_donnees">Notice « Données suivies »</label>
+        {erreurNotice ? (
+          <div className="notice notice-error" role="alert">{erreurNotice}</div>
+        ) : (
+          <textarea id="aca-prm-notice_donnees" className="form-textarea" rows={6}
+            value={notice ?? ''} disabled={enCours || notice === null}
+            placeholder={notice === null ? 'Chargement de la notice…' : undefined}
+            onChange={(e) => setNotice(e.target.value)} />
+        )}
+        <div className="form-hint">Le texte que chaque collaborateur lit depuis « Données suivies » : ce que la formation enregistre de son entraînement. Les destinataires et la durée de conservation s’affichent à la suite, ils ne se saisissent pas ici.</div>
+      </div>
       <div className="aca-pied">
         <button type="button" className="btn btn-primary" onClick={enregistrer} disabled={enCours}>{enCours ? 'Enregistrement…' : 'Enregistrer les paramètres'}</button>
         <span className="aca-statut" role="status" aria-live="polite">{enregistreLe ? 'Enregistré' : ''}</span>
@@ -727,7 +756,7 @@ function OngletJournal({ journal }) {
       <div className="card">
         <div className="table-empty-state">
           <div className="empty-title">Aucun geste enregistré</div>
-          <div className="empty-sub">Chaque création, publication, archivage ou affectation s inscrit ici, avec son auteur.</div>
+          <div className="empty-sub">Chaque création, publication, archivage ou affectation s’inscrit ici, avec son auteur.</div>
         </div>
       </div>
     )
@@ -815,8 +844,8 @@ export default function Administration({ profile, route, onNaviguer }) {
     return (
       <div className="card">
         <div className="table-empty-state">
-          <div className="empty-title">Réservé à l administration de la formation</div>
-          <div className="empty-sub">Les contenus se gèrent par la direction et l administrateur formation. Votre parcours est dans l onglet Mon parcours.</div>
+          <div className="empty-title">Réservé à l’administration de la formation</div>
+          <div className="empty-sub">Les contenus se gèrent par la direction et l’administrateur formation. Votre entraînement est dans l’onglet Aujourd hui.</div>
         </div>
       </div>
     )

@@ -1,19 +1,19 @@
 // src/services/academy.js
 // Couche d'accès Supabase de l'Entasis Academy, la rubrique de formation
-// interne (migrations 20260921_academy_1_socle et 20260921_academy_2_fonctions).
+// interne (migrations 20260921_academy_1 à 6 ; le mode entraînement est la
+// migration 6).
 //
 // Presque tout passe par des fonctions SQL security definer qui lisent
-// l'identité dans auth.uid() : un collaborateur ne voit que son parcours, ses
-// tentatives et ses rappels ; la direction lit le pilotage, les fiches et la
-// matrice des compétences ; seul l'administrateur de l'Academy crée,
-// versionne, publie et archive les modules. Rien ici ne filtre « pour
-// protéger » : la base tranche, le navigateur affiche.
+// l'identité dans auth.uid() : un collaborateur ne voit que ses decks, ses
+// sessions, sa série et ses rappels ; la direction lit le pilotage, les
+// fiches et la matrice ; seul l'administrateur de l'Academy crée, versionne,
+// publie et archive les decks. Rien ici ne filtre « pour protéger » : la base
+// tranche, le navigateur affiche. Une session d'entraînement se joue par
+// trois fonctions : demarrerEntrainement (tirage et mélange côté serveur),
+// repondre (correction immédiate, répétition espacée, battement d'activité),
+// terminerEntrainement (XP, série, couronnes, validation).
 //
-// Trois tables s'écrivent en direct sous RLS :
-//   * academy_progression_lecons : le collaborateur ne peut poser que sa
-//     propre position de lecture (colonnes position et updated_at, la ligne
-//     est créée par academy_ouvrir_session ; terminee_le ne se pose que par
-//     academy_terminer_lecon, un déclencheur l'impose) ;
+// Deux tables s'écrivent en direct sous RLS :
 //   * academy_parametres : l'administrateur seul ;
 //   * academy_commentaires_coaching : la direction seule.
 // Ces écritures se terminent par .select('id') et passent par
@@ -101,7 +101,7 @@ export async function listerCatalogue() {
   return appel('listerCatalogue', 'academy_catalogue', undefined, [])
 }
 
-/** Un module complet (leçons, affectation, validation, attestation, tentatives). */
+/** Un deck complet : mémo, maîtrise, sessions, affectation, validation, attestation. */
 export async function lireModule(slug) {
   if (!slug) throw new Error('Module sans identifiant.')
   return appel('lireModule', 'academy_module', { p_slug: slug })
@@ -112,10 +112,6 @@ export async function monParcours() {
   return appel('monParcours', 'academy_mon_parcours')
 }
 
-/** Toutes les tentatives soumises par le collaborateur. */
-export async function mesTentatives() {
-  return appel('mesTentatives', 'academy_mes_tentatives', undefined, [])
-}
 
 /** Les rappels du jour (échéances, révisions) regroupés par type. */
 export async function mesRappels() {
@@ -140,108 +136,54 @@ export async function formationOuverte() {
   }
 }
 
-/** Une leçon avec son contenu, sa mini question et la progression du lecteur. */
-export async function lireLecon(leconId) {
-  if (!leconId) throw new Error('Leçon sans identifiant.')
-  return appel('lireLecon', 'academy_lecon', { p_lecon_id: leconId })
+/**
+ * Ouvre une session d'entraînement sur un deck. Le jeton (uuid tiré par le
+ * navigateur) rend l'appel rejouable : un second envoi rend la même session.
+ * Rend { entrainement_id, version_id, titre, slug, items:[{item_id, rang,
+ * type, competence, payload}], reponses_deja:[{item_id, correcte}] }.
+ */
+export async function demarrerEntrainement(versionId, jeton) {
+  if (!versionId) throw new Error('Deck sans identifiant.')
+  if (!jeton) throw new Error('Session sans jeton.')
+  return appel('demarrerEntrainement', 'academy_demarrer_entrainement', { p_version_id: versionId, p_jeton: jeton })
 }
 
 /**
- * Ouvre une session de lecture. Le jeton (uuid tiré par le navigateur) rend
- * l'appel rejouable : un second envoi du même jeton rend la même session.
- * @returns {Promise<string>} identifiant de session
+ * Répond à un exercice : la base corrige, met la répétition espacée à jour et
+ * compte le temps actif. Rejoué sur coupure réseau (idempotent par item).
+ * Rend { correcte, bonne_reponse, explication, force, deja }.
  */
-export async function ouvrirSession(leconId, jeton) {
-  if (!leconId) throw new Error('Leçon sans identifiant.')
-  if (!jeton) throw new Error('Session sans jeton.')
-  return appel('ouvrirSession', 'academy_ouvrir_session', { p_lecon_id: leconId, p_jeton: jeton })
-}
-
-/** Un battement d'activité. Rejoué sur coupure réseau. @returns {Promise<string>} horodatage */
-export async function battement(sessionId) {
-  if (!sessionId) throw new Error('Battement sans session.')
-  return journaliser('battement', () => avecRetry(async () => {
-    const { data, error } = await supabase.rpc('academy_battement', { p_session_id: sessionId })
+export async function repondre(entrainementId, itemId, reponse) {
+  if (!entrainementId || !itemId) throw new Error('Réponse sans session ou sans exercice.')
+  return journaliser('repondre', () => avecRetry(async () => {
+    const { data, error } = await supabase.rpc('academy_repondre', { p_entrainement_id: entrainementId, p_item_id: itemId, p_reponse: reponse ?? null })
     if (error) throw error
     return data
   }))
 }
 
 /**
- * Enregistre la position de reprise d'une leçon.
- *
- * Pas d'upsert PostgREST ici : la base ne donne au navigateur que le droit
- * d'écrire position et updated_at (grant par colonne), et PostgREST pose
- * toutes les colonnes envoyées dans le ON CONFLICT DO UPDATE, ce que la base
- * refuserait. On met donc la ligne à jour (elle existe dès l'ouverture de la
- * session) et, seulement si elle manque, on la crée sans écraser une ligne
- * apparue entre temps (onConflict, ignoreDuplicates).
+ * Termine la session : XP, série, couronnes, validation. Rend le résumé
+ * { nb_bons, nb_total, xp, serie, couronnes_avant, couronnes_apres, valide,
+ * attestation, erreurs:[...] }. Rejouer rend le même résumé.
  */
-export async function sauverPosition(leconId, versionId, position) {
-  if (!leconId) throw new Error('Leçon sans identifiant.')
-  return journaliser('sauverPosition', () => avecRetry(async () => {
-    const profileId = await idUtilisateur()
-    if (!profileId) throw new Error('Session expirée : reconnectez vous pour enregistrer la progression.')
-    const valeur = position && typeof position === 'object' ? position : {}
-
-    const maj = await supabase
-      .from('academy_progression_lecons')
-      .update({ position: valeur, updated_at: new Date().toISOString() })
-      .eq('profile_id', profileId)
-      .eq('lecon_id', leconId)
-      .select('id')
-    if (maj.error) throw maj.error
-    if (Array.isArray(maj.data) && maj.data.length > 0) return maj.data
-
-    if (!versionId) throw new Error('Enregistrement de la progression : la version du module est inconnue.')
-    const creation = await supabase
-      .from('academy_progression_lecons')
-      .upsert(
-        { profile_id: profileId, lecon_id: leconId, version_id: versionId, position: valeur },
-        { onConflict: 'profile_id,lecon_id', ignoreDuplicates: true },
-      )
-      .select('id')
-    return verifierEcriture(creation, 'Enregistrement de la progression', MOTIF_DROITS)
+export async function terminerEntrainement(entrainementId) {
+  if (!entrainementId) throw new Error('Session sans identifiant.')
+  return journaliser('terminerEntrainement', () => avecRetry(async () => {
+    const { data, error } = await supabase.rpc('academy_terminer_entrainement', { p_entrainement_id: entrainementId })
+    if (error) throw error
+    return data
   }))
 }
 
-/**
- * Termine une leçon : la base juge la mini question et pose terminee_le.
- * @returns {Promise<{ correcte: boolean, explication: string, terminee_le: string, statut_module: string }>}
- */
-export async function terminerLecon(leconId, reponse) {
-  if (!leconId) throw new Error('Leçon sans identifiant.')
-  return appel('terminerLecon', 'academy_terminer_lecon', { p_lecon_id: leconId, p_reponse: reponse ?? null })
+/** Sessions, XP par semaine, série et exercices faibles du collaborateur. */
+export async function mesResultats() {
+  return appel('mesResultats', 'academy_mes_resultats')
 }
 
-// ─── Quiz et révisions ────────────────────────────────────────────────────
-
-/**
- * Ouvre une tentative (quiz de module ou révision). Le jeton rend l'appel
- * rejouable comme pour la session. Les questions arrivent sans corrigé.
- */
-export async function ouvrirTentative(versionId, type, jeton) {
-  if (!versionId) throw new Error('Tentative sans version de module.')
-  if (!jeton) throw new Error('Tentative sans jeton.')
-  return appel('ouvrirTentative', 'academy_ouvrir_tentative', { p_version_id: versionId, p_type: type, p_jeton: jeton })
-}
-
-/**
- * Soumet les réponses ({ question_id: index }) et reçoit le corrigé complet,
- * le score et, le cas échéant, l'attestation délivrée.
- */
-export async function soumettreTentative(tentativeId, reponses) {
-  if (!tentativeId) throw new Error('Tentative sans identifiant.')
-  return appel('soumettreTentative', 'academy_soumettre_tentative', {
-    p_tentative_id: tentativeId,
-    p_reponses: reponses && typeof reponses === 'object' ? reponses : {},
-  })
-}
-
-/** Le corrigé d'une tentative déjà soumise, même objet que la soumission. */
-export async function corrige(tentativeId) {
-  if (!tentativeId) throw new Error('Tentative sans identifiant.')
-  return appel('corrige', 'academy_corrige', { p_tentative_id: tentativeId })
+/** Nombre de sessions visées par jour (1 à 10). */
+export async function objectifQuotidien(objectif) {
+  return appel('objectifQuotidien', 'academy_objectif_quotidien', { p_objectif: Number(objectif) || 1 }, null)
 }
 
 // ─── Direction : pilotage, fiches, matrice ────────────────────────────────
@@ -343,20 +285,14 @@ export async function enregistrerVersion(versionId, patch) {
   return appel('enregistrerVersion', 'academy_enregistrer_version', { p_version_id: versionId, p_patch: patch || {} })
 }
 
-/** leconId null crée la leçon. @returns {Promise<string>} identifiant de la leçon */
-export async function enregistrerLecon(versionId, leconId, patch) {
+/**
+ * Crée (itemId null) ou modifie un exercice d'un brouillon. Le patch porte
+ * type, competence, difficulte, payload, corrige, explication, ordre,
+ * archive. Rend l'identifiant de l'exercice.
+ */
+export async function enregistrerItem(versionId, itemId, patch) {
   if (!versionId) throw new Error('Version sans identifiant.')
-  return appel('enregistrerLecon', 'academy_enregistrer_lecon', {
-    p_version_id: versionId, p_lecon_id: leconId || null, p_patch: patch || {},
-  })
-}
-
-/** questionId null crée la question. @returns {Promise<string>} identifiant de la question */
-export async function enregistrerQuestion(versionId, questionId, patch) {
-  if (!versionId) throw new Error('Version sans identifiant.')
-  return appel('enregistrerQuestion', 'academy_enregistrer_question', {
-    p_version_id: versionId, p_question_id: questionId || null, p_patch: patch || {},
-  })
+  return appel('enregistrerItem', 'academy_enregistrer_item', { p_version_id: versionId, p_item_id: itemId || null, p_patch: patch || {} })
 }
 
 /**

@@ -1,0 +1,1110 @@
+{
+ "slug": "trame-rendez-vous-audit",
+ "titre": "La trame du rendez vous d’audit patrimonial",
+ "theme": "methode",
+ "niveau": "decouverte",
+ "competence": "Dérouler les sept étapes du rendez vous d’audit patrimonial standard, dans l’ordre et dans le temps imparti",
+ "objectif": "Savoir par cœur les sept étapes de la trame, leur durée, ce que l’on demande à chacune et les documents à récupérer.",
+ "duree_minutes": 10,
+ "memo_md": "## La trame du rendez vous d’audit patrimonial\n\n**Durée : 1 h.** Objectif : évaluer la situation patrimoniale globale du client, identifier des leviers d’optimisation, récupérer les documents clés.\n\n1. **Accueil et cadrage, 5 min** : présenter le cabinet (indépendance, sur mesure, accompagnement long terme) ; reformuler l’objectif (situation pro et perso, projets, axes d’optimisation) ; confirmer le temps disponible et la disponibilité pour un futur rendez vous.\n2. **Situation personnelle et familiale, 10 min** : état civil, régime matrimonial, enfants, succession ; lieu de résidence, résident fiscal français ou non ; objectifs familiaux (protection, transmission, donations).\n3. **Situation professionnelle et revenus, 10 min** : profession et statut (salarié, indépendant, société, TNS, libéral) ; revenus annuels nets imposables et revenus du foyer ; régime social, IR ou IS, sociétés détenues.\n4. **Patrimoine actuel, 15 min** : immobilier (résidence principale, locatif, SCI, SCPI) ; financier (assurance vie, PER, PEA, CTO, livrets, épargne) ; situation bancaire, crédits, endettement ; épargne retraite, prévoyance, Madelin ou 154 bis ; transmission en cours ou anticipée (donation, usufruit).\n5. **Objectifs du client, 10 min** : réduire la fiscalité ; revenus complémentaires ou passifs ; retraite ; structuration de société ou de trésorerie ; transmission ou protection de la famille ; immobilier ou diversification à court ou moyen terme.\n6. **Premiers axes de recommandation, 5 min** : structuration à l’IS, holding, dividendes contre rémunération ; ouverture ou arbitrage de contrats (AV, PER, CTO) ; optimisation immobilière (LMNP, déficit foncier, SCPI, MH) ; épargne pro ou perso selon la nature des flux.\n7. **Documents à récupérer, 5 min** : un maximum de documents pour lancer l’analyse : dernier avis d’imposition (foyer complet) ; tableau d’actifs ou liste des placements ; relevés AV, PER, PEA, comptes titres ; bilan et liasse fiscale si entrepreneur ; relevé de carrière, tableau de retraite, mutuelle et prévoyance ; situation locative (baux, crédits, loyers perçus).\n",
+ "items": [
+  {
+   "cle": "i01",
+   "type": "ordre",
+   "competence": "Les sept étapes",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Remets les sept étapes de la trame dans l’ordre.",
+    "elements": [
+     "Accueil et cadrage",
+     "Situation personnelle et familiale",
+     "Situation professionnelle et revenus",
+     "Patrimoine actuel",
+     "Objectifs du client",
+     "Premiers axes de recommandation",
+     "Documents à récupérer"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ]
+   },
+   "explication": "Accueil, situation personnelle, situation professionnelle, patrimoine, objectifs, axes, documents."
+  },
+  {
+   "cle": "i02",
+   "type": "ordre",
+   "competence": "Les sept étapes",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Remets dans l’ordre les quatre premières étapes.",
+    "elements": [
+     "Accueil et cadrage",
+     "Situation personnelle et familiale",
+     "Situation professionnelle et revenus",
+     "Patrimoine actuel"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3
+    ]
+   },
+   "explication": "On cadre, puis la famille, puis le professionnel, puis le patrimoine."
+  },
+  {
+   "cle": "i03",
+   "type": "ordre",
+   "competence": "Les sept étapes",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Remets dans l’ordre les trois dernières étapes.",
+    "elements": [
+     "Objectifs du client",
+     "Premiers axes de recommandation",
+     "Documents à récupérer"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "Objectifs, premiers axes, puis les documents pour lancer l’analyse."
+  },
+  {
+   "cle": "i04",
+   "type": "ordre",
+   "competence": "Le patrimoine actuel",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Remets dans l’ordre de la trame les points de l’étape Patrimoine actuel.",
+    "elements": [
+     "Immobilier",
+     "Financier",
+     "Situation bancaire et crédits",
+     "Épargne retraite et prévoyance",
+     "Transmission en cours ou anticipée"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ]
+   },
+   "explication": "Immobilier, financier, bancaire, retraite et prévoyance, transmission."
+  },
+  {
+   "cle": "i05",
+   "type": "association",
+   "competence": "Les durées",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Associe chaque étape à sa durée.",
+    "gauche": [
+     "Accueil et cadrage",
+     "Patrimoine actuel",
+     "Objectifs du client"
+    ],
+    "droite": [
+     "5 min",
+     "15 min",
+     "10 min"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ]
+    ]
+   },
+   "explication": "Accueil 5 minutes, patrimoine 15, objectifs 10."
+  },
+  {
+   "cle": "i06",
+   "type": "multi",
+   "competence": "Les durées",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Coche les étapes qui durent cinq minutes.",
+    "choix": [
+     "Accueil et cadrage",
+     "Situation personnelle et familiale",
+     "Premiers axes de recommandation",
+     "Documents à récupérer",
+     "Patrimoine actuel"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     2,
+     3
+    ]
+   },
+   "explication": "Trois étapes de cinq minutes : accueil, premiers axes, documents."
+  },
+  {
+   "cle": "i07",
+   "type": "association",
+   "competence": "Ce qu’on demande à chaque étape",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Associe chaque point à son étape.",
+    "gauche": [
+     "Régime matrimonial",
+     "Revenus annuels nets imposables",
+     "Encours de crédits",
+     "Dernier avis d’imposition"
+    ],
+    "droite": [
+     "Situation personnelle et familiale",
+     "Situation professionnelle et revenus",
+     "Patrimoine actuel",
+     "Documents à récupérer"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      3,
+      3
+     ]
+    ]
+   },
+   "explication": "Le régime matrimonial est familial, les revenus sont professionnels, les crédits sont du patrimoine, l’avis est un document."
+  },
+  {
+   "cle": "i08",
+   "type": "association",
+   "competence": "Les premiers axes",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Associe chaque exemple à son axe de recommandation.",
+    "gauche": [
+     "Création de holding",
+     "Arbitrage d’un contrat",
+     "LMNP",
+     "Épargne pro ou perso"
+    ],
+    "droite": [
+     "Structuration à l’IS",
+     "Ouverture ou arbitrage de contrats",
+     "Optimisation immobilière",
+     "Selon la nature des flux"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      3,
+      3
+     ]
+    ]
+   },
+   "explication": "Les quatre axes de la trame : IS et holding, contrats, immobilier, épargne selon les flux."
+  },
+  {
+   "cle": "i09",
+   "type": "multi",
+   "competence": "Ce qu’on demande à chaque étape",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Coche tout ce qui appartient à l’étape Situation personnelle et familiale.",
+    "choix": [
+     "État civil",
+     "Régime matrimonial",
+     "Statut professionnel",
+     "Objectifs familiaux",
+     "Encours de crédits",
+     "Résident fiscal en France ou non"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     3,
+     5
+    ]
+   },
+   "explication": "État civil, régime matrimonial, résidence et fiscalité, objectifs familiaux ; le statut et les crédits viennent après."
+  },
+  {
+   "cle": "i10",
+   "type": "multi",
+   "competence": "Ce qu’on demande à chaque étape",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Coche tout ce qui appartient à l’étape Situation professionnelle et revenus.",
+    "choix": [
+     "Profession et statut",
+     "Revenus du foyer",
+     "Régime social",
+     "Sociétés détenues",
+     "Régime matrimonial",
+     "Relevé de carrière"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2,
+     3
+    ]
+   },
+   "explication": "Profession, revenus, régime social, fiscalité IR ou IS et sociétés ; le relevé de carrière est un document à récupérer."
+  },
+  {
+   "cle": "i11",
+   "type": "multi",
+   "competence": "Le patrimoine actuel",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Coche tout ce qui relève du patrimoine financier dans la trame.",
+    "choix": [
+     "Assurance vie",
+     "PER",
+     "SCI",
+     "PEA",
+     "CTO",
+     "Livrets"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     3,
+     4,
+     5
+    ]
+   },
+   "explication": "La SCI est classée dans l’immobilier ; assurance vie, PER, PEA, CTO, livrets et épargne sont le financier."
+  },
+  {
+   "cle": "i12",
+   "type": "multi",
+   "competence": "Le patrimoine actuel",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Coche tout ce qui relève de l’immobilier dans la trame.",
+    "choix": [
+     "Résidence principale",
+     "Locatif",
+     "SCI",
+     "SCPI",
+     "PEA",
+     "Livrets"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2,
+     3
+    ]
+   },
+   "explication": "Résidence principale, locatif, SCI et SCPI."
+  },
+  {
+   "cle": "i13",
+   "type": "multi",
+   "competence": "Les documents à récupérer",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Coche les documents à récupérer selon la trame.",
+    "choix": [
+     "Dernier avis d’imposition",
+     "Relevés d’assurance vie, PER, PEA, comptes titres",
+     "Carte d’identité du conjoint",
+     "Bilan et liasse fiscale si entrepreneur",
+     "Relevé de carrière",
+     "Ticket de caisse du dernier achat"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     3,
+     4
+    ]
+   },
+   "explication": "Avis d’imposition, relevés de contrats, bilan et liasse, relevé de carrière ; la trame ne cite ni pièce d’identité ni ticket."
+  },
+  {
+   "cle": "i14",
+   "type": "multi",
+   "competence": "Les documents à récupérer",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Coche ce que la trame demande pour la situation locative.",
+    "choix": [
+     "Baux",
+     "Crédits",
+     "Loyers perçus",
+     "Photos du bien",
+     "Diagnostic énergétique"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "Baux, crédits, loyers perçus."
+  },
+  {
+   "cle": "i15",
+   "type": "multi",
+   "competence": "Les objectifs du client",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Coche les objectifs listés à l’étape 5.",
+    "choix": [
+     "Réduction de la fiscalité",
+     "Création de revenus complémentaires ou passifs",
+     "Préparation de la retraite",
+     "Changement de banque",
+     "Transmission ou protection de la famille",
+     "Immobilier ou diversification à court ou moyen terme"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2,
+     4,
+     5
+    ]
+   },
+   "explication": "Six objectifs dans la trame ; changer de banque n’en fait pas partie."
+  },
+  {
+   "cle": "i16",
+   "type": "multi",
+   "competence": "L’accueil et le cadrage",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Coche les trois marqueurs de l’approche du cabinet à présenter à l’accueil.",
+    "choix": [
+     "Indépendance",
+     "Sur mesure",
+     "Accompagnement long terme",
+     "Frais les plus bas du marché",
+     "Rendement garanti"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "Indépendance, sur mesure, accompagnement long terme."
+  },
+  {
+   "cle": "i17",
+   "type": "choix",
+   "competence": "Les durées",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Combien de temps dure le rendez vous d’audit patrimonial standard ?",
+    "choix": [
+     "30 minutes",
+     "45 minutes",
+     "1 heure",
+     "1 heure 30"
+    ]
+   },
+   "corrige": {
+    "index": 2
+   },
+   "explication": "La trame prévoit une heure."
+  },
+  {
+   "cle": "i18",
+   "type": "choix",
+   "competence": "Les sept étapes",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Combien d’étapes compte la trame ?",
+    "choix": [
+     "5",
+     "6",
+     "7",
+     "8"
+    ]
+   },
+   "corrige": {
+    "index": 2
+   },
+   "explication": "Sept étapes, de l’accueil aux documents."
+  },
+  {
+   "cle": "i19",
+   "type": "choix",
+   "competence": "Les durées",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Quelle est l’étape la plus longue ?",
+    "choix": [
+     "Situation personnelle et familiale",
+     "Patrimoine actuel",
+     "Objectifs du client",
+     "Documents à récupérer"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Le patrimoine actuel prend quinze minutes."
+  },
+  {
+   "cle": "i20",
+   "type": "choix",
+   "competence": "Les sept étapes",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Quelle est la dernière étape de la trame ?",
+    "choix": [
+     "Premiers axes de recommandation",
+     "Objectifs du client",
+     "Documents à récupérer",
+     "Patrimoine actuel"
+    ]
+   },
+   "corrige": {
+    "index": 2
+   },
+   "explication": "On termine par les documents, pour lancer l’analyse."
+  },
+  {
+   "cle": "i21",
+   "type": "choix",
+   "competence": "L’accueil et le cadrage",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Quel est l’objectif de l’échange, tel qu’on le reformule à l’accueil ?",
+    "choix": [
+     "Vendre un contrat adapté",
+     "Comprendre la situation pro et perso, les projets et les axes d’optimisation",
+     "Signer un mandat de gestion",
+     "Comparer les frais des contrats en place"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "On reformule : comprendre la situation, les projets, les axes d’optimisation."
+  },
+  {
+   "cle": "i22",
+   "type": "choix",
+   "competence": "L’accueil et le cadrage",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Que confirme t on à la fin de l’accueil ?",
+    "choix": [
+     "Le montant à investir",
+     "Le temps disponible et la disponibilité pour un futur rendez vous",
+     "Le choix de la compagnie",
+     "Le régime matrimonial"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Le temps disponible aujourd’hui et la disponibilité du client pour la suite."
+  },
+  {
+   "cle": "i23",
+   "type": "choix",
+   "competence": "Ce qu’on demande à chaque étape",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "À quelle étape demande t on si le client est résident fiscal français ?",
+    "choix": [
+     "Accueil et cadrage",
+     "Situation personnelle et familiale",
+     "Situation professionnelle et revenus",
+     "Patrimoine actuel"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Lieu de résidence et fiscalité applicable sont dans la situation personnelle et familiale."
+  },
+  {
+   "cle": "i24",
+   "type": "choix",
+   "competence": "Ce qu’on demande à chaque étape",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "À quelle étape parle t on de régime social et d’IR ou IS ?",
+    "choix": [
+     "Situation personnelle et familiale",
+     "Situation professionnelle et revenus",
+     "Objectifs du client",
+     "Premiers axes de recommandation"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Régime social, fiscalité IR ou IS et sociétés détenues : étape professionnelle."
+  },
+  {
+   "cle": "i25",
+   "type": "choix",
+   "competence": "Le patrimoine actuel",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Dans quel bloc du patrimoine actuel classe t on la SCPI ?",
+    "choix": [
+     "Immobilier",
+     "Financier",
+     "Situation bancaire",
+     "Épargne retraite"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Immobilier : résidence principale, locatif, SCI, SCPI."
+  },
+  {
+   "cle": "i26",
+   "type": "choix",
+   "competence": "Le patrimoine actuel",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Que demande t on sur la transmission à l’étape Patrimoine actuel ?",
+    "choix": [
+     "Le montant des droits payés",
+     "Si une transmission est en cours ou anticipée, donation ou usufruit par exemple",
+     "Le nom du notaire",
+     "La date du dernier testament"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Transmission en cours ou anticipée ? Donation, usufruit, etc."
+  },
+  {
+   "cle": "i27",
+   "type": "choix",
+   "competence": "Les objectifs du client",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Lequel de ces objectifs figure dans la trame ?",
+    "choix": [
+     "Structuration de société ou de trésorerie",
+     "Obtenir un crédit immobilier",
+     "Ouvrir un compte à l’étranger",
+     "Changer d’assureur auto"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Structuration de société ou de trésorerie est un des six objectifs."
+  },
+  {
+   "cle": "i28",
+   "type": "choix",
+   "competence": "Les premiers axes",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Quel axe regroupe holding, IS et dividendes contre rémunération ?",
+    "choix": [
+     "Optimisation immobilière",
+     "Structuration à l’IS",
+     "Ouverture ou arbitrage de contrats",
+     "Épargne pro ou perso"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Structuration à l’IS, création de holding, stratégie dividendes contre rémunération."
+  },
+  {
+   "cle": "i29",
+   "type": "choix",
+   "competence": "Les premiers axes",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Selon la trame, de quoi dépend le choix entre épargne pro et épargne perso ?",
+    "choix": [
+     "De l’âge du client",
+     "De la nature des flux",
+     "Du nombre d’enfants",
+     "De la banque du client"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Épargne pro ou perso selon la nature des flux."
+  },
+  {
+   "cle": "i30",
+   "type": "choix",
+   "competence": "Les documents à récupérer",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Quel est l’objectif affiché de l’étape Documents ?",
+    "choix": [
+     "Vérifier l’identité du client",
+     "Récupérer un maximum de documents pour lancer l’analyse",
+     "Faire signer le mandat",
+     "Estimer les frais"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Important : récupérer un maximum de documents pour lancer l’analyse."
+  },
+  {
+   "cle": "i31",
+   "type": "choix",
+   "competence": "Les documents à récupérer",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Quel avis d’imposition demande t on ?",
+    "choix": [
+     "Le dernier, pour le foyer complet",
+     "Celui du client seul",
+     "Les trois derniers",
+     "Celui de l’année de mariage"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Le dernier avis d’imposition, foyer complet."
+  },
+  {
+   "cle": "i32",
+   "type": "choix",
+   "competence": "Les documents à récupérer",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Quels documents demande t on à un entrepreneur ?",
+    "choix": [
+     "Bilan et liasse fiscale",
+     "Kbis et statuts",
+     "Contrat de bail commercial",
+     "Attestation URSSAF"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Bilan et liasse fiscale, si entrepreneur."
+  },
+  {
+   "cle": "i33",
+   "type": "choix",
+   "competence": "Les documents à récupérer",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Que demande t on pour la retraite ?",
+    "choix": [
+     "Relevé de carrière et tableau de retraite",
+     "Carte Vitale",
+     "Bulletins de salaire des cinq dernières années",
+     "Contrat de travail"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Relevé de carrière, tableau de retraite, mutuelle et prévoyance."
+  },
+  {
+   "cle": "i34",
+   "type": "vrai_faux",
+   "competence": "Les durées",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "L’accueil et le cadrage durent cinq minutes."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "Cinq minutes, comme les axes et les documents."
+  },
+  {
+   "cle": "i35",
+   "type": "vrai_faux",
+   "competence": "Les durées",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Les objectifs du client prennent quinze minutes."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "Dix minutes ; c’est le patrimoine actuel qui en prend quinze."
+  },
+  {
+   "cle": "i36",
+   "type": "vrai_faux",
+   "competence": "Les durées",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Les sept étapes additionnées font une heure."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "5 + 10 + 10 + 15 + 10 + 5 + 5 = 60 minutes."
+  },
+  {
+   "cle": "i37",
+   "type": "vrai_faux",
+   "competence": "L’accueil et le cadrage",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "À l’accueil, on présente l’indépendance, le sur mesure et l’accompagnement long terme du cabinet."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "Ce sont les trois marqueurs de l’approche à présenter."
+  },
+  {
+   "cle": "i38",
+   "type": "vrai_faux",
+   "competence": "Ce qu’on demande à chaque étape",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Les enfants et la succession se traitent à l’étape Situation professionnelle et revenus."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "État civil, régime matrimonial, enfants, succession : étape personnelle et familiale."
+  },
+  {
+   "cle": "i39",
+   "type": "vrai_faux",
+   "competence": "Le patrimoine actuel",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Le niveau d’endettement fait partie de l’étape Patrimoine actuel."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "Situation bancaire, encours de crédits, niveau d’endettement."
+  },
+  {
+   "cle": "i40",
+   "type": "vrai_faux",
+   "competence": "Les premiers axes",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Le déficit foncier est cité parmi les optimisations immobilières."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "LMNP, déficit foncier, SCPI, MH, etc."
+  },
+  {
+   "cle": "i41",
+   "type": "vrai_faux",
+   "competence": "Les documents à récupérer",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "La situation locative se documente avec les baux, les crédits et les loyers perçus."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "C’est le dernier point de la liste des documents."
+  },
+  {
+   "cle": "i42",
+   "type": "vrai_faux",
+   "competence": "Les documents à récupérer",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Si le client n’a pas de tableau d’actifs, on ne demande rien d’autre."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "Tableau d’actifs si existant, sinon la liste des placements."
+  },
+  {
+   "cle": "i43",
+   "type": "vrai_faux",
+   "competence": "Les objectifs du client",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "La préparation de la retraite fait partie des objectifs à explorer."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "Un des six objectifs de l’étape 5."
+  },
+  {
+   "cle": "i44",
+   "type": "trou_choix",
+   "competence": "Les durées",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Durée du rendez vous : ___.",
+    "choix": [
+     "1 h",
+     "45 min",
+     "2 h",
+     "30 min"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Une heure."
+  },
+  {
+   "cle": "i45",
+   "type": "trou_choix",
+   "competence": "Le patrimoine actuel",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "Épargne retraite, prévoyance, contrats Madelin ou ___ bis.",
+    "choix": [
+     "154",
+     "163",
+     "83",
+     "62"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Contrats Madelin ou 154 bis."
+  },
+  {
+   "cle": "i46",
+   "type": "trou_choix",
+   "competence": "Les premiers axes",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "Stratégie ___ contre rémunération.",
+    "choix": [
+     "dividendes",
+     "holding",
+     "donation",
+     "usufruit"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Stratégie dividendes contre rémunération, dans l’axe structuration à l’IS."
+  },
+  {
+   "cle": "i47",
+   "type": "trou_choix",
+   "competence": "Ce qu’on demande à chaque étape",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "Revenus annuels nets ___ et revenus du foyer.",
+    "choix": [
+     "imposables",
+     "bruts",
+     "exonérés",
+     "différés"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Revenus annuels nets imposables."
+  },
+  {
+   "cle": "i48",
+   "type": "trou_saisie",
+   "competence": "Les durées",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Le patrimoine actuel dure ___ minutes.",
+    "aide": "un nombre"
+   },
+   "corrige": {
+    "reponses": [
+     "15",
+     "quinze"
+    ]
+   },
+   "explication": "Quinze minutes, l’étape la plus longue."
+  },
+  {
+   "cle": "i49",
+   "type": "trou_saisie",
+   "competence": "Le patrimoine actuel",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "Contrats Madelin ou ___ bis.",
+    "aide": "un nombre"
+   },
+   "corrige": {
+    "reponses": [
+     "154"
+    ]
+   },
+   "explication": "154 bis."
+  },
+  {
+   "cle": "i50",
+   "type": "trou_saisie",
+   "competence": "Les sept étapes",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "La trame compte ___ étapes.",
+    "aide": "un nombre"
+   },
+   "corrige": {
+    "reponses": [
+     "7",
+     "sept"
+    ]
+   },
+   "explication": "Sept étapes."
+  },
+  {
+   "cle": "i51",
+   "type": "trou_saisie",
+   "competence": "Les premiers axes",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "Structuration à l’___, création de holding.",
+    "aide": "deux lettres"
+   },
+   "corrige": {
+    "reponses": [
+     "IS",
+     "is",
+     "impot sur les societes",
+     "impôt sur les sociétés"
+    ]
+   },
+   "explication": "Structuration à l’IS."
+  },
+  {
+   "cle": "i52",
+   "type": "carte",
+   "competence": "Les sept étapes",
+   "difficulte": 1,
+   "payload": {
+    "recto": "Étape 1 de la trame ?",
+    "verso": "Accueil et cadrage, 5 minutes"
+   },
+   "corrige": {},
+   "explication": "Première étape."
+  },
+  {
+   "cle": "i53",
+   "type": "carte",
+   "competence": "Les sept étapes",
+   "difficulte": 1,
+   "payload": {
+    "recto": "Étape 4 de la trame ?",
+    "verso": "Patrimoine actuel, 15 minutes"
+   },
+   "corrige": {},
+   "explication": "Quatrième étape, la plus longue."
+  },
+  {
+   "cle": "i54",
+   "type": "carte",
+   "competence": "Les documents à récupérer",
+   "difficulte": 1,
+   "payload": {
+    "recto": "Les six documents à récupérer ?",
+    "verso": "Avis d’imposition, tableau d’actifs ou liste des placements, relevés de contrats, bilan et liasse, relevé de carrière et retraite, situation locative"
+   },
+   "corrige": {},
+   "explication": "La liste de l’étape 7."
+  },
+  {
+   "cle": "i55",
+   "type": "carte",
+   "competence": "L’accueil et le cadrage",
+   "difficulte": 1,
+   "payload": {
+    "recto": "Objectif global du rendez vous ?",
+    "verso": "Évaluer la situation patrimoniale globale, identifier des leviers d’optimisation, récupérer les documents clés"
+   },
+   "corrige": {},
+   "explication": "L’objectif en tête de trame."
+  }
+ ]
+}

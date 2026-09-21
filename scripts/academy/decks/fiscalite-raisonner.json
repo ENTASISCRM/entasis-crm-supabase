@@ -1,0 +1,836 @@
+{
+ "slug": "fiscalite-raisonner",
+ "titre": "Fiscalité : raisonner avant de proposer",
+ "competence": "Distinguer déduction, réduction, crédit et logique économique",
+ "memo_md": "**Un avantage fiscal n'est pas le résultat : nommer le mécanisme, lire l'avis d'imposition, reconstituer le bilan complet avant de proposer.**\n\n## Trois mécanismes\n- Déduction : sur le revenu imposable, avant l'impôt. Vaut la tranche du client.\n- Réduction : sur l'impôt calculé. Vaut au plus l'impôt dû ; surplus perdu, sauf report prévu.\n- Crédit : sur l'impôt calculé. Vaut sa valeur faciale ; surplus remboursé, même non imposable, au-delà de 8 €.\n\n## Effet réel d'une déduction\n- Barème progressif : 0, 11, 30, 41 et 45 %. Seuils indexés chaque année, à lire sur impots.gouv.fr.\n- TMI : taux de la dernière tranche atteinte. Économie : environ versement × TMI, tant qu'il reste dans la tranche.\n- Annoncer « environ », confirmer au simulateur officiel.\n\n## Deux plafonds\n- Plafond épargne retraite : sur l'avis, année en cours plus reliquats des trois années précédentes.\n- Plafonnement global : 10 000 € (18 000 € avec outre-mer ou Sofica) pour réductions et crédits liés à un investissement ou une prestation. Épargne retraite et dons hors champ.\n\n## Cinq questions avant de proposer\nCoût, durée d'immobilisation, sortie, reprise possible, épargne de précaution.\n- PER : versements déduits imposés à la sortie, capital comme rente. Report, pas exonération.\n- Girardin : apport à fonds perdus, portage minimal cinq ans, réduction reprenable même sans faute.\n\n## En rendez-vous\n- Lire impôt dû, revenu imposable, plafond épargne retraite avant tout chiffre.\n- Tableau avec et sans, jusqu'à la sortie ; relier à un objectif de vie, sinon bilan patrimonial.",
+ "items": [
+  {
+   "cle": "i01",
+   "type": "choix",
+   "competence": "Trois mécanismes fiscaux",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Sur quoi agit une déduction fiscale ?",
+    "choix": [
+     "Sur le revenu imposable, avant le calcul de l'impôt",
+     "Sur l'impôt calculé, sans remboursement du surplus",
+     "Sur l'impôt calculé, avec remboursement du surplus",
+     "Sur le plafond épargne retraite imprimé sur l'avis"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "La déduction retire une somme du revenu imposable ; l'impôt est ensuite calculé sur ce qui reste."
+  },
+  {
+   "cle": "i02",
+   "type": "choix",
+   "competence": "Trois mécanismes fiscaux",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Cas fictif. L'impôt calculé d'une cliente est de 1 500 € et elle a droit à une réduction d'impôt de 700 €. Combien paie-t-elle ?",
+    "choix": [
+     "800 €",
+     "0 €",
+     "1 500 €",
+     "2 200 €"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "La réduction s'impute sur l'impôt calculé : 1 500 moins 700 donne 800 € à payer."
+  },
+  {
+   "cle": "i03",
+   "type": "choix",
+   "competence": "Trois mécanismes fiscaux",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Un client a un impôt calculé de 500 € et bénéficie d'un crédit d'impôt de 700 €. Quel est le résultat ?",
+    "choix": [
+     "Impôt à zéro et 200 € remboursés",
+     "Impôt à zéro et 200 € perdus",
+     "Impôt maintenu à 500 €, le crédit ne s'impute pas",
+     "Impôt à zéro et 200 € retirés du revenu imposable suivant"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Le crédit d'impôt s'impute sur l'impôt et le surplus est remboursé au client, à la différence de la réduction."
+  },
+  {
+   "cle": "i04",
+   "type": "choix",
+   "competence": "Effet réel selon la TMI",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Qu'est-ce que la tranche marginale d'imposition (TMI) ?",
+    "choix": [
+     "Le taux de la dernière tranche atteinte par le revenu imposable du client",
+     "Le taux moyen payé sur l'ensemble des revenus du client",
+     "Le taux appliqué au plafonnement global des avantages fiscaux",
+     "Le taux de la tranche la plus élevée du barème, soit 45 %"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "La TMI est le taux de la dernière tranche atteinte ; c'est lui qui mesure l'effet d'une déduction."
+  },
+  {
+   "cle": "i05",
+   "type": "choix",
+   "competence": "Effet réel selon la TMI",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Un client en TMI 11 % verse 6 000 € sur un dispositif déductible et le versement reste dans sa tranche. Quelle économie annoncez-vous ?",
+    "choix": [
+     "Environ 660 €",
+     "Environ 1 800 €",
+     "6 000 €",
+     "Environ 2 460 €"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "L'économie vaut environ le versement multiplié par la TMI : 6 000 × 11 % = 660 €."
+  },
+  {
+   "cle": "i06",
+   "type": "choix",
+   "competence": "Effet réel selon la TMI",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Le revenu imposable d'une cliente dépasse de 2 000 € seulement la limite basse de la tranche à 41 %. Elle verse 6 000 € sur un dispositif déductible. Quelle économie est correcte ?",
+    "choix": [
+     "Environ 2 020 € (2 000 × 41 % + 4 000 × 30 %)",
+     "Environ 2 460 € (6 000 × 41 %)",
+     "Environ 1 800 € (6 000 × 30 %)",
+     "Environ 2 700 € (6 000 × 45 %)"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Seuls les 2 000 € situés dans la tranche à 41 % économisent ce taux ; les 4 000 € suivants retombent à 30 %."
+  },
+  {
+   "cle": "i07",
+   "type": "choix",
+   "competence": "Plafonds et plafonnement global",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Un client bénéficie déjà d'un crédit d'impôt pour emploi à domicile et d'une réduction pour investissement locatif. Quel plafond peut-il avoir en grande partie consommé ?",
+    "choix": [
+     "Le plafonnement global des avantages fiscaux de 10 000 €",
+     "Le plafond épargne retraite imprimé sur son avis",
+     "La limite haute de sa tranche marginale",
+     "Le seuil de 8 € de restitution des crédits d'impôt"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Emploi à domicile et investissement locatif sont des avantages en contrepartie d'une prestation ou d'un investissement, visés par le plafonnement global."
+  },
+  {
+   "cle": "i08",
+   "type": "choix",
+   "competence": "Sortie, blocage et reprise",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictif. Un client a déduit ses versements sur un PER pendant quinze ans et sort en capital à la retraite. Comment ces versements sont-ils traités ?",
+    "choix": [
+     "Ils sont imposés à la sortie : la déduction était un report d'imposition",
+     "Ils sont exonérés : la déduction obtenue à l'entrée est définitivement acquise",
+     "Ils sont imposés seulement en cas de sortie en rente, pas en capital",
+     "Ils sont restitués sous forme de crédit d'impôt"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Les versements déduits à l'entrée sont imposés à la sortie, en capital comme en rente : report, pas exonération."
+  },
+  {
+   "cle": "i09",
+   "type": "choix",
+   "competence": "Bilan économique complet",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Un chirurgien-dentiste avec 6 000 € de livret et un rachat de parts prévu dans dix-huit mois veut souscrire 15 000 € dans un Girardin industriel « avant la fin de l'année ». Quelle prochaine étape proposez-vous ?",
+    "choix": [
+     "Un bilan patrimonial avec l'avis d'imposition complet et le prévisionnel du rachat de parts",
+     "La signature de la souscription avant le 31 décembre pour ne pas perdre l'avantage",
+     "Le même Girardin ramené à 10 000 € pour limiter l'apport perdu",
+     "Un versement PER immédiat pour consommer son plafond épargne retraite inutilisé"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Épargne de précaution insuffisante et projet à dix-huit mois : on ne recommande rien sans bilan patrimonial et simulation chiffrée."
+  },
+  {
+   "cle": "i10",
+   "type": "choix",
+   "competence": "Lecture de l'avis d'imposition",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Quelles sont les deux lignes de l'avis d'imposition qui conditionnent toute proposition fiscale ?",
+    "choix": [
+     "L'impôt dû et le revenu imposable",
+     "Le plafond épargne retraite et les frais de scolarité",
+     "Le taux moyen et le montant des dons",
+     "Le plafonnement global et le quotient familial"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Sans impôt dû, une réduction n'a pas d'effet ; sans revenu dans une tranche élevée, une déduction rapporte peu."
+  },
+  {
+   "cle": "i11",
+   "type": "vrai_faux",
+   "competence": "Trois mécanismes fiscaux",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Un crédit d'impôt est remboursé au client même s'il n'est pas imposable."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "Le surplus d'un crédit d'impôt est restitué, y compris à un contribuable non imposable."
+  },
+  {
+   "cle": "i12",
+   "type": "vrai_faux",
+   "competence": "Trois mécanismes fiscaux",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Une réduction d'impôt qui dépasse l'impôt dû est remboursée au client pour la part excédentaire."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "Le surplus d'une réduction est perdu, sauf report prévu par le dispositif ; seul un crédit d'impôt est remboursé."
+  },
+  {
+   "cle": "i13",
+   "type": "vrai_faux",
+   "competence": "Plafonds et plafonnement global",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Les versements déduits sur un PER entrent dans le plafonnement global des avantages fiscaux de 10 000 €."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "Les charges déductibles du revenu global, dont l'épargne retraite, sont hors champ du plafonnement global."
+  },
+  {
+   "cle": "i14",
+   "type": "vrai_faux",
+   "competence": "Effet réel selon la TMI",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Les limites des tranches du barème de l'impôt sur le revenu sont indexées chaque année par la loi de finances."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "Les seuils changent chaque année (relevés de 0,9 % pour l'imposition 2026) et se lisent sur la source officielle."
+  },
+  {
+   "cle": "i15",
+   "type": "vrai_faux",
+   "competence": "Sortie, blocage et reprise",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Dans un Girardin industriel, l'investisseur récupère son apport à l'issue de la durée de portage de cinq ans."
+   },
+   "corrige": {
+    "vrai": false
+   },
+   "explication": "L'apport est à fonds perdus : le gain réside uniquement dans la réduction d'impôt."
+  },
+  {
+   "cle": "i16",
+   "type": "vrai_faux",
+   "competence": "Bilan économique complet",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Un tableau comparatif limité à l'économie d'impôt de la première année flatte le dispositif le plus agressif et cache la sortie."
+   },
+   "corrige": {
+    "vrai": true
+   },
+   "explication": "La comparaison se construit sur toute la durée, jusqu'à la sortie, avec frais, fiscalité et scénario de reprise."
+  },
+  {
+   "cle": "i17",
+   "type": "multi",
+   "competence": "Trois mécanismes fiscaux",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Cochez tout ce qui agit sur l'impôt déjà calculé, et non sur le revenu imposable.",
+    "choix": [
+     "La réduction d'impôt",
+     "Le crédit d'impôt",
+     "La déduction",
+     "Le plafond épargne retraite"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1
+    ]
+   },
+   "explication": "Réduction et crédit s'imputent sur l'impôt après calcul ; la déduction agit sur le revenu, avant."
+  },
+  {
+   "cle": "i18",
+   "type": "multi",
+   "competence": "Plafonds et plafonnement global",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cochez tout ce qui est exclu du plafonnement global des avantages fiscaux.",
+    "choix": [
+     "Les dons",
+     "Les cotisations d'épargne retraite déduites du revenu global",
+     "Une réduction d'impôt en contrepartie d'un investissement locatif",
+     "Le quotient familial",
+     "Un crédit d'impôt pour emploi à domicile",
+     "Une souscription Sofica"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     3
+    ]
+   },
+   "explication": "Dons, charges déductibles du revenu global et quotient familial sont hors champ ; investissement, prestation et Sofica sont visés."
+  },
+  {
+   "cle": "i19",
+   "type": "multi",
+   "competence": "Bilan économique complet",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Cochez tout ce qui fait partie des cinq questions à poser avant de proposer un dispositif à avantage fiscal.",
+    "choix": [
+     "Que coûte l'opération, frais d'entrée, de gestion et de sortie compris ?",
+     "Combien de temps l'argent est-il immobilisé ?",
+     "Quel dispositif affiche l'économie la plus élevée en année 1 ?",
+     "L'épargne de précaution du client est-elle intacte ?",
+     "Le client est-il dans la tranche à 45 % ?"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     3
+    ]
+   },
+   "explication": "Les cinq questions sont coût, durée, sortie, reprise possible et épargne de précaution ; l'économie d'année 1 n'en fait pas partie."
+  },
+  {
+   "cle": "i20",
+   "type": "multi",
+   "competence": "Sortie, blocage et reprise",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cochez tout ce qui caractérise un dispositif Girardin selon l'AMF.",
+    "choix": [
+     "Un apport à fonds perdus",
+     "Une durée de portage minimale de cinq ans",
+     "Une réduction qui peut être reprise même sans faute de l'investisseur",
+     "Une épargne disponible à tout moment",
+     "Des versements imposés à la sortie en capital ou en rente",
+     "Une déduction du revenu imposable"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "Fonds perdus, cinq ans de portage et reprise possible ; la fiscalité de sortie et la déduction relèvent du PER."
+  },
+  {
+   "cle": "i21",
+   "type": "multi",
+   "competence": "Lecture de l'avis d'imposition",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cochez tout ce que vous relevez sur l'avis d'imposition en début de rendez-vous fiscal.",
+    "choix": [
+     "Le revenu imposable",
+     "L'impôt dû",
+     "Le plafond épargne retraite",
+     "Les frais de gestion du contrat envisagé",
+     "La durée de portage du dispositif",
+     "La forme de la société de portage"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "Revenu imposable, impôt dû et plafond épargne retraite se lisent sur l'avis ; frais et portage viennent du dispositif."
+  },
+  {
+   "cle": "i22",
+   "type": "ordre",
+   "competence": "Bilan économique complet",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Remettez dans l'ordre les cinq questions à poser avant de proposer un dispositif à avantage fiscal.",
+    "elements": [
+     "Que coûte l'opération ?",
+     "Combien de temps l'argent est-il immobilisé ?",
+     "Que se passe-t-il à la sortie ?",
+     "L'avantage peut-il être repris ?",
+     "L'épargne de précaution est-elle intacte ?"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ]
+   },
+   "explication": "Coût, durée, sortie, reprise possible, épargne de précaution : les cinq questions se posent dans cet ordre."
+  },
+  {
+   "cle": "i23",
+   "type": "ordre",
+   "competence": "Lecture de l'avis d'imposition",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Remettez dans l'ordre les étapes pour estimer en rendez-vous l'effet d'un versement déductible.",
+    "elements": [
+     "Demander le dernier avis d'imposition",
+     "Repérer le revenu imposable, l'impôt dû et le plafond épargne retraite",
+     "Situer la tranche marginale du client",
+     "Estimer l'économie en disant « environ » et en précisant la condition de tranche",
+     "Vérifier le plafond du dispositif, puis le plafonnement global s'il s'applique",
+     "Reporter la simulation dans la feuille de route avec la source et la date"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   },
+   "explication": "On part de l'avis, on situe la TMI, on estime avec « environ », on vérifie les plafonds, puis on consigne avec la source."
+  },
+  {
+   "cle": "i24",
+   "type": "ordre",
+   "competence": "Trois mécanismes fiscaux",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Remettez dans l'ordre les étapes du calcul qui font intervenir déduction, réduction et crédit.",
+    "elements": [
+     "Déclarer le revenu",
+     "Retirer la déduction du revenu imposable",
+     "Calculer l'impôt sur le revenu restant, tranche par tranche",
+     "Imputer les réductions et crédits sur l'impôt calculé",
+     "Rembourser le surplus éventuel de crédit d'impôt"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ]
+   },
+   "explication": "La déduction intervient avant le calcul de l'impôt ; réduction et crédit s'imputent après, et seul le surplus de crédit est remboursé."
+  },
+  {
+   "cle": "i25",
+   "type": "ordre",
+   "competence": "Bilan économique complet",
+   "difficulte": 3,
+   "payload": {
+    "enonce": "Cas fictif. Un prospect veut « juste savoir combien il économise » avec un Girardin. Remettez dans l'ordre votre réponse en rendez-vous.",
+    "elements": [
+     "Reformuler : il veut que son impôt serve à quelque chose plutôt que de le subir",
+     "Nommer les contraintes aussi clairement que l'avantage : apport perdu, reprise possible, plafonnement, liquidité",
+     "Proposer un bilan patrimonial avec l'avis d'imposition complet et le prévisionnel de ses projets",
+     "Comparer dans la feuille de route plusieurs trajectoires jusqu'à la sortie, chiffrées et sourcées"
+    ]
+   },
+   "corrige": {
+    "ordre": [
+     0,
+     1,
+     2,
+     3
+    ]
+   },
+   "explication": "Reformulation, contraintes nommées, bilan patrimonial, puis feuille de route comparée sur la durée : aucune souscription en fin de rendez-vous."
+  },
+  {
+   "cle": "i26",
+   "type": "association",
+   "competence": "Trois mécanismes fiscaux",
+   "difficulte": 1,
+   "payload": {
+    "enonce": "Associez chaque mécanisme à ce qu'il vaut réellement pour le client.",
+    "gauche": [
+     "Déduction",
+     "Réduction d'impôt",
+     "Crédit d'impôt"
+    ],
+    "droite": [
+     "Ce que vaut la tranche du client",
+     "Au plus l'impôt dû",
+     "Sa valeur faciale, surplus remboursé"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ]
+    ]
+   },
+   "explication": "Une déduction vaut la tranche, une réduction au plus l'impôt dû, un crédit sa valeur faciale."
+  },
+  {
+   "cle": "i27",
+   "type": "association",
+   "competence": "Sortie, blocage et reprise",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Associez chaque avantage fiscal à ce qui l'attend ensuite.",
+    "gauche": [
+     "Déduction des versements sur un PER",
+     "Réduction d'impôt Girardin",
+     "Réduction d'impôt supérieure à l'impôt dû"
+    ],
+    "droite": [
+     "Report d'imposition : les versements déduits sont imposés à la sortie",
+     "Gain à fonds perdus, reprenable si les conditions d'exploitation cessent",
+     "Surplus perdu, sauf report prévu par le dispositif"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ]
+    ]
+   },
+   "explication": "Le PER reporte l'imposition, le Girardin est un gain à fonds perdus reprenable, la réduction excédentaire est perdue."
+  },
+  {
+   "cle": "i28",
+   "type": "association",
+   "competence": "Plafonds et plafonnement global",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Associez chaque plafond ou seuil à sa valeur pour l'imposition 2026 des revenus 2025.",
+    "gauche": [
+     "Plafond épargne retraite",
+     "Plafonnement global de droit commun",
+     "Plafonnement global avec outre-mer ou Sofica",
+     "Seuil de restitution du surplus d'un crédit d'impôt"
+    ],
+    "droite": [
+     "Imprimé sur l'avis : année en cours plus reliquats des trois années précédentes",
+     "10 000 €",
+     "18 000 €",
+     "8 €"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      3,
+      3
+     ]
+    ]
+   },
+   "explication": "Plafond épargne retraite sur l'avis, plafonnement global 10 000 € ou 18 000 €, restitution du crédit au-delà de 8 €."
+  },
+  {
+   "cle": "i29",
+   "type": "association",
+   "competence": "Effet réel selon la TMI",
+   "difficulte": 2,
+   "payload": {
+    "enonce": "Cas fictifs. Associez chaque versement déductible, resté dans la tranche, à l'économie d'impôt approximative.",
+    "gauche": [
+     "TMI 11 %, versement de 6 000 €",
+     "TMI 30 %, versement de 6 000 €",
+     "TMI 41 %, versement de 10 000 €"
+    ],
+    "droite": [
+     "Environ 660 €",
+     "Environ 1 800 €",
+     "Environ 4 100 €"
+    ]
+   },
+   "corrige": {
+    "paires": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ]
+    ]
+   },
+   "explication": "L'économie vaut environ le versement multiplié par la TMI tant qu'il reste dans la tranche."
+  },
+  {
+   "cle": "i30",
+   "type": "trou_choix",
+   "competence": "Trois mécanismes fiscaux",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Une réduction d'impôt ne profite qu'à un client ___.",
+    "choix": [
+     "imposable",
+     "non imposable",
+     "en tranche à 45 %",
+     "titulaire d'un PER"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Sans impôt dû, une réduction ne produit rien et ne se rembourse pas."
+  },
+  {
+   "cle": "i31",
+   "type": "trou_choix",
+   "competence": "Plafonds et plafonnement global",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "Le plafonnement global est porté à 18 000 € en présence d'investissements ___ ou de souscriptions Sofica.",
+    "choix": [
+     "outre-mer",
+     "locatifs",
+     "en épargne retraite",
+     "en emploi à domicile"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Le plafond de 10 000 € passe à 18 000 € avec des investissements outre-mer ou des souscriptions Sofica."
+  },
+  {
+   "cle": "i32",
+   "type": "trou_choix",
+   "competence": "Sortie, blocage et reprise",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "Dans un Girardin, la réduction d'impôt s'impute sur l'impôt de l'année ___.",
+    "choix": [
+     "suivante",
+     "en cours",
+     "précédente",
+     "de la retraite"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "La réduction s'impute l'année suivante ; la part non imputée peut être reportée jusqu'à la cinquième année."
+  },
+  {
+   "cle": "i33",
+   "type": "trou_choix",
+   "competence": "Bilan économique complet",
+   "difficulte": 2,
+   "payload": {
+    "phrase": "Un dispositif sans objectif de vie est un ___, pas une stratégie.",
+    "choix": [
+     "produit",
+     "placement",
+     "report d'imposition",
+     "avantage fiscal"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Le dispositif se relie à un objectif de vie ; sans objectif, la prochaine étape est un bilan patrimonial."
+  },
+  {
+   "cle": "i34",
+   "type": "trou_saisie",
+   "competence": "Plafonds et plafonnement global",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Pour l'imposition 2026 des revenus 2025, le plafonnement global des avantages fiscaux est de ___ € hors outre-mer et Sofica.",
+    "aide": "Un montant en euros."
+   },
+   "corrige": {
+    "reponses": [
+     "10 000",
+     "10000",
+     "10 000 €",
+     "10000 €",
+     "dix mille"
+    ]
+   },
+   "explication": "Le plafonnement global de droit commun est de 10 000 €, porté à 18 000 € dans certains cas."
+  },
+  {
+   "cle": "i35",
+   "type": "trou_saisie",
+   "competence": "Sortie, blocage et reprise",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Un dispositif Girardin impose une durée de portage minimale de ___ ans.",
+    "aide": "Un chiffre."
+   },
+   "corrige": {
+    "reponses": [
+     "5",
+     "cinq"
+    ]
+   },
+   "explication": "La durée de portage minimale d'un Girardin est de cinq ans."
+  },
+  {
+   "cle": "i36",
+   "type": "trou_saisie",
+   "competence": "Trois mécanismes fiscaux",
+   "difficulte": 3,
+   "payload": {
+    "phrase": "Le surplus d'un crédit d'impôt n'est restitué que s'il dépasse ___ €.",
+    "aide": "Un très petit montant."
+   },
+   "corrige": {
+    "reponses": [
+     "8",
+     "huit",
+     "8 €"
+    ]
+   },
+   "explication": "Les très petits montants ne sont pas restitués : le surplus de crédit n'est remboursé qu'au-delà de 8 €."
+  },
+  {
+   "cle": "i37",
+   "type": "trou_saisie",
+   "competence": "Effet réel selon la TMI",
+   "difficulte": 1,
+   "payload": {
+    "phrase": "Le taux de la dernière tranche atteinte par le revenu imposable est la tranche ___ d'imposition.",
+    "aide": "Un adjectif, celui du M de TMI."
+   },
+   "corrige": {
+    "reponses": [
+     "marginale",
+     "Marginale",
+     "marginal"
+    ]
+   },
+   "explication": "La tranche marginale d'imposition, ou TMI, est le taux de la dernière tranche atteinte."
+  },
+  {
+   "cle": "i38",
+   "type": "carte",
+   "competence": "Trois mécanismes fiscaux",
+   "difficulte": 1,
+   "payload": {
+    "recto": "Déduction, réduction, crédit : la phrase à retenir sur ce que vaut chacun ?",
+    "verso": "Une déduction vaut la tranche du client, une réduction au plus l'impôt dû, un crédit sa valeur faciale."
+   },
+   "corrige": {},
+   "explication": "Cette phrase résume l'effet réel des trois mécanismes pour le client."
+  },
+  {
+   "cle": "i39",
+   "type": "carte",
+   "competence": "Bilan économique complet",
+   "difficulte": 1,
+   "payload": {
+    "recto": "Les cinq questions à poser avant de proposer un dispositif à avantage fiscal ?",
+    "verso": "Coût, durée d'immobilisation, sortie, reprise possible de l'avantage, épargne de précaution intacte."
+   },
+   "corrige": {},
+   "explication": "L'avantage fiscal est une pièce du bilan économique, jamais le bilan lui-même."
+  },
+  {
+   "cle": "i40",
+   "type": "carte",
+   "competence": "Lecture de l'avis d'imposition",
+   "difficulte": 2,
+   "payload": {
+    "recto": "Que dire au client avant de citer un chiffre sur un versement déductible ?",
+    "verso": "Nommer le mécanisme : le versement diminue le revenu imposable, pas directement l'impôt, puis regarder ensemble ce que cela représente."
+   },
+   "corrige": {},
+   "explication": "Le mécanisme se nomme avant le chiffre ; la simulation chiffrée appartient à l'étude, pas à la conversation."
+  }
+ ]
+}

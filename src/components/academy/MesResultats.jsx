@@ -1,44 +1,24 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// MES RÉSULTATS : l historique daté des tentatives du collaborateur
+// MES RÉSULTATS : ce que le collaborateur a fait, et ce qui reste fragile
 //
-// Un tableau de toutes les tentatives soumises (quiz et révisions), et en
-// tête, par module, le premier score, le dernier, le meilleur et le nombre
-// de tentatives : c est la progression qui compte, pas la note isolée. Les
-// révisions se lisent à part des quiz dans ces agrégats. Un module sans
-// tentative dit « Non évalué », jamais 0. Une frise chronologique reprend
-// le tout dans l ordre.
+// La série et la meilleure série, l XP total, l XP par semaine (barres CSS
+// doublées d’un tableau lisible), toutes les sessions terminées, puis les
+// « Exercices à consolider » : les items dont la force est basse, avec leur
+// prochaine date de révision et le bouton qui ouvre une session sur le deck
+// concerné. C’est la progression qui compte, pas la note isolée.
+//
+// Conteneur (academy_mes_resultats) et présentation séparés.
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { useEffect, useState } from 'react'
-import { mesTentatives } from '../../services/academy'
+import { mesResultats } from '../../services/academy'
 import { messageErreur } from '../../lib/ui-shared'
-import { formatScore } from '../../lib/academy/quiz'
-import { formatDuree, jourParis, pourcentage } from '../../lib/academy/format'
+import { dateHeureParis, jourParis, semaineLibelle } from '../../lib/academy/format'
+import { Flamme } from './Couronnes'
 import { SkeletonTable } from '../ui/Skeleton'
 
-const TYPE_LIBELLE = { quiz: 'Quiz', revision_j7: 'Révision J+7', revision_j30: 'Révision J+30' }
+const FORCE_MAX = 5
 const pluriel = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`
-const score = (t) => (t && Number(t.total) > 0 ? formatScore(t.score, t.total) : null)
-const NonEvalue = () => <span className="ac-italique">Non évalué</span>
-
-// Par module (version) : les quiz d un côté, les révisions de l autre, dans
-// l ordre chronologique, avec premier, dernier, meilleur et compte.
-function agregerParModule(tentatives) {
-  const parVersion = new Map()
-  for (const t of tentatives) {
-    if (!parVersion.has(t.version_id)) parVersion.set(t.version_id, { version_id: t.version_id, titre: t.titre, slug: t.slug, quiz: [], revisions: [] })
-    const g = parVersion.get(t.version_id)
-    ;(t.type === 'quiz' ? g.quiz : g.revisions).push(t)
-  }
-  const tri = (a, b) => String(a.soumise_le || '').localeCompare(String(b.soumise_le || ''))
-  const resume = (liste) => {
-    const l = [...liste].sort(tri)
-    if (l.length === 0) return { premier: null, dernier: null, meilleur: null, nombre: 0 }
-    const meilleur = l.reduce((m, t) => (pourcentage(t.score, t.total) > pourcentage(m.score, m.total) ? t : m), l[0])
-    return { premier: l[0], dernier: l[l.length - 1], meilleur, nombre: l.length }
-  }
-  return [...parVersion.values()].map((g) => ({ ...g, quiz: resume(g.quiz), revisions: resume(g.revisions) }))
-}
 
 function Entete({ sousTitre }) {
   return (
@@ -52,21 +32,99 @@ function Entete({ sousTitre }) {
   )
 }
 
-export function MesResultatsVue({ tentatives, onNaviguer }) {
-  const liste = Array.isArray(tentatives) ? tentatives : []
-  const modules = agregerParModule(liste)
-  const chrono = [...liste].sort((a, b) => String(b.soumise_le || '').localeCompare(String(a.soumise_le || '')))
+function Kpi({ kicker, valeur, sous, avant }) {
+  return (
+    <div className="card card-p">
+      <div className="ac-kpi-kicker">{kicker}</div>
+      <div className="ac-serie">
+        {avant}
+        <div className="ac-kpi-valeur">{valeur}</div>
+      </div>
+      {sous && <div className="ac-kpi-sous">{sous}</div>}
+    </div>
+  )
+}
 
-  if (liste.length === 0) {
+// L XP par semaine : une barre par semaine (hauteur relative au maximum),
+// puis le tableau qui porte les chiffres exacts.
+function Semaines({ semaines }) {
+  const liste = Array.isArray(semaines) ? semaines : []
+  if (liste.length === 0) return <div className="ac-muet">Aucune session terminée ces douze dernières semaines.</div>
+  const max = Math.max(1, ...liste.map((s) => Number(s.xp) || 0))
+  return (
+    <div className="card card-p">
+      <div className="ac-barres" aria-hidden="true">
+        {liste.map((s) => {
+          const xp = Number(s.xp) || 0
+          return (
+            <div key={s.semaine} className="ac-barre">
+              <div className="ac-barre-colonne">
+                <div className="ac-barre-plein" style={{ height: `${Math.round((100 * xp) / max)}%` }} />
+              </div>
+              <div className="ac-barre-libelle">{jourParis(s.semaine).slice(0, 5)}</div>
+            </div>
+          )
+        })}
+      </div>
+      <div className="table-wrap">
+        <table className="data-table">
+          <thead>
+            <tr><th>Semaine</th><th>XP</th><th>Sessions</th></tr>
+          </thead>
+          <tbody>
+            {liste.map((s) => (
+              <tr key={s.semaine}>
+                <td className="cell-primary">{semaineLibelle(s.semaine)}</td>
+                <td className="cell-mono">{Number(s.xp) || 0}</td>
+                <td className="cell-mono">{Number(s.sessions) || 0}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+// Un exercice faible : force sur cinq, prochaine révision, session sur le deck.
+function ItemFaible({ item, aujourdhui, onNaviguer }) {
+  const force = Math.max(0, Math.min(FORCE_MAX, Number(item.force) || 0))
+  const prochaine = item.prochaine_le ? String(item.prochaine_le) : ''
+  const due = prochaine && aujourdhui ? new Date(prochaine).getTime() <= new Date(aujourdhui).getTime() : false
+  return (
+    <li className="card card-p ac-ligne ac-faible">
+      <div className="ac-croissance">
+        <div className="priority-item-client">{item.enonce_court || 'Exercice'}</div>
+        <div className="priority-item-detail">{[item.titre_module, item.competence].filter(Boolean).join(' · ')}</div>
+        <div className="ac-force" aria-label={`Force ${force} sur ${FORCE_MAX}`}>
+          {Array.from({ length: FORCE_MAX }).map((_, i) => <span key={i} className={`ac-force-point${i < force ? ' on' : ''}`} />)}
+          <span className="ac-muet">force {force}/{FORCE_MAX}{prochaine ? ` · ${due ? 'à revoir depuis le' : 'prochaine révision le'} ${jourParis(prochaine)}` : ''}</span>
+        </div>
+      </div>
+      <button type="button" className="btn btn-primary btn-sm" onClick={() => onNaviguer?.(`#/formation/entrainement/${item.version_id}`)}>S’entraîner</button>
+    </li>
+  )
+}
+
+export function MesResultatsVue({ resultats, aujourdhui, onNaviguer }) {
+  const r = resultats || {}
+  const sessions = Array.isArray(r.sessions) ? r.sessions : []
+  const faibles = Array.isArray(r.items_faibles) ? r.items_faibles : []
+  const serie = Number(r.serie) || 0
+  const meilleure = Number(r.meilleure) || 0
+  const xpTotal = Number(r.xp_total) || 0
+  const jourJ = aujourdhui || null
+
+  if (sessions.length === 0 && faibles.length === 0) {
     return (
       <div>
         <Entete />
         <div className="card">
           <div className="table-empty-state">
-            <div className="empty-title">Aucune tentative pour l instant</div>
-            <div className="empty-sub">Termine les leçons d un module, puis passe son quiz : chaque tentative s inscrit ici, avec sa date et son score.</div>
+            <div className="empty-title">Aucune session pour l’instant</div>
+            <div className="empty-sub">Lance une session de douze exercices sur un deck : chaque session s’inscrit ici avec sa date, ses bonnes réponses et son XP.</div>
             <button type="button" className="btn btn-primary btn-sm" style={{ marginTop: 14 }} onClick={() => onNaviguer?.('#/formation/parcours')}>
-              Voir mon parcours
+              Voir Aujourd hui
             </button>
           </div>
         </div>
@@ -74,101 +132,84 @@ export function MesResultatsVue({ tentatives, onNaviguer }) {
     )
   }
 
-  const reussies = liste.filter((t) => t.reussie).length
+  const bons = sessions.reduce((n, s) => n + (Number(s.nb_bons) || 0), 0)
+  const total = sessions.reduce((n, s) => n + (Number(s.nb_total) || 0), 0)
+
   return (
     <div>
-      <Entete sousTitre={`${pluriel(liste.length, 'tentative', 'tentatives')} · ${reussies} ${reussies > 1 ? 'réussies' : 'réussie'} · ${pluriel(modules.length, 'module', 'modules')}`} />
+      <Entete sousTitre={`${pluriel(sessions.length, 'session terminée', 'sessions terminées')} · ${bons} bonnes réponses sur ${total} · ${xpTotal} XP`} />
 
       <div className="kpi-grid">
-        {modules.map((m) => (
-          <div key={m.version_id} className="card card-p">
-            <div className="ac-kpi-kicker">{m.titre}</div>
-            <div className="ac-kpi-valeur">{score(m.quiz.dernier) || <NonEvalue />}</div>
-            <div className="ac-kpi-sous">
-              {m.quiz.nombre === 0 ? (
-                <span>Aucun quiz passé</span>
-              ) : (
-                <span>
-                  premier {score(m.quiz.premier)} · meilleur {score(m.quiz.meilleur)} · {pluriel(m.quiz.nombre, 'tentative', 'tentatives')}
-                </span>
-              )}
-            </div>
-            <div className="ac-kpi-sous">
-              {m.revisions.nombre === 0 ? 'Révisions : ' : `Révisions : dernière ${score(m.revisions.dernier)} · ${pluriel(m.revisions.nombre, 'faite', 'faites')}`}
-              {m.revisions.nombre === 0 && <NonEvalue />}
-            </div>
-          </div>
-        ))}
+        <Kpi kicker="Série en cours" valeur={pluriel(serie, 'jour', 'jours')} avant={<Flamme eteinte={serie === 0} />} sous={serie === 0 ? 'une session aujourd’hui la relance' : 'jours consécutifs avec une session'} />
+        <Kpi kicker="Meilleure série" valeur={pluriel(meilleure, 'jour', 'jours')} sous="ton record" />
+        <Kpi kicker="XP total" valeur={xpTotal} sous="10 XP par bonne réponse, 5 par carte sue, bonus session parfaite et première du jour" />
+        <Kpi kicker="À consolider" valeur={faibles.length} sous={faibles.length ? 'exercices à force basse' : 'aucun exercice fragile'} />
       </div>
 
-      <section className="ac-bloc" aria-labelledby="ac-mr-table">
-        <h3 id="ac-mr-table" className="ac-bloc-titre">Toutes les tentatives</h3>
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Module</th><th>Type</th><th>Date</th><th>Score</th><th>Résultat</th><th>Durée</th><th>Notions à revoir</th>
-              </tr>
-            </thead>
-            <tbody>
-              {chrono.map((t) => {
-                const notions = Array.isArray(t.notions_a_revoir) ? t.notions_a_revoir : []
-                return (
-                  <tr key={t.id}>
-                    <td className="cell-primary">
-                      <button type="button" className="btn btn-ghost btn-sm" style={{ padding: 0, height: 'auto', fontWeight: 600 }}
-                        onClick={() => onNaviguer?.(`#/formation/module/${t.slug}`)}>
-                        {t.titre}
-                      </button>
-                    </td>
-                    <td>{TYPE_LIBELLE[t.type] || t.type}{t.numero ? ` n° ${t.numero}` : ''}</td>
-                    <td className="cell-mono">{jourParis(t.soumise_le)}</td>
-                    <td className="cell-mono">{score(t) || <NonEvalue />}</td>
-                    <td><span className={`badge ${t.reussie ? 'badge-signed' : 'badge-high'}`}>{t.reussie ? 'Réussi' : 'À revoir'}</span></td>
-                    <td className="cell-mono">{formatDuree(t.duree_s)}</td>
-                    <td>{notions.length ? notions.join(', ') : <span className="ac-muet">aucune</span>}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+      <section className="ac-bloc" aria-labelledby="ac-mr-semaines">
+        <h3 id="ac-mr-semaines" className="ac-bloc-titre">XP par semaine</h3>
+        <Semaines semaines={r.semaines} />
       </section>
 
-      <section className="ac-bloc" aria-labelledby="ac-mr-frise">
-        <h3 id="ac-mr-frise" className="ac-bloc-titre">Chronologie</h3>
-        <ol className="ac-frise">
-          {chrono.map((t) => {
-            const revision = t.type !== 'quiz'
-            const pastille = revision ? 'revision' : t.reussie ? 'reussie' : 'echouee'
-            return (
-              <li key={t.id} className="ac-frise-item">
-                <span className={`ac-frise-pastille ${pastille}`} aria-hidden="true" />
-                <span className="cell-mono">{jourParis(t.soumise_le)}</span>{' · '}
-                <span className="ac-frise-titre">{t.titre}</span>{' · '}
-                {TYPE_LIBELLE[t.type] || t.type} {score(t) || ''} {revision ? (t.reussie ? '(réussie)' : '(à revoir)') : (t.reussie ? '(réussi)' : '(à revoir)')}
-              </li>
-            )
-          })}
-        </ol>
+      <section className="ac-bloc" aria-labelledby="ac-mr-sessions">
+        <h3 id="ac-mr-sessions" className="ac-bloc-titre">Sessions</h3>
+        {sessions.length === 0 ? (
+          <div className="ac-muet">Aucune session terminée.</div>
+        ) : (
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr><th>Deck</th><th>Date</th><th>Bonnes réponses</th><th>XP</th></tr>
+              </thead>
+              <tbody>
+                {sessions.map((s) => (
+                  <tr key={s.id}>
+                    <td className="cell-primary">
+                      <button type="button" className="btn btn-ghost btn-sm" style={{ padding: 0, height: 'auto', fontWeight: 600 }}
+                        onClick={() => onNaviguer?.(`#/formation/module/${s.slug}`)}>
+                        {s.titre}
+                      </button>
+                    </td>
+                    <td className="cell-mono">{dateHeureParis(s.terminee_le || s.demarree_le)}</td>
+                    <td className="cell-mono">{Number(s.nb_bons) || 0}/{Number(s.nb_total) || 0}</td>
+                    <td className="cell-mono">{Number(s.xp) || 0}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section className="ac-bloc" aria-labelledby="ac-mr-faibles">
+        <h3 id="ac-mr-faibles" className="ac-bloc-titre">Exercices à consolider</h3>
+        {faibles.length === 0 ? (
+          <div className="ac-muet">Aucun exercice fragile : tout ce que tu as vu tient au moins à force 3.</div>
+        ) : (
+          <ul className="ac-liste-plate">
+            {faibles.map((item) => <ItemFaible key={item.item_id} item={item} aujourdhui={jourJ} onNaviguer={onNaviguer} />)}
+          </ul>
+        )}
       </section>
     </div>
   )
 }
 
 export default function MesResultats({ onNaviguer }) {
-  const [tentatives, setTentatives] = useState(null)
+  const [resultats, setResultats] = useState(null)
   const [erreur, setErreur] = useState(null)
+  // L instant de l’ouverture : sert à dire si une révision est déjà due.
+  const [aujourdhui] = useState(() => new Date().toISOString())
 
   useEffect(() => {
     let vivant = true
-    mesTentatives()
-      .then((l) => { if (vivant) setTentatives(Array.isArray(l) ? l : []) })
+    mesResultats()
+      .then((r) => { if (vivant) setResultats(r || {}) })
       .catch((e) => { if (vivant) setErreur(messageErreur(e)) })
     return () => { vivant = false }
   }, [])
 
   if (erreur) return <div><Entete /><div className="notice notice-error" role="alert">{erreur}</div></div>
-  if (!tentatives) return <div><Entete /><SkeletonTable rows={5} cols={7} /></div>
-  return <MesResultatsVue tentatives={tentatives} onNaviguer={onNaviguer} />
+  if (!resultats) return <div><Entete /><SkeletonTable rows={5} cols={4} /></div>
+  return <MesResultatsVue resultats={resultats} aujourdhui={aujourdhui} onNaviguer={onNaviguer} />
 }

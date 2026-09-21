@@ -1,10 +1,10 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// ENTASIS ACADEMY, formats d affichage
+// ENTASIS ACADEMY, formats d’affichage
 //
 // Durées, dates et pourcentages des écrans Formation. Les horodatages
 // viennent de Postgres en UTC (timestamptz) : on les affiche toujours à
-// l heure de Paris par Intl, jamais par un découpage de chaîne, sinon un
-// battement de 00h30 s afficherait la veille à 22h30 (le piège documenté
+// l’heure de Paris par Intl, jamais par un découpage de chaîne, sinon un
+// battement de 00h30 s’afficherait la veille à 22h30 (le piège documenté
 // dans ui-shared.js pour les dates de rendez vous).
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -17,10 +17,10 @@ const FORMAT_HEURE = new Intl.DateTimeFormat('fr-FR', {
   timeZone: PARIS, hour: '2-digit', minute: '2-digit', hour12: false,
 })
 
-// Une valeur porte une heure si elle a la forme d un horodatage ISO.
+// Une valeur porte une heure si elle a la forme d’un horodatage ISO.
 const aInstant = (v) => /T\d{2}:\d{2}/.test(String(v || ''))
 
-// Le Date d un horodatage, ou null si la chaîne est vide ou illisible.
+// Le Date d’un horodatage, ou null si la chaîne est vide ou illisible.
 const instant = (iso) => {
   if (!iso) return null
   const d = new Date(String(iso))
@@ -28,7 +28,7 @@ const instant = (iso) => {
 }
 
 // Une date seule (AAAA MM JJ) écrite JJ/MM/AAAA sans passer par un fuseau :
-// un `date` Postgres n a pas d heure, la décaler serait un contresens.
+// un `date` Postgres n’a pas d’heure, la décaler serait un contresens.
 const jourSeul = (iso) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''))
   return m ? `${m[3]}/${m[2]}/${m[1]}` : ''
@@ -36,7 +36,7 @@ const jourSeul = (iso) => {
 
 /**
  * Une durée active en texte court : « 0 min » sous trente secondes,
- * « 2 min », puis « 1 h 05 » à partir d une heure.
+ * « 2 min », puis « 1 h 05 » à partir d’une heure.
  */
 export function formatDuree(secondes) {
   const s = Math.max(0, Number(secondes) || 0)
@@ -47,7 +47,7 @@ export function formatDuree(secondes) {
   return `${h} h ${String(m).padStart(2, '0')}`
 }
 
-/** Le jour à Paris, JJ/MM/AAAA, d un horodatage ou d une date seule. '' sans valeur. */
+/** Le jour à Paris, JJ/MM/AAAA, d un horodatage ou d’une date seule. '' sans valeur. */
 export function jourParis(iso) {
   if (!iso) return ''
   if (!aInstant(iso)) return jourSeul(iso)
@@ -78,7 +78,7 @@ export function semaineLibelle(isoLundi) {
 }
 
 // ── Référentiels du catalogue ───────────────────────────────────────────────
-// Les thèmes et niveaux sont stockés en clés (les slugs du seed) ; l écran
+// Les thèmes et niveaux sont stockés en clés (les slugs du seed) ; l’écran
 // affiche le libellé, et retombe sur la clé pour une valeur inconnue plutôt
 // que sur rien.
 export const THEMES = [

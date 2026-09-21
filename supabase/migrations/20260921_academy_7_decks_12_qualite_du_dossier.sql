@@ -1,0 +1,222 @@
+-- Entasis Academy, migration 7 : les decks d exercices (mode entrainement).
+--
+-- Genere par scripts/academy/generer-decks.mjs depuis scripts/academy/decks/*.json :
+-- ne pas editer a la main, regenerer. Un deck = un memo d une page et une
+-- quarantaine d exercices (huit types), tout en BROUILLON, a relire avant
+-- publication. Les corriges vont dans academy_items_corriges (illisible en
+-- direct). Idempotent : une version qui porte deja des items est ignoree.
+--
+-- Contenu : la trame du rendez vous d audit patrimonial (deux pages de
+-- Louis, 21 septembre 2026) et les douze modules du catalogue convertis
+-- depuis leurs lecons verifiees, sans fait nouveau.
+
+-- ── Deck : Qualité du dossier et vigilance (qualite-du-dossier) ──
+do $deck_qualite_du_dossier$
+declare v_mod uuid; v_ver uuid; v_numero integer; v_statut text; v_item uuid; v_p uuid;
+begin
+  select id into v_mod from public.academy_modules where slug = $academy_deck$qualite-du-dossier$academy_deck$;
+  if v_mod is null then
+    insert into public.academy_modules (slug, titre, theme, niveau, ordre)
+    values ($academy_deck$qualite-du-dossier$academy_deck$, $academy_deck$Qualité du dossier et vigilance$academy_deck$, $academy_deck$methode$academy_deck$, $academy_deck$fondamentaux$academy_deck$, 0)
+    returning id into v_mod;
+    insert into public.academy_module_versions (module_id, numero, statut, titre, objectif, competence, duree_minutes, prerequis, seuil_reussite, sources, memo_md)
+    values (v_mod, 1, 'brouillon', $academy_deck$Qualité du dossier et vigilance$academy_deck$, $academy_deck$$academy_deck$, $academy_deck$Identifier pièces manquantes, incohérences et besoin d'escalade$academy_deck$, 10, '[]'::jsonb, 0.80, $academy_deck$[]$academy_deck$::jsonb, '')
+    returning id into v_ver;
+  else
+    select id into v_ver from public.academy_module_versions where module_id = v_mod and statut = 'brouillon' order by numero desc limit 1;
+    if v_ver is null then
+      select coalesce(max(numero), 0) + 1 into v_numero from public.academy_module_versions where module_id = v_mod;
+      insert into public.academy_module_versions (module_id, numero, statut, titre, objectif, competence, duree_minutes, prerequis, seuil_reussite, cas_pratique, a_completer, sources, fictif, memo_md)
+      select v_mod, v_numero, 'brouillon', titre, objectif, competence, duree_minutes, prerequis, seuil_reussite, cas_pratique, a_completer, sources, fictif, ''
+        from public.academy_module_versions where module_id = v_mod order by (statut = 'publie') desc, numero desc limit 1
+      returning id into v_ver;
+    end if;
+  end if;
+  if exists (select 1 from public.academy_items where version_id = v_ver) then
+    return;
+  end if;
+  update public.academy_module_versions set memo_md = $academy_deck$Le dossier prouve, il ne raconte pas : chaque information importante s'appuie sur une pièce datée.
+
+## Trois questions avant l'étude
+- Qui est cette personne, d'où vient l'argent, ce qu'elle veut faire.
+- Identité vérifiée sur document probant (L561-5), objet de la relation (L561-5-1), connaissance tenue à jour (L561-6).
+- Sans ces éléments : aucune opération, aucune relation (L561-8).
+- Une pièce produite après l'opération ne régularise rien. L'ancienneté du client ne dispense pas d'un dossier à jour.
+
+## Lire les incohérences
+- Croiser ce que le client dit, ce que les pièces montrent, ce que le projet suppose.
+- Quatre croisements : revenus contre avis d'imposition ; montant contre patrimoine et origine ; horizon contre besoin de liquidité ; risque déclaré contre expérience réelle.
+- Une incohérence se questionne avec neutralité et se documente : version corrigée, date, source, pièce. Corriger seul, c'est fabriquer le dossier.
+
+## Trois niveaux de réaction
+- Pièce manquante ou écart explicable : réglé avec le client.
+- Opération complexe, montant inhabituel ou sans logique économique : examen renforcé (L561-10-2) : origine et destination des fonds, objet, bénéficiaire.
+- Soupçon (infraction punie de plus d'un an d'emprisonnement, fraude fiscale) : déclaration à Tracfin (L561-15) par la personne habilitée (R561-23), inscrite sur ERMES.
+
+## Escalader
+- Rien à signer ; remontée écrite, datée, les faits sans qualification, le jour même.
+- Ne jamais informer le client d'un signalement (L561-18) : amende de 22 500 euros (L574-1).
+- « Je dois vérifier quelques éléments de mon côté avant de vous répondre. »
+$academy_deck$, competence = coalesce(nullif($academy_deck$Identifier pièces manquantes, incohérences et besoin d'escalade$academy_deck$, ''), competence), updated_at = now() where id = v_ver;
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 1, $academy_deck$choix$academy_deck$, $academy_deck$Pièces du dossier$academy_deck$, 1, $academy_deck${"enonce":"Avant d'entrer en relation d'affaires, que demande l'article L561-5 du Code monétaire et financier ?","choix":["Recueillir l'objet et la nature de la relation d'affaires","Identifier le client et vérifier son identité sur un document écrit à caractère probant","Examiner la cohérence des opérations avec la connaissance actualisée du client","Se renseigner sur l'origine et la destination des fonds"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":1}$academy_deck$::jsonb, $academy_deck$L'article L561-5 impose l'identification et la vérification de l'identité sur un document probant ; les autres obligations relèvent des articles L561-5-1, L561-6 et L561-10-2.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 2, $academy_deck$choix$academy_deck$, $academy_deck$Origine des fonds$academy_deck$, 1, $academy_deck${"enonce":"Cas fictif. Une cliente explique que les 180 000 euros à investir proviennent de la vente d'un appartement. Quelle pièce documente le mieux cette origine des fonds ?","choix":["Une attestation sur l'honneur rédigée par la cliente","Un relevé de compte montrant le solde actuel","L'acte de vente ou l'attestation notariée, avec le relevé montrant l'arrivée des fonds","Le dernier avis d'imposition"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":2}$academy_deck$::jsonb, $academy_deck$L'origine des fonds s'appuie sur la pièce qui établit l'événement et celle qui relie cet événement aux sommes reçues.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 3, $academy_deck$choix$academy_deck$, $academy_deck$Pièces du dossier$academy_deck$, 2, $academy_deck${"enonce":"Un client a remis toutes ses pièces sauf le justificatif d'origine des 150 000 euros à investir. Il propose de signer aujourd'hui et d'envoyer l'acte de vente la semaine prochaine. Que faites-vous ?","choix":["Signer aujourd'hui et noter la pièce à recevoir dans le CRM","Suspendre la souscription jusqu'à réception de la pièce, sans renoncer au dossier","Remplacer la pièce par une attestation sur l'honneur signée du client","Renoncer au dossier, le client cherche à contourner la règle"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":1}$academy_deck$::jsonb, $academy_deck$Sans origine des fonds documentée, aucune opération ; une pièce produite après l'opération ne régularise rien, et une semaine d'attente ne justifie pas un renoncement.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 4, $academy_deck$choix$academy_deck$, $academy_deck$Pièces du dossier$academy_deck$, 2, $academy_deck${"enonce":"Une SARL souhaite placer sa trésorerie. Le gérant remet sa carte d'identité et un extrait d'immatriculation datant de quatorze mois. Que manque-t-il en priorité pour entrer en relation ?","choix":["Rien, la pièce d'identité du gérant suffit pour une société","Un extrait d'immatriculation récent et l'identification des bénéficiaires effectifs","Les trois derniers bilans de la société","Le justificatif de domicile personnel du gérant uniquement"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":1}$academy_deck$::jsonb, $academy_deck$Pour une société, le dossier comporte un extrait d'immatriculation récent, les statuts et l'identification des bénéficiaires effectifs ; les bilans relèvent de l'étude.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 5, $academy_deck$choix$academy_deck$, $academy_deck$Détecter les incohérences$academy_deck$, 2, $academy_deck${"enonce":"Cas fictif. Le questionnaire de Monsieur Lecoq indique 60 000 euros de revenus annuels, son avis d'imposition 38 000 euros. Il veut placer 250 000 euros d'économies. Quelle est la bonne suite ?","choix":["Corriger le questionnaire pour l'aligner sur l'avis d'imposition","Ignorer l'écart, il ne change pas la recommandation","Questionner le client sur l'écart et sur l'origine des 250 000 euros, puis noter la réponse et la pièce","Remonter immédiatement le dossier pour déclaration à Tracfin"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":2}$academy_deck$::jsonb, $academy_deck$Une incohérence se questionne avec neutralité et se documente ; corriger seul revient à fabriquer le dossier, escalader avant d'interroger le client est prématuré.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 6, $academy_deck$choix$academy_deck$, $academy_deck$Détecter les incohérences$academy_deck$, 3, $academy_deck${"enonce":"Un client déclare un horizon de quinze ans pour « préparer la retraite », puis évoque un achat immobilier dans dix-huit mois qui mobilisera la majeure partie de la somme à placer. Quelle incohérence traitez-vous en priorité et avec quelle conséquence ?","choix":["Le profil de risque doit être relevé pour tenir les deux objectifs","L'horizon et le besoin de liquidité contredisent l'objectif : réinterroger le client avant toute recommandation d'enveloppe peu disponible","Aucune : deux projets différents peuvent coexister sans conséquence","Proposer un PER pour la retraite et conserver le reste sur le compte courant"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":1}$academy_deck$::jsonb, $academy_deck$Horizon et objectif contre besoin de liquidité est l'un des quatre croisements ; aucune enveloppe à liquidité contrainte tant que l'écart n'est pas résolu.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 7, $academy_deck$choix$academy_deck$, $academy_deck$Examen renforcé$academy_deck$, 3, $academy_deck${"enonce":"Un client connu du cabinet, coopératif, souhaite réaliser une opération d'un montant très supérieur à tout ce que son dossier laissait attendre, sans logique économique apparente. Que demande la loi au cabinet ?","choix":["Refuser l'opération d'office","Réaliser un examen renforcé : origine et destination des fonds, objet de l'opération, bénéficiaire, réponses documentées","Ne rien faire de particulier, le client est connu et coopératif","Effectuer automatiquement une déclaration de soupçon"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":1}$academy_deck$::jsonb, $academy_deck$L'article L561-10-2 impose un examen renforcé des opérations d'un montant inhabituellement élevé ou sans justification économique apparente, ni refus ni déclaration automatiques.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 8, $academy_deck$choix$academy_deck$, $academy_deck$Escalade et confidentialité$academy_deck$, 2, $academy_deck${"enonce":"Cas fictif. Monsieur Tavares veut verser 400 000 euros en trois virements depuis deux banques dont une à l'étranger, et refuse d'expliquer l'origine des fonds. Que faites-vous ?","choix":["Avancer, la compagnie d'assurance fera ses propres contrôles","Effectuer vous-même une déclaration à Tracfin depuis votre poste","Ne rien faire signer et remonter les faits par écrit au responsable désigné","Informer le client qu'un signalement sera fait s'il ne fournit pas la pièce"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":2}$academy_deck$::jsonb, $academy_deck$Aucune opération tant que le doute n'est pas levé, remontée écrite et factuelle ; l'obligation du cabinet ne se délègue pas à la compagnie.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 9, $academy_deck$choix$academy_deck$, $academy_deck$Escalade et confidentialité$academy_deck$, 1, $academy_deck${"enonce":"Qui effectue la déclaration de soupçon à Tracfin au nom du cabinet ?","choix":["Le conseiller qui a reçu le client, dès qu'il a un doute","Le dirigeant ou le préposé habilité que le cabinet a déclaré à Tracfin et à l'AMF","La compagnie d'assurance qui reçoit les fonds","L'AMF, sur signalement du cabinet"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":1}$academy_deck$::jsonb, $academy_deck$L'article R561-23 réserve la déclaration aux dirigeants ou préposés habilités que le cabinet a déclarés, pas au conseiller de son propre chef.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 10, $academy_deck$choix$academy_deck$, $academy_deck$Escalade et confidentialité$academy_deck$, 3, $academy_deck${"enonce":"En fin de rendez-vous, un client dont l'origine des fonds vous inquiète sérieusement demande si tout est en ordre pour signer. Quelle réponse est conforme ?","choix":["« Tout est en ordre, nous signerons la semaine prochaine. »","« Je dois vérifier quelques éléments de mon côté avant de vous répondre, je reviens vers vous. »","« J'ai un doute sur l'origine de vos fonds, une déclaration pourrait suivre. »","« Vos virements sont suspects, je ne peux pas vous suivre. »"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":1}$academy_deck$::jsonb, $academy_deck$Ton calme et factuel : ne pas rassurer à tort, ne pas menacer, ne pas révéler qu'un signalement est envisagé.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 11, $academy_deck$vrai_faux$academy_deck$, $academy_deck$Pièces du dossier$academy_deck$, 1, $academy_deck${"enonce":"Un client suivi depuis dix ans par le cabinet, sans aucun incident, n'a pas besoin que ses pièces d'identité et sa situation soient actualisées dans le dossier."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"vrai":false}$academy_deck$::jsonb, $academy_deck$L'AMF est explicite : l'ancienneté de la relation ou l'absence apparente de risque ne dispense pas d'un dossier à jour.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 12, $academy_deck$vrai_faux$academy_deck$, $academy_deck$Détecter les incohérences$academy_deck$, 1, $academy_deck${"enonce":"Une incohérence entre le questionnaire et une pièce du dossier signifie que le client cherche à tromper le cabinet."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"vrai":false}$academy_deck$::jsonb, $academy_deck$Le plus souvent, c'est une erreur de saisie, un oubli ou une information dépassée ; elle se questionne et se documente, sans accusation.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 13, $academy_deck$vrai_faux$academy_deck$, $academy_deck$Escalade et confidentialité$academy_deck$, 3, $academy_deck${"enonce":"Par souci de transparence, le conseiller doit prévenir le client qu'une déclaration de soupçon a été effectuée à son sujet."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"vrai":false}$academy_deck$::jsonb, $academy_deck$L'article L561-18 interdit de révéler l'existence, le contenu ou les suites d'une déclaration ; la divulgation est une infraction pénale.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 14, $academy_deck$vrai_faux$academy_deck$, $academy_deck$Pièces du dossier$academy_deck$, 1, $academy_deck${"enonce":"Lors d'un contrôle, la date des pièces du dossier est comparée à la date de l'opération."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"vrai":true}$academy_deck$::jsonb, $academy_deck$Le contrôle compare les dates : une pièce obtenue après l'opération ne répare pas un dossier incomplet au moment de l'opération.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 15, $academy_deck$vrai_faux$academy_deck$, $academy_deck$Escalade et confidentialité$academy_deck$, 2, $academy_deck${"enonce":"Tant que le doute sur l'origine des fonds n'est pas levé, le cabinet n'exécute aucune opération, même si la compagnie d'assurance effectuera ses propres contrôles."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"vrai":true}$academy_deck$::jsonb, $academy_deck$L'article L561-8 s'applique au cabinet, dont l'obligation de vigilance ne se délègue pas à la compagnie.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 16, $academy_deck$vrai_faux$academy_deck$, $academy_deck$Détecter les incohérences$academy_deck$, 2, $academy_deck${"enonce":"Une explication orale du client sur un écart du dossier ne compte que si elle est écrite dans la fiche et appuyée par une pièce."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"vrai":true}$academy_deck$::jsonb, $academy_deck$L'AMF rappelle que des échanges informels ne remplacent pas une actualisation formalisée et documentée des informations.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 17, $academy_deck$multi$academy_deck$, $academy_deck$Pièces du dossier$academy_deck$, 1, $academy_deck${"enonce":"Cochez tout ce qui figure parmi les manquements les plus fréquents relevés par l'AMF dans sa synthèse des contrôles de juin 2026.","choix":["Dossier sans pièce d'identité","Dossier sans justificatif de domicile","Aucun élément sur l'origine des fonds","Absence de plaquette de présentation du cabinet","Absence de simulation chiffrée dans la feuille de route","Contrat non disponible chez l'assureur"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"indices":[0,1,2]}$academy_deck$::jsonb, $academy_deck$L'AMF cite les dossiers sans pièce d'identité, sans justificatif de domicile, sans élément sur l'origine des fonds ou avec des documents obsolètes.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 18, $academy_deck$multi$academy_deck$, $academy_deck$Détecter les incohérences$academy_deck$, 2, $academy_deck${"enonce":"Cochez tout ce qui fait partie des croisements recommandés pour repérer une incohérence dans un dossier.","choix":["Revenus déclarés dans le questionnaire contre avis d'imposition","Montant à investir contre patrimoine déclaré et origine des fonds documentée","Horizon et objectif contre besoin de liquidité","Âge du client contre durée du contrat proposé","Frais du contrat visé contre frais des contrats concurrents","Nombre de rendez-vous contre ancienneté de la relation"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"indices":[0,1,2]}$academy_deck$::jsonb, $academy_deck$Les quatre croisements : revenus contre avis, montant contre patrimoine et origine, horizon contre liquidité, risque déclaré contre expérience réelle.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 19, $academy_deck$multi$academy_deck$, $academy_deck$Examen renforcé$academy_deck$, 1, $academy_deck${"enonce":"Cochez tout ce sur quoi le cabinet se renseigne lors d'un examen renforcé, selon l'article L561-10-2.","choix":["L'origine et la destination des fonds","L'objet de l'opération","L'identité de la personne qui bénéficie de l'opération","Le rapport au risque déclaré par le client","La résidence fiscale du client","L'expérience financière du client"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"indices":[0,1,2]}$academy_deck$::jsonb, $academy_deck$L'examen renforcé porte sur l'origine et la destination des fonds, l'objet de l'opération et son bénéficiaire ; le reste relève du dossier de base.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 20, $academy_deck$multi$academy_deck$, $academy_deck$Escalade et confidentialité$academy_deck$, 2, $academy_deck${"enonce":"Cochez tout ce qui caractérise une escalade correcte d'un dossier douteux vers le responsable désigné.","choix":["Elle est faite par écrit","Elle est datée","Elle rapporte les faits observés, sans qualification ni interprétation","Elle contient votre conclusion sur l'infraction soupçonnée","Elle intervient après avoir prévenu le client","Elle se fait oralement pour gagner du temps"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"indices":[0,1,2]}$academy_deck$::jsonb, $academy_deck$Une escalade se fait par écrit, datée, avec les faits ; ni interprétation, ni information du client, ni échange de couloir.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 21, $academy_deck$multi$academy_deck$, $academy_deck$Origine des fonds$academy_deck$, 3, $academy_deck${"enonce":"Cas fictif. Un dossier repris d'un collègue parti montre 310 000 euros arrivés il y a cinq semaines par virement d'une SCI. Cochez tout ce qui en fait un signal d'alerte.","choix":["Le montant est inhabituellement élevé au regard des revenus connus","La SCI ne figure nulle part dans la fiche client","Le client presse pour signer cette semaine","Le client exerce une profession libérale","Sa carte d'identité est expirée depuis quatre mois","Sa situation familiale diffère entre la fiche et l'avis d'imposition"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"indices":[0,1,2]}$academy_deck$::jsonb, $academy_deck$Montant inhabituel, provenance inconnue et pression sur le calendrier appellent l'examen renforcé ; la pièce expirée et l'écart familial se traitent avec le client.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 22, $academy_deck$ordre$academy_deck$, $academy_deck$Pièces du dossier$academy_deck$, 1, $academy_deck${"enonce":"Remettez dans l'ordre la gestion des pièces, du premier entretien à l'ouverture de l'étude.","elements":["Envoyer la liste des pièces par écrit après le rendez-vous","Annoncer les pièces dès le premier entretien : « c'est la même règle pour tout le monde »","Noter dans le CRM ce qui est reçu, ce qui manque et la date de chaque pièce","Ouvrir l'étude une fois l'identité et l'origine des fonds documentées"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"ordre":[1,0,2,3]}$academy_deck$::jsonb, $academy_deck$Annonce orale, liste écrite, suivi daté dans le CRM, puis étude seulement quand identité et origine des fonds sont prouvées.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 23, $academy_deck$ordre$academy_deck$, $academy_deck$Détecter les incohérences$academy_deck$, 2, $academy_deck${"enonce":"Remettez dans l'ordre le traitement d'une incohérence entre la fiche client et une pièce du dossier.","elements":["Surligner les écarts dans la fiche avant le rendez-vous","Reformuler la réponse du client et dire quelle pièce la documentera","Mettre à jour la fiche avec la version corrigée, la date et la source","Escalader si l'écart persiste sans explication crédible","Aborder l'écart avec neutralité, comme un point de méthode"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"ordre":[0,4,1,2,3]}$academy_deck$::jsonb, $academy_deck$Préparer, questionner sans soupçon, reformuler, écrire avec date et source, et n'escalader que si l'écart persiste.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 24, $academy_deck$ordre$academy_deck$, $academy_deck$Escalade et confidentialité$academy_deck$, 2, $academy_deck${"enonce":"Cas fictif. Un client refuse d'expliquer l'origine de 400 000 euros. Remettez dans l'ordre ce que fait le conseiller.","elements":["Attendre sa réponse avant tout nouveau contact sur ce dossier","Transmettre par écrit au responsable désigné, le jour même","Noter dans le CRM les faits tels qu'observés","Clore le rendez-vous sans rien faire signer ni promettre"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"ordre":[3,2,1,0]}$academy_deck$::jsonb, $academy_deck$Rien signé, faits notés, remontée écrite le jour même, puis silence sur le dossier jusqu'à la réponse du responsable.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 25, $academy_deck$ordre$academy_deck$, $academy_deck$Examen renforcé$academy_deck$, 3, $academy_deck${"enonce":"Remettez dans l'ordre la gradation des réactions face à un dossier qui pose problème, de la plus courante à la plus grave.","elements":["Soupçon : remontée écrite au responsable désigné","Déclaration à Tracfin par la personne habilitée","Pièce manquante ou écart explicable, réglé avec le client","Opération inhabituelle ou sans logique économique : examen renforcé"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"ordre":[2,3,0,1]}$academy_deck$::jsonb, $academy_deck$Premier niveau avec le client, deuxième niveau examen renforcé, troisième niveau soupçon remonté, puis déclaration par la personne habilitée.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 26, $academy_deck$association$academy_deck$, $academy_deck$Pièces du dossier$academy_deck$, 1, $academy_deck${"enonce":"Associez chaque article du Code monétaire et financier à l'obligation qu'il pose.","gauche":["Article L561-5","Article L561-5-1","Article L561-6","Article L561-8"],"droite":["Recueillir l'objet et la nature de la relation d'affaires","Vérifier l'identité du client sur un document écrit à caractère probant","Tenir la connaissance du client à jour et exercer une vigilance constante","N'exécuter aucune opération si ces éléments ne peuvent être obtenus"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"paires":[[0,1],[1,0],[2,2],[3,3]]}$academy_deck$::jsonb, $academy_deck$L561-5 identité, L561-5-1 objet de la relation, L561-6 vigilance constante, L561-8 aucune opération sans ces éléments.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 27, $academy_deck$association$academy_deck$, $academy_deck$Escalade et confidentialité$academy_deck$, 2, $academy_deck${"enonce":"Associez chaque article du Code monétaire et financier à ce qu'il prévoit en matière de soupçon.","gauche":["Article L561-10-2","Article L561-15","Article L561-18","Article R561-23"],"droite":["Déclaration à Tracfin des sommes soupçonnées de provenir d'une infraction","Confidentialité de la déclaration : interdiction d'en révéler l'existence au client","Examen renforcé des opérations complexes, inhabituelles ou sans justification économique","Désignation des dirigeants ou préposés habilités à déclarer"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"paires":[[0,2],[1,0],[2,1],[3,3]]}$academy_deck$::jsonb, $academy_deck$L561-10-2 examen renforcé, L561-15 déclaration, L561-18 confidentialité, R561-23 personnes habilitées.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 28, $academy_deck$association$academy_deck$, $academy_deck$Détecter les incohérences$academy_deck$, 3, $academy_deck${"enonce":"Cas fictif. Vous reprenez le dossier d'un collègue parti. Associez chaque écart à son classement.","gauche":["Marié, deux enfants dans la fiche ; célibataire sur l'avis d'imposition","140 000 euros de revenus dans la fiche ; 92 000 euros sur l'avis de l'année précédente","310 000 euros reçus d'une SCI inconnue du dossier, client pressé"],"droite":["Point à questionner, une pièce récente doit expliquer l'écart","Erreur probable ou changement récent, à vérifier","Signal d'alerte, examen renforcé"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"paires":[[0,1],[1,0],[2,2]]}$academy_deck$::jsonb, $academy_deck$La situation familiale est une erreur probable, l'écart de revenus un point à questionner, l'origine des fonds inconnue un signal d'alerte.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 29, $academy_deck$association$academy_deck$, $academy_deck$Pièces du dossier$academy_deck$, 2, $academy_deck${"enonce":"Associez chaque élément à connaître à la pièce qui le documente.","gauche":["Identité de la personne","Revenus et fiscalité","Origine de fonds issus d'une vente immobilière","Société cliente"],"droite":["Dernier avis d'imposition","Extrait d'immatriculation récent, statuts et bénéficiaires effectifs","Acte de vente ou attestation notariée","Pièce d'identité en cours de validité"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"paires":[[0,3],[1,0],[2,2],[3,1]]}$academy_deck$::jsonb, $academy_deck$Chaque information importante s'appuie sur une pièce datée : identité, avis d'imposition, acte notarié, extrait et bénéficiaires effectifs.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 30, $academy_deck$trou_choix$academy_deck$, $academy_deck$Pièces du dossier$academy_deck$, 1, $academy_deck${"phrase":"Avant l'entrée en relation, l'identité du client est vérifiée sur un document écrit à caractère ___.","choix":["probant","officiel","récent","original"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":0}$academy_deck$::jsonb, $academy_deck$L'article L561-5 parle d'un document écrit à caractère probant.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 31, $academy_deck$trou_choix$academy_deck$, $academy_deck$Escalade et confidentialité$academy_deck$, 3, $academy_deck${"phrase":"Face à un soupçon, le conseiller ne déclare pas lui-même : il remonte les faits par écrit ___.","choix":["au responsable désigné du cabinet","à Tracfin","à l'AMF","à la compagnie d'assurance"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":0}$academy_deck$::jsonb, $academy_deck$Le conseiller escalade en interne ; la déclaration à Tracfin relève ensuite de la personne habilitée que le cabinet a déclarée.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 32, $academy_deck$trou_choix$academy_deck$, $academy_deck$Détecter les incohérences$academy_deck$, 1, $academy_deck${"phrase":"Modifier le revenu déclaré pour qu'il colle à l'avis d'imposition, c'est ___ un dossier.","choix":["fabriquer","actualiser","compléter","sécuriser"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":0}$academy_deck$::jsonb, $academy_deck$Corriger soi-même un chiffre ou relever un profil de risque pour justifier une allocation, c'est fabriquer un dossier.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 33, $academy_deck$trou_choix$academy_deck$, $academy_deck$Examen renforcé$academy_deck$, 2, $academy_deck${"phrase":"L'examen renforcé s'impose pour une opération particulièrement complexe, d'un montant inhabituellement élevé ou ___.","choix":["sans justification économique apparente","réalisée par une personne politiquement exposée","réglée depuis une banque à l'étranger","demandée par un nouveau client"]}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":0}$academy_deck$::jsonb, $academy_deck$L'article L561-10-2 vise la complexité, le montant inhabituel ou l'absence de justification économique ; les personnes politiquement exposées relèvent de la vigilance complémentaire.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 34, $academy_deck$trou_saisie$academy_deck$, $academy_deck$Escalade et confidentialité$academy_deck$, 1, $academy_deck${"phrase":"La divulgation d'une déclaration de soupçon est punie d'une amende de ___ euros (article L574-1).","aide":"Un montant en euros."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"reponses":["22 500","22500","22.500","22 500 euros"]}$academy_deck$::jsonb, $academy_deck$L'article L574-1 punit la méconnaissance de l'interdiction de divulgation d'une amende de 22 500 euros.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 35, $academy_deck$trou_saisie$academy_deck$, $academy_deck$Escalade et confidentialité$academy_deck$, 2, $academy_deck${"phrase":"Pour déclarer un soupçon, le déclarant doit être inscrit sur la plateforme de télédéclaration de Tracfin, appelée ___.","aide":"Un nom de cinq lettres."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"reponses":["ERMES","Ermes","ermes"]}$academy_deck$::jsonb, $academy_deck$L'inscription sur ERMES en tant que déclarant suppose une désignation formelle au sein du cabinet.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 36, $academy_deck$trou_saisie$academy_deck$, $academy_deck$Escalade et confidentialité$academy_deck$, 2, $academy_deck${"phrase":"La déclaration de soupçon vise les sommes provenant d'une infraction punie de plus de ___ d'emprisonnement.","aide":"Une durée."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"reponses":["un an","1 an","un","1"]}$academy_deck$::jsonb, $academy_deck$L'article L561-15 vise les infractions punies de plus d'un an d'emprisonnement, ou la fraude fiscale selon des critères fixés par décret.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 37, $academy_deck$trou_saisie$academy_deck$, $academy_deck$Origine des fonds$academy_deck$, 1, $academy_deck${"phrase":"Sans identité vérifiée, objet de la relation et ___ des fonds documentés, aucune opération n'est exécutée.","aide":"Un mot : d'où vient l'argent."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"reponses":["origine","Origine","l'origine","provenance"]}$academy_deck$::jsonb, $academy_deck$Les trois éléments sans lesquels aucune opération : identité vérifiée, origine des fonds, objet de la relation.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 38, $academy_deck$carte$academy_deck$, $academy_deck$Pièces du dossier$academy_deck$, 1, $academy_deck${"recto":"Les trois questions à se poser avant d'ouvrir l'étude","verso":"Qui est cette personne, d'où vient l'argent, ce qu'elle veut faire."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${}$academy_deck$::jsonb, $academy_deck$Identité, origine des fonds, objet de la relation : les trois preuves exigées avant toute opération.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 39, $academy_deck$carte$academy_deck$, $academy_deck$Détecter les incohérences$academy_deck$, 1, $academy_deck${"recto":"Les trois sources qu'un conseiller croise pour lire un dossier","verso":"Ce que le client dit, ce que les pièces montrent, ce que le projet suppose."}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${}$academy_deck$::jsonb, $academy_deck$Déclaration, pièce et projet doivent raconter la même histoire.$academy_deck$);
+  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+  values (v_ver, 40, $academy_deck$carte$academy_deck$, $academy_deck$Escalade et confidentialité$academy_deck$, 2, $academy_deck${"recto":"La phrase à dire au client quand vous devez vérifier avant de répondre","verso":"« Je dois vérifier quelques éléments de mon côté avant de vous répondre, je reviens vers vous. »"}$academy_deck$::jsonb)
+  returning id into v_item;
+  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${}$academy_deck$::jsonb, $academy_deck$Ton calme et factuel, sans argumenter, sans menacer, sans rassurer à tort, et rien à signer.$academy_deck$);
+end
+$deck_qualite_du_dossier$;

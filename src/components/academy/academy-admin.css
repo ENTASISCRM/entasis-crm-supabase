@@ -48,25 +48,76 @@
 }
 .aca-apercu-vide { color: var(--t2); font-style: italic; }
 
-/* Les leçons : un accordéon par leçon, le résumé dans le bouton replié. */
-.aca-lecons { display: flex; flex-direction: column; gap: 12px; }
-.aca-lecons .form-pliable-corps > * + * { margin-top: 14px; }
+/* Les grilles de champs de la fiche et des formulaires. */
 .aca-grille-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
 .aca-grille-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
 
-/* Les questions : une carte par question, la ligne d en tête porte la clé,
-   la leçon, les statistiques et l alerte de formulation. */
-.aca-questions { display: flex; flex-direction: column; gap: 12px; }
-.aca-question {
-  padding: 16px 18px; background: var(--card); border: 0.5px solid var(--bd);
+/* Le compteur de mots du mémo : gris hors fourchette, vert dedans, orange
+   quand il déborde. Jamais rouge : un mémo long n est pas une faute. */
+.aca-mots { display: inline-block; margin-top: 6px; font-size: 12.5px; color: var(--t2); font-variant-numeric: tabular-nums; }
+.aca-mots-bon { color: var(--signed); }
+.aca-mots-court { color: var(--t2); }
+.aca-mots-long { color: var(--progress); }
+
+/* Les exercices : une liste ordonnée, une carte par exercice. La ligne d en
+   tête porte le numéro, le type, la compétence, les statistiques, l alerte
+   de formulation et les gestes ; l énoncé court dessous ; le formulaire se
+   déplie sous la carte quand on le modifie. */
+.aca-exos { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.aca-exo {
+  padding: 12px 16px; background: var(--card); border: 0.5px solid var(--bd);
   border-radius: var(--rad-lg); box-shadow: var(--sh-sm);
 }
-.aca-question > * + * { margin-top: 14px; }
-.aca-question-archivee { background: var(--bg-subtle); box-shadow: none; }
-.aca-question-tete { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.aca-question-cle { font-weight: 700; color: var(--t1); font-variant-numeric: tabular-nums; }
-.aca-question-stats { font-size: 12.5px; color: var(--t2); }
-.aca-question-tete .aca-actions { margin-left: auto; }
+.aca-exo-nouveau { margin-top: 10px; }
+.aca-exo-ouvert { border-color: var(--gold-line); }
+.aca-exo-archive { background: var(--bg-subtle); box-shadow: none; }
+.aca-exo-archive .aca-exo-enonce { color: var(--t2); }
+.aca-exo-tete { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.aca-exo-numero {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; padding: 0 6px;
+  border-radius: 999px; background: var(--navy); color: var(--t-inv); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.aca-exo-meta { font-size: 12.5px; color: var(--t2); }
+.aca-exo-stats { font-size: 12.5px; color: var(--t2); font-variant-numeric: tabular-nums; }
+.aca-exo-tete .aca-actions { margin-left: auto; }
+.aca-exo-enonce { margin-top: 8px; font-size: 13.5px; color: var(--t1); line-height: 1.45; }
+.aca-exo-formulaire { margin-top: 14px; padding-top: 14px; border-top: 0.5px solid var(--bd); }
+.aca-exo-formulaire > * + * { margin-top: 14px; }
+.aca-nouvel-exo { margin-top: 14px; }
+.aca-nouvel-exo .form-label { margin: 0; }
+.aca-nouvel-exo .form-select { width: auto; min-width: 200px; }
+
+/* Les champs d un exercice : un groupe de choix avec sa radio ou sa case,
+   une liste d éléments ordonnables, des paires en face à face. */
+.aca-fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.aca-fieldset legend { padding: 0; margin-bottom: 6px; }
+.aca-ligne-choix { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.aca-ligne-choix input[type="radio"], .aca-ligne-choix input[type="checkbox"] { width: 16px; height: 16px; flex: 0 0 auto; accent-color: var(--navy); }
+.aca-ligne-choix .form-input { flex: 1 1 auto; min-width: 0; }
+.aca-radios { display: flex; gap: 18px; flex-wrap: wrap; }
+.aca-liste-textes { display: flex; flex-direction: column; gap: 8px; }
+.aca-ligne-texte { display: flex; align-items: center; gap: 10px; }
+.aca-ligne-texte .form-input { flex: 1 1 auto; min-width: 0; }
+.aca-ligne-numero { font-weight: 650; color: var(--t2); font-variant-numeric: tabular-nums; min-width: 22px; }
+.aca-paires { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.aca-paire { display: grid; grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.aca-paire-fleche { color: var(--t2); }
+@media (max-width: 720px) {
+  .aca-paire { grid-template-columns: auto minmax(0, 1fr); }
+  .aca-paire-fleche { display: none; }
+}
+.aca-exo input[type="radio"]:focus-visible, .aca-exo input[type="checkbox"]:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* L état de préparation avant publication : ce qui est là, ce qui manque. */
+.aca-preparation { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.aca-preparation li { padding-left: 18px; position: relative; color: var(--t1); }
+.aca-preparation li::before { content: ''; position: absolute; left: 4px; top: 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--t3); }
+.aca-preparation .aca-ok::before { background: var(--signed); }
+.aca-preparation .aca-manque { color: var(--cancelled); }
+.aca-preparation .aca-manque::before { background: var(--cancelled); }
+.aca-preparation .aca-conseil { color: var(--t2); }
+.aca-preparation .aca-conseil::before { background: var(--progress); }
+
 .aca-pied { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .aca-pied .aca-statut { font-size: 12px; color: var(--t2); }
 
@@ -113,15 +164,17 @@
   background: rgba(0,0,0,0.04); color: var(--t2);
 }
 
-/* L aperçu collaborateur dans la modale : une leçon après l autre, puis le
-   quiz. Les radios sont là pour donner la mesure, jamais pour répondre. */
-.aca-apercu-lecon + .aca-apercu-lecon, .aca-apercu-quiz { margin-top: 22px; padding-top: 18px; border-top: 0.5px solid var(--bd); }
-.aca-apercu-lecon h3, .aca-apercu-quiz h3 { font-size: 16px; font-weight: 700; color: var(--t1); margin: 0 0 4px; }
-.aca-apercu-objectif { font-size: 13px; color: var(--t2); margin: 0 0 12px; }
-.aca-apercu-question { margin-top: 14px; }
-.aca-apercu-enonce { font-size: 13.5px; font-weight: 600; color: var(--t1); margin-bottom: 6px; }
-.aca-apercu-choix { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-.aca-apercu-choix li { font-size: 13px; color: var(--t1); display: flex; gap: 8px; align-items: center; }
+/* L aperçu d un exercice dans la modale : le composant de la session, puis
+   le bandeau de correction, vert ou rouge, avec la bonne réponse en clair
+   et l explication. Le mémo se prévisualise à côté de sa saisie. */
+.aca-joueur { margin-top: 6px; }
+.aca-joueur > * + * { margin-top: 14px; }
+.aca-bandeau { display: block; padding: 12px 14px; border-radius: var(--rad); border: 0.5px solid; }
+.aca-bandeau-ok { background: var(--signed-bg); border-color: var(--signed); color: var(--signed); }
+.aca-bandeau-ko { background: var(--cancelled-bg); border-color: var(--cancelled); color: var(--cancelled); }
+.aca-bandeau-titre { font-weight: 700; }
+.aca-bandeau-bonne { margin-top: 4px; font-size: 13px; color: var(--t1); }
+.aca-bandeau-explication { margin-top: 4px; font-size: 13px; color: var(--t1); }
 .aca-modale-large { width: min(100%, 920px); }
 
 .aca .btn:focus-visible, .aca .form-pliable-bouton:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }

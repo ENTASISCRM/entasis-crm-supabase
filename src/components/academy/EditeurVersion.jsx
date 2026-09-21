@@ -1,37 +1,57 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// ÉDITEUR DE VERSION : le contenu d un module, côté administration
+// ÉDITEUR DE VERSION : un deck d’exercices et son mémo, côté administration
 //
-// Une version est la seule chose qui s écrit dans l Academy. Un brouillon se
-// modifie champ par champ (la fiche du module, chaque leçon, chaque
-// question) ; une version publiée ne se modifie plus, l écran la montre en
-// lecture seule et renvoie vers « Nouveau brouillon ». La publication est un
-// geste séparé qui enregistre le nom du relecteur : c est la base qui refuse
-// (au moins cinq questions, une leçon, un corrigé par question), et son
-// message s affiche tel quel.
+// Une version est la seule chose qui s’écrit dans l’Academy. Un brouillon se
+// modifie pièce par pièce : la fiche du deck, le mémo d’une page (markdown),
+// chaque exercice (huit types, un formulaire par type qui édite l’énoncé ET
+// le corrigé ensemble, en indices originaux). Une version publiée ne se
+// modifie plus : l’écran la montre en lecture seule et renvoie vers
+// « Nouveau brouillon ». La publication est un geste séparé qui enregistre le
+// nom du relecteur ; c’est la base qui refuse (au moins douze exercices avec
+// corrigé) et son message s’affiche tel quel.
 //
 // Les corrigés arrivent ici parce que academy_version_admin les rend à
-// l administrateur seul ; ils ne sortent jamais vers un collaborateur, et
-// l aperçu collaborateur ne les marque pas.
+// l’administrateur seul ; ils ne sortent jamais vers un collaborateur. La
+// prévisualisation joue UN exercice avec les composants de la session
+// (exercices/), les choix présentés tels quels, sans mélange, et la
+// correction est calculée en local depuis le corrigé, pour l’aperçu
+// seulement : une vraie session passe par academy_repondre.
 //
 // Conteneur (chargement) et vue (tout par props) sont séparés : la vue se
-// teste en renderToStaticMarkup.
+// teste en renderToStaticMarkup. La logique (état d’un formulaire,
+// validation, patch, bonne réponse de l’aperçu) vit dans
+// src/lib/academy/editeur-items.js.
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { messageErreur } from '../../lib/ui-shared'
 import { dateHeureParis, pourcentage, THEMES, NIVEAUX, libelleTheme, libelleNiveau } from '../../lib/academy/format'
+import { LIBELLE_TYPES } from '../../lib/academy/statuts'
 import {
-  versionAdmin, enregistrerVersion, enregistrerLecon, enregistrerQuestion, publierVersion,
-} from '../../services/academy'
+  TYPES_ITEM, NB_CHOIX, MULTI_MIN, MULTI_MAX, MEMO_MOTS, compterMots, etatItem, enonceCourt, validerItem, bonneReponseApercu,
+} from '../../lib/academy/editeur-items'
+import { reponseVide, reponseComplete, estBonneReponse, rendreBonneReponse } from '../../lib/academy/exercices'
+import { versionAdmin, enregistrerVersion, enregistrerItem, publierVersion } from '../../services/academy'
 import { confirmDialog } from '../ui/confirm'
-import FormSection from '../ui/FormSection'
 import RenduMarkdown from '../ui/RenduMarkdown'
 import { SkeletonTable } from '../ui/Skeleton'
+import Choix from './exercices/Choix'
+import VraiFaux from './exercices/VraiFaux'
+import Multi from './exercices/Multi'
+import Ordre from './exercices/Ordre'
+import Association from './exercices/Association'
+import TrouChoix from './exercices/TrouChoix'
+import TrouSaisie from './exercices/TrouSaisie'
+import Carte from './exercices/Carte'
 import './academy-admin.css'
+// Les composants d’exercice portent leurs styles dans la feuille de la
+// session : l’aperçu les rejoue tels quels, même si la session n’a jamais
+// été ouverte dans cet onglet.
+import './academy-entrainement.css'
 
-// ─── Référentiels partagés avec l écran Administration ─────────────────────
-// Un fichier de composant n exporte que des composants (Fast Refresh) : ces
+// ─── Référentiels ──────────────────────────────────────────────────────────
+// Un fichier de composant n’exporte que des composants (Fast Refresh) : ces
 // listes sont rendues par les petits composants exportés plus bas.
 
 const STATUTS_VERSION = {
@@ -39,30 +59,35 @@ const STATUTS_VERSION = {
   publie: { libelle: 'Publié', classe: 'badge badge-signed' },
   archive: { libelle: 'Archivé', classe: 'badge badge-cancelled' },
 }
-const TYPES_QUESTION = [
-  { cle: 'qcm', libelle: 'QCM' },
-  { cle: 'vrai_faux', libelle: 'Vrai ou faux' },
-  { cle: 'cas_court', libelle: 'Cas court' },
-]
 const DIFFICULTES = [
   { cle: 1, libelle: '1 · facile' },
   { cle: 2, libelle: '2 · moyenne' },
   { cle: 3, libelle: '3 · difficile' },
 ]
+const COMPOSANTS_EXERCICE = {
+  choix: Choix, vrai_faux: VraiFaux, multi: Multi, ordre: Ordre,
+  association: Association, trou_choix: TrouChoix, trou_saisie: TrouSaisie, carte: Carte,
+}
 
 // Sous ce nombre de réponses, un taux ne dit rien de la formulation.
 const REPONSES_MINIMUM = 8
 const TAUX_A_REVOIR = 40
+// La publication exige ce nombre d’exercices actifs avec corrigé.
+const EXERCICES_MINIMUM = 12
 
-const libelleDe = (liste, cle) => liste.find((e) => e.cle === cle)?.libelle || cle || ''
+const libelleType = (type) => LIBELLE_TYPES[type] || type || ''
 const pluriel = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`
 const lignes = (texte) => String(texte || '').split('\n').map((l) => l.trim()).filter(Boolean)
 const texteLignes = (liste) => (Array.isArray(liste) ? liste : []).map((l) => (typeof l === 'string' ? l : JSON.stringify(l))).join('\n')
+const nombreEntier = (v, defaut) => {
+  const n = Number.parseInt(v, 10)
+  return Number.isFinite(n) ? n : defaut
+}
+const estActif = (it) => !it.archive_le
 
 // Les sources se saisissent une par ligne : « titre | url | émetteur | date ».
-// Les champs que la ligne ne porte pas (date de validité, ce qu elle établit)
-// sont repris de la source d origine qui a la même adresse, pour ne pas les
-// perdre en retouchant un titre.
+// Les champs que la ligne ne porte pas sont repris de la source d’origine
+// qui a la même adresse, pour ne pas les perdre en retouchant un titre.
 const sourcesEnTexte = (sources) => (Array.isArray(sources) ? sources : [])
   .map((s) => [s?.titre, s?.url, s?.emetteur, s?.date_consultation].map((v) => (v == null ? '' : String(v))).join(' | '))
   .join('\n')
@@ -76,20 +101,7 @@ function sourcesDepuisTexte(texte, originales) {
   })
 }
 
-const nombreEntier = (v, defaut) => {
-  const n = Number.parseInt(v, 10)
-  return Number.isFinite(n) ? n : defaut
-}
-
-// Vérifie la liste des choix d une question : deux à quatre, une bonne
-// réponse dans la liste. Rend le message d erreur, ou null si tout va bien.
-function erreurChoix(choix, bonne) {
-  if (choix.length < 2 || choix.length > 4) return 'Une question a de 2 à 4 choix, un par ligne'
-  if (!(bonne >= 0 && bonne < choix.length)) return 'Choisissez la bonne réponse parmi les choix'
-  return null
-}
-
-// ─── Petits composants partagés ────────────────────────────────────────────
+// ─── Petits composants partagés avec l’écran Administration ────────────────
 
 export function BadgeStatutVersion({ statut }) {
   const s = STATUTS_VERSION[statut] || STATUTS_VERSION.brouillon
@@ -120,28 +132,7 @@ export function SelectNiveau({ id, value, onChange, disabled }) {
   )
 }
 
-// La zone de saisie markdown et son aperçu rendu, côte à côte quand l écran
-// est assez large.
-function EditeurMarkdown({ id, label, value, onChange, disabled, rows = 12, hint }) {
-  return (
-    <div className="form-group">
-      <label className="form-label" htmlFor={id}>{label}</label>
-      <div className="aca-editeur">
-        <textarea id={id} className="form-textarea" rows={rows} value={value} disabled={disabled}
-          onChange={(e) => onChange(e.target.value)} />
-        <div className="aca-apercu">
-          <div className="aca-apercu-titre">Aperçu</div>
-          {String(value || '').trim()
-            ? <RenduMarkdown markdown={value} />
-            : <div className="aca-apercu-vide">Rien à afficher pour l instant.</div>}
-        </div>
-      </div>
-      {hint && <div className="form-hint">{hint}</div>}
-    </div>
-  )
-}
-
-// La ligne « Enregistré à 10h42 » sous un bouton, annoncée aux lecteurs d écran.
+// La ligne « Enregistré à 10h42 » sous un bouton, annoncée aux lecteurs d’écran.
 const HEURE_PARIS = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit', hour12: false })
 function StatutEnregistrement({ quand }) {
   return (
@@ -151,21 +142,31 @@ function StatutEnregistrement({ quand }) {
   )
 }
 
-// ─── La fiche de la version ────────────────────────────────────────────────
+// Le compteur de mots du mémo : la fourchette visée, et la couleur qui dit si
+// on y est. Un mémo vide ne se colore pas, il se signale.
+function CompteurMots({ texte }) {
+  const n = compterMots(texte)
+  let classe = 'aca-mots'
+  let mention = `viser ${MEMO_MOTS.min} à ${MEMO_MOTS.max}`
+  if (n === 0) mention = 'aucun mémo pour l’instant'
+  else if (n < MEMO_MOTS.min) { classe += ' aca-mots-court'; mention = `un peu court, viser ${MEMO_MOTS.min} à ${MEMO_MOTS.max}` }
+  else if (n > MEMO_MOTS.max) { classe += ' aca-mots-long'; mention = `un peu long, viser ${MEMO_MOTS.min} à ${MEMO_MOTS.max}` }
+  else classe += ' aca-mots-bon'
+  return <span className={classe} role="status" aria-live="polite">{pluriel(n, 'mot', 'mots')} · {mention}</span>
+}
+
+// ─── La fiche du deck et le mémo ───────────────────────────────────────────
 
 const etatVersion = (v) => ({
   titre: v.titre || '',
   objectif: v.objectif || '',
   competence: v.competence || '',
-  duree_minutes: String(v.duree_minutes ?? 15),
+  duree_minutes: String(v.duree_minutes ?? 10),
   seuil_reussite: String(v.seuil_reussite ?? 0.8),
   prerequis: (Array.isArray(v.prerequis) ? v.prerequis : []).join(', '),
   theme: v.theme || 'methode',
   niveau: v.niveau || 'fondamentaux',
-  cas_titre: v.cas_pratique?.titre || '',
-  cas_situation: v.cas_pratique?.situation_markdown || '',
-  cas_questions: texteLignes(v.cas_pratique?.questions),
-  cas_corrige: v.cas_pratique?.corrige_markdown || '',
+  memo_md: v.memo_md || '',
   a_completer: texteLignes(v.a_completer),
   sources: sourcesEnTexte(v.sources),
   fictif: !!v.fictif,
@@ -189,21 +190,17 @@ function FormulaireVersion({ version, lectureSeule, onRecharger }) {
         titre: f.titre.trim(),
         objectif: f.objectif,
         competence: f.competence,
-        duree_minutes: Math.max(1, nombreEntier(f.duree_minutes, 15)),
+        duree_minutes: Math.max(1, nombreEntier(f.duree_minutes, 10)),
         seuil_reussite: seuil,
         prerequis: String(f.prerequis).split(',').map((s) => s.trim()).filter(Boolean),
         theme: f.theme,
         niveau: f.niveau,
-        cas_pratique: {
-          ...(version.cas_pratique && typeof version.cas_pratique === 'object' ? version.cas_pratique : {}),
-          titre: f.cas_titre, situation_markdown: f.cas_situation,
-          questions: lignes(f.cas_questions), corrige_markdown: f.cas_corrige,
-        },
+        memo_md: f.memo_md,
         a_completer: lignes(f.a_completer),
         sources: sourcesDepuisTexte(f.sources, version.sources),
         fictif: !!f.fictif,
       })
-      toast.success('Version enregistrée')
+      toast.success('Deck enregistré')
       setEnregistreLe(new Date())
       onRecharger?.()
     } catch (e) {
@@ -215,7 +212,7 @@ function FormulaireVersion({ version, lectureSeule, onRecharger }) {
 
   return (
     <div className="form-section">
-      <div className="form-section-title">La fiche du module</div>
+      <div className="form-section-title">La fiche du deck</div>
       <div className="form-group">
         <label className="form-label" htmlFor={id('titre')}>Titre</label>
         <input id={id('titre')} className="form-input" value={f.titre} disabled={lectureSeule} onChange={(e) => poser({ titre: e.target.value })} />
@@ -223,7 +220,7 @@ function FormulaireVersion({ version, lectureSeule, onRecharger }) {
       <div className="form-group">
         <label className="form-label" htmlFor={id('objectif')}>Objectif</label>
         <textarea id={id('objectif')} className="form-textarea" rows={3} value={f.objectif} disabled={lectureSeule}
-          onChange={(e) => poser({ objectif: e.target.value })} placeholder="À l issue du module, le conseiller…" />
+          onChange={(e) => poser({ objectif: e.target.value })} placeholder="À l’issue du deck, le conseiller sait…" />
       </div>
       <div className="aca-grille-2">
         <div className="form-group">
@@ -257,34 +254,39 @@ function FormulaireVersion({ version, lectureSeule, onRecharger }) {
         </div>
       </div>
 
-      <div className="form-section-title" style={{ marginTop: 22 }}>Le cas pratique</div>
+      <div className="form-section-title" style={{ marginTop: 22 }}>Le mémo</div>
+      <p className="aca-mention" style={{ marginTop: 0 }}>
+        Une page à savoir par cœur, en markdown : le collaborateur la lit avant de s’entraîner et y revient après une erreur.
+      </p>
       <div className="form-group">
-        <label className="form-label" htmlFor={id('cas-titre')}>Titre du cas</label>
-        <input id={id('cas-titre')} className="form-input" value={f.cas_titre} disabled={lectureSeule} onChange={(e) => poser({ cas_titre: e.target.value })} />
+        <label className="form-label" htmlFor={id('memo')}>Mémo (markdown)</label>
+        <div className="aca-editeur">
+          <textarea id={id('memo')} className="form-textarea" rows={16} value={f.memo_md} disabled={lectureSeule}
+            onChange={(e) => poser({ memo_md: e.target.value })} placeholder="## Les sept étapes&#10;&#10;1. …" />
+          <div className="aca-apercu">
+            <div className="aca-apercu-titre">Aperçu</div>
+            {String(f.memo_md || '').trim()
+              ? <RenduMarkdown markdown={f.memo_md} />
+              : <div className="aca-apercu-vide">Rien à afficher pour l’instant.</div>}
+          </div>
+        </div>
+        <CompteurMots texte={f.memo_md} />
       </div>
-      <EditeurMarkdown id={id('cas-situation')} label="Situation (markdown)" value={f.cas_situation} disabled={lectureSeule} rows={10}
-        onChange={(v) => poser({ cas_situation: v })} hint="Un cas fictif se dit fictif dès la première ligne." />
-      <div className="form-group">
-        <label className="form-label" htmlFor={id('cas-questions')}>Questions de réflexion</label>
-        <textarea id={id('cas-questions')} className="form-textarea" rows={4} value={f.cas_questions} disabled={lectureSeule}
-          onChange={(e) => poser({ cas_questions: e.target.value })} />
-        <div className="form-hint">Une question par ligne.</div>
-      </div>
-      <EditeurMarkdown id={id('cas-corrige')} label="Corrigé (markdown)" value={f.cas_corrige} disabled={lectureSeule} rows={10}
-        onChange={(v) => poser({ cas_corrige: v })} />
 
       <div className="form-section-title" style={{ marginTop: 22 }}>Ce que le cabinet complète</div>
-      <div className="form-group">
-        <label className="form-label" htmlFor={id('a-completer')}>À compléter par le cabinet</label>
-        <textarea id={id('a-completer')} className="form-textarea" rows={4} value={f.a_completer} disabled={lectureSeule}
-          onChange={(e) => poser({ a_completer: e.target.value })} />
-        <div className="form-hint">Un élément par ligne : les procédures internes que le contenu ne peut pas connaître.</div>
-      </div>
-      <div className="form-group">
-        <label className="form-label" htmlFor={id('sources')}>Sources</label>
-        <textarea id={id('sources')} className="form-textarea" rows={4} value={f.sources} disabled={lectureSeule}
-          onChange={(e) => poser({ sources: e.target.value })} placeholder="Titre | https://… | Émetteur | 2026-09-21" />
-        <div className="form-hint">Une source par ligne : titre | url | émetteur | date de consultation.</div>
+      <div className="aca-grille-2">
+        <div className="form-group">
+          <label className="form-label" htmlFor={id('a-completer')}>À compléter par le cabinet</label>
+          <textarea id={id('a-completer')} className="form-textarea" rows={3} value={f.a_completer} disabled={lectureSeule}
+            onChange={(e) => poser({ a_completer: e.target.value })} />
+          <div className="form-hint">Un élément par ligne : les procédures internes que le contenu ne peut pas connaître.</div>
+        </div>
+        <div className="form-group">
+          <label className="form-label" htmlFor={id('sources')}>Sources</label>
+          <textarea id={id('sources')} className="form-textarea" rows={3} value={f.sources} disabled={lectureSeule}
+            onChange={(e) => poser({ sources: e.target.value })} placeholder="Titre | https://… | Émetteur | 2026-09-21" />
+          <div className="form-hint">Une source par ligne : titre | url | émetteur | date de consultation.</div>
+        </div>
       </div>
       <label className="aca-case" htmlFor={id('fictif')}>
         <input id={id('fictif')} type="checkbox" checked={f.fictif} disabled={lectureSeule} onChange={(e) => poser({ fictif: e.target.checked })} />
@@ -293,7 +295,7 @@ function FormulaireVersion({ version, lectureSeule, onRecharger }) {
 
       <div className="aca-pied">
         <button type="button" className="btn btn-primary" onClick={enregistrer} disabled={lectureSeule || enCours}>
-          {enCours ? 'Enregistrement…' : 'Enregistrer la version'}
+          {enCours ? 'Enregistrement…' : 'Enregistrer'}
         </button>
         <StatutEnregistrement quand={enregistreLe} />
       </div>
@@ -301,206 +303,242 @@ function FormulaireVersion({ version, lectureSeule, onRecharger }) {
   )
 }
 
-// ─── Les leçons ────────────────────────────────────────────────────────────
+// ─── Le formulaire d’un exercice, un par type ──────────────────────────────
 
-const etatLecon = (l) => ({
-  titre: l.titre || '',
-  objectif: l.objectif || '',
-  duree_minutes: String(l.duree_minutes ?? 4),
-  contenu_md: l.contenu_md || '',
-  mq_enonce: l.mini_question?.enonce || '',
-  mq_choix: texteLignes(l.mini_question?.choix),
-  mq_bonne: String(l.mini_question?.bonne_reponse ?? 0),
-  mq_explication: l.mini_question?.explication || '',
-  sources: sourcesEnTexte(l.sources),
-})
-
-function FormulaireLecon({ version, lecon, lectureSeule, onRecharger, onAbandonner }) {
-  const [f, setF] = useState(() => etatLecon(lecon))
-  const [enCours, setEnCours] = useState(false)
-  const [enregistreLe, setEnregistreLe] = useState(null)
-  const nouvelle = !lecon.id
-  const poser = (patch) => setF((prev) => ({ ...prev, ...patch }))
-  const id = (c) => `aca-lecon-${lecon.id || 'nouvelle'}-${c}`
-  const choix = lignes(f.mq_choix)
-
-  async function enregistrer() {
-    if (enCours) return
-    if (!f.titre.trim()) { toast.error('Le titre de la leçon est obligatoire'); return }
-    const bonne = nombreEntier(f.mq_bonne, 0)
-    if (f.mq_enonce.trim()) {
-      const probleme = erreurChoix(choix, bonne)
-      if (probleme) { toast.error(probleme); return }
-    }
-    setEnCours(true)
-    try {
-      await enregistrerLecon(version.id, lecon.id || null, {
-        titre: f.titre.trim(),
-        objectif: f.objectif,
-        duree_minutes: Math.max(1, nombreEntier(f.duree_minutes, 4)),
-        contenu_md: f.contenu_md,
-        mini_question: f.mq_enonce.trim()
-          ? { enonce: f.mq_enonce.trim(), choix, bonne_reponse: bonne, explication: f.mq_explication }
-          : {},
-        sources: sourcesDepuisTexte(f.sources, lecon.sources),
-      })
-      toast.success('Leçon enregistrée')
-      setEnregistreLe(new Date())
-      if (nouvelle) onAbandonner?.()
-      onRecharger?.()
-    } catch (e) {
-      toast.error(messageErreur(e))
-    } finally {
-      setEnCours(false)
-    }
+// Une liste de textes éditables (éléments d’un ordre, lignes d’une
+// association) avec les gestes monter, descendre, retirer, en boutons
+// natifs : rien ne se glisse à la souris.
+function ListeTextes({ idBase, libelle, valeurs, onChange, disabled, min = 2, max = 12, placeholder, ordonnable = true }) {
+  const poser = (i, v) => onChange(valeurs.map((x, j) => (j === i ? v : x)))
+  const deplacer = (i, sens) => {
+    const j = i + sens
+    if (j < 0 || j >= valeurs.length) return
+    const liste = [...valeurs]
+    const [element] = liste.splice(i, 1)
+    liste.splice(j, 0, element)
+    onChange(liste)
   }
-
-  const titreSection = nouvelle ? 'Nouvelle leçon' : `Leçon ${lecon.ordre} · ${f.titre || 'sans titre'}`
-
-  // La première leçon s ouvre d elle même, les suivantes se déplient à la
-  // demande : trois éditeurs markdown d un coup font une page de dix écrans.
+  const retirer = (i) => onChange(valeurs.filter((_, j) => j !== i))
   return (
-    <FormSection title={titreSection} hint={f.objectif} defaultOpen={nouvelle || Number(lecon.ordre) === 1}>
-      <div className="aca-grille-2">
-        <div className="form-group">
-          <label className="form-label" htmlFor={id('titre')}>Titre</label>
-          <input id={id('titre')} className="form-input" value={f.titre} disabled={lectureSeule} onChange={(e) => poser({ titre: e.target.value })} />
+    <div className="aca-liste-textes">
+      {valeurs.map((v, i) => (
+        <div className="aca-ligne-texte" key={i}>
+          <span className="aca-ligne-numero">{i + 1}.</span>
+          <input id={`${idBase}-${i}`} className="form-input" value={v} disabled={disabled} placeholder={placeholder}
+            aria-label={`${libelle} ${i + 1}`} onChange={(e) => poser(i, e.target.value)} />
+          <span className="aca-actions">
+            {ordonnable && (
+              <>
+                <button type="button" className="btn btn-ghost btn-sm" aria-label={`Monter ${libelle.toLowerCase()} ${i + 1}`} onClick={() => deplacer(i, -1)} disabled={disabled || i === 0}>Monter</button>
+                <button type="button" className="btn btn-ghost btn-sm" aria-label={`Descendre ${libelle.toLowerCase()} ${i + 1}`} onClick={() => deplacer(i, 1)} disabled={disabled || i === valeurs.length - 1}>Descendre</button>
+              </>
+            )}
+            <button type="button" className="btn btn-ghost btn-sm" aria-label={`Retirer ${libelle.toLowerCase()} ${i + 1}`} onClick={() => retirer(i)} disabled={disabled || valeurs.length <= min}>Retirer</button>
+          </span>
         </div>
-        <div className="form-group">
-          <label className="form-label" htmlFor={id('duree')}>Durée (minutes)</label>
-          <input id={id('duree')} className="form-input" type="number" min={1} value={f.duree_minutes} disabled={lectureSeule} onChange={(e) => poser({ duree_minutes: e.target.value })} />
-        </div>
-      </div>
-      <div className="form-group">
-        <label className="form-label" htmlFor={id('objectif')}>Objectif</label>
-        <input id={id('objectif')} className="form-input" value={f.objectif} disabled={lectureSeule} onChange={(e) => poser({ objectif: e.target.value })}
-          placeholder="Ce que le collaborateur sait faire à la fin de la leçon" />
-      </div>
-      <EditeurMarkdown id={id('contenu')} label="Contenu (markdown)" value={f.contenu_md} disabled={lectureSeule} rows={16}
-        onChange={(v) => poser({ contenu_md: v })} />
-
-      <div className="form-section-title" style={{ marginTop: 8 }}>La mini question de fin de leçon</div>
-      <div className="form-group">
-        <label className="form-label" htmlFor={id('mq-enonce')}>Énoncé</label>
-        <input id={id('mq-enonce')} className="form-input" value={f.mq_enonce} disabled={lectureSeule} onChange={(e) => poser({ mq_enonce: e.target.value })} />
-      </div>
-      <div className="aca-grille-2">
-        <div className="form-group">
-          <label className="form-label" htmlFor={id('mq-choix')}>Choix</label>
-          <textarea id={id('mq-choix')} className="form-textarea" rows={4} value={f.mq_choix} disabled={lectureSeule} onChange={(e) => poser({ mq_choix: e.target.value })} />
-          <div className="form-hint">De 2 à 4 choix, un par ligne.</div>
-        </div>
-        <div className="form-group">
-          <label className="form-label" htmlFor={id('mq-bonne')}>Bonne réponse</label>
-          <select id={id('mq-bonne')} className="form-select" value={f.mq_bonne} disabled={lectureSeule} onChange={(e) => poser({ mq_bonne: e.target.value })}>
-            {choix.length === 0 && <option value="0">Saisissez d abord les choix</option>}
-            {choix.map((c, i) => <option key={i} value={String(i)}>{i + 1}. {c}</option>)}
-          </select>
-        </div>
-      </div>
-      <div className="form-group">
-        <label className="form-label" htmlFor={id('mq-explication')}>Explication</label>
-        <textarea id={id('mq-explication')} className="form-textarea" rows={3} value={f.mq_explication} disabled={lectureSeule} onChange={(e) => poser({ mq_explication: e.target.value })} />
-      </div>
-      <div className="form-group">
-        <label className="form-label" htmlFor={id('sources')}>Sources</label>
-        <textarea id={id('sources')} className="form-textarea" rows={3} value={f.sources} disabled={lectureSeule} onChange={(e) => poser({ sources: e.target.value })}
-          placeholder="Titre | https://… | Émetteur | 2026-09-21" />
-        <div className="form-hint">Une source par ligne : titre | url | émetteur | date de consultation.</div>
-      </div>
-      <div className="aca-pied">
-        <button type="button" className="btn btn-primary btn-sm" onClick={enregistrer} disabled={lectureSeule || enCours}>
-          {enCours ? 'Enregistrement…' : 'Enregistrer la leçon'}
+      ))}
+      <div>
+        <button type="button" className="btn btn-outline btn-sm" onClick={() => onChange([...valeurs, ''])} disabled={disabled || valeurs.length >= max}>
+          Ajouter
         </button>
-        {nouvelle && (
-          <button type="button" className="btn btn-ghost btn-sm" onClick={onAbandonner} disabled={enCours}>Abandonner</button>
-        )}
-        <StatutEnregistrement quand={enregistreLe} />
       </div>
-    </FormSection>
+    </div>
   )
 }
 
-// ─── Les questions ─────────────────────────────────────────────────────────
+// Quatre choix et la radio de la bonne réponse, pour un choix unique ou un
+// texte à trou.
+function ChampsChoixUnique({ id, f, poser, disabled }) {
+  return (
+    <fieldset className="aca-fieldset">
+      <legend className="form-label">Les {NB_CHOIX} choix, et la bonne réponse</legend>
+      {f.choix.map((c, i) => (
+        <div className="aca-ligne-choix" key={i}>
+          <input type="radio" id={id(`bonne-${i}`)} name={id('bonne')} checked={f.bonne === i} disabled={disabled}
+            onChange={() => poser({ bonne: i })} aria-label={`Le choix ${i + 1} est la bonne réponse`} />
+          <input id={id(`choix-${i}`)} className="form-input" value={c} disabled={disabled} aria-label={`Choix ${i + 1}`}
+            placeholder={`Choix ${i + 1}`} onChange={(e) => poser({ choix: f.choix.map((x, j) => (j === i ? e.target.value : x)) })} />
+        </div>
+      ))}
+      <div className="form-hint">Cochez la bonne réponse. Les choix seront mélangés à chaque session.</div>
+    </fieldset>
+  )
+}
 
-const etatQuestion = (q) => ({
-  cle: q.cle || '',
-  lecon_id: q.lecon_id || '',
-  type: q.type || 'qcm',
-  competence: q.competence || '',
-  enonce: q.enonce || '',
-  choix: texteLignes(q.choix),
-  bonne_reponse: String(q.bonne_reponse ?? 0),
-  explication: q.explication || '',
-  difficulte: String(q.difficulte ?? 2),
-})
+function ChampsParType({ id, f, poser, disabled }) {
+  const champEnonce = (
+    <div className="form-group">
+      <label className="form-label" htmlFor={id('enonce')}>Énoncé</label>
+      <textarea id={id('enonce')} className="form-textarea" rows={2} value={f.enonce} disabled={disabled} onChange={(e) => poser({ enonce: e.target.value })} />
+    </div>
+  )
+  const champPhrase = (
+    <div className="form-group">
+      <label className="form-label" htmlFor={id('phrase')}>Phrase avec un trou</label>
+      <textarea id={id('phrase')} className="form-textarea" rows={2} value={f.phrase} disabled={disabled} onChange={(e) => poser({ phrase: e.target.value })}
+        placeholder="Le plafond non utilisé se reporte sur les ___ années suivantes." />
+      <div className="form-hint">Un seul trou, écrit ___ (trois tirets bas).</div>
+    </div>
+  )
 
-function FormulaireQuestion({ version, question, lectureSeule, onRecharger, onAbandonner }) {
-  const [f, setF] = useState(() => etatQuestion(question))
+  switch (f.type) {
+    case 'choix':
+      return <>{champEnonce}<ChampsChoixUnique id={id} f={f} poser={poser} disabled={disabled} /></>
+    case 'trou_choix':
+      return <>{champPhrase}<ChampsChoixUnique id={id} f={f} poser={poser} disabled={disabled} /></>
+    case 'vrai_faux':
+      return (
+        <>
+          <div className="form-group">
+            <label className="form-label" htmlFor={id('enonce')}>Affirmation</label>
+            <textarea id={id('enonce')} className="form-textarea" rows={2} value={f.enonce} disabled={disabled} onChange={(e) => poser({ enonce: e.target.value })} />
+          </div>
+          <fieldset className="aca-fieldset">
+            <legend className="form-label">L’affirmation est</legend>
+            <div className="aca-radios">
+              <label className="aca-case" htmlFor={id('vrai')}>
+                <input type="radio" id={id('vrai')} name={id('vf')} checked={f.vrai === true} disabled={disabled} onChange={() => poser({ vrai: true })} />
+                Vraie
+              </label>
+              <label className="aca-case" htmlFor={id('faux')}>
+                <input type="radio" id={id('faux')} name={id('vf')} checked={f.vrai === false} disabled={disabled} onChange={() => poser({ vrai: false })} />
+                Fausse
+              </label>
+            </div>
+          </fieldset>
+        </>
+      )
+    case 'multi':
+      return (
+        <>
+          {champEnonce}
+          <fieldset className="aca-fieldset">
+            <legend className="form-label">De {MULTI_MIN} à {MULTI_MAX} choix, cochez les bonnes réponses</legend>
+            {f.choix.map((c, i) => (
+              <div className="aca-ligne-choix" key={i}>
+                <input type="checkbox" id={id(`coche-${i}`)} checked={f.coches.includes(i)} disabled={disabled}
+                  aria-label={`Le choix ${i + 1} est une bonne réponse`}
+                  onChange={(e) => poser({ coches: e.target.checked ? [...f.coches, i] : f.coches.filter((x) => x !== i) })} />
+                <input id={id(`choix-${i}`)} className="form-input" value={c} disabled={disabled} aria-label={`Choix ${i + 1}`}
+                  placeholder={`Choix ${i + 1}`} onChange={(e) => poser({ choix: f.choix.map((x, j) => (j === i ? e.target.value : x)) })} />
+                <button type="button" className="btn btn-ghost btn-sm" aria-label={`Retirer le choix ${i + 1}`} disabled={disabled || f.choix.length <= MULTI_MIN}
+                  onClick={() => poser({ choix: f.choix.filter((_, j) => j !== i), coches: f.coches.filter((x) => x !== i).map((x) => (x > i ? x - 1 : x)) })}>
+                  Retirer
+                </button>
+              </div>
+            ))}
+            <div>
+              <button type="button" className="btn btn-outline btn-sm" disabled={disabled || f.choix.length >= MULTI_MAX} onClick={() => poser({ choix: [...f.choix, ''] })}>
+                Ajouter un choix
+              </button>
+            </div>
+          </fieldset>
+        </>
+      )
+    case 'ordre':
+      return (
+        <>
+          {champEnonce}
+          <div className="form-group">
+            <span className="form-label">Les éléments, dans le bon ordre</span>
+            <ListeTextes idBase={id('element')} libelle="Élément" valeurs={f.elements} disabled={disabled} onChange={(elements) => poser({ elements })} />
+            <div className="form-hint">Saisissez les dans le bon ordre : la session les mélange et le collaborateur les remet en place.</div>
+          </div>
+        </>
+      )
+    case 'association':
+      return (
+        <>
+          {champEnonce}
+          <div className="form-group">
+            <span className="form-label">Les paires, chaque ligne de gauche en face de la sienne</span>
+            <div className="aca-paires">
+              {f.gauche.map((g, i) => (
+                <div className="aca-paire" key={i}>
+                  <span className="aca-ligne-numero">{i + 1}.</span>
+                  <input id={id(`gauche-${i}`)} className="form-input" value={g} disabled={disabled} aria-label={`Gauche ${i + 1}`} placeholder="Gauche"
+                    onChange={(e) => poser({ gauche: f.gauche.map((x, j) => (j === i ? e.target.value : x)) })} />
+                  <span className="aca-paire-fleche" aria-hidden="true">↔</span>
+                  <input id={id(`droite-${i}`)} className="form-input" value={f.droite[i] ?? ''} disabled={disabled} aria-label={`Droite ${i + 1}`} placeholder="Droite"
+                    onChange={(e) => poser({ droite: f.droite.map((x, j) => (j === i ? e.target.value : x)) })} />
+                  <button type="button" className="btn btn-ghost btn-sm" aria-label={`Retirer la paire ${i + 1}`} disabled={disabled || f.gauche.length <= 2}
+                    onClick={() => poser({ gauche: f.gauche.filter((_, j) => j !== i), droite: f.droite.filter((_, j) => j !== i) })}>
+                    Retirer
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div>
+              <button type="button" className="btn btn-outline btn-sm" disabled={disabled || f.gauche.length >= 8}
+                onClick={() => poser({ gauche: [...f.gauche, ''], droite: [...f.droite, ''] })}>
+                Ajouter une paire
+              </button>
+            </div>
+            <div className="form-hint">La colonne de droite sera mélangée à chaque session.</div>
+          </div>
+        </>
+      )
+    case 'trou_saisie':
+      return (
+        <>
+          {champPhrase}
+          <div className="aca-grille-2">
+            <div className="form-group">
+              <label className="form-label" htmlFor={id('aide')}>Aide (facultative)</label>
+              <input id={id('aide')} className="form-input" value={f.aide} disabled={disabled} onChange={(e) => poser({ aide: e.target.value })} placeholder="Un chiffre." />
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor={id('reponses')}>Réponses acceptées</label>
+              <textarea id={id('reponses')} className="form-textarea" rows={3} value={f.reponses} disabled={disabled} onChange={(e) => poser({ reponses: e.target.value })}
+                placeholder={'3\ntrois'} />
+              <div className="form-hint">Une par ligne. La comparaison ignore la casse, les accents et les espaces en trop.</div>
+            </div>
+          </div>
+        </>
+      )
+    case 'carte':
+      return (
+        <div className="aca-grille-2">
+          <div className="form-group">
+            <label className="form-label" htmlFor={id('recto')}>Recto (la question)</label>
+            <textarea id={id('recto')} className="form-textarea" rows={3} value={f.recto} disabled={disabled} onChange={(e) => poser({ recto: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor={id('verso')}>Verso (la réponse)</label>
+            <textarea id={id('verso')} className="form-textarea" rows={3} value={f.verso} disabled={disabled} onChange={(e) => poser({ verso: e.target.value })} />
+          </div>
+        </div>
+      )
+    default:
+      return null
+  }
+}
+
+/**
+ * Le formulaire d’un exercice : l’énoncé et le corrigé ensemble, en indices
+ * originaux. `item` est un exercice de academy_version_admin, ou { type }
+ * seul pour un nouvel exercice. Exporté pour se tester à sec, type par type.
+ */
+export function FormulaireExercice({ version, item, lectureSeule, onRecharger, onFermer }) {
+  const [f, setF] = useState(() => etatItem(item))
   const [enCours, setEnCours] = useState(false)
   const [enregistreLe, setEnregistreLe] = useState(null)
-  const nouvelle = !question.id
-  const archivee = !!question.archive_le
+  const nouveau = !item?.id
+  const verrou = lectureSeule || !!item?.archive_le
   const poser = (patch) => setF((prev) => ({ ...prev, ...patch }))
-  const id = (c) => `aca-question-${question.id || 'nouvelle'}-${c}`
-  const choix = lignes(f.choix)
-  const stats = question.statistiques || {}
-  const reponses = Number(stats.reponses) || 0
-  const taux = pourcentage(stats.correctes, reponses)
-  const aRevoir = reponses >= REPONSES_MINIMUM && taux < TAUX_A_REVOIR
-  const verrou = lectureSeule || archivee
-
-  const changerType = (type) => {
-    // Un vrai ou faux n a que deux choix : on les pose si la liste est vide.
-    poser(type === 'vrai_faux' && choix.length === 0 ? { type, choix: 'Vrai\nFaux' } : { type })
-  }
+  const id = (c) => `aca-exo-${item?.id || 'nouveau'}-${c}`
 
   async function enregistrer() {
     if (enCours) return
-    if (!f.enonce.trim()) { toast.error('L énoncé est obligatoire'); return }
-    const bonne = nombreEntier(f.bonne_reponse, 0)
-    const probleme = erreurChoix(choix, bonne)
-    if (probleme) { toast.error(probleme); return }
+    const { erreur, patch } = validerItem(f)
+    if (erreur) { toast.error(erreur); return }
     setEnCours(true)
     try {
-      await enregistrerQuestion(version.id, question.id || null, {
-        cle: f.cle.trim() || undefined,
-        lecon_id: f.lecon_id || null,
-        type: f.type,
-        competence: f.competence.trim(),
-        enonce: f.enonce.trim(),
-        choix,
-        bonne_reponse: bonne,
-        explication: f.explication,
-        difficulte: nombreEntier(f.difficulte, 2),
-      })
-      toast.success('Question enregistrée')
+      await enregistrerItem(version.id, item?.id || null, patch)
+      toast.success(nouveau ? 'Exercice ajouté' : 'Exercice enregistré')
       setEnregistreLe(new Date())
-      if (nouvelle) onAbandonner?.()
       onRecharger?.()
-    } catch (e) {
-      toast.error(messageErreur(e))
-    } finally {
-      setEnCours(false)
-    }
-  }
-
-  async function archiver(archive) {
-    if (enCours) return
-    if (archive) {
-      const ok = await confirmDialog({
-        title: `Archiver la question ${question.cle} ?`,
-        message: 'Elle ne sera plus tirée dans les quiz. Les réponses déjà données restent dans l historique.',
-        confirmLabel: 'Archiver',
-        danger: true,
-      })
-      if (!ok) return
-    }
-    setEnCours(true)
-    try {
-      await enregistrerQuestion(version.id, question.id, { archive })
-      toast.success(archive ? 'Question archivée' : 'Question restaurée')
-      onRecharger?.()
+      if (nouveau) onFermer?.()
     } catch (e) {
       toast.error(messageErreur(e))
     } finally {
@@ -509,44 +547,12 @@ function FormulaireQuestion({ version, question, lectureSeule, onRecharger, onAb
   }
 
   return (
-    <article className={`aca-question${archivee ? ' aca-question-archivee' : ''}`} aria-label={`Question ${question.cle || 'nouvelle'}`}>
-      <div className="aca-question-tete">
-        <span className="aca-question-cle">{nouvelle ? 'Nouvelle question' : question.cle}</span>
-        <span className="badge badge-normal">{libelleDe(TYPES_QUESTION, f.type)}</span>
-        {archivee && <span className="badge badge-cancelled">Archivée</span>}
-        {reponses > 0 && (
-          <span className="aca-question-stats">{pluriel(reponses, 'réponse', 'réponses')}, {taux} % de bonnes réponses</span>
-        )}
-        {aRevoir && <span className="badge badge-high" title={`Moins de ${TAUX_A_REVOIR} % de bonnes réponses sur au moins ${REPONSES_MINIMUM} réponses`}>Formulation à revoir</span>}
-        {!nouvelle && !lectureSeule && (
-          <span className="aca-actions">
-            {archivee
-              ? <button type="button" className="btn btn-ghost btn-sm" onClick={() => archiver(false)} disabled={enCours}>Restaurer</button>
-              : <button type="button" className="btn btn-ghost btn-sm" onClick={() => archiver(true)} disabled={enCours}>Archiver la question</button>}
-          </span>
-        )}
-      </div>
+    <div className="aca-exo-formulaire" aria-label={`Formulaire ${libelleType(f.type).toLowerCase()}`}>
       <div className="aca-grille-3">
         <div className="form-group">
-          <label className="form-label" htmlFor={id('cle')}>Clé</label>
-          <input id={id('cle')} className="form-input" value={f.cle} disabled={verrou} onChange={(e) => poser({ cle: e.target.value })} placeholder="q11" />
-        </div>
-        <div className="form-group">
-          <label className="form-label" htmlFor={id('lecon')}>Leçon</label>
-          <select id={id('lecon')} className="form-select" value={f.lecon_id} disabled={verrou} onChange={(e) => poser({ lecon_id: e.target.value })}>
-            <option value="">Aucune leçon en particulier</option>
-            {(version.lecons || []).map((l) => <option key={l.id} value={l.id}>Leçon {l.ordre} · {l.titre}</option>)}
-          </select>
-        </div>
-        <div className="form-group">
-          <label className="form-label" htmlFor={id('type')}>Type</label>
-          <select id={id('type')} className="form-select" value={f.type} disabled={verrou} onChange={(e) => changerType(e.target.value)}>
-            {TYPES_QUESTION.map((t) => <option key={t.cle} value={t.cle}>{t.libelle}</option>)}
-          </select>
-        </div>
-        <div className="form-group">
           <label className="form-label" htmlFor={id('competence')}>Compétence</label>
-          <input id={id('competence')} className="form-input" value={f.competence} disabled={verrou} onChange={(e) => poser({ competence: e.target.value })} />
+          <input id={id('competence')} className="form-input" value={f.competence} disabled={verrou} onChange={(e) => poser({ competence: e.target.value })}
+            placeholder="Blocage et déblocage anticipé" />
         </div>
         <div className="form-group">
           <label className="form-label" htmlFor={id('difficulte')}>Difficulté</label>
@@ -555,39 +561,134 @@ function FormulaireQuestion({ version, question, lectureSeule, onRecharger, onAb
           </select>
         </div>
       </div>
+      <ChampsParType id={id} f={f} poser={poser} disabled={verrou} />
       <div className="form-group">
-        <label className="form-label" htmlFor={id('enonce')}>Énoncé</label>
-        <textarea id={id('enonce')} className="form-textarea" rows={3} value={f.enonce} disabled={verrou} onChange={(e) => poser({ enonce: e.target.value })} />
-      </div>
-      <div className="aca-grille-2">
-        <div className="form-group">
-          <label className="form-label" htmlFor={id('choix')}>Choix</label>
-          <textarea id={id('choix')} className="form-textarea" rows={4} value={f.choix} disabled={verrou} onChange={(e) => poser({ choix: e.target.value })} />
-          <div className="form-hint">De 2 à 4 choix, un par ligne, sans marquer la bonne réponse.</div>
-        </div>
-        <div className="form-group">
-          <label className="form-label" htmlFor={id('bonne')}>Bonne réponse</label>
-          <select id={id('bonne')} className="form-select" value={f.bonne_reponse} disabled={verrou} onChange={(e) => poser({ bonne_reponse: e.target.value })}>
-            {choix.length === 0 && <option value="0">Saisissez d abord les choix</option>}
-            {choix.map((c, i) => <option key={i} value={String(i)}>{i + 1}. {c}</option>)}
-          </select>
-        </div>
-      </div>
-      <div className="form-group">
-        <label className="form-label" htmlFor={id('explication')}>Explication</label>
-        <textarea id={id('explication')} className="form-textarea" rows={3} value={f.explication} disabled={verrou} onChange={(e) => poser({ explication: e.target.value })}
-          placeholder="Ce que le collaborateur lit après avoir répondu, juste ou faux" />
+        <label className="form-label" htmlFor={id('explication')}>Explication{f.type === 'carte' ? ' (facultative)' : ''}</label>
+        <textarea id={id('explication')} className="form-textarea" rows={2} value={f.explication} disabled={verrou} onChange={(e) => poser({ explication: e.target.value })}
+          placeholder="La ligne lue après la réponse, juste ou fausse" />
       </div>
       <div className="aca-pied">
         <button type="button" className="btn btn-primary btn-sm" onClick={enregistrer} disabled={verrou || enCours}>
-          {enCours ? 'Enregistrement…' : 'Enregistrer la question'}
+          {enCours ? 'Enregistrement…' : (nouveau ? 'Ajouter l’exercice' : 'Enregistrer l’exercice')}
         </button>
-        {nouvelle && (
-          <button type="button" className="btn btn-ghost btn-sm" onClick={onAbandonner} disabled={enCours}>Abandonner</button>
+        {onFermer && (
+          <button type="button" className="btn btn-ghost btn-sm" onClick={onFermer} disabled={enCours}>{nouveau ? 'Abandonner' : 'Fermer'}</button>
         )}
         <StatutEnregistrement quand={enregistreLe} />
       </div>
-    </article>
+    </div>
+  )
+}
+
+// ─── La liste des exercices ────────────────────────────────────────────────
+
+function LigneExercice({ version, item, numero, lectureSeule, ouvert, onOuvrir, onApercu, onRecharger }) {
+  const [enCours, setEnCours] = useState(false)
+  const archive = !!item.archive_le
+  const stats = item.statistiques || {}
+  const reponses = Number(stats.reponses) || 0
+  const taux = pourcentage(stats.correctes, reponses)
+  const aRevoir = reponses >= REPONSES_MINIMUM && taux < TAUX_A_REVOIR
+
+  async function archiver(valeur) {
+    if (enCours) return
+    if (valeur) {
+      const ok = await confirmDialog({
+        title: `Archiver l’exercice ${numero} ?`,
+        message: 'Il ne sera plus tiré dans les sessions ni compté dans la maîtrise. Les réponses déjà données restent dans l’historique.',
+        confirmLabel: 'Archiver',
+        danger: true,
+      })
+      if (!ok) return
+    }
+    setEnCours(true)
+    try {
+      await enregistrerItem(version.id, item.id, { archive: valeur })
+      toast.success(valeur ? 'Exercice archivé' : 'Exercice restauré')
+      onRecharger?.()
+    } catch (e) {
+      toast.error(messageErreur(e))
+    } finally {
+      setEnCours(false)
+    }
+  }
+
+  return (
+    <li className={`aca-exo${archive ? ' aca-exo-archive' : ''}${ouvert ? ' aca-exo-ouvert' : ''}`}>
+      <div className="aca-exo-tete">
+        <span className="aca-exo-numero">{numero}</span>
+        <span className="badge badge-normal">{libelleType(item.type)}</span>
+        <span className="aca-exo-meta">{item.competence || 'Sans compétence'} · difficulté {item.difficulte ?? 2}</span>
+        {archive && <span className="badge badge-cancelled">Archivé</span>}
+        {reponses > 0 && (
+          <span className="aca-exo-stats">{pluriel(reponses, 'réponse', 'réponses')}, {taux} % de réussite</span>
+        )}
+        {aRevoir && <span className="badge badge-high" title={`Moins de ${TAUX_A_REVOIR} % de réussite sur au moins ${REPONSES_MINIMUM} réponses`}>Formulation à revoir</span>}
+        <span className="aca-actions">
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => onApercu(item)}>Prévisualiser</button>
+          <button type="button" className="btn btn-outline btn-sm" onClick={() => onOuvrir(ouvert ? null : item.id)} aria-expanded={ouvert}>
+            {ouvert ? 'Fermer' : (lectureSeule || archive ? 'Voir' : 'Modifier')}
+          </button>
+          {!lectureSeule && (archive
+            ? <button type="button" className="btn btn-ghost btn-sm" onClick={() => archiver(false)} disabled={enCours}>Restaurer</button>
+            : <button type="button" className="btn btn-ghost btn-sm" onClick={() => archiver(true)} disabled={enCours}>Archiver</button>)}
+        </span>
+      </div>
+      <div className="aca-exo-enonce">{enonceCourt(item) || <em>Sans énoncé</em>}</div>
+      {ouvert && (
+        <FormulaireExercice key={item.id} version={version} item={item} lectureSeule={lectureSeule} onRecharger={onRecharger} onFermer={() => onOuvrir(null)} />
+      )}
+    </li>
+  )
+}
+
+function ListeExercices({ version, lectureSeule, onRecharger, onApercu }) {
+  const [ouvert, setOuvert] = useState(null)
+  const [nouveau, setNouveau] = useState(null) // le type du nouvel exercice en cours de saisie
+  const [typeChoisi, setTypeChoisi] = useState('choix')
+  const items = [...(version.items || [])].sort((a, b) => (Number(a.ordre) || 0) - (Number(b.ordre) || 0))
+  const actifs = items.filter(estActif)
+  const archives = items.length - actifs.length
+  const titre = `Exercices · ${actifs.length} en jeu${archives > 0 ? ` · ${pluriel(archives, 'archivé', 'archivés')}` : ''}`
+
+  return (
+    <div className="form-section">
+      <div className="form-section-title">{titre}</div>
+      <p className="aca-mention" style={{ marginTop: 0 }}>
+        Une session tire douze exercices, mélange les choix et corrige tout de suite. Une bonne réponse monte la force de l’exercice, une erreur la ramène au début.
+      </p>
+      {items.length === 0 && !nouveau && (
+        <div className="form-hint">Aucun exercice. Un deck publié en compte au moins {EXERCICES_MINIMUM}.</div>
+      )}
+      <ol className="aca-exos">
+        {items.map((it, i) => (
+          <LigneExercice key={it.id} version={version} item={it} numero={i + 1} lectureSeule={lectureSeule}
+            ouvert={ouvert === it.id} onOuvrir={setOuvert} onApercu={onApercu} onRecharger={onRecharger} />
+        ))}
+      </ol>
+      {nouveau && (
+        <div className="aca-exo aca-exo-ouvert aca-exo-nouveau">
+          <div className="aca-exo-tete">
+            <span className="aca-exo-numero">{items.length + 1}</span>
+            <span className="badge badge-normal">{libelleType(nouveau)}</span>
+            <span className="aca-exo-meta">Nouvel exercice</span>
+          </div>
+          <FormulaireExercice key={`nouveau-${nouveau}`} version={version} item={{ type: nouveau }} lectureSeule={lectureSeule}
+            onRecharger={onRecharger} onFermer={() => setNouveau(null)} />
+        </div>
+      )}
+      {!lectureSeule && (
+        <div className="aca-pied aca-nouvel-exo">
+          <label className="form-label" htmlFor="aca-nouvel-exo-type">Type</label>
+          <select id="aca-nouvel-exo-type" className="form-select" value={typeChoisi} onChange={(e) => setTypeChoisi(e.target.value)} disabled={!!nouveau}>
+            {TYPES_ITEM.map((t) => <option key={t} value={t}>{libelleType(t)}</option>)}
+          </select>
+          <button type="button" className="btn btn-outline btn-sm" onClick={() => setNouveau(typeChoisi)} disabled={!!nouveau}>
+            Nouvel exercice
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -600,6 +701,9 @@ function FormulairePublication({ version, onRecharger }) {
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState(null)
   const pret = reluPar.trim().length > 0 && !enCours
+  const actifs = (version.items || []).filter(estActif)
+  const sansCorrige = actifs.filter((it) => it.type !== 'carte' && (!it.corrige || Object.keys(it.corrige).length === 0)).length
+  const memo = String(version.memo_md || '').trim().length > 0
 
   async function publier() {
     if (!pret) return
@@ -617,8 +721,8 @@ function FormulairePublication({ version, onRecharger }) {
       toast.success(nouvelles > 0 ? `Version publiée, ${pluriel(nouvelles, 'affectation renouvelée', 'affectations renouvelées')}` : 'Version publiée')
       onRecharger?.()
     } catch (e) {
-      // Le message de la base dit ce qui manque (« Il faut au moins 5
-      // questions… ») : il s affiche tel quel, sans reformulation.
+      // Le message de la base dit ce qui manque (« Il faut au moins 12
+      // exercices… ») : il s’affiche tel quel, sans reformulation.
       setErreur(messageErreur(e))
     } finally {
       setEnCours(false)
@@ -629,9 +733,14 @@ function FormulairePublication({ version, onRecharger }) {
     <div className="form-section">
       <div className="form-section-title">Publier</div>
       <p className="aca-mention" style={{ marginTop: 0 }}>
-        La publication enregistre qui a relu et quand. Elle demande au moins une leçon, un corrigé par question et
-        assez de questions pour un quiz complet.
+        La publication enregistre qui a relu et quand. Elle demande au moins {EXERCICES_MINIMUM} exercices avec corrigé, un mémo conseillé.
       </p>
+      <ul className="aca-preparation">
+        <li className={actifs.length >= EXERCICES_MINIMUM && sansCorrige === 0 ? 'aca-ok' : 'aca-manque'}>
+          {pluriel(actifs.length, 'exercice en jeu', 'exercices en jeu')}{sansCorrige > 0 ? `, ${pluriel(sansCorrige, 'sans corrigé', 'sans corrigé')}` : ''}
+        </li>
+        <li className={memo ? 'aca-ok' : 'aca-conseil'}>{memo ? 'Mémo présent' : 'Pas de mémo : conseillé avant de publier'}</li>
+      </ul>
       {erreur && <div className="notice notice-error" role="alert">{erreur}</div>}
       <div className="aca-grille-2">
         <div className="form-group">
@@ -657,53 +766,87 @@ function FormulairePublication({ version, onRecharger }) {
   )
 }
 
-// ─── L aperçu collaborateur ────────────────────────────────────────────────
+// ─── L’aperçu : un exercice joué comme en session ──────────────────────────
 
-function ApercuCollaborateur({ version, onFermer }) {
-  const questions = (version.questions || []).filter((q) => !q.archive_le)
+// Le titre du bandeau : une carte se juge, elle n’a pas de bonne réponse.
+const titreBandeau = (type, correcte) => {
+  if (type === 'carte') return correcte ? '✓ Carte sue' : '✕ Carte à revoir'
+  return correcte ? '✓ Bonne réponse' : '✕ Mauvaise réponse'
+}
+
+/**
+ * Joue un exercice avec le composant de la session. Les choix sont présentés
+ * tels quels (aucun mélange) : la bonne réponse de l’aperçu se lit donc
+ * directement dans le corrigé. Rien ne part au serveur. Exporté pour se
+ * tester à sec avec les huit composants.
+ */
+export function JoueurApercu({ item }) {
+  const [valeur, setValeur] = useState(() => reponseVide(item.type))
+  const [resultat, setResultat] = useState(null)
+  const Composant = COMPOSANTS_EXERCICE[item.type]
+  const payload = item.payload || {}
+  const complete = reponseComplete(item.type, valeur, payload)
+
+  function verifier() {
+    const bonne = bonneReponseApercu(item.type, item.corrige)
+    setResultat({ correcte: estBonneReponse(item.type, valeur, bonne), bonne_reponse: bonne, explication: item.explication || '' })
+  }
+  function recommencer() {
+    setValeur(reponseVide(item.type))
+    setResultat(null)
+  }
+
+  if (!Composant) return <div className="notice notice-error" role="alert">Type d’exercice inconnu : {item.type}</div>
+  const enClair = resultat ? rendreBonneReponse(item.type, payload, resultat.bonne_reponse) : ''
+
+  return (
+    <div className="aca-joueur">
+      <Composant payload={payload} valeur={valeur} onChange={setValeur} verrouille={!!resultat} resultat={resultat} />
+      {resultat && (
+        <div className={`aca-bandeau ${resultat.correcte ? 'aca-bandeau-ok' : 'aca-bandeau-ko'}`} role="status" aria-live="polite">
+          <div className="aca-bandeau-titre">{titreBandeau(item.type, resultat.correcte)}</div>
+          {!resultat.correcte && enClair && <div className="aca-bandeau-bonne">Bonne réponse : {enClair.split('\n').map((l, i) => <span key={i}>{i > 0 && <br />}{l}</span>)}</div>}
+          {resultat.explication && <div className="aca-bandeau-explication">{resultat.explication}</div>}
+        </div>
+      )}
+      <div className="aca-pied">
+        {resultat
+          ? <button type="button" className="btn btn-outline btn-sm" onClick={recommencer}>Recommencer</button>
+          : <button type="button" className="btn btn-primary btn-sm" onClick={verifier} disabled={!complete}>Vérifier</button>}
+      </div>
+    </div>
+  )
+}
+
+function ApercuExercice({ version, itemInitial, onFermer }) {
+  // Les exercices en jeu d’abord, puis les archivés (on peut les rejouer
+  // avant de les restaurer) ; sans choix initial, le premier en jeu.
+  const items = [...(version.items || [])].sort((a, b) => Number(estActif(b)) - Number(estActif(a)) || (Number(a.ordre) || 0) - (Number(b.ordre) || 0))
+  const [itemId, setItemId] = useState(itemInitial?.id || items[0]?.id || null)
+  const item = items.find((it) => it.id === itemId) || null
+
   return (
     <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onFermer() }}>
       <div className="modal-box aca-modale-large" role="dialog" aria-modal="true" aria-labelledby="aca-apercu-titre">
         <div className="modal-head">
           <div>
-            <div className="modal-title" id="aca-apercu-titre">{version.titre}</div>
-            <div className="modal-subtitle">Ce qu un collaborateur verra : les leçons, puis le quiz complet, sans les corrigés.</div>
+            <div className="modal-title" id="aca-apercu-titre">Prévisualiser comme un collaborateur</div>
+            <div className="modal-subtitle">Un exercice joué comme en session, choix dans l’ordre saisi (la session les mélange). Rien n’est enregistré.</div>
           </div>
           <button type="button" className="btn btn-ghost btn-sm" aria-label="Fermer" onClick={onFermer}>✕</button>
         </div>
         <div className="modal-body">
-          {version.objectif && <p className="aca-apercu-objectif">{version.objectif}</p>}
-          {(version.lecons || []).map((l) => (
-            <section key={l.id} className="aca-apercu-lecon">
-              <h3>Leçon {l.ordre} · {l.titre}</h3>
-              {l.objectif && <p className="aca-apercu-objectif">{l.objectif}</p>}
-              <RenduMarkdown markdown={l.contenu_md || ''} />
-              {l.mini_question?.enonce && (
-                <div className="aca-apercu-question">
-                  <div className="aca-apercu-enonce">{l.mini_question.enonce}</div>
-                  <ul className="aca-apercu-choix">
-                    {(l.mini_question.choix || []).map((c, i) => (
-                      <li key={i}><input type="radio" disabled aria-hidden="true" tabIndex={-1} /> {c}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </section>
-          ))}
-          <section className="aca-apercu-quiz">
-            <h3>Quiz · {pluriel(questions.length, 'question', 'questions')}</h3>
-            <p className="aca-apercu-objectif">Le quiz tire quelques questions dans cette banque, dans un ordre mélangé.</p>
-            {questions.map((q, n) => (
-              <div key={q.id || n} className="aca-apercu-question">
-                <div className="aca-apercu-enonce">{n + 1}. {q.enonce}</div>
-                <ul className="aca-apercu-choix">
-                  {(q.choix || []).map((c, i) => (
-                    <li key={i}><input type="radio" disabled aria-hidden="true" tabIndex={-1} /> {c}</li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </section>
+          <div className="form-group">
+            <label className="form-label" htmlFor="aca-apercu-exo">Exercice</label>
+            <select id="aca-apercu-exo" className="form-select" value={itemId || ''} onChange={(e) => setItemId(e.target.value)}>
+              {items.map((it, i) => (
+                <option key={it.id} value={it.id}>{i + 1}. {libelleType(it.type)} · {enonceCourt(it, 70)}{estActif(it) ? '' : ' (archivé)'}</option>
+              ))}
+            </select>
+          </div>
+          {item
+            ? <JoueurApercu key={item.id} item={item} />
+            : <div className="aca-apercu-vide">Aucun exercice en jeu à prévisualiser.</div>}
         </div>
         <div className="modal-foot">
           <button type="button" className="btn btn-outline" onClick={onFermer}>Fermer</button>
@@ -716,17 +859,15 @@ function ApercuCollaborateur({ version, onFermer }) {
 // ─── La vue ────────────────────────────────────────────────────────────────
 
 export function EditeurVersionVue({ version, onNaviguer, onRecharger }) {
-  const [apercu, setApercu] = useState(false)
-  const [nouvellesLecons, setNouvellesLecons] = useState([])
-  const [nouvellesQuestions, setNouvellesQuestions] = useState([])
+  const [apercu, setApercu] = useState(null) // null : fermé ; { item } : ouvert (item null = le premier)
   const lectureSeule = version.statut !== 'brouillon'
   const statut = STATUTS_VERSION[version.statut] || STATUTS_VERSION.brouillon
-  const lecons = version.lecons || []
-  const questions = version.questions || []
-  const actives = questions.filter((q) => !q.archive_le)
+  const actifs = (version.items || []).filter(estActif)
 
   const sousTitre = [
     `Version ${version.numero} · ${statut.libelle.toLowerCase()}`,
+    pluriel(actifs.length, 'exercice', 'exercices'),
+    String(version.memo_md || '').trim() ? 'mémo présent' : 'sans mémo',
     version.relu_par ? `relu par ${version.relu_par}` : null,
   ].filter(Boolean).join(' · ')
 
@@ -734,7 +875,7 @@ export function EditeurVersionVue({ version, onNaviguer, onRecharger }) {
     <div className="aca">
       <div className="aca-entete-retour">
         <button type="button" className="btn btn-ghost btn-sm" onClick={() => onNaviguer?.('#/formation/administration')}>
-          Retour à l administration
+          Retour à l’administration
         </button>
       </div>
       <div className="section-header">
@@ -747,7 +888,9 @@ export function EditeurVersionVue({ version, onNaviguer, onRecharger }) {
           </div>
         </div>
         <div className="aca-actions">
-          <button type="button" className="btn btn-outline btn-sm" onClick={() => setApercu(true)}>Prévisualiser comme un collaborateur</button>
+          <button type="button" className="btn btn-outline btn-sm" onClick={() => setApercu({ item: null })} disabled={actifs.length === 0}>
+            Prévisualiser comme un collaborateur
+          </button>
         </div>
       </div>
 
@@ -759,49 +902,7 @@ export function EditeurVersionVue({ version, onNaviguer, onRecharger }) {
 
       <FormulaireVersion key={version.id} version={version} lectureSeule={lectureSeule} onRecharger={onRecharger} />
 
-      <div className="form-section">
-        <div className="form-section-title">Leçons · {lecons.length}</div>
-        <div className="aca-lecons">
-          {lecons.map((l) => (
-            <FormulaireLecon key={l.id} version={version} lecon={l} lectureSeule={lectureSeule} onRecharger={onRecharger} />
-          ))}
-          {nouvellesLecons.map((cle, i) => (
-            <FormulaireLecon key={cle} version={version} lecon={{ id: null, ordre: lecons.length + i + 1 }} lectureSeule={lectureSeule}
-              onRecharger={onRecharger} onAbandonner={() => setNouvellesLecons((prev) => prev.filter((c) => c !== cle))} />
-          ))}
-        </div>
-        {lecons.length === 0 && nouvellesLecons.length === 0 && (
-          <div className="form-hint">Aucune leçon. Une version publiée en a au moins une.</div>
-        )}
-        <div className="aca-pied">
-          <button type="button" className="btn btn-outline btn-sm" disabled={lectureSeule}
-            onClick={() => setNouvellesLecons((prev) => [...prev, `lecon-${Date.now()}-${prev.length}`])}>
-            Ajouter une leçon
-          </button>
-        </div>
-      </div>
-
-      <div className="form-section">
-        <div className="form-section-title">Questions · {actives.length} en banque{questions.length > actives.length ? ` · ${questions.length - actives.length} archivée${questions.length - actives.length > 1 ? 's' : ''}` : ''}</div>
-        <div className="aca-questions">
-          {questions.map((q) => (
-            <FormulaireQuestion key={q.id} version={version} question={q} lectureSeule={lectureSeule} onRecharger={onRecharger} />
-          ))}
-          {nouvellesQuestions.map((cle) => (
-            <FormulaireQuestion key={cle} version={version} question={{ id: null }} lectureSeule={lectureSeule}
-              onRecharger={onRecharger} onAbandonner={() => setNouvellesQuestions((prev) => prev.filter((c) => c !== cle))} />
-          ))}
-        </div>
-        {questions.length === 0 && nouvellesQuestions.length === 0 && (
-          <div className="form-hint">Aucune question. Le quiz en tire plusieurs à chaque tentative : la banque en compte dix par module dans le catalogue semé.</div>
-        )}
-        <div className="aca-pied">
-          <button type="button" className="btn btn-outline btn-sm" disabled={lectureSeule}
-            onClick={() => setNouvellesQuestions((prev) => [...prev, `question-${Date.now()}-${prev.length}`])}>
-            Ajouter une question
-          </button>
-        </div>
-      </div>
+      <ListeExercices version={version} lectureSeule={lectureSeule} onRecharger={onRecharger} onApercu={(item) => setApercu({ item })} />
 
       {lectureSeule ? (
         <div className="form-section">
@@ -818,7 +919,7 @@ export function EditeurVersionVue({ version, onNaviguer, onRecharger }) {
         <FormulairePublication key={version.id} version={version} onRecharger={onRecharger} />
       )}
 
-      {apercu && <ApercuCollaborateur version={version} onFermer={() => setApercu(false)} />}
+      {apercu && <ApercuExercice version={version} itemInitial={apercu.item} onFermer={() => setApercu(null)} />}
     </div>
   )
 }
@@ -842,7 +943,7 @@ export default function EditeurVersion({ versionId, onNaviguer }) {
     return (
       <div className="aca">
         <div className="aca-entete-retour">
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => onNaviguer?.('#/formation/administration')}>Retour à l administration</button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => onNaviguer?.('#/formation/administration')}>Retour à l’administration</button>
         </div>
         <div className="notice notice-error" role="alert">{erreur}</div>
       </div>

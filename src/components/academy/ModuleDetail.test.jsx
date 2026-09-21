@@ -3,84 +3,120 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { ModuleDetailVue } from './ModuleDetail'
 
 const AUJOURDHUI = '2026-09-21'
-const NBSP = '\u00a0'
 const profile = { id: 'p1', full_name: 'Camille Exemple', role: 'advisor' }
 
+// Un deck tel que le rend academy_module : en cours, en retard, une
+// couronne, un mémo, deux compétences, deux sessions terminées.
 const module = {
-  module_id: 'm2', slug: 'per-et-retraite', titre: 'Le PER et la retraite', theme: 'Produits', niveau: 'fondamentaux', version_id: 'v2',
-  objectif: 'Expliquer la déduction et la sortie', competence: 'Fiscalité du PER', duree_minutes: 15, prerequis: [], seuil_reussite: 0.8,
-  cas_pratique: { titre: 'Un artisan de 45 ans', situation_markdown: 'Situation fictive.', questions: ['Quel plafond ?', 'Quelle sortie ?'], corrige_markdown: 'Le corrigé.' },
-  a_completer: ['Le barème interne des frais'],
+  module_id: 'm2', slug: 'per-et-retraite', titre: 'Le PER et la retraite', theme: 'per-retraite', niveau: 'fondamentaux', version_id: 'v2', numero: 1,
+  objectif: 'Expliquer la déduction et la sortie', competence: 'Fiscalité du PER', duree_minutes: 15, prerequis: [],
+  memo_md: '## Le PER en une page\n\nLe versement est **déductible** du revenu imposable.',
   sources: [{ titre: 'Code général des impôts, article 163 quatervicies', url: 'https://www.legifrance.gouv.fr/', emetteur: 'Légifrance' }],
-  relu_par: 'Direction', publie_le: '2026-09-01',
-  lecons: [
-    { id: 'l1', ordre: 1, slug: 'l1', titre: 'Les bases', objectif: '', duree_minutes: 5, terminee_le: '2026-09-15T10:00:00Z', position: { scroll: 100 } },
-    { id: 'l2', ordre: 2, slug: 'l2', titre: 'Les versements', objectif: '', duree_minutes: 5, terminee_le: null, position: { scroll: 40 } },
-    { id: 'l3', ordre: 3, slug: 'l3', titre: 'La sortie', objectif: '', duree_minutes: 5, terminee_le: null, position: null },
+  relu_par: 'Direction', relu_le: '2026-08-30', publie_le: '2026-09-01',
+  nb_items: 40, couronnes: 1, items_vus: 24, items_dus: 5, xp: 320,
+  competences: [
+    { competence: 'Plafonds de déduction', nb: 12, force_moyenne: 1.5 },
+    { competence: 'Sortie du PER', nb: 10, force_moyenne: 4.2 },
+  ],
+  sessions: [
+    { id: 's2', demarree_le: '2026-09-19T08:00:00Z', terminee_le: '2026-09-19T08:06:00Z', nb_bons: 10, nb_total: 12, xp: 100 },
+    { id: 's1', demarree_le: '2026-09-18T08:00:00Z', terminee_le: '2026-09-18T08:07:00Z', nb_bons: 7, nb_total: 12, xp: 80 },
   ],
   affectation: { id: 'a2', statut: 'en_cours', echeance: '2026-09-10', obligatoire: true },
-  validation: null, attestation: null,
-  revisions: [], tentatives: [], tentative_ouverte: null, duree_active_s: 900,
+  validation: null, attestation: null, entrainement_ouvert: null, duree_active_s: 900,
 }
 
 const rendre = (m) => renderToStaticMarkup(<ModuleDetailVue module={m} profile={profile} aujourdhui={AUJOURDHUI} onNaviguer={() => {}} onAttestation={() => {}} />)
 
-describe('ModuleDetailVue', () => {
-  it('le quiz reste fermé tant qu une leçon n est pas terminée, et les leçons terminées sont cochées', () => {
+describe('ModuleDetailVue (deck)', () => {
+  it('en tête, maîtrise à couronnes, gros bouton Démarrer une session, plus de leçon ni de quiz', () => {
     const html = rendre(module)
-    expect(html).toContain('Terminez les leçons pour ouvrir le quiz')
-    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Passer le quiz<\/button>/)
-    expect(html).toContain('Leçons · 1 sur 3 terminée')
-    expect((html.match(/>✓</g) || []).length).toBe(1)
-    expect(html).toContain('>Reprendre<')
-    expect(html).toContain('>Lire<')
-    expect(html).toContain(`Seuil : 4 bonnes réponses sur 5 (80${NBSP}%)`)
+    expect(html).toContain('section-title">Le PER et la retraite')
+    expect(html).toContain('PER et retraite · Fondamentaux')
+    expect(html).toContain('Compétence : Fiscalité du PER')
+    expect(html).toContain('40 exercices')
+    expect(html).toContain('aria-label="1 couronne sur 5"')
+    expect(html).toContain('ac-couronnes grande')
+    expect(html).toContain('24 sur 40 exercices vus')
+    expect(html).toContain('5 à revoir')
+    expect(html).toContain('320 XP')
+    expect(html).toContain('2 sessions')
+    expect(html).toMatch(/<button[^>]*class="btn btn-primary ac-btn-grand"[^>]*>Démarrer une session<\/button>/)
+    expect(html).toContain('12 exercices, corrigés un par un')
     expect(html).toContain('badge badge-urgent">En retard')
     expect(html).toContain('Échéance dépassée de 11 jours')
-    expect(html).toContain('À compléter par le cabinet')
-    expect(html).toContain('Le barème interne des frais')
-    expect(html).toContain('Voir le corrigé')
-    expect(html).toContain('Quel plafond ?')
+    expect(html).toContain('temps actif 15 min')
     expect(html).toContain('Sources (1)')
+    expect(html).not.toContain('Leçon')
+    expect(html).not.toContain('quiz')
+    expect(html).not.toContain('Quiz')
   })
 
-  it('toutes les leçons terminées : le quiz s ouvre', () => {
-    const fini = { ...module, lecons: module.lecons.map((l) => ({ ...l, terminee_le: '2026-09-16T10:00:00Z' })) }
-    const html = rendre(fini)
-    expect(html).not.toContain('Terminez les leçons pour ouvrir le quiz')
-    expect(html).toMatch(/<button[^>]*class="btn btn-primary"[^>]*>Passer le quiz<\/button>/)
-    expect(html).not.toMatch(/disabled=""[^>]*>Passer le quiz/)
-    expect((html.match(/>✓</g) || []).length).toBe(3)
+  it('le mémo passe par RenduMarkdown ; vide, on le dit', () => {
+    expect(rendre(module)).toContain('class="md-rendu"')
+    const sansMemo = rendre({ ...module, memo_md: '' })
+    expect(sansMemo).toContain('Ce deck n’a pas encore de mémo')
   })
 
-  it('une tentative ouverte se reprend', () => {
-    const html = rendre({ ...module, tentative_ouverte: { id: 't9', type: 'quiz', jeton_client: 'j' } })
-    expect(html).toContain('Reprendre le quiz en cours')
+  it('les compétences portent leur force moyenne en barre', () => {
+    const html = rendre(module)
+    expect(html).toContain('Plafonds de déduction')
+    expect(html).toContain('12 exercices')
+    expect(html).toContain('aria-label="Force 1.5 sur 5"')
+    expect(html).toContain('1,5/5')
+    expect(html).toContain('width:30%')
+    expect(html).toContain('4,2/5')
+    expect(html).toContain('team-bar-fill signed')
   })
 
-  it('module validé : historique, révisions, attestation', () => {
+  it('l’historique des sessions : date à Paris, bons sur total, XP', () => {
+    const html = rendre(module)
+    expect(html).toContain('Historique des sessions')
+    expect(html).toContain('19/09/2026 à 10h06')
+    expect(html).toContain('>10/12<')
+    expect(html).toContain('>100<')
+    expect(html).toContain('>7/12<')
+  })
+
+  it('une session ouverte se reprend', () => {
+    const html = rendre({ ...module, entrainement_ouvert: { id: 'e9', jeton_client: 'j' } })
+    expect(html).toContain('Reprendre la session')
+    expect(html).not.toContain('Démarrer une session')
+    expect(html).toContain('tu reprends où tu t es arrêté')
+  })
+
+  it('deck validé : attestation à trois couronnes, sans note de quiz', () => {
     const valide = {
-      ...module,
-      lecons: module.lecons.map((l) => ({ ...l, terminee_le: '2026-09-16T10:00:00Z' })),
+      ...module, couronnes: 3, items_vus: 40, items_dus: 0,
       affectation: { id: 'a2', statut: 'valide', echeance: '2026-09-10', obligatoire: true },
       validation: { valide_le: '2026-09-16T11:00:00Z' },
-      attestation: { numero: 'EA-2026-0007', delivree_le: '2026-09-16T11:00:00Z', score: 4, total: 5 },
-      tentatives: [{ id: 't1', type: 'quiz', numero: 1, soumise_le: '2026-09-16T11:00:00Z', score: 4, total: 5, reussie: true, duree_s: 420 }],
-      revisions: [
-        { type: 'J7', echeance: '2026-09-23', resultat: null, faite_le: null, due: false },
-        { type: 'J30', echeance: '2026-10-16', resultat: null, faite_le: null, due: false },
-      ],
+      attestation: { numero: 'EA-2026-0007', delivree_le: '2026-09-16T11:00:00Z', score: 3, total: 5 },
     }
     const html = rendre(valide)
-    expect(html).toContain('Historique des tentatives')
-    expect(html).toContain(`4/5 · 80${NBSP}%`)
-    expect(html).toContain('>Réussi<')
-    expect(html).toContain('7 min')
-    expect(html).toContain('Révision J+7')
-    expect(html).toContain('Prévue le 23/09/2026')
+    expect(html).toContain('aria-label="3 couronnes sur 5"')
+    expect(html).toContain('Deck validé.')
     expect(html).toContain('Attestation interne de réalisation')
     expect(html).toContain('EA-2026-0007')
-    expect(html).toContain('Télécharger l attestation interne')
+    expect(html).toContain('Délivrée le 16/09/2026 · maîtrise à trois couronnes · contenu relu par Direction')
+    expect(html).toContain('Télécharger l’attestation interne')
+    expect(html).not.toContain('3/5')
     expect(html).not.toContain('En retard')
+    expect(html).toContain('rien à revoir')
+  })
+
+  it('consultation libre : deck non affecté, statut déduit des exercices vus', () => {
+    const html = rendre({ ...module, affectation: null, sessions: [] })
+    expect(html).toContain('Consultation libre, deck non affecté')
+    expect(html).toContain('badge badge-progress">En cours')
+    expect(html).toContain('Aucune session terminée sur ce deck.')
+  })
+
+  it('un deck sans exercice : le gros bouton est désactivé et le dit', () => {
+    const html = rendre({ ...module, nb_items: 0, items_vus: 0, items_dus: 0, competences: [], sessions: [] })
+    expect(html).toMatch(/<button[^>]*class="btn btn-primary ac-btn-grand"[^>]*disabled=""[^>]*title="Aucun exercice dans ce deck"[^>]*>Démarrer une session<\/button>/)
+    expect(html).toContain('Aucun exercice dans ce deck : rien à jouer pour l’instant.')
+    expect(html).not.toContain('corrigés un par un')
+    // Avec des exercices, rien n est désactivé.
+    expect(rendre(module)).not.toMatch(/ac-btn-grand"[^>]*disabled=""/)
   })
 })
