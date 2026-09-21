@@ -22,3 +22,11 @@ l etape. La transaction est annulee dans les deux cas : rien ne reste en base.
 Identites simulees comme le fait PostgREST : `set local role authenticated`
 et `request.jwt.claims` avec le `sub` d un profil fictif du projet DEV
 (camille, noe, martin borgis).
+
+Journal : joue le 21 septembre 2026 sur DEV apres le seed, quatorze etapes
+`OK`. Le premier passage avait revele une erreur dans
+`academy_nouvelle_version` (variable de boucle `q` homonyme de l alias de
+table, « record q is not assigned yet ») : corrigee dans la migration 2
+du depot et appliquee sur DEV sous le nom
+`academy_2_correctif_nouvelle_version` (version 20260921103158). En
+production, la migration 2 corrigee s applique telle quelle.

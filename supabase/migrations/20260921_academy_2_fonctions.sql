@@ -796,7 +796,9 @@ begin
     returning id into v_new_lecon;
     v_map := v_map || jsonb_build_object(l.id::text, v_new_lecon::text);
   end loop;
-  for q in select q.*, c.bonne_reponse, c.explication from public.academy_questions q left join public.academy_corriges c on c.question_id = q.id where q.version_id = src.id order by q.cle loop
+  -- L alias de table ne doit pas porter le nom de la variable de boucle :
+  -- PL/pgSQL substituerait la variable (encore vide) a l alias.
+  for q in select aq.*, c.bonne_reponse, c.explication from public.academy_questions aq left join public.academy_corriges c on c.question_id = aq.id where aq.version_id = src.id order by aq.cle loop
     insert into public.academy_questions (version_id, lecon_id, cle, type, competence, enonce, choix, difficulte, archive_le)
     values (v_new, case when q.lecon_id is null then null else (v_map ->> q.lecon_id::text)::uuid end, q.cle, q.type, q.competence, q.enonce, q.choix, q.difficulte, q.archive_le)
     returning id into v_new_q;
