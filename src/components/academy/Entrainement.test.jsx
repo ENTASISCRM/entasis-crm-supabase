@@ -61,7 +61,6 @@ describe('EntrainementVue, le déroulé', () => {
     const html = vue()
     expect(html).toContain('>Quitter<')
     expect(html).toContain('Le PER et la retraite')
-    expect(html).toContain('width:8%')
     expect(html).toContain('class="ae-sr" aria-live="polite">Exercice 1 sur 12<')
     expect(html).toContain('class="ae-corps" tabindex="-1"')
     expect(html).toContain('>Choix unique<')
@@ -199,7 +198,7 @@ describe('EntrainementVue, les écrans', () => {
     expect(html).toContain('aria-label="2 couronnes sur 5"')
     expect(html).toContain('aria-label="3 couronnes sur 5"')
     expect((html.match(/ac-couronne on/g) || []).length).toBe(5)
-    expect((html.match(/<svg/g) || []).length).toBe(10)
+    expect((html.match(/<svg[^>]*class="ac-couronne/g) || []).length).toBe(10)
     expect(html).toContain('3 couronnes : une de plus.')
     expect(html).toContain('Deck validé')
     expect(html).toContain('EA-2026-0007')
@@ -223,6 +222,174 @@ describe('EntrainementVue, les écrans', () => {
     expect(html).toContain('aria-label="0 couronne sur 5"')
     expect(html).toContain('aria-label="1 couronne sur 5"')
     expect(html).toContain('1 couronne : une de plus.')
+  })
+})
+
+// ─── Gamification (migration 8) ──────────────────────────────────────────
+// Tout ce qui se compte vient du serveur : xp_session, combo et xp_gagne sur
+// une réponse, xp_detail, niveau_avant, niveau_apres, succes_debloques,
+// defis et classement sur le bilan. La vue ne fait qu afficher et animer,
+// et le HTML initial porte déjà les valeurs finales.
+
+const SCHEMA_SAIN = '<svg viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg"><title>Les cinq temps</title><rect x="0" y="0" width="640" height="360" fill="#FFFFFF"/><rect x="40" y="140" width="160" height="80" rx="8" fill="#F5EDD8" stroke="#162443" stroke-width="2"/><text x="120" y="186" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" fill="#2C3548">Le premier appel</text></svg>'
+
+const FIN_GAMIFIEE = {
+  entrainement_id: 'e2', version_id: 'v1', nb_bons: 11, nb_total: 12, xp: 165, premiere_du_jour: true, serie: 5, meilleure_serie: 6,
+  couronnes_avant: 2, couronnes_apres: 3, valide: false, attestation: null,
+  erreurs: [{ item_id: 'i1', competence: 'Sortie du PER', enonce_court: 'Le PER se débloque à quel moment ?' }],
+  statut_module: 'en_cours', xp_total_version: 475,
+  xp_detail: { reponses: 105, combo: 20, parfaite: 0, premiere_du_jour: 10, defis: 30, total: 165 },
+  combo_max: 7,
+  niveau_avant: { niveau: 2, titre: 'Apprenti', xp_min: 100, xp_suivant: 250, xp_total: 235, progression_pct: 90 },
+  niveau_apres: { niveau: 3, titre: 'Initié', xp_min: 250, xp_suivant: 450, xp_total: 400, progression_pct: 75 },
+  succes_debloques: [{ code: 'combo_6', titre: 'Six d’affilée', description: 'Un combo de six bonnes réponses dans une session.', icone: 'eclair' }],
+  defis: [
+    { code: 'justes_15', titre: 'Quinze bonnes réponses', description: '', cible: 15, progression: 15, fait: true, xp: 30, fait_par_cette_session: true },
+    { code: 'sessions_2', titre: 'Deux sessions aujourd’hui', description: '', cible: 2, progression: 1, fait: false, xp: 30, fait_par_cette_session: false },
+  ],
+  classement: { semaine: '2026-09-21', rang: 3, participants: 9, xp_moi: 320, xp_premier: 360, xp_devant: 355, ecart_premier: 40 },
+}
+
+describe('EntrainementVue, le haut de session gamifié', () => {
+  it('compteur d’XP de session, pastille de combo dès 2, barre segmentée', () => {
+    const html = vue({ rang: 4, total: 6, xpSession: 45, combo: 3, marques: ['bon', 'faux', 'bon'] })
+    expect(html).toContain('class="ae-jauge-valeur">45 XP<')
+    expect(html).toContain('class="ae-combo">Combo ×3<')
+    expect((html.match(/ae-segment is-bon/g) || []).length).toBe(2)
+    expect((html.match(/ae-segment is-faux/g) || []).length).toBe(1)
+    expect((html.match(/ae-segment is-encours/g) || []).length).toBe(1)
+    expect((html.match(/ae-segment is-avenir/g) || []).length).toBe(2)
+  })
+
+  it('aucune pastille de combo sous 2, le compteur part de zéro', () => {
+    const html = vue({ xpSession: 0, combo: 1 })
+    expect(html).toContain('class="ae-jauge-valeur">0 XP<')
+    expect(html).not.toContain('ae-combo')
+  })
+
+  it('la reprise d’une session ouverte repart de son XP et de son combo', () => {
+    const html = vue({ rang: 8, total: 12, xpSession: 80, combo: 4, marques: ['bon', 'bon', 'bon', 'bon', 'faux', 'bon', 'bon'] })
+    expect(html).toContain('>80 XP<')
+    expect(html).toContain('Combo ×4')
+    expect((html.match(/ae-segment is-avenir/g) || []).length).toBe(4)
+  })
+})
+
+describe('EntrainementVue, la correction gamifiée', () => {
+  it('bonne réponse : le bandeau annonce le gain et le +N flotte', () => {
+    const html = vue({ valeur: 1, resultat: { ...VERT(1), xp_gagne: 10, xp_session: 10, combo: 1 }, xpGagne: 10, combo: 1, xpSession: 10 })
+    expect(html).toContain('>Bonne réponse<')
+    expect(html).toContain('class="ae-bandeau-gain"> ! +10 XP<')
+    expect(html).toContain('class="ae-flottant" aria-hidden="true">+10<')
+    expect(html).not.toContain('combo ×')
+  })
+
+  it('bonne réponse en combo : le bandeau dit le bonus et le combo', () => {
+    const html = vue({ valeur: 1, resultat: { ...VERT(1), xp_gagne: 15, xp_session: 65, combo: 4 }, xpGagne: 15, combo: 4, xpSession: 65 })
+    expect(html).toContain('class="ae-bandeau-gain"> ! +15 XP, combo ×4<')
+    expect(html).toContain('class="ae-combo">Combo ×4<')
+  })
+
+  it('mauvaise réponse : aucun XP annoncé et la carte est secouée', () => {
+    const html = vue({ valeur: 0, resultat: ROUGE(1), xpGagne: 0, combo: 0, xpSession: 40 })
+    expect(html).toContain('class="ae-corps is-secousse"')
+    expect(html).not.toContain('ae-bandeau-gain')
+    expect(html).not.toContain('ae-flottant')
+  })
+
+  it('en rejeu : rien n’est annoncé, la carte n’est pas secouée sur un vert', () => {
+    const html = vue({ rejeu: true, rang: 1, total: 2, valeur: 1, resultat: VERT(1), xpGagne: 0, xpSession: 120 })
+    expect(html).toContain('Cette fois c’est bon')
+    expect(html).not.toContain('ae-bandeau-gain')
+    expect(html).not.toContain('is-secousse')
+    expect(html).toContain('>120 XP<')
+  })
+})
+
+describe('EntrainementVue, la figure d’un exercice', () => {
+  const avecRef = { ...ITEMS.choix, payload: { ...ITEMS.choix.payload, figure: { ref: 'cinq-temps' } } }
+  const schemas = [{ cle: 'cinq-temps', titre: 'Les cinq temps', svg: SCHEMA_SAIN, legende: 'Toujours dans cet ordre, du premier appel au suivi.' }]
+
+  it('une figure par ref est résolue dans les schémas de la version, au dessus de l’énoncé', () => {
+    const html = vue({ item: avecRef, schemas })
+    expect(html).toContain('class="ae-figure"')
+    expect(html).toContain('class="ac-schema"')
+    expect(html).toContain('Toujours dans cet ordre')
+    expect(html.indexOf('ae-figure')).toBeLessThan(html.indexOf('ae-corps'))
+  })
+
+  it('une figure propre à l’exercice passe par son svg', () => {
+    const item = { ...ITEMS.choix, payload: { ...ITEMS.choix.payload, figure: { svg: SCHEMA_SAIN, alt: 'Frise des cinq temps' } } }
+    expect(vue({ item })).toContain('class="ac-schema"')
+  })
+
+  it('une ref introuvable ne pose aucune figure', () => {
+    expect(vue({ item: avecRef, schemas: [] })).not.toContain('ae-figure')
+    expect(vue()).not.toContain('ae-figure')
+  })
+})
+
+describe('EntrainementVue, le bilan gamifié', () => {
+  const html = vue({ phase: 'fin', fin: FIN_GAMIFIEE })
+
+  it('confettis : une centaine de particules, aucune image ni son', () => {
+    expect((html.match(/class="ae-confetti /g) || []).length).toBe(100)
+    expect(html).toContain('class="ae-confettis" aria-hidden="true"')
+    expect(html).not.toContain('<audio')
+  })
+
+  it('détail d’XP : une ligne par poste, le défi crédité, le total', () => {
+    expect(html).toContain('Bonnes réponses')
+    expect(html).toContain('+105 XP')
+    expect(html).toContain('Combos, jusqu’à 7 d’affilée')
+    expect(html).toContain('+20 XP')
+    expect(html).toContain('Première session du jour')
+    expect(html).toContain('Quinze bonnes réponses')
+    expect(html).toContain('+30 XP')
+    expect(html).toContain('class="ae-detail-somme" role="status" aria-live="polite">+165 XP<')
+    // Le défi non crédité par cette session ne compte pas deux fois.
+    expect(html).not.toContain('Deux sessions aujourd’hui')
+    expect(html).not.toContain('Session parfaite')
+  })
+
+  it('niveau : le titre du serveur, le passage annoncé, ce qui reste', () => {
+    expect(html).toContain('class="ae-niveau-titre">Initié<')
+    expect(html).toContain('Niveau 3 atteint : Initié.')
+    expect(html).toContain('400 XP au total')
+    expect(html).toContain('50 XP avant Confirmé')
+    // La barre part du départ, la transition CSS l’amène à l’arrivée.
+    expect(html).toContain('class="ae-niveau-fill" style="width:0%"')
+  })
+
+  it('succès débloqués et classement anonyme', () => {
+    expect(html).toContain('>Succès débloqué<')
+    expect(html).toContain('Six d’affilée')
+    expect(html).toContain('Un combo de six bonnes réponses')
+    expect(html).toContain('ac-picto-eclair')
+    expect(html).toContain('3e sur 9 cette semaine, 40 XP derrière le premier')
+    expect(html).toContain('ni nom ni score de personne')
+  })
+
+  it('les trois boutons de sortie, Revoir mes erreurs seulement s’il y a des erreurs', () => {
+    expect(html).toContain('>Encore une session</button>')
+    expect(html).toContain('>Revoir mes erreurs</button>')
+    expect(html).toContain('les exercices à revoir passent en premier')
+    expect(html).toContain('>Retour au deck</button>')
+    const parfaite = vue({ phase: 'fin', fin: { ...FIN_GAMIFIEE, erreurs: [] } })
+    expect(parfaite).not.toContain('Revoir mes erreurs')
+    expect(parfaite).toContain('Sans faute.')
+  })
+
+  it('un bilan sans clés de la migration 8 reste lisible', () => {
+    const vieux = { nb_bons: 9, nb_total: 12, xp: 90, serie: 1, meilleure_serie: 1, couronnes_avant: 0, couronnes_apres: 1, valide: false, erreurs: [] }
+    const simple = vue({ phase: 'fin', fin: vieux })
+    expect(simple).toContain('+90 XP')
+    expect(simple).toContain('Réponses et bonus')
+    // Repli : le niveau est recalculé depuis l’XP, sans prétendre à un passage.
+    expect(simple).toContain('class="ae-niveau-titre">Débutant<')
+    expect(simple).not.toContain('atteint :')
+    expect(simple).not.toContain('ae-classement')
+    expect(simple).not.toContain('Succès débloqué')
   })
 })
 

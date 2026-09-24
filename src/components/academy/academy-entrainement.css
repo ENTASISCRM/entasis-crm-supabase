@@ -24,14 +24,53 @@
 .ae-haut { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .ae-haut-titre { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: var(--t2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ae-compteur { font-size: 12.5px; font-weight: 600; color: var(--t2); font-variant-numeric: tabular-nums; }
-.ae-progress { height: 8px; background: var(--bd); border-radius: 999px; overflow: hidden; }
-.ae-progress-fill { height: 100%; background: var(--gold); border-radius: 999px; transition: width var(--tr); }
 .ae-type { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--t3); }
+
+/* Jauges : XP de la session (compteur qui monte) et pastille de combo. */
+.ae-jauges { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.ae-jauge {
+  display: inline-flex; align-items: baseline; gap: 6px; padding: 5px 12px;
+  border: 1px solid var(--gold-line); border-radius: 999px; background: var(--gold-subtle);
+}
+.ae-jauge-kicker { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold-dk); }
+.ae-jauge-valeur { font-size: 14px; font-weight: 700; color: var(--t1); font-variant-numeric: tabular-nums; }
+.ae-combo {
+  display: inline-flex; align-items: center; padding: 5px 12px; border-radius: 999px;
+  background: var(--navy); color: var(--t-inv); font-size: 12.5px; font-weight: 700; letter-spacing: 0.01em;
+  animation: ae-pulse 420ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Progression segmentée : un segment par exercice de la session. */
+.ae-segments { list-style: none; margin: 0; padding: 0; display: flex; gap: 3px; min-width: 0; }
+.ae-segment { flex: 1 1 0; min-width: 0; height: 8px; border-radius: 999px; background: var(--bd); transition: background var(--tr), transform var(--tr); }
+.ae-segment.is-bon { background: var(--signed); }
+.ae-segment.is-faux { background: var(--cancelled); }
+.ae-segment.is-encours { background: var(--gold); transform: scaleY(1.35); }
 .ae-revient-kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold-dk); }
 .ae-kicker { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); }
 
+/* ─── Figure d un exercice (schéma assaini, composant Schema) ───────────── */
+/* Les classes ac-schema et ac-picto sont celles des composants partagés ;
+   elles sont ici cadrées pour la session seulement (hauteur bornée sur
+   téléphone, aucun défilement interne : l image se réduit). */
+.ae-figure { min-width: 0; }
+.ae .ac-schema { margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.ae .ac-schema-image {
+  display: block; width: 100%; min-width: 0; padding: 8px;
+  border: 1px solid var(--bd-strong); border-radius: var(--rad-md); background: var(--card); box-shadow: var(--sh-xs);
+}
+.ae .ac-schema-image svg { display: block; width: 100%; height: auto; max-height: 38vh; }
+.ae .ac-schema-indisponible {
+  margin: 0; padding: 14px; border: 1px dashed var(--bd-strong); border-radius: var(--rad-md);
+  background: var(--bg-subtle); color: var(--t2); font-size: 13px; text-align: center;
+}
+.ae .ac-schema-legende { display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; color: var(--t2); line-height: 1.45; }
+.ae .ac-schema-titre { font-size: 12px; font-weight: 700; color: var(--t1); }
+.ae .ac-picto { display: block; flex-shrink: 0; }
+
 /* ─── Corps d un exercice ───────────────────────────────────────────────── */
 .ae-corps { min-width: 0; }
+.ae-corps.is-secousse { animation: ae-secousse 200ms ease-in-out; }
 .ae-corps:focus { outline: none; }
 .ae-corps:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; border-radius: var(--rad-sm); }
 .ae-exo { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
@@ -133,7 +172,18 @@
 }
 .ae-bandeau.is-vert { background: var(--signed-bg); border-color: var(--signed); }
 .ae-bandeau.is-rouge { background: var(--cancelled-bg); border-color: var(--cancelled); }
+.ae-bandeau { position: relative; }
 .ae-bandeau-titre { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.ae-bandeau-gain { color: var(--gold-dk); font-variant-numeric: tabular-nums; }
+/* Le +N flotte en haut à droite : le titre lui laisse la place, sinon les
+   deux se chevauchent sur un téléphone quand le combo s ajoute au gain. */
+.ae-bandeau.is-gain .ae-bandeau-titre { padding-right: 62px; }
+/* Le +N qui flotte et s estompe au dessus du bandeau. */
+.ae-flottant {
+  position: absolute; top: 10px; right: 16px; pointer-events: none;
+  font-size: 22px; font-weight: 800; color: var(--gold-dk); font-variant-numeric: tabular-nums;
+  animation: ae-flotte 1100ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
 .is-vert > .ae-bandeau-titre { color: var(--signed); }
 .is-rouge > .ae-bandeau-titre { color: var(--cancelled); }
 .ae-bandeau-sous { font-size: 13px; color: var(--t2); line-height: 1.5; }
@@ -169,6 +219,116 @@
 .ae-parfait { font-size: 15px; font-weight: 600; color: var(--signed); text-align: center; }
 .ae-actions-fin { flex-direction: column; }
 .ae-actions-fin .btn { width: 100%; }
+.ae-mention { text-align: center; margin-top: -4px; }
+
+/* ─── Bilan : confettis, détail d XP, niveau, succès, classement ────────── */
+.ae-fin { position: relative; }
+.ae-fin:focus { outline: none; }
+.ae-fin:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; border-radius: var(--rad-sm); }
+/* Les confettis tombent au dessus du bilan sans jamais le gêner ni le
+   faire défiler : la couche est fixée à la fenêtre et ne prend aucun clic. */
+.ae-confettis { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 5; }
+.ae-confetti {
+  position: absolute; top: -12px; width: 8px; height: 12px; border-radius: 2px; opacity: 0;
+  animation-name: ae-chute; animation-timing-function: cubic-bezier(0.3, 0.7, 0.4, 1); animation-fill-mode: forwards;
+}
+.ae-confetti.t0 { background: var(--gold); }
+.ae-confetti.t1 { background: var(--navy); }
+.ae-confetti.t2 { background: var(--gold-lt); }
+.ae-confetti.t3 { background: var(--signed); }
+
+.ae-detail { display: flex; flex-direction: column; gap: 8px; }
+.ae-detail-lignes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ae-detail-ligne {
+  display: flex; align-items: center; gap: 10px; min-width: 0;
+  padding-bottom: 8px; border-bottom: 0.5px solid var(--bd);
+  animation: ae-apparait 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.ae-detail-ligne:last-child { border-bottom: 0; padding-bottom: 0; }
+.ae-detail-picto { display: inline-flex; color: var(--gold-dk); }
+.ae-detail-libelle { flex: 1; min-width: 0; font-size: 14px; color: var(--t1); line-height: 1.35; overflow-wrap: anywhere; }
+.ae-detail-xp { font-size: 14px; font-weight: 700; color: var(--gold-dk); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ae-detail-total {
+  display: flex; align-items: baseline; gap: 10px; margin-top: 2px; padding-top: 10px; border-top: 1px solid var(--bd-strong);
+}
+.ae-detail-total .ae-detail-libelle { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--t2); }
+.ae-detail-somme { font-size: 22px; font-weight: 800; color: var(--gold-dk); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+
+.ae-niveau { display: flex; flex-direction: column; gap: 8px; }
+.ae-niveau-tete { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.ae-niveau-pastille {
+  display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; flex-shrink: 0;
+  border-radius: 50%; background: var(--navy); color: var(--t-inv); font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums;
+}
+.ae-niveau-pastille.is-passage { animation: ae-retourne 700ms cubic-bezier(0.16, 1, 0.3, 1) 200ms both; }
+.ae-niveau-titre { font-size: 18px; font-weight: 700; color: var(--t1); letter-spacing: -0.01em; }
+.ae-niveau-xp { margin-left: auto; font-size: 12.5px; color: var(--t2); font-variant-numeric: tabular-nums; }
+.ae-passage { font-size: 13px; font-weight: 600; color: var(--gold-dk); }
+.ae-niveau-barre { height: 10px; background: var(--bd); border-radius: 999px; overflow: hidden; }
+.ae-niveau-fill { height: 100%; background: var(--gold); border-radius: 999px; transition: width 900ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* Les couronnes du bilan s allument une à une. */
+.ae-fin .ae-couronnes-ligne .ac-couronnes.grande .ac-couronne.on { animation: ae-allume 360ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.ae-fin .ae-couronnes-ligne .ac-couronnes.grande .ac-couronne.on:nth-child(1) { animation-delay: 260ms; }
+.ae-fin .ae-couronnes-ligne .ac-couronnes.grande .ac-couronne.on:nth-child(2) { animation-delay: 400ms; }
+.ae-fin .ae-couronnes-ligne .ac-couronnes.grande .ac-couronne.on:nth-child(3) { animation-delay: 540ms; }
+.ae-fin .ae-couronnes-ligne .ac-couronnes.grande .ac-couronne.on:nth-child(4) { animation-delay: 680ms; }
+.ae-fin .ae-couronnes-ligne .ac-couronnes.grande .ac-couronne.on:nth-child(5) { animation-delay: 820ms; }
+
+.ae-succes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ae-succes-carte {
+  display: flex; align-items: flex-start; gap: 12px; min-width: 0; padding: 12px 14px;
+  border: 1px solid var(--gold-line); border-radius: var(--rad-md); background: var(--gold-subtle);
+  animation: ae-apparait 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.ae-succes-picto {
+  display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; flex-shrink: 0;
+  border-radius: 50%; background: var(--card); color: var(--gold-dk); box-shadow: var(--sh-xs);
+}
+.ae-succes-texte { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ae-succes-titre { font-size: 15px; font-weight: 700; color: var(--t1); line-height: 1.3; }
+.ae-succes-desc { font-size: 13px; color: var(--t2); line-height: 1.45; overflow-wrap: anywhere; }
+
+.ae-classement { display: flex; flex-direction: column; gap: 6px; }
+.ae-classement-phrase { font-size: 17px; font-weight: 700; color: var(--t1); line-height: 1.35; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+
+/* ─── Mouvements ────────────────────────────────────────────────────────── */
+@keyframes ae-pulse {
+  0% { transform: scale(0.7); }
+  55% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+@keyframes ae-secousse {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-7px); }
+  45% { transform: translateX(6px); }
+  70% { transform: translateX(-4px); }
+  88% { transform: translateX(2px); }
+}
+@keyframes ae-flotte {
+  0% { opacity: 0; transform: translateY(6px) scale(0.85); }
+  25% { opacity: 1; transform: translateY(0) scale(1.05); }
+  100% { opacity: 0; transform: translateY(-34px) scale(1); }
+}
+@keyframes ae-apparait {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes ae-allume {
+  0% { opacity: 0.25; transform: scale(0.6); }
+  60% { opacity: 1; transform: scale(1.25); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes ae-retourne {
+  0% { transform: rotateY(0deg) scale(1); }
+  50% { transform: rotateY(180deg) scale(1.2); }
+  100% { transform: rotateY(360deg) scale(1); }
+}
+@keyframes ae-chute {
+  0% { opacity: 0; transform: translate3d(0, 0, 0) rotate(0deg); }
+  10% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(var(--ae-derive, 0px), 105vh, 0) rotate(540deg); }
+}
 
 /* ─── Téléphone ─────────────────────────────────────────────────────────── */
 @media (max-width: 720px) {
@@ -176,7 +336,27 @@
   .ae-enonce { font-size: 17px; }
   .ae-fin-grille { grid-template-columns: 1fr; }
   .ae-actions { position: sticky; bottom: 0; padding: 10px 0 calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--bg); }
+  /* Le bilan se lit en entier : ses boutons closent la page au lieu de rester
+     collés en bas, où ils masquaient le niveau, les succès et le classement. */
+  .ae-actions-fin { position: static; padding-top: 4px; }
   .ae-actions .btn, .ae-bandeau .btn { width: 100%; }
   .ae-carte-actions .btn { flex: 1 1 100%; }
   .ae-vrai-faux .ae-choix-liste { flex-direction: row; }
+  /* Un schéma ne dépasse jamais 45 % de la fenêtre et ne défile pas : il se
+     réduit, le reste de l exercice reste accessible sans faire défiler. */
+  .ae .ac-schema-image svg { max-height: 45vh; }
+  .ae-segment { height: 6px; }
+  .ae-niveau-xp { margin-left: 0; flex-basis: 100%; }
+}
+
+/* ─── Moins de mouvement : tout s arrête, rien ne disparaît ─────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .ae-combo, .ae-corps.is-secousse, .ae-detail-ligne, .ae-succes-carte,
+  .ae-niveau-pastille.is-passage, .ae-fin .ae-couronnes-ligne .ac-couronnes.grande .ac-couronne.on {
+    animation: none;
+  }
+  .ae-segment, .ae-niveau-fill { transition: none; }
+  .ae-confettis { display: none; }
+  /* Le +N reste lisible au lieu de flotter puis de s effacer. */
+  .ae-flottant { animation: none; opacity: 1; }
 }

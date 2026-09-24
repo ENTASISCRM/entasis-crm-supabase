@@ -85,3 +85,49 @@ describe('MesResultatsVue', () => {
     expect(html).toContain('Voir Aujourd hui')
   })
 })
+
+// ── Gamification (migration 8) : niveau et compteur de succès ───────────────
+// academy_mes_resultats rend en plus niveau (forme d academy_niveau) et
+// succes (tout le catalogue avec obtenu_le ou null).
+const gamifie = {
+  ...resultats,
+  niveau: { niveau: 5, titre: 'Solide', xp_min: 700, xp_suivant: 1000, xp_total: 860, progression_pct: 53 },
+  succes: [
+    { code: 'premiere_session', titre: 'Premier pas', description: 'Terminer une première session.', icone: 'pas', ordre: 1, secret: false, obtenu_le: '2026-09-01T18:30:00Z' },
+    { code: 'session_parfaite', titre: 'Sans faute', description: 'Réussir les douze exercices d’une session.', icone: 'cible', ordre: 2, secret: false, obtenu_le: '2026-09-20T18:00:00Z' },
+    { code: 'combo_6', titre: 'Six d’affilée', description: 'Enchaîner six bonnes réponses.', icone: 'eclair', ordre: 3, secret: false, obtenu_le: null },
+  ],
+}
+
+describe('MesResultatsVue, gamification', () => {
+  it('la carte de niveau reprend celle d’Aujourd hui', () => {
+    const html = rendre(gamifie)
+    expect(html).toContain('ac-kpi-kicker">Niveau<')
+    expect(html).toContain('ac-niveau-pastille" aria-hidden="true">5<')
+    expect(html).toContain('ac-niveau-titre">Solide<')
+    expect(html).toContain('niveau 5 · 860 XP au total')
+    expect(html).toContain('140 XP avant Expert')
+  })
+
+  it('le compteur de succès et son lien vers la galerie', () => {
+    const html = rendre(gamifie)
+    expect(html).toContain('ac-kpi-kicker">Succès<')
+    expect(html).toContain('>2 <')
+    expect(html).toContain('sur 3</span>')
+    expect(html).toContain('débloqués par tes sessions')
+    expect(html).toContain('>Tous mes succès</button>')
+  })
+
+  it('un serveur sans niveau ni succès : le niveau se recalcule, la carte des succès disparaît', () => {
+    const html = rendre()
+    expect(html).toContain('ac-niveau-titre">Solide<')
+    expect(html).not.toContain('ac-kpi-kicker">Succès<')
+    expect(html).not.toContain('Tous mes succès')
+  })
+
+  it('aucun succès débloqué : la carte invite à la première session', () => {
+    const html = rendre({ ...gamifie, succes: gamifie.succes.map((s) => ({ ...s, obtenu_le: null })) })
+    expect(html).toContain('la première session terminée en débloque un')
+    expect(html).toContain('>0 <')
+  })
+})

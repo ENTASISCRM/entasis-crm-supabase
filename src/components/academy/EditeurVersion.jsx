@@ -17,6 +17,14 @@
 // correction est calculée en local depuis le corrigé, pour l’aperçu
 // seulement : une vraie session passe par academy_repondre.
 //
+// Une version porte aussi ses SCHÉMAS : une liste [{ cle, titre, svg,
+// legende }] que le mémo place avec un marqueur [schema:cle] et à laquelle
+// un exercice renvoie par payload.figure = { ref }. La section « Schémas »
+// les édite (SVG collé dans une zone à chasse fixe, aperçu assaini en
+// direct) ; le champ « Figure » d’un exercice choisit un schéma de la
+// version ou un SVG propre à l’exercice. Rien n’est rendu tel quel : tout
+// passe par le composant Schema, donc par lib/academy/svg.js.
+//
 // Conteneur (chargement) et vue (tout par props) sont séparés : la vue se
 // teste en renderToStaticMarkup. La logique (état d’un formulaire,
 // validation, patch, bonne réponse de l’aperçu) vit dans
@@ -29,13 +37,17 @@ import { messageErreur } from '../../lib/ui-shared'
 import { dateHeureParis, pourcentage, THEMES, NIVEAUX, libelleTheme, libelleNiveau } from '../../lib/academy/format'
 import { LIBELLE_TYPES } from '../../lib/academy/statuts'
 import {
-  TYPES_ITEM, NB_CHOIX, MULTI_MIN, MULTI_MAX, MEMO_MOTS, compterMots, etatItem, enonceCourt, validerItem, bonneReponseApercu,
+  TYPES_ITEM, NB_CHOIX, MULTI_MIN, MULTI_MAX, MEMO_MOTS, FIGURES,
+  compterMots, etatItem, enonceCourt, validerItem, bonneReponseApercu, normaliserCle,
 } from '../../lib/academy/editeur-items'
+import { LONGUEUR_MAX, preVerifierSvg } from '../../lib/academy/svg'
 import { reponseVide, reponseComplete, estBonneReponse, rendreBonneReponse } from '../../lib/academy/exercices'
 import { versionAdmin, enregistrerVersion, enregistrerItem, publierVersion } from '../../services/academy'
 import { confirmDialog } from '../ui/confirm'
 import RenduMarkdown from '../ui/RenduMarkdown'
+import Schema from './Schema'
 import { SkeletonTable } from '../ui/Skeleton'
+import './academy-schemas.css'
 import Choix from './exercices/Choix'
 import VraiFaux from './exercices/VraiFaux'
 import Multi from './exercices/Multi'
@@ -77,6 +89,9 @@ const EXERCICES_MINIMUM = 12
 
 const libelleType = (type) => LIBELLE_TYPES[type] || type || ''
 const pluriel = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`
+const chaine = (v) => (v == null ? '' : String(v))
+// Espace insécable comme séparateur de milliers (cf. lib/campagnes.js).
+const milliers = (n) => Number(n).toLocaleString('fr-FR').replace(/\u202f/g, '\u00a0')
 const lignes = (texte) => String(texte || '').split('\n').map((l) => l.trim()).filter(Boolean)
 const texteLignes = (liste) => (Array.isArray(liste) ? liste : []).map((l) => (typeof l === 'string' ? l : JSON.stringify(l))).join('\n')
 const nombreEntier = (v, defaut) => {
@@ -303,6 +318,145 @@ function FormulaireVersion({ version, lectureSeule, onRecharger }) {
   )
 }
 
+// ─── Les schémas de la version ─────────────────────────────────────────────
+
+const etatSchemas = (v) => (Array.isArray(v.schemas) ? v.schemas : [])
+  .filter((s) => s && typeof s === 'object')
+  .map((s) => ({ cle: normaliserCle(s.cle), titre: chaine(s.titre), legende: chaine(s.legende), svg: chaine(s.svg) }))
+
+// Un schéma en cours d’édition : la clé, le titre, la légende, le SVG à
+// gauche et son aperçu assaini à droite. La raison d’un refus vient de
+// preVerifierSvg et s’affiche tout de suite, sans aller retour serveur.
+function LigneSchema({ schema, numero, disabled, onPoser, onDeplacer, onRetirer, premier, dernier }) {
+  const id = (c) => `aca-schema-${numero}-${c}`
+  const svg = chaine(schema.svg)
+  const verdict = svg.trim() ? preVerifierSvg(svg) : null
+  const cle = normaliserCle(schema.cle)
+  return (
+    <div className="aca-schema">
+      <div className="aca-schema-tete">
+        <span className="aca-schema-numero">{numero}.</span>
+        <span className="aca-mention" style={{ margin: 0 }}>
+          {cle ? `Dans le mémo : [schema:${cle}]` : 'Donnez une clé pour pouvoir l’appeler depuis le mémo'}
+        </span>
+        <span className="aca-actions">
+          <button type="button" className="btn btn-ghost btn-sm" aria-label={`Monter le schéma ${numero}`} onClick={() => onDeplacer(-1)} disabled={disabled || premier}>Monter</button>
+          <button type="button" className="btn btn-ghost btn-sm" aria-label={`Descendre le schéma ${numero}`} onClick={() => onDeplacer(1)} disabled={disabled || dernier}>Descendre</button>
+          <button type="button" className="btn btn-ghost btn-sm" aria-label={`Retirer le schéma ${numero}`} onClick={onRetirer} disabled={disabled}>Retirer</button>
+        </span>
+      </div>
+      <div className="aca-grille-3">
+        <div className="form-group">
+          <label className="form-label" htmlFor={id('cle')}>Clé</label>
+          <input id={id('cle')} className="form-input" value={schema.cle} disabled={disabled} placeholder="frise"
+            onChange={(e) => onPoser({ cle: normaliserCle(e.target.value) })} />
+          <div className="form-hint">Des minuscules sans espace : c’est elle qui sert de marqueur.</div>
+        </div>
+        <div className="form-group">
+          <label className="form-label" htmlFor={id('titre')}>Titre</label>
+          <input id={id('titre')} className="form-input" value={schema.titre} disabled={disabled} placeholder="Les sept étapes du rendez vous"
+            onChange={(e) => onPoser({ titre: e.target.value })} />
+        </div>
+        <div className="form-group">
+          <label className="form-label" htmlFor={id('legende')}>Légende</label>
+          <input id={id('legende')} className="form-input" value={schema.legende} disabled={disabled} placeholder="Ce qu’il faut retenir en une phrase"
+            onChange={(e) => onPoser({ legende: e.target.value })} />
+        </div>
+      </div>
+      <div className="aca-schema-corps">
+        <div className="form-group">
+          <label className="form-label" htmlFor={id('svg')}>SVG</label>
+          <textarea id={id('svg')} className="form-textarea aca-svg" rows={12} value={svg} disabled={disabled} spellCheck={false}
+            placeholder={'<svg viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg">…</svg>'}
+            onChange={(e) => onPoser({ svg: e.target.value })} />
+          <div className={svg.length > LONGUEUR_MAX ? 'aca-schema-refus' : 'aca-schema-compte'}>
+            {milliers(svg.length)} caractères sur {milliers(LONGUEUR_MAX)} au plus
+          </div>
+          {verdict && !verdict.ok && <div className="aca-schema-refus" role="status">{verdict.raison}</div>}
+        </div>
+        <div className="aca-schema-apercu">
+          <div className="aca-apercu-titre">Aperçu</div>
+          {svg.trim()
+            ? <Schema svg={svg} titre={schema.titre} legende={schema.legende} />
+            : <div className="aca-schema-vide">Collez le SVG du schéma pour le voir ici.</div>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SectionSchemas({ version, lectureSeule, onRecharger }) {
+  const [liste, setListe] = useState(() => etatSchemas(version))
+  const [enCours, setEnCours] = useState(false)
+  const [enregistreLe, setEnregistreLe] = useState(null)
+
+  const poser = (i, patch) => setListe((prev) => prev.map((s, j) => (j === i ? { ...s, ...patch } : s)))
+  const retirer = (i) => setListe((prev) => prev.filter((_, j) => j !== i))
+  const deplacer = (i, sens) => setListe((prev) => {
+    const j = i + sens
+    if (j < 0 || j >= prev.length) return prev
+    const copie = [...prev]
+    const [element] = copie.splice(i, 1)
+    copie.splice(j, 0, element)
+    return copie
+  })
+
+  async function enregistrer() {
+    if (enCours) return
+    const schemas = []
+    for (let i = 0; i < liste.length; i += 1) {
+      const s = liste[i]
+      const cle = normaliserCle(s.cle)
+      const svg = chaine(s.svg).trim()
+      if (!cle) { toast.error(`Le schéma ${i + 1} n’a pas de clé : des minuscules sans espace, par exemple « frise »`); return }
+      if (schemas.some((x) => x.cle === cle)) { toast.error(`Deux schémas portent la clé « ${cle} » : une clé ne sert qu’une fois`); return }
+      if (svg.length > LONGUEUR_MAX) { toast.error(`Le schéma « ${cle} » dépasse ${milliers(LONGUEUR_MAX)} caractères : allégez le dessin, il ne serait pas rendu`); return }
+      schemas.push({ cle, titre: chaine(s.titre).trim(), legende: chaine(s.legende).trim(), svg })
+    }
+    setEnCours(true)
+    try {
+      await enregistrerVersion(version.id, { schemas })
+      toast.success(schemas.length > 0 ? pluriel(schemas.length, 'schéma enregistré', 'schémas enregistrés') : 'Schémas enregistrés')
+      setEnregistreLe(new Date())
+      onRecharger?.()
+    } catch (e) {
+      toast.error(messageErreur(e))
+    } finally {
+      setEnCours(false)
+    }
+  }
+
+  return (
+    <div className="form-section">
+      <div className="form-section-title">Schémas · {pluriel(liste.length, 'figure', 'figures')}</div>
+      <p className="aca-mention" style={{ marginTop: 0 }}>
+        Un dessin vaut une page de texte. Le mémo place un schéma avec son marqueur [schema:cle] seul sur sa ligne ;
+        sans marqueur, les schémas se posent à la fin du mémo. Un exercice peut aussi s’appuyer sur l’un d’eux par son champ « Figure ».
+        Tout SVG est assaini avant d’être affiché : ni script, ni image, ni police ni lien vers l’extérieur.
+      </p>
+      {liste.length === 0 && <div className="form-hint">Aucun schéma pour l’instant.</div>}
+      <div className="aca-schemas">
+        {liste.map((s, i) => (
+          <LigneSchema key={i} schema={s} numero={i + 1} disabled={lectureSeule}
+            premier={i === 0} dernier={i === liste.length - 1}
+            onPoser={(patch) => poser(i, patch)} onDeplacer={(sens) => deplacer(i, sens)} onRetirer={() => retirer(i)} />
+        ))}
+      </div>
+      {!lectureSeule && (
+        <div className="aca-pied">
+          <button type="button" className="btn btn-outline btn-sm" onClick={() => setListe((prev) => [...prev, { cle: '', titre: '', legende: '', svg: '' }])} disabled={enCours}>
+            Ajouter un schéma
+          </button>
+          <button type="button" className="btn btn-primary btn-sm" onClick={enregistrer} disabled={enCours}>
+            {enCours ? 'Enregistrement…' : 'Enregistrer les schémas'}
+          </button>
+          <StatutEnregistrement quand={enregistreLe} />
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Le formulaire d’un exercice, un par type ──────────────────────────────
 
 // Une liste de textes éditables (éléments d’un ordre, lignes d’une
@@ -362,6 +516,63 @@ function ChampsChoixUnique({ id, f, poser, disabled }) {
       ))}
       <div className="form-hint">Cochez la bonne réponse. Les choix seront mélangés à chaque session.</div>
     </fieldset>
+  )
+}
+
+// La figure d’un exercice : rien, un schéma de la version (par sa clé), ou
+// un SVG propre à cet exercice. Elle s’affiche au dessus de l’énoncé pendant
+// la session ; le texte de remplacement sert aux lecteurs d’écran.
+function ChampFigure({ id, f, poser, disabled, schemas }) {
+  const liste = (Array.isArray(schemas) ? schemas : []).filter((s) => s && normaliserCle(s.cle))
+  const mode = FIGURES.includes(f.figure_mode) ? f.figure_mode : 'aucune'
+  const svg = chaine(f.figure_svg)
+  const verdict = mode === 'svg' && svg.trim() ? preVerifierSvg(svg) : null
+  return (
+    <div className="form-group aca-figure">
+      <label className="form-label" htmlFor={id('figure')}>Figure</label>
+      <select id={id('figure')} className="form-select" value={mode} disabled={disabled} onChange={(e) => poser({ figure_mode: e.target.value })}>
+        <option value="aucune">Aucune figure</option>
+        <option value="ref">Un schéma de la version</option>
+        <option value="svg">Un SVG propre à cet exercice</option>
+      </select>
+      {mode === 'ref' && (liste.length > 0 ? (
+        <div className="form-group" style={{ marginTop: 10 }}>
+          <label className="form-label" htmlFor={id('figure-ref')}>Le schéma</label>
+          <select id={id('figure-ref')} className="form-select" value={f.figure_ref || ''} disabled={disabled}
+            onChange={(e) => poser({ figure_ref: e.target.value })}>
+            <option value="">Choisir un schéma</option>
+            {liste.map((s) => <option key={normaliserCle(s.cle)} value={normaliserCle(s.cle)}>{normaliserCle(s.cle)}{s.titre ? ` · ${s.titre}` : ''}</option>)}
+          </select>
+        </div>
+      ) : (
+        <div className="form-hint">Cette version n’a pas encore de schéma : ajoutez le dans la section « Schémas ».</div>
+      ))}
+      {mode === 'svg' && (
+        <div className="aca-figure-champs" style={{ marginTop: 10 }}>
+          <div className="form-group">
+            <label className="form-label" htmlFor={id('figure-svg')}>SVG de la figure</label>
+            <textarea id={id('figure-svg')} className="form-textarea aca-svg" rows={8} value={svg} disabled={disabled} spellCheck={false}
+              placeholder={'<svg viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg">…</svg>'}
+              onChange={(e) => poser({ figure_svg: e.target.value })} />
+            <div className={svg.length > LONGUEUR_MAX ? 'aca-schema-refus' : 'aca-schema-compte'}>
+              {milliers(svg.length)} caractères sur {milliers(LONGUEUR_MAX)} au plus
+            </div>
+            {verdict && !verdict.ok && <div className="aca-schema-refus" role="status">{verdict.raison}</div>}
+            <div className="form-group" style={{ marginTop: 10 }}>
+              <label className="form-label" htmlFor={id('figure-alt')}>Texte de remplacement</label>
+              <input id={id('figure-alt')} className="form-input" value={chaine(f.figure_alt)} disabled={disabled}
+                placeholder="Ce que montre la figure, en une ligne" onChange={(e) => poser({ figure_alt: e.target.value })} />
+            </div>
+          </div>
+          <div className="aca-schema-apercu">
+            <div className="aca-apercu-titre">Aperçu</div>
+            {svg.trim()
+              ? <Schema svg={svg} alt={f.figure_alt} />
+              : <div className="aca-schema-vide">Collez le SVG de la figure pour la voir ici.</div>}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -562,6 +773,7 @@ export function FormulaireExercice({ version, item, lectureSeule, onRecharger, o
         </div>
       </div>
       <ChampsParType id={id} f={f} poser={poser} disabled={verrou} />
+      <ChampFigure id={id} f={f} poser={poser} disabled={verrou} schemas={version?.schemas} />
       <div className="form-group">
         <label className="form-label" htmlFor={id('explication')}>Explication{f.type === 'carte' ? ' (facultative)' : ''}</label>
         <textarea id={id('explication')} className="form-textarea" rows={2} value={f.explication} disabled={verrou} onChange={(e) => poser({ explication: e.target.value })}
@@ -768,6 +980,24 @@ function FormulairePublication({ version, onRecharger }) {
 
 // ─── L’aperçu : un exercice joué comme en session ──────────────────────────
 
+// La figure à afficher au dessus d’un exercice : payload.figure vaut
+// { ref } (un schéma de la version, résolu par sa clé) ou { svg, alt }. Rend
+// null quand l’exercice n’en porte pas, ou quand la clé ne désigne rien :
+// une prévisualisation ne doit pas se transformer en message d’erreur.
+// (Un fichier de composant n’exporte que des composants : cette fonction
+// reste interne et se teste à travers JoueurApercu.)
+function figureDeLItem(payload, schemas) {
+  const f = payload && typeof payload.figure === 'object' ? payload.figure : null
+  if (!f) return null
+  const ref = normaliserCle(f.ref)
+  if (ref) {
+    const s = (Array.isArray(schemas) ? schemas : []).find((x) => x && normaliserCle(x.cle) === ref)
+    return s ? { svg: chaine(s.svg), titre: chaine(s.titre), legende: chaine(s.legende), alt: '' } : null
+  }
+  const svg = chaine(f.svg)
+  return svg.trim() ? { svg, titre: '', legende: '', alt: chaine(f.alt) } : null
+}
+
 // Le titre du bandeau : une carte se juge, elle n’a pas de bonne réponse.
 const titreBandeau = (type, correcte) => {
   if (type === 'carte') return correcte ? '✓ Carte sue' : '✕ Carte à revoir'
@@ -780,12 +1010,13 @@ const titreBandeau = (type, correcte) => {
  * directement dans le corrigé. Rien ne part au serveur. Exporté pour se
  * tester à sec avec les huit composants.
  */
-export function JoueurApercu({ item }) {
+export function JoueurApercu({ item, schemas }) {
   const [valeur, setValeur] = useState(() => reponseVide(item.type))
   const [resultat, setResultat] = useState(null)
   const Composant = COMPOSANTS_EXERCICE[item.type]
   const payload = item.payload || {}
   const complete = reponseComplete(item.type, valeur, payload)
+  const figure = figureDeLItem(payload, schemas)
 
   function verifier() {
     const bonne = bonneReponseApercu(item.type, item.corrige)
@@ -801,6 +1032,7 @@ export function JoueurApercu({ item }) {
 
   return (
     <div className="aca-joueur">
+      {figure && <Schema svg={figure.svg} titre={figure.titre} legende={figure.legende} alt={figure.alt} />}
       <Composant payload={payload} valeur={valeur} onChange={setValeur} verrouille={!!resultat} resultat={resultat} />
       {resultat && (
         <div className={`aca-bandeau ${resultat.correcte ? 'aca-bandeau-ok' : 'aca-bandeau-ko'}`} role="status" aria-live="polite">
@@ -845,7 +1077,7 @@ function ApercuExercice({ version, itemInitial, onFermer }) {
             </select>
           </div>
           {item
-            ? <JoueurApercu key={item.id} item={item} />
+            ? <JoueurApercu key={item.id} item={item} schemas={version.schemas} />
             : <div className="aca-apercu-vide">Aucun exercice en jeu à prévisualiser.</div>}
         </div>
         <div className="modal-foot">
@@ -901,6 +1133,8 @@ export function EditeurVersionVue({ version, onNaviguer, onRecharger }) {
       )}
 
       <FormulaireVersion key={version.id} version={version} lectureSeule={lectureSeule} onRecharger={onRecharger} />
+
+      <SectionSchemas key={`schemas-${version.id}`} version={version} lectureSeule={lectureSeule} onRecharger={onRecharger} />
 
       <ListeExercices version={version} lectureSeule={lectureSeule} onRecharger={onRecharger} onApercu={(item) => setApercu({ item })} />
 

@@ -2,7 +2,21 @@
  "slug": "methode-entasis",
  "titre": "La méthode Entasis",
  "competence": "Préparer et structurer la découverte, l'analyse et le suivi",
- "memo_md": "Une stratégie d'ensemble, pas une collection de produits.\n\n## Les trois temps\n- Écoute : premier entretien de 30 minutes, confidentiel et sans engagement. Comprendre, pas proposer.\n- Étude : analyse patrimoniale complète, puis feuille de route argumentée, chaque recommandation chiffrée.\n- Accompagnement : un conseiller dédié, un point annuel formel, des ajustements au fil de la vie.\n\n## Avant tout conseil (AMF)\n- Recueillir : situation financière (dont capacité à subir des pertes), connaissances et expérience, objectifs, horizon, tolérance au risque.\n- Sans ces informations : s'abstenir de tout conseil.\n- Demande de produit : notée, reportée à l'étude, ni acceptée ni rejetée.\n\n## Le bilan patrimonial\nActifs, passifs, revenus, fiscalité, régime matrimonial, clauses bénéficiaires, objectifs de vie.\n\n## L'étude, dans l'ordre\n1. Diagnostic : où en est le client ?\n2. Objectifs de vie hiérarchisés, avec leur horizon.\n3. Stratégie, puis moyens : les solutions arrivent ici seulement.\n- Pour chaque recommandation : objectif servi, chiffre, contrainte, risque, scénario défavorable.\n- Aucun chiffre réglementaire de mémoire : source officielle datée, ou mention « à vérifier ».\n- Le conseil écrit : la déclaration d'adéquation.\n\n## Le suivi\n- Point annuel : « Qu'est-ce qui a changé dans votre vie ? » Famille, activité, revenus, projets, rapport au risque.\n- Mariage, naissance, cession, héritage, baisse de revenus : mettre à jour l'étude, pas de réponse immédiate.\n- Notaire, avocat fiscaliste, expert-comptable : coordonnés avec l'accord du client, sans les remplacer.\n- Chaque échange, même bref, est tracé dans le CRM le jour même.\n",
+ "memo_md": "Une stratégie d'ensemble, pas une collection de produits.\n\n## Les trois temps\n- Écoute : premier entretien de 30 minutes, confidentiel et sans engagement. Comprendre, pas proposer.\n- Étude : analyse patrimoniale complète, puis feuille de route argumentée, chaque recommandation chiffrée.\n- Accompagnement : un conseiller dédié, un point annuel formel, des ajustements au fil de la vie.\n\n[schema:trois_temps]\n\n## Avant tout conseil (AMF)\n- Recueillir : situation financière (dont capacité à subir des pertes), connaissances et expérience, objectifs, horizon, tolérance au risque.\n- Sans ces informations : s'abstenir de tout conseil.\n- Demande de produit : notée, reportée à l'étude, ni acceptée ni rejetée.\n\n## Le bilan patrimonial\nActifs, passifs, revenus, fiscalité, régime matrimonial, clauses bénéficiaires, objectifs de vie.\n\n## L'étude, dans l'ordre\n1. Diagnostic : où en est le client ?\n2. Objectifs de vie hiérarchisés, avec leur horizon.\n3. Stratégie, puis moyens : les solutions arrivent ici seulement.\n\n[schema:ordre_etude]\n\n- Pour chaque recommandation : objectif servi, chiffre, contrainte, risque, scénario défavorable.\n- Aucun chiffre réglementaire de mémoire : source officielle datée, ou mention « à vérifier ».\n- Le conseil écrit : la déclaration d'adéquation.\n\n## Le suivi\n- Point annuel : « Qu'est-ce qui a changé dans votre vie ? » Famille, activité, revenus, projets, rapport au risque.\n- Mariage, naissance, cession, héritage, baisse de revenus : mettre à jour l'étude, pas de réponse immédiate.\n- Notaire, avocat fiscaliste, expert-comptable : coordonnés avec l'accord du client, sans les remplacer.\n- Chaque échange, même bref, est tracé dans le CRM le jour même.\n",
+ "schemas": [
+  {
+   "cle": "trois_temps",
+   "titre": "Les trois temps de la méthode Entasis",
+   "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 640 360\" font-family=\"system-ui, -apple-system, Segoe UI, sans-serif\">\n<title>Les trois temps de la méthode Entasis</title>\n<rect x=\"0\" y=\"0\" width=\"640\" height=\"360\" fill=\"#FFFFFF\"/>\n<text x=\"320\" y=\"34\" text-anchor=\"middle\" font-size=\"20\" font-weight=\"700\" fill=\"#162443\">Les trois temps de la méthode Entasis</text>\n<text x=\"320\" y=\"58\" text-anchor=\"middle\" font-size=\"14\" fill=\"#8A95A8\">Une stratégie d’ensemble, pas une collection de produits</text>\n<line x1=\"110\" y1=\"92\" x2=\"530\" y2=\"92\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<g font-size=\"16\" font-weight=\"700\" fill=\"#FFFFFF\" text-anchor=\"middle\">\n<circle cx=\"110\" cy=\"92\" r=\"16\" fill=\"#162443\"/>\n<text x=\"110\" y=\"98\">1</text>\n<circle cx=\"320\" cy=\"92\" r=\"16\" fill=\"#162443\"/>\n<text x=\"320\" y=\"98\">2</text>\n<circle cx=\"530\" cy=\"92\" r=\"16\" fill=\"#162443\"/>\n<text x=\"530\" y=\"98\">3</text>\n</g>\n<g fill=\"#FFFFFF\" stroke=\"#162443\" stroke-width=\"2\">\n<rect x=\"10\" y=\"124\" width=\"200\" height=\"176\" rx=\"8\"/>\n<rect x=\"220\" y=\"124\" width=\"200\" height=\"176\" rx=\"8\"/>\n<rect x=\"430\" y=\"124\" width=\"200\" height=\"176\" rx=\"8\"/>\n</g>\n<g stroke=\"#C5A55A\" stroke-width=\"2\">\n<line x1=\"50\" y1=\"166\" x2=\"170\" y2=\"166\"/>\n<line x1=\"260\" y1=\"166\" x2=\"380\" y2=\"166\"/>\n<line x1=\"470\" y1=\"166\" x2=\"590\" y2=\"166\"/>\n</g>\n<g font-size=\"18\" font-weight=\"700\" fill=\"#162443\" text-anchor=\"middle\">\n<text x=\"110\" y=\"154\">Écoute</text>\n<text x=\"320\" y=\"154\">Étude</text>\n<text x=\"530\" y=\"154\">Accompagnement</text>\n</g>\n<g font-size=\"14\" fill=\"#2C3548\" text-anchor=\"middle\">\n<text x=\"110\" y=\"190\">Premier entretien</text>\n<text x=\"110\" y=\"208\">de 30 minutes</text>\n<text x=\"110\" y=\"226\">confidentiel,</text>\n<text x=\"110\" y=\"244\">sans engagement</text>\n<text x=\"320\" y=\"190\">Analyse complète</text>\n<text x=\"320\" y=\"208\">du patrimoine</text>\n<text x=\"320\" y=\"226\">Feuille de route</text>\n<text x=\"320\" y=\"244\">argumentée et chiffrée</text>\n<text x=\"530\" y=\"190\">Un conseiller dédié</text>\n<text x=\"530\" y=\"208\">Un point annuel formel</text>\n<text x=\"530\" y=\"226\">Changement de vie :</text>\n<text x=\"530\" y=\"244\">l’étude est mise à jour</text>\n</g>\n<g font-size=\"14\" font-weight=\"700\" fill=\"#162443\" text-anchor=\"middle\">\n<text x=\"110\" y=\"270\">Comprendre,</text>\n<text x=\"110\" y=\"288\">pas proposer</text>\n<text x=\"320\" y=\"270\">Les solutions</text>\n<text x=\"320\" y=\"288\">n’arrivent qu’ici</text>\n<text x=\"530\" y=\"270\">Ajuster</text>\n<text x=\"530\" y=\"288\">dans la durée</text>\n</g>\n<rect x=\"10\" y=\"308\" width=\"620\" height=\"46\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"320\" y=\"327\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"700\" fill=\"#162443\">Aucune solution avant l’étude</text>\n<text x=\"320\" y=\"346\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">Une demande de produit est notée, reportée à l’étude, ni acceptée ni rejetée.</text>\n</svg>",
+   "legende": "Écoute, étude, accompagnement : on comprend avant de proposer, on argumente et on chiffre, puis on ajuste dans la durée. Aucune solution ne précède l’étude."
+  },
+  {
+   "cle": "ordre_etude",
+   "titre": "L’étude, dans l’ordre",
+   "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 640 360\" font-family=\"system-ui, -apple-system, Segoe UI, sans-serif\">\n<title>L’étude, dans l’ordre</title>\n<rect x=\"0\" y=\"0\" width=\"640\" height=\"360\" fill=\"#FFFFFF\"/>\n<text x=\"320\" y=\"34\" text-anchor=\"middle\" font-size=\"20\" font-weight=\"700\" fill=\"#162443\">L’étude, dans l’ordre</text>\n<polygon points=\"310,278 310,172 460,172 460,130 630,130 630,278\" fill=\"#F5EDD8\"/>\n<polyline points=\"10,278 10,256 160,256 160,214 310,214 310,172 460,172 460,130 630,130 630,278 10,278\" fill=\"none\" stroke=\"#162443\" stroke-width=\"2\"/>\n<g fill=\"#162443\">\n<circle cx=\"85\" cy=\"190\" r=\"13\"/>\n<circle cx=\"235\" cy=\"148\" r=\"13\"/>\n<circle cx=\"385\" cy=\"106\" r=\"13\"/>\n<circle cx=\"545\" cy=\"64\" r=\"13\"/>\n</g>\n<g font-size=\"14\" font-weight=\"700\" fill=\"#FFFFFF\" text-anchor=\"middle\">\n<text x=\"85\" y=\"195\">1</text>\n<text x=\"235\" y=\"153\">2</text>\n<text x=\"385\" y=\"111\">3</text>\n<text x=\"545\" y=\"69\">4</text>\n</g>\n<g font-size=\"17\" font-weight=\"700\" fill=\"#162443\" text-anchor=\"middle\">\n<text x=\"85\" y=\"216\">Diagnostic</text>\n<text x=\"235\" y=\"174\">Objectifs</text>\n<text x=\"385\" y=\"132\">Stratégie</text>\n<text x=\"545\" y=\"90\">Moyens</text>\n</g>\n<g font-size=\"13\" fill=\"#2C3548\" text-anchor=\"middle\">\n<text x=\"85\" y=\"234\">Où en est le client ?</text>\n<text x=\"85\" y=\"250\">le bilan patrimonial</text>\n<text x=\"235\" y=\"192\">Où aller ?</text>\n<text x=\"235\" y=\"208\">hiérarchisés, datés</text>\n<text x=\"385\" y=\"150\">Comment y aller ?</text>\n<text x=\"385\" y=\"166\">le cap, puis les moyens</text>\n<text x=\"545\" y=\"108\">Les solutions</text>\n<text x=\"545\" y=\"124\">au service d’un objectif</text>\n</g>\n<text x=\"470\" y=\"236\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"700\" fill=\"#162443\">Les solutions arrivent ici seulement</text>\n<rect x=\"10\" y=\"294\" width=\"620\" height=\"48\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"320\" y=\"314\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"700\" fill=\"#162443\">Pour chaque recommandation</text>\n<text x=\"320\" y=\"333\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">objectif servi, chiffre, contrainte, risque, scénario défavorable</text>\n</svg>",
+   "legende": "Diagnostic, objectifs hiérarchisés, stratégie, puis moyens : les solutions n’arrivent qu’aux deux dernières marches, chacune au service d’un objectif."
+  }
+ ],
  "items": [
   {
    "cle": "i01",
@@ -28,6 +42,9 @@
    "type": "choix",
    "competence": "Préparer la découverte",
    "difficulte": 2,
+   "figure": {
+    "ref": "trois_temps"
+   },
    "payload": {
     "enonce": "Cas fictif. Un dirigeant ouvre le premier entretien par : « Quel placement me conseillez-vous ? » Quelle réponse correspond à la méthode Entasis ?",
     "choix": [
@@ -123,6 +140,9 @@
    "type": "choix",
    "competence": "Argumenter et chiffrer",
    "difficulte": 3,
+   "figure": {
+    "ref": "trois_temps"
+   },
    "payload": {
     "enonce": "Cas fictif. Après le premier entretien, le client écrit : « Envoyez-moi juste le bulletin de souscription, on verra l'étude plus tard. » Que faites-vous ?",
     "choix": [
@@ -180,6 +200,9 @@
    "type": "choix",
    "competence": "Structurer l'analyse",
    "difficulte": 3,
+   "figure": {
+    "ref": "ordre_etude"
+   },
    "payload": {
     "enonce": "Cas fictif. Un gérant majoritaire de 55 ans veut préparer sa retraite et réduire son impôt. L'écoute révèle qu'il n'a aucune prévoyance et que ses revenus chuteraient fortement en cas d'arrêt de travail. Quelle hiérarchie l'étude retient-elle ?",
     "choix": [
@@ -678,6 +701,9 @@
    "type": "trou_choix",
    "competence": "Structurer l'analyse",
    "difficulte": 1,
+   "figure": {
+    "ref": "ordre_etude"
+   },
    "payload": {
     "phrase": "Dans l'étude, les solutions n'apparaissent qu'à l'étape ___, comme des moyens au service d'un objectif.",
     "choix": [
@@ -837,6 +863,78 @@
    },
    "corrige": {},
    "explication": "Le cabinet le formule ainsi : un patrimoine solide repose sur une suite d'ajustements justes, discrets, pensés dans la durée."
+  },
+  {
+   "cle": "i41",
+   "type": "choix",
+   "competence": "Argumenter et chiffrer",
+   "difficulte": 2,
+   "figure": {
+    "ref": "trois_temps"
+   },
+   "payload": {
+    "enonce": "Sur le schéma des trois temps, dans quel temps apparaît pour la première fois une recommandation chiffrée ?",
+    "choix": [
+     "Dans l’écoute, dès que le client a exposé sa demande.",
+     "Dans l’étude, avec la feuille de route argumentée et chiffrée.",
+     "Dans l’accompagnement, au point annuel.",
+     "Dans aucun des trois : le chiffre vient du gestionnaire du contrat."
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Le schéma le dit sous le deuxième temps : les solutions n’arrivent qu’ici, dans une feuille de route argumentée et chiffrée ; l’écoute comprend sans proposer, l’accompagnement ajuste."
+  },
+  {
+   "cle": "i42",
+   "type": "multi",
+   "competence": "Structurer l'analyse",
+   "difficulte": 2,
+   "figure": {
+    "ref": "ordre_etude"
+   },
+   "payload": {
+    "enonce": "Sur le schéma de l’étude, cochez tout ce qui est déjà établi quand le conseiller atteint la marche « Stratégie ».",
+    "choix": [
+     "Le diagnostic : où en est le client",
+     "La hiérarchie des objectifs de vie",
+     "L’horizon de chaque objectif",
+     "Le choix des solutions",
+     "Le chiffre de chaque recommandation",
+     "Le scénario défavorable de chaque solution"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "Avant la stratégie, l’étude a posé le diagnostic et hiérarchisé les objectifs avec leur horizon ; solutions, chiffres et scénarios n’arrivent qu’aux deux dernières marches."
+  },
+  {
+   "cle": "i43",
+   "type": "trou_choix",
+   "competence": "Organiser le suivi",
+   "difficulte": 2,
+   "figure": {
+    "ref": "trois_temps"
+   },
+   "payload": {
+    "phrase": "Sur le schéma des trois temps, une cession d’entreprise annoncée au point annuel renvoie le dossier au temps de l’___ : la feuille de route est mise à jour, sans réponse immédiate.",
+    "choix": [
+     "écoute",
+     "étude",
+     "accompagnement",
+     "entrée en relation"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Le troisième temps porte la mention « Changement de vie : l’étude est mise à jour » : un événement de vie relance le deuxième temps avant toute proposition, le point annuel ne se transforme pas en rendez vous de vente."
   }
  ]
 }

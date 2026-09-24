@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   TYPES_ITEM, compterMots, etatItem, enonceCourt, validerItem, bonneReponseApercu,
+  decouperMemo, normaliserCle, figureItem,
 } from './editeur-items'
 
 // Un formulaire complet par type, tel que l’éditeur le construit : tout
@@ -133,5 +134,97 @@ describe('compterMots et enonceCourt', () => {
     expect(long.length).toBeLessThanOrEqual(20)
     expect(long.endsWith('…')).toBe(true)
     expect(enonceCourt({})).toBe('')
+  })
+})
+
+// ─── Les schémas : le marqueur du mémo et la figure d’un exercice ──────────
+
+describe('normaliserCle', () => {
+  it('rend des minuscules sans espace ni ponctuation', () => {
+    expect(normaliserCle('Frise')).toBe('frise')
+    // Ni espace ni accent : une clé se retape à l’identique dans un mémo.
+    expect(normaliserCle('  Les Sept Etapes ')).toBe('lesseptetapes')
+    expect(normaliserCle('étapes')).toBe('tapes')
+    expect(normaliserCle('trois_poches-2')).toBe('trois_poches-2')
+    expect(normaliserCle(null)).toBe('')
+    expect(normaliserCle(12)).toBe('12')
+  })
+})
+
+describe('decouperMemo', () => {
+  it('coupe le mémo autour des marqueurs, dans l’ordre de lecture', () => {
+    const memo = '## Les étapes\n\nOn ouvre.\n\n[schema:frise]\n\nPuis on conclut.\n\n[schema:poches]'
+    expect(decouperMemo(memo)).toEqual([
+      { type: 'texte', texte: '## Les étapes\n\nOn ouvre.' },
+      { type: 'schema', cle: 'frise' },
+      { type: 'texte', texte: 'Puis on conclut.' },
+      { type: 'schema', cle: 'poches' },
+    ])
+  })
+
+  it('un mémo sans marqueur ne fait qu’un morceau de texte, un mémo vide aucun', () => {
+    expect(decouperMemo('Une page de mémo.')).toEqual([{ type: 'texte', texte: 'Une page de mémo.' }])
+    expect(decouperMemo('   ')).toEqual([])
+    expect(decouperMemo(null)).toEqual([])
+  })
+
+  it('la clé est normalisée, les marqueurs collés se suivent', () => {
+    expect(decouperMemo('[schema:Frise]\n[schema:POCHES]')).toEqual([
+      { type: 'schema', cle: 'frise' },
+      { type: 'schema', cle: 'poches' },
+    ])
+  })
+
+  it('le compteur de mots du mémo ignore les marqueurs', () => {
+    expect(compterMots('un deux [schema:frise] trois')).toBe(3)
+    expect(compterMots('[schema:frise]')).toBe(0)
+  })
+})
+
+describe('figureItem', () => {
+  it('rend la figure du mode choisi, ou rien', () => {
+    expect(figureItem({ figure_mode: 'aucune' })).toEqual({ figure: null })
+    expect(figureItem({})).toEqual({ figure: null })
+    expect(figureItem({ figure_mode: 'ref', figure_ref: 'Frise' })).toEqual({ figure: { ref: 'frise' } })
+    expect(figureItem({ figure_mode: 'svg', figure_svg: '<svg></svg>', figure_alt: ' Les sept étapes ' }))
+      .toEqual({ figure: { svg: '<svg></svg>', alt: 'Les sept étapes' } })
+    // Sans texte de remplacement, la clé alt ne part pas.
+    expect(figureItem({ figure_mode: 'svg', figure_svg: '<svg></svg>' })).toEqual({ figure: { svg: '<svg></svg>' } })
+  })
+
+  it('refuse une figure incomplète ou trop longue, avec un message clair', () => {
+    expect(figureItem({ figure_mode: 'ref', figure_ref: '' }).erreur).toContain('Choisissez le schéma')
+    expect(figureItem({ figure_mode: 'svg', figure_svg: '  ' }).erreur).toContain('Collez le SVG')
+    const enorme = { figure_mode: 'svg', figure_svg: `<svg>${'a'.repeat(24000)}</svg>` }
+    expect(figureItem(enorme).erreur).toBe('La figure dépasse 24\u00a0000 caractères : elle ne serait pas rendue')
+  })
+})
+
+describe('la figure dans etatItem et validerItem', () => {
+  it('etatItem lit payload.figure et choisit le mode', () => {
+    const sans = etatItem({ type: 'choix' })
+    expect(sans.figure_mode).toBe('aucune')
+    expect(sans.figure_ref).toBe('')
+    const ref = etatItem({ type: 'choix', payload: { enonce: 'A', figure: { ref: 'Frise' } } })
+    expect(ref).toMatchObject({ figure_mode: 'ref', figure_ref: 'frise', figure_svg: '' })
+    const propre = etatItem({ type: 'choix', payload: { enonce: 'A', figure: { svg: '<svg />', alt: 'Une frise' } } })
+    expect(propre).toMatchObject({ figure_mode: 'svg', figure_svg: '<svg />', figure_alt: 'Une frise' })
+  })
+
+  it('validerItem pose la figure dans le payload, sans toucher au corrigé', () => {
+    const { patch } = validerItem({ ...formulaires.choix, figure_mode: 'ref', figure_ref: 'frise' })
+    expect(patch.payload).toEqual({ enonce: 'Quel cas ?', choix: ['A', 'B', 'C', 'D'], figure: { ref: 'frise' } })
+    expect(patch.corrige).toEqual({ index: 2 })
+    // Une carte aussi peut porter une figure.
+    const carte = validerItem({ ...formulaires.carte, figure_mode: 'svg', figure_svg: '<svg />' })
+    expect(carte.patch.payload.figure).toEqual({ svg: '<svg />' })
+    // Sans figure, le payload ne gagne pas de clé.
+    expect(validerItem(formulaires.choix).patch.payload.figure).toBeUndefined()
+  })
+
+  it('une figure incomplète arrête l’enregistrement avant le reste', () => {
+    const { erreur, patch } = validerItem({ ...formulaires.choix, figure_mode: 'svg', figure_svg: '' })
+    expect(patch).toBeUndefined()
+    expect(erreur).toContain('Collez le SVG')
   })
 })

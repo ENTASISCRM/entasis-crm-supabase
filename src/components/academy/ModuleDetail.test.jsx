@@ -120,3 +120,62 @@ describe('ModuleDetailVue (deck)', () => {
     expect(rendre(module)).not.toMatch(/ac-btn-grand"[^>]*disabled=""/)
   })
 })
+
+// Deux schémas de version, tels que academy_module les rend : du SVG simple,
+// sans script ni ressource extérieure, aux couleurs du guide d’auteur.
+const SCHEMAS = [
+  { cle: 'frise', titre: 'Les sept étapes', legende: 'Chaque étape a sa durée.', svg: '<svg viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg"><title>Les sept étapes</title><rect x="0" y="0" width="640" height="360" fill="#FFFFFF" /><text x="20" y="40" fill="#162443">Découverte</text></svg>' },
+  { cle: 'poches', titre: 'Les trois poches', legende: 'Précaution, projets datés, long terme.', svg: '<svg viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg"><circle cx="100" cy="100" r="40" fill="#F5EDD8" /></svg>' },
+]
+
+describe('ModuleDetailVue, les schémas du mémo', () => {
+  it('rend la figure là où le mémo pose son marqueur, et le marqueur disparaît', () => {
+    const html = rendre({ ...module, memo_md: 'Avant.\n\n[schema:frise]\n\nAprès.', schemas: [SCHEMAS[0]] })
+    expect(html).toContain('class="ac-schema"')
+    expect(html).toContain('Les sept étapes')
+    expect(html).toContain('Chaque étape a sa durée.')
+    expect(html).toContain('role="img"')
+    expect(html).toContain('aria-label="Les sept étapes"')
+    expect(html).toContain('width="100%"')
+    expect(html).not.toContain('[schema:frise]')
+    // Le mémo est coupé en deux morceaux de markdown, la figure entre les deux.
+    const avant = html.indexOf('md-rendu')
+    expect(avant).toBeLessThan(html.indexOf('ac-schema'))
+    expect(html.match(/class="md-rendu"/g)).toHaveLength(2)
+  })
+
+  it('sans marqueur, tous les schémas se posent à la fin du mémo', () => {
+    const html = rendre({ ...module, schemas: SCHEMAS })
+    expect(html.match(/class="ac-schema"/g)).toHaveLength(2)
+    expect(html.indexOf('md-rendu')).toBeLessThan(html.indexOf('ac-schema'))
+    expect(html.indexOf('Les sept étapes')).toBeLessThan(html.indexOf('Les trois poches'))
+  })
+
+  it('un marqueur inconnu disparaît sans erreur, le schéma non appelé reste à la fin', () => {
+    const html = rendre({ ...module, memo_md: 'Texte.\n\n[schema:inconnu]\n\n[schema:poches]', schemas: SCHEMAS })
+    expect(html).not.toContain('[schema:')
+    expect(html).not.toContain('inconnu')
+    expect(html).not.toContain('Schéma indisponible')
+    // La poche appelée à sa place, la frise jamais appelée à la fin.
+    expect(html.indexOf('Les trois poches')).toBeLessThan(html.indexOf('Les sept étapes'))
+    expect(html.match(/class="ac-schema"/g)).toHaveLength(2)
+  })
+
+  it('un SVG hostile ne passe pas : le dessin tombe, la légende reste', () => {
+    const hostile = [{ cle: 'frise', titre: 'Les sept étapes', legende: 'Chaque étape a sa durée.', svg: '<svg viewBox="0 0 10 10"><script>alert(1)</script></svg>' }]
+    const html = rendre({ ...module, memo_md: '[schema:frise]', schemas: hostile })
+    expect(html).toContain('Schéma indisponible')
+    expect(html).not.toContain('alert(1)')
+    expect(html).toContain('Chaque étape a sa durée.')
+  })
+
+  it('un deck sans mémo ni schéma le dit toujours', () => {
+    const html = rendre({ ...module, memo_md: '', schemas: [] })
+    expect(html).toContain('Ce deck n’a pas encore de mémo')
+    expect(html).not.toContain('ac-schema')
+    // Avec des schémas mais sans mémo, on montre les figures plutôt que la phrase.
+    const figures = rendre({ ...module, memo_md: '', schemas: [SCHEMAS[0]] })
+    expect(figures).not.toContain('Ce deck n’a pas encore de mémo')
+    expect(figures).toContain('Les sept étapes')
+  })
+})

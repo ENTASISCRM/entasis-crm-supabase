@@ -10,6 +10,12 @@
 // Règle du dépôt : aucune donnée de rémunération. Ce fichier ne connaît que
 // la formation ; il n’y a ni marge ni commission dans la RPC, et il n’y en
 // aura pas dans les colonnes.
+//
+// L’export ignore les figures : academy_pilotage ne rend que des compteurs
+// par collaborateur, aucun contenu de deck. Les schémas d’une version et les
+// figures des exercices (payload.figure) restent donc hors du CSV, et il n’y
+// a pas de colonne à créer pour eux : un SVG n’a rien à faire dans un
+// tableur, et une colonne de 24 000 caractères casserait le fichier.
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { jourParis } from './format'

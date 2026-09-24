@@ -79,3 +79,60 @@ fonctions identiques octet pour octet, verifie par md5), dix etapes vertes.
 En production, les trois fichiers corriges s appliquent tels quels, dans
 l ordre ; sur DEV, le meme contenu est enregistre sous le nom unique
 `academy_6_entrainement` plus `academy_6_correctifs_relecture`.
+
+## Gamification et schemas (migration 8)
+
+`acceptation-gamification.sql` joue, de la meme facon (un bloc `do`,
+transaction annulee, message `TESTS OK` ou `ECHEC`), tout ce que la
+migration 8 ajoute : XP par reponse et combo (10, 10 puis 15 des la
+troisieme bonne d affilee, 0 sur une erreur qui remet le combo a zero,
+5 pour une carte sue), reprise d une session ouverte qui rend `xp_session`
+et `combo`, rejeu qui rend les valeurs memorisees sans rien recalculer
+(`deja`), bilan dont `xp_detail` se recoupe avec l XP de la session,
+niveau qui monte de 1 a 2 puis au dela, succes `premiere_session`,
+`premiere_couronne`, `combo_6`, puis `session_parfaite` et `deck_valide`,
+colonne `etait_du` posee sur les reponses, defis du jour identiques pour
+deux profils et credites une seule fois (leur XP entre dans l XP de la
+session qui les gagne, donc `sum(academy_entrainements.xp)` reste la seule
+source de l XP total), classement anonyme (camille premiere, noe deuxieme,
+`xp_devant`, aucun nom ni identifiant dans le JSON, aucune cle inattendue),
+ecritures directes refusees sur `academy_succes_obtenus` et
+`academy_defis_faits`, cloche `defis_du_jour`, `schemas` et `figure` rendus
+par `academy_demarrer_entrainement`, `academy_module` et
+`academy_version_admin`, SVG de plus de 24 000 caracteres refuse par
+`academy_enregistrer_version` (`check_violation`), schemas copies par
+`academy_nouvelle_version` puis figes par le trigger d immutabilite,
+pilotage et fiche avec le niveau et le nombre de succes.
+
+Le fichier suppose `acceptation-entrainement.sql` vert : il ne rejoue pas
+les verifications du mode entrainement. Les deux se jouent a la suite. Ils
+sont separes parce que le premier depassait 40 Ko avec les nouvelles
+etapes.
+
+`acceptation-entrainement.sql` gagne de son cote les XP par reponse dans
+sa boucle de session 1 (combo compris) et un `xp_detail` coherent en fin
+de session, sans supposer quels defis tombent ce jour la (la part `defis`
+du bilan est lue, pas devinee).
+
+Ou : DEV seulement, apres les migrations 1 a 7 puis les trois fichiers de
+la migration 8, dans l ordre 8, 8b, 8c.
+
+Journal : joues le 22 septembre 2026 sur DEV, `TESTS OK` des deux cotes
+(onze etapes pour l entrainement, sept pour la gamification) ; rejoues tels
+quels le 24 septembre 2026, toujours verts. Migration appliquee en trois
+fichiers, tous sous 40 Ko : `academy_8_gamification` (version
+20260921221034), `academy_8b_gamification_fonctions` (20260921221237) et
+`academy_8c_gamification_admin_pilotage` (20260921221422). Le troisieme
+fichier n etait pas prevu par la conception : 8b ne tenait pas sous 40 Ko
+avec les fonctions d administration, elles sont donc dans 8c
+(`academy_enregistrer_version`, `academy_nouvelle_version`,
+`academy_version_immuable`, `academy_version_admin`, `academy_pilotage`,
+`academy_fiche` et les droits d execution).
+
+Controle d identite entre le depot et DEV : `select name,
+md5(statements[1]) from supabase_migrations.schema_migrations where name
+like 'academy_8%'` rend a29618e2cc5e0ad813ced68c593d49ef,
+699368df6931b0dd59dc03d2be36c1f5 et 57c8577fc34fe1dedc552d3621c7ed37, soit
+exactement `md5 -q` des trois fichiers. Attention : l ordre enregistre la
+derniere ligne blanche du fichier, il ne faut donc pas ajouter de saut de
+ligne a `statements[1]` pour comparer.
