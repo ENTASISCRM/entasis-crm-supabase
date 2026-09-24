@@ -155,6 +155,28 @@ const SCENARIOS = [
   { nom: 'clients-campagnes', role: 'manager', route: '#/clients/campagnes', attendu: 'Prévoyance TNS' },
   { nom: 'leads-entrants', role: 'conseiller', route: '#/leads', attendu: 'Leads entrants' },
   {
+    // Le bloc « Exporter pour recontact », deplie. Le compte attendu vaut
+    // preuve de la regle des deux mois : sur les quatre leads sans suite du
+    // jeu, deux sont morts depuis plus de deux mois, un est rendu au pool et
+    // un a bouge la semaine derniere.
+    nom: 'leads-export-recontact', role: 'conseiller', route: '#/leads', attendu: '2 leads éligibles',
+    actions: async (page) => {
+      await cliquer(page, 'button:has-text("Exporter pour recontact")', 'Exporter pour recontact')
+      await attendreRendu(page)
+      // Le fichier est produit pour de vrai : une erreur dans la mise en
+      // lignes ou dans le journal d export remonterait en erreur console, que
+      // les verifications communes refusent.
+      const telechargement = page.waitForEvent('download', { timeout: 10000 })
+      await cliquer(page, 'button:has-text("Télécharger le fichier")', 'Télécharger le fichier')
+      const fichier = await telechargement
+      const nom = fichier.suggestedFilename()
+      if (!/^leads-recontact-toutes-campagnes-\d{4}-\d{2}-\d{2}\.csv$/.test(nom)) {
+        throw new Error(`nom de fichier inattendu : ${nom}`)
+      }
+      await attendreRendu(page)
+    },
+  },
+  {
     nom: 'modale-client-edition', role: 'conseiller', route: '#/clients',
     actions: async (page) => {
       await cliquer(page, 'button:has-text("Voir")', 'Voir')

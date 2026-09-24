@@ -19,6 +19,17 @@ const COLONNES = 'id, nom, telephone, email, campagne, status, taken_by, taken_a
 
 export const LIMITE_LEADS = 300
 
+// Colonnes de l'export pour recontact : on ajoute les champs de qualification
+// (tmi, patrimoine_net, actifs), inutiles pour appeler mais utiles pour
+// préparer un rappel.
+const COLONNES_RECONTACT = 'id, nom, telephone, email, campagne, status, tmi, patrimoine_net, actifs, created_at, updated_at'
+
+// Deux ans en arrière : la fenêtre de 30 jours de l'écran ne sert à rien ici,
+// un lead à rappeler est par définition ancien. Le plafond protège la mémoire
+// du navigateur, il n'est pas une règle de gestion.
+export const JOURS_RECONTACT = 730
+export const LIMITE_RECONTACT = 1000
+
 /**
  * Leads reçus sur les N derniers jours, du plus récent au plus ancien.
  * Une erreur de lecture est journalisée puis relancée : l'écran l'affiche en
@@ -35,6 +46,31 @@ export async function listRecents({ jours = 30 } = {}) {
     .limit(LIMITE_LEADS)
   if (error) {
     logger.error('[leads] listRecents', error)
+    throw error
+  }
+  return data || []
+}
+
+/**
+ * Les leads sans suite, pour une campagne de recontact : morts (un refus côté
+ * Lead Room) et rendus au pool. Le tri se fait sur le dernier mouvement,
+ * faute de date de refus dans la copie CRM.
+ *
+ * Lecture seule, même RLS que le reste de la table : tout membre actif du
+ * cabinet voit ces leads à l'écran, l'export n'ouvre aucun périmètre
+ * nouveau. Il laisse en revanche une trace, via exporterCsv (SEC-07).
+ */
+export async function listSansSuite({ jours = JOURS_RECONTACT, limite = LIMITE_RECONTACT } = {}) {
+  const depuis = new Date(Date.now() - jours * 86400000).toISOString()
+  const { data, error } = await supabase
+    .from('leads')
+    .select(COLONNES_RECONTACT)
+    .in('status', ['dead', 'released'])
+    .gte('created_at', depuis)
+    .order('updated_at', { ascending: false })
+    .limit(limite)
+  if (error) {
+    logger.error('[leads] listSansSuite', error)
     throw error
   }
   return data || []

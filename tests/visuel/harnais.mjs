@@ -95,6 +95,14 @@ export const LEADS = [
   { id: 'l1', nom: 'Lead Exemple', telephone: '0611000001', email: 'lead1@demo.fr', campagne: 'PER', status: 'available', taken_by: null, taken_at: null, booked_at: null, email_confirmed: 'true', created_at: ilYA(0.2), updated_at: ilYA(0.2) },
   { id: 'l2', nom: 'Lead Pris', telephone: '0611000002', email: 'lead2@demo.fr', campagne: 'Prévoyance', status: 'taken', taken_by: 'u-demo', taken_at: ilYA(1), booked_at: null, email_confirmed: 'true', created_at: ilYA(2), updated_at: ilYA(1) },
   { id: 'l3', nom: 'Lead Collègue', telephone: '0611000003', email: null, campagne: 'SCPI', status: 'taken', taken_by: 'u-temoin', taken_at: ilYA(3), booked_at: ilYA(2), email_confirmed: 'false', created_at: ilYA(4), updated_at: ilYA(2) },
+  // Sans suite, pour le bloc « Exporter pour recontact ». Deux sont eligibles
+  // (plus de deux mois sans mouvement), un est rendu au pool (hors selection
+  // par defaut) et le dernier a bouge la semaine derniere : il doit rester
+  // dehors, c est la regle des deux mois qui se verifie a l ecran.
+  { id: 'l4', nom: 'Lead Rappel Un', telephone: '0611000004', email: 'lead4@demo.fr', campagne: 'PER', status: 'dead', taken_by: 'u-temoin', taken_at: ilYA(95), booked_at: null, email_confirmed: 'true', tmi: '30 %', patrimoine_net: 'Entre 100 000 et 250 000', actifs: 'Assurance vie', created_at: ilYA(100), updated_at: ilYA(90) },
+  { id: 'l5', nom: 'Lead Rappel Deux', telephone: '0611000005', email: 'lead5@demo.fr', campagne: 'SCPI', status: 'dead', taken_by: 'u-demo', taken_at: ilYA(80), booked_at: null, email_confirmed: 'false', tmi: '41 %', patrimoine_net: 'Plus de 250 000', actifs: 'Immobilier locatif', created_at: ilYA(85), updated_at: ilYA(75) },
+  { id: 'l6', nom: 'Lead Rendu', telephone: '0611000006', email: 'lead6@demo.fr', campagne: 'PER', status: 'released', taken_by: null, taken_at: null, booked_at: null, email_confirmed: 'true', tmi: '11 %', patrimoine_net: 'Moins de 100 000', actifs: null, created_at: ilYA(110), updated_at: ilYA(105) },
+  { id: 'l7', nom: 'Lead Trop Frais', telephone: '0611000007', email: 'lead7@demo.fr', campagne: 'PER', status: 'dead', taken_by: 'u-demo', taken_at: ilYA(9), booked_at: null, email_confirmed: 'true', tmi: '30 %', patrimoine_net: null, actifs: null, created_at: ilYA(12), updated_at: ilYA(7) },
 ]
 
 // ── Smart RH : une demande a valider, pour voir la file de decision ────────

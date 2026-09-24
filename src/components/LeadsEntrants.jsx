@@ -23,6 +23,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { SkeletonTable } from './ui/Skeleton'
 import LeadsRapprochement from './LeadsRapprochement'
+import LeadsExportRecontact from './LeadsExportRecontact'
 import { listRecents } from '../services/leads'
 import {
   classerLeads, rechercherLeads, dossierPourLead, delaiPremierAppel,
@@ -175,6 +176,11 @@ export default function LeadsEntrants({ profile, onCreerDossier, onOuvrirDossier
           )}
         </>
       )}
+
+      {/* Hors de la liste de travail : les leads à rappeler sont par
+          définition plus vieux que la fenêtre de 30 jours de l'écran, le bloc
+          s'affiche donc même quand rien n'est arrivé depuis un mois. */}
+      <LeadsExportRecontact />
 
       {profile?.role === 'manager' && (
         <LeadsRapprochement advisorCode={profile?.advisor_code} onCreerDossier={onCreerDossier} onOuvrirDossier={onOuvrirDossier} />
