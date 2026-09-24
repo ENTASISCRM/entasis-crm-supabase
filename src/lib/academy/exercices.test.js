@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   TYPES, reponseVide, reponseComplete, reponseAEnvoyer, normaliserSaisie, rendreBonneReponse, erreurSessionClose,
-  estBonneReponse, etatChoix, xpSession, itemsAJouer, enonceCourt, jetonSession,
+  estBonneReponse, etatChoix, xpSession, xpReponse, ventilationXp, COMBO_BONUS, itemsAJouer, enonceCourt, jetonSession,
 } from './exercices'
 
 // Les payloads tels que les présente academy_presenter_item : choix,
@@ -203,6 +203,65 @@ describe('estBonneReponse, la correction locale du rejeu', () => {
   })
 })
 
+describe('xpReponse, comme academy_repondre', () => {
+  it('10 pour une bonne réponse, 5 pour une carte sue, 0 sinon', () => {
+    expect(xpReponse('choix', true, 1)).toBe(10)
+    expect(xpReponse('ordre', true, 2)).toBe(10)
+    expect(xpReponse('carte', true, 1)).toBe(5)
+    expect(xpReponse('choix', false, 0)).toBe(0)
+    expect(xpReponse('carte', false, 0)).toBe(0)
+    expect(xpReponse('choix', 'true', 5)).toBe(0)
+    expect(xpReponse('choix', null, 5)).toBe(0)
+  })
+  it('+5 dès que le combo après la réponse atteint 3, carte sue comprise', () => {
+    expect(COMBO_BONUS).toBe(3)
+    expect(xpReponse('choix', true, 3)).toBe(15)
+    expect(xpReponse('choix', true, 7)).toBe(15)
+    expect(xpReponse('carte', true, 3)).toBe(10)
+    expect(xpReponse('choix', true, '4')).toBe(15)
+    expect(xpReponse('choix', true, null)).toBe(10)
+    expect(xpReponse('choix', true, -2)).toBe(10)
+  })
+  it('reproduit la suite de la spec : 3 bonnes d’affilée puis une erreur = 10, 10, 15, 0', () => {
+    expect([1, 2, 3, 0].map((combo, i) => xpReponse('choix', i < 3, combo))).toEqual([10, 10, 15, 0])
+  })
+})
+
+describe('ventilationXp, le bilan à partir des réponses', () => {
+  const r = (type, correcte, combo) => (combo === undefined ? { type, correcte } : { type, correcte, combo })
+  it('sépare les 10 et les 5 des bonus de combo, et recalcule le combo dans l’ordre', () => {
+    const reponses = [
+      r('choix', true), r('vrai_faux', true), r('carte', true), r('multi', true), r('ordre', false),
+      r('choix', true), r('trou_choix', true), r('association', true), r('carte', false),
+    ]
+    // Combos : 1, 2, 3 (+5), 4 (+5), 0, 1, 2, 3 (+5), 0 ; sept bonnes dont
+    // une carte sue à 5 XP (avec bonus) : 10 + 10 + 5 + 10 + 10 + 10 + 10.
+    expect(ventilationXp(reponses)).toEqual({ reponses: 65, combo: 15, total: 80, combo_max: 4, nb_bons: 7 })
+  })
+  it('prend le combo rendu par le serveur quand la réponse le porte', () => {
+    // Reprise d’une session : la base dit que la première réponse jouée ici est déjà la 3e bonne d’affilée.
+    const reponses = [r('choix', true, 3), r('choix', true), r('choix', false, 0), r('carte', true)]
+    expect(ventilationXp(reponses)).toEqual({ reponses: 25, combo: 10, total: 35, combo_max: 4, nb_bons: 3 })
+    // Un combo serveur sur une mauvaise réponse ne compte pas : une erreur vaut zéro.
+    expect(ventilationXp([r('choix', true, 2), r('choix', false, 9), r('choix', true)]).combo_max).toBe(2)
+  })
+  it('rend des zéros sans réponse ou avec une liste illisible', () => {
+    const vide = { reponses: 0, combo: 0, total: 0, combo_max: 0, nb_bons: 0 }
+    expect(ventilationXp([])).toEqual(vide)
+    expect(ventilationXp(null)).toEqual(vide)
+    expect(ventilationXp('x')).toEqual(vide)
+    expect(ventilationXp([null, {}, { correcte: 'oui' }])).toEqual(vide)
+  })
+  it('est cohérente avec xpReponse et xpSession', () => {
+    const reponses = Array.from({ length: 12 }, (_, i) => r(i % 4 === 0 ? 'carte' : 'choix', true))
+    const v = ventilationXp(reponses)
+    // 12 bonnes d’affilée : 9 choix + 3 cartes, bonus dès la 3e (10 réponses à +5).
+    expect(v).toEqual({ reponses: 105, combo: 50, total: 155, combo_max: 12, nb_bons: 12 })
+    expect(v.total).toBe(reponses.reduce((s, x, i) => s + xpReponse(x.type, x.correcte, i + 1), 0))
+    expect(xpSession(12, 3, true, true, v.combo)).toBe(155 + 20 + 10)
+  })
+})
+
 describe('xpSession, comme academy_terminer_entrainement', () => {
   it('10 par bon hors carte, 5 par carte sue', () => {
     expect(xpSession(8, 0, false, false)).toBe(80)
@@ -213,6 +272,12 @@ describe('xpSession, comme academy_terminer_entrainement', () => {
     expect(xpSession(12, 0, true, false)).toBe(140)
     expect(xpSession(12, 0, false, true)).toBe(130)
     expect(xpSession(12, 3, true, true)).toBe(135)
+  })
+  it('ajoute les bonus de combo et l’XP des défis du jour', () => {
+    expect(xpSession(12, 0, true, true, 50)).toBe(200)
+    expect(xpSession(12, 0, true, true, 50, 30)).toBe(230)
+    expect(xpSession(7, 0, false, false, 0, 30)).toBe(100)
+    expect(xpSession(7, 0, false, false, -5, 'x')).toBe(70)
   })
   it('ne compte pas plus de cartes que de bons, ni de valeurs négatives ou illisibles', () => {
     expect(xpSession(2, 5, false, false)).toBe(10)

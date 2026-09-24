@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { MonParcoursVue } from './MonParcours'
+import { MonParcoursVue, CarteNiveau } from './MonParcours'
 
 const AUJOURDHUI = '2026-09-21'
 
@@ -144,5 +144,139 @@ describe('MonParcoursVue (Aujourd hui)', () => {
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*title="Aucun exercice dans ce deck"[^>]*>S’entraîner<\/button>/)
     expect(html).toContain('class="ac-muet">Aucun exercice dans ce deck<')
     expect(html).not.toContain('Version remplacée')
+  })
+})
+
+// ── Gamification (migration 8) : niveau, défis, classement, succès ──────────
+// Ce que academy_mon_parcours rend en plus depuis la spec du 22 septembre.
+const gamifie = {
+  ...parcours,
+  niveau: { niveau: 2, titre: 'Apprenti', xp_min: 100, xp_suivant: 250, xp_total: 180, progression_pct: 53 },
+  defis: [
+    { code: 'sessions_2', titre: 'Deux sessions aujourd’hui', description: 'Terminer deux sessions aujourd’hui.', cible: 2, progression: 1, fait: false, xp: 30 },
+    { code: 'justes_15', titre: 'Quinze bonnes réponses', description: 'Donner quinze bonnes réponses dans des sessions terminées.', cible: 15, progression: 15, fait: true, xp: 30 },
+    { code: 'combo_5', titre: 'Combo de cinq', description: 'Enchaîner cinq bonnes réponses dans une session.', cible: 1, progression: 0, fait: false, xp: 25 },
+  ],
+  classement: { semaine: '2026-09-21', rang: 3, participants: 9, xp_moi: 140, xp_premier: 180, xp_devant: 150, ecart_premier: 40 },
+  succes: {
+    obtenus: 7, total: 21,
+    recents: [
+      { code: 'serie_3', titre: 'Trois jours', icone: 'flamme', obtenu_le: '2026-09-20T18:00:00Z' },
+      { code: 'combo_6', titre: 'Six d’affilée', icone: 'eclair', obtenu_le: '2026-09-19T18:00:00Z' },
+      { code: 'premiere_session', titre: 'Premier pas', icone: 'pas', obtenu_le: '2026-09-01T18:00:00Z' },
+    ],
+  },
+}
+
+describe('MonParcoursVue, gamification', () => {
+  it('la carte de niveau : titre, palier, XP total, barre et ce qui reste avant le palier suivant', () => {
+    const html = rendre(gamifie)
+    expect(html).toContain('ac-kpi-kicker">Niveau<')
+    expect(html).toContain('ac-niveau-pastille" aria-hidden="true">2<')
+    expect(html).toContain('ac-niveau-titre">Apprenti<')
+    expect(html).toContain('niveau 2 · 180 XP au total')
+    expect(html).toContain('width:53%')
+    expect(html).toContain('70 XP avant Initié')
+  })
+
+  it('le niveau se recalcule côté client quand le serveur ne le rend pas encore', () => {
+    // Même jeu sans clé niveau : l XP total du parcours (860) donne le niveau 5.
+    const html = rendre({ ...gamifie, niveau: undefined })
+    expect(html).toContain('ac-niveau-titre">Solide<')
+    expect(html).toContain('niveau 5 · 860 XP au total')
+    expect(html).toContain('140 XP avant Expert')
+  })
+
+  it('CarteNiveau au dernier titre : le palier suivant se nomme par son numéro', () => {
+    const html = renderToStaticMarkup(<CarteNiveau niveau={{ niveau: 10, titre: 'Légende', xp_min: 2700, xp_suivant: 3250, xp_total: 2800, progression_pct: 18 }} xpTotal={2800} />)
+    expect(html).toContain('ac-niveau-titre">Légende<')
+    expect(html).toContain('450 XP avant le niveau 11')
+  })
+
+  it('les trois défis du jour : pictogramme, condition, barre vers la cible, XP, coche', () => {
+    const html = rendre(gamifie)
+    expect(html).toContain('ac-bloc-titre">Défis du jour<')
+    expect((html.match(/<li class="card card-p ac-defi/g) || []).length).toBe(3)
+    expect(html).toContain('ac-defi-titre">Deux sessions aujourd’hui<')
+    expect(html).toContain('Enchaîner cinq bonnes réponses dans une session.')
+    expect(html).toContain('aria-label="1 sur 2"')
+    expect(html).toContain('>1/2<')
+    expect(html).toContain('>15/15<')
+    expect(html).toContain('ac-defi-xp">+30 XP<')
+    expect(html).toContain('ac-defi-xp">+25 XP<')
+    // Le défi fait porte la coche, le liseré vert et le badge.
+    expect(html).toContain('class="card card-p ac-defi fait"')
+    expect(html).toContain('aria-label="Défi fait"')
+    expect(html).toContain('badge badge-signed">Fait<')
+    expect(html).toContain('class="ac-picto ac-picto-session"')
+    expect(html).toContain('class="ac-picto ac-picto-combo"')
+    expect(html).not.toMatch(/[\u{1F300}-\u{1FAFF}]/u)
+  })
+
+  it('un serveur qui ne rend pas encore les défis le dit, sans laisser un trou', () => {
+    const html = rendre(parcours)
+    expect(html).toContain('Défis du jour')
+    expect(html).toContain('Les défis du jour arrivent avec la prochaine mise à jour de la formation.')
+    expect(html).not.toContain('ac-defi-xp')
+    // Sans classement ni succès rendus, ces blocs ne s’affichent pas du tout.
+    expect(html).not.toContain('Classement de la semaine')
+    expect(html).not.toContain('Succès récents')
+  })
+
+  it('le classement de la semaine : rang, participants, écarts, phrase, aucun nom', () => {
+    const html = rendre(gamifie)
+    expect(html).toContain('ac-bloc-titre">Classement de la semaine<')
+    expect(html).toContain('>3e<')
+    expect(html).toContain('sur 9 participants')
+    expect(html).toContain('3e sur 9 cette semaine, 10 XP de la place au dessus')
+    expect(html).toContain('>140 XP cette semaine<')
+    expect(html).toContain('>40 XP derrière le premier<')
+    expect(html).toContain('>10 XP de la place au dessus<')
+    expect(html).toContain('Classement anonyme : ni les noms ni les scores des collègues n’apparaissent.')
+  })
+
+  it('premier de la semaine : la phrase change et aucun écart ne s’affiche', () => {
+    const p = { ...gamifie, classement: { semaine: '2026-09-21', rang: 1, participants: 9, xp_moi: 180, xp_premier: 180, xp_devant: null, ecart_premier: 0 } }
+    const html = rendre(p)
+    expect(html).toContain('Premier de la semaine !')
+    expect(html).toContain('>1er<')
+    expect(html).not.toContain('derrière le premier')
+  })
+
+  it('sans XP cette semaine : non classé, et la phrase invite à jouer', () => {
+    const p = { ...gamifie, classement: { semaine: '2026-09-21', rang: 9, participants: 9, xp_moi: 0, xp_premier: 180, xp_devant: 20, ecart_premier: 180 } }
+    const html = rendre(p)
+    expect(html).toContain('>Non classé<')
+    expect(html).toContain('Pas encore d’XP cette semaine, une session et tu entres au classement')
+  })
+
+  it('les succès récents : trois pictogrammes, le compteur et le lien vers la galerie', () => {
+    const html = rendre(gamifie)
+    expect(html).toContain('ac-bloc-titre">Succès récents<')
+    expect((html.match(/<li class="ac-succes-puce">/g) || []).length).toBe(3)
+    expect(html).toContain('class="ac-picto ac-picto-flamme"')
+    expect(html).toContain('class="ac-picto ac-picto-eclair"')
+    expect(html).toContain('class="ac-picto ac-picto-pas"')
+    expect(html).toContain('ac-succes-titre">Trois jours<')
+    expect(html).toContain('Obtenu le 20/09/2026')
+    expect(html).toContain('>7 sur 21<')
+    expect(html).toContain('>Tous mes succès</button>')
+  })
+
+  it('aucun succès encore : le bloc le dit et garde le lien', () => {
+    const p = { ...gamifie, succes: { obtenus: 0, total: 21, recents: [] } }
+    const html = rendre(p)
+    expect(html).toContain('Aucun succès pour l’instant : la première session terminée en débloque un.')
+    expect(html).toContain('>0 sur 21<')
+    expect(html).toContain('>Tous mes succès</button>')
+  })
+
+  it('la flamme s’anime quand une session est déjà terminée aujourd’hui', () => {
+    const p = { ...gamifie, serie: { ...gamifie.serie, sessions_aujourdhui: 1, en_danger: false, objectif_atteint: false } }
+    const html = rendre(p)
+    expect(html).toContain('class="ac-flamme-vive"')
+    expect(html).toContain('class="ac-flamme"')
+    // En danger ou série à zéro, la flamme reste éteinte et fixe.
+    expect(rendre(gamifie)).not.toContain('ac-flamme-vive')
   })
 })

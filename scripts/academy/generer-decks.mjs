@@ -11,6 +11,24 @@
 // version cible. Les decks sont semes en BROUILLON : la publication est un
 // geste de l administrateur.
 //
+// Schemas (22 septembre 2026) : un deck peut porter `schemas` (tableau de
+// { cle, titre, svg, legende }, poses sur academy_module_versions.schemas)
+// et un item peut porter `figure` ({ ref } vers une cle du deck, ou
+// { svg, alt } propre a l exercice), fondu dans payload.figure. Les seeds 7
+// les posent sur un deck neuf. Pour un deck DEJA seme (brouillon courant en
+// base), le generateur emet en plus une migration 9 par deck qui complete
+// ce brouillon : schemas remplaces par cle, figure posee sur les exercices
+// existants reperes par (ordre, type) qui n en ont pas, exercices nouveaux
+// inseres au dela du maximum. Seuls les items qui portent une figure vont
+// dans la migration 9 : un exercice nouveau doit donc renvoyer a un schema.
+// Sans deck a schema, les seeds 7 ressortent a l identique et aucune
+// migration 9 n est ecrite.
+//
+// Garde fous : un svg de plus de 12 000 caracteres ou qui contient un motif
+// interdit (script, gestionnaire on*, javascript:, foreignObject, image,
+// href externe) arrete la generation. Le controle complet du guide de
+// style est dans verifier-schemas.mjs (a lancer avant).
+//
 // Usage : node scripts/academy/generer-decks.mjs
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
@@ -25,13 +43,28 @@ const j = (v) => q(JSON.stringify(v ?? null)) + '::jsonb'
 const n = (v, d = 0) => (Number.isFinite(Number(v)) ? Number(v) : d)
 const TYPES = new Set(['choix', 'vrai_faux', 'multi', 'ordre', 'association', 'trou_choix', 'trou_saisie', 'carte'])
 
+// Un schema tient sous cette taille (guide de style) ; au dela, la
+// generation s arrete. L assainisseur client refuse a 24 000.
+const LIMITE_SCHEMA = 12000
+// Motifs qu un svg de la base ne porte jamais : le client les retire de
+// toute facon (src/lib/academy/svg.js), mais on ne les seme pas.
+const MOTIFS_INTERDITS = [
+  { nom: '<script', re: /<script/i },
+  { nom: 'gestionnaire on*=', re: /(^|[\s"'/<])on\w+\s*=/i },
+  { nom: 'javascript:', re: /javascript:/i },
+  { nom: '<foreignObject', re: /<foreignObject/i },
+  { nom: '<image', re: /<image/i },
+  { nom: 'href externe', re: /href\s*=\s*["']?\s*(https?:|\/\/)/i },
+  { nom: 'adresse data: ou vbscript:', re: /=\s*["']?\s*(?:vbscript|data)\s*:/i },
+]
+// Taille au dela de laquelle un fichier de migration ne se colle plus dans
+// l outil MCP (brief : 40 Ko).
+const LIMITE_MIGRATION = 40000
+
 // Ordre de generation : la trame d abord (elle rejoint le parcours
 // Integration), puis les modules dans l ordre du catalogue.
 const ORDRE = ['trame-rendez-vous-audit', 'methode-entasis', 'reussir-la-decouverte', 'per-et-retraite', 'assurance-vie', 'allocation-et-risques',
   'scpi-et-immobilier', 'fiscalite-raisonner', 'protection-sociale-dirigeant', 'transmission-approche-globale', 'conduire-un-rendez-vous', 'qualite-du-dossier', 'maitriser-le-crm']
-
-const decks = readdirSync(dossier).filter((f) => f.endsWith('.json')).map((f) => JSON.parse(readFileSync(join(dossier, f), 'utf8')))
-  .sort((a, b) => ORDRE.indexOf(a.slug) - ORDRE.indexOf(b.slug))
 
 const entete = `-- Entasis Academy, migration 7 : les decks d exercices (mode entrainement).
 --
@@ -44,6 +77,19 @@ const entete = `-- Entasis Academy, migration 7 : les decks d exercices (mode en
 -- Contenu : la trame du rendez vous d audit patrimonial (deux pages de
 -- Louis, 21 septembre 2026) et les douze modules du catalogue convertis
 -- depuis leurs lecons verifiees, sans fait nouveau.
+`
+
+const enteteSchemas = `-- Entasis Academy, migration 9 : schemas et figures des decks (brouillons).
+--
+-- Genere par scripts/academy/generer-decks.mjs depuis scripts/academy/decks/*.json :
+-- ne pas editer a la main, regenerer. Complete le brouillon courant d un
+-- module deja seme par la migration 7 : pose les schemas de la version
+-- (remplacement par cle, les autres cles conservees), pose payload.figure
+-- sur les exercices existants reperes par (ordre, type) qui n en ont pas
+-- encore, insere les exercices nouveaux (ordre au dela du maximum existant)
+-- avec leur corrige, ordre et association deja melanges. Idempotent. Une
+-- version publiee n est jamais touchee : sans brouillon, raise notice et
+-- rien. A appliquer apres la migration 8 (colonne academy_module_versions.schemas).
 `
 
 // Un exercice d ordre ou d association ne se seme jamais dans l ordre
@@ -84,14 +130,93 @@ function melanger(slug, it) {
   return { ...it, payload, corrige }
 }
 
+// ── Schemas et figures ───────────────────────────────────────────────────────
+/**
+ * Refuse un svg trop long ou porteur d un motif interdit. `quoi` nomme la
+ * piece dans le message (« schema frise », « figure de i42 ») pour qu un
+ * agent de contenu la retrouve sans chercher.
+ */
+function verifierSvgSeme(slug, quoi, svg) {
+  const t = String(svg ?? '')
+  if (!t.trim()) throw new Error(`${slug} : ${quoi} sans svg`)
+  if (t.length > LIMITE_SCHEMA) throw new Error(`${slug} : ${quoi} trop long (${t.length} caracteres, maximum ${LIMITE_SCHEMA})`)
+  for (const m of MOTIFS_INTERDITS) {
+    if (m.re.test(t)) throw new Error(`${slug} : ${quoi} contient un motif interdit (${m.nom})`)
+  }
+}
+
+/** Les schemas d un deck, verifies : tableau (vide si absent), cles uniques. */
+function schemasDuDeck(d) {
+  if (d.schemas == null) return []
+  if (!Array.isArray(d.schemas)) throw new Error(`${d.slug} : schemas doit etre un tableau`)
+  const cles = new Set()
+  return d.schemas.map((s) => {
+    if (!s || typeof s !== 'object') throw new Error(`${d.slug} : schema mal forme`)
+    const cle = String(s.cle ?? '').trim()
+    if (!/^[a-z0-9_]+$/.test(cle)) throw new Error(`${d.slug} : cle de schema invalide « ${s.cle} » (minuscules, chiffres, soulignes)`)
+    if (cles.has(cle)) throw new Error(`${d.slug} : schema ${cle} en double`)
+    cles.add(cle)
+    if (!String(s.titre ?? '').trim()) throw new Error(`${d.slug} : schema ${cle} sans titre`)
+    if (!String(s.legende ?? '').trim()) throw new Error(`${d.slug} : schema ${cle} sans legende`)
+    verifierSvgSeme(d.slug, `schema ${cle}`, s.svg)
+    return { cle, titre: String(s.titre).trim(), svg: String(s.svg), legende: String(s.legende).trim() }
+  })
+}
+
+/** La figure d un item, verifiee : { ref } vers une cle du deck, ou { svg, alt } ; null si absente. */
+function figureDeLItem(d, it, cles) {
+  if (it.figure == null) return null
+  const f = it.figure
+  if (!f || typeof f !== 'object') throw new Error(`${d.slug} : figure mal formee sur ${it.cle}`)
+  if (f.ref != null) {
+    if (f.svg != null || f.alt != null) throw new Error(`${d.slug} : figure de ${it.cle} : ref OU svg, pas les deux`)
+    const ref = String(f.ref).trim()
+    if (!cles.has(ref)) throw new Error(`${d.slug} : figure de ${it.cle} renvoie a un schema inconnu « ${ref} »`)
+    return { ref }
+  }
+  if (!String(f.alt ?? '').trim()) throw new Error(`${d.slug} : figure propre de ${it.cle} sans alt`)
+  verifierSvgSeme(d.slug, `figure de ${it.cle}`, f.svg)
+  return { svg: String(f.svg), alt: String(f.alt).trim() }
+}
+
+/** Le payload seme : celui du deck, plus figure quand l item en porte une. */
+function payloadSeme(it, figure) {
+  return figure ? { ...it.payload, figure } : it.payload
+}
+
+/** Les deux insertions d un exercice (item puis corrige), avec son indentation. */
+function sqlInsertionItem(it, ordre, indent) {
+  return `${indent}insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+${indent}values (v_ver, ${ordre}, ${q(it.type)}, ${q(it.competence || '')}, ${Math.min(3, Math.max(1, n(it.difficulte, 2)))}, ${j(it.payload)})
+${indent}returning id into v_item;
+${indent}insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, ${j(it.corrige || {})}, ${q(it.explication || '')});`
+}
+
+// ── Lecture des decks ────────────────────────────────────────────────────────
+const decks = readdirSync(dossier).filter((f) => f.endsWith('.json')).map((f) => JSON.parse(readFileSync(join(dossier, f), 'utf8')))
+  .sort((a, b) => ORDRE.indexOf(a.slug) - ORDRE.indexOf(b.slug))
+
 const fichiers = []
+const avertissements = []
 decks.forEach((d, index) => {
   if (!Array.isArray(d.items) || d.items.length < 12) throw new Error(`${d.slug} : moins de 12 items`)
   for (const it of d.items) {
     if (!TYPES.has(it.type)) throw new Error(`${d.slug} : type inconnu ${it.type}`)
     if (!it.payload || typeof it.payload !== 'object') throw new Error(`${d.slug} : payload manquant sur ${it.cle}`)
   }
-  const tagBloc = `$deck_${d.slug.replace(/-/g, '_')}$`
+  const schemas = schemasDuDeck(d)
+  const cles = new Set(schemas.map((s) => s.cle))
+  // Les items avec leur figure fondue dans payload, puis melanges (le
+  // melange conserve payload.figure puisqu il recopie le payload).
+  const items = d.items.map((it) => {
+    const figure = figureDeLItem(d, it, cles)
+    return melanger(d.slug, { ...it, payload: payloadSeme(it, figure), figure })
+  })
+  const numero = String(index + 1).padStart(2, '0')
+  const slugSql = d.slug.replace(/-/g, '_')
+
+  // ── Seed 7 : le deck neuf ──
+  const tagBloc = `$deck_${slugSql}$`
   const lignes = []
   lignes.push(`
 -- ── Deck : ${d.titre.replace(/--/g, ' ')} (${d.slug}) ──
@@ -119,12 +244,9 @@ begin
   if exists (select 1 from public.academy_items where version_id = v_ver) then
     return;
   end if;
-  update public.academy_module_versions set memo_md = ${q(d.memo_md || '')}, competence = coalesce(nullif(${q(d.competence || '')}, ''), competence), updated_at = now() where id = v_ver;`)
-  d.items.map((it) => melanger(d.slug, it)).forEach((it, i) => {
-    lignes.push(`  insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
-  values (v_ver, ${i + 1}, ${q(it.type)}, ${q(it.competence || '')}, ${Math.min(3, Math.max(1, n(it.difficulte, 2)))}, ${j(it.payload)})
-  returning id into v_item;
-  insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, ${j(it.corrige || {})}, ${q(it.explication || '')});`)
+  update public.academy_module_versions set memo_md = ${q(d.memo_md || '')}, competence = coalesce(nullif(${q(d.competence || '')}, ''), competence)${schemas.length ? `, schemas = ${j(schemas)}` : ''}, updated_at = now() where id = v_ver;`)
+  items.forEach((it, i) => {
+    lignes.push(sqlInsertionItem(it, i + 1, '  '))
   })
   if (d.slug === 'trame-rendez-vous-audit') {
     lignes.push(`  -- La trame ouvre le parcours Integration.
@@ -137,8 +259,56 @@ begin
   lignes.push(`end
 ${tagBloc};
 `)
-  const nom = `20260921_academy_7_decks_${String(index + 1).padStart(2, '0')}_${d.slug.replace(/-/g, '_')}.sql`
-  fichiers.push({ nom, contenu: entete + lignes.join('\n') })
+  fichiers.push({ nom: `20260921_academy_7_decks_${numero}_${slugSql}.sql`, contenu: entete + lignes.join('\n') })
+
+  // ── Migration 9 : le brouillon deja seme ──
+  const avecFigure = items.map((it, i) => ({ it, ordre: i + 1 })).filter(({ it }) => it.figure)
+  if (!schemas.length && !avecFigure.length) return
+  const tagSchemas = `$schemas_${slugSql}$`
+  const l9 = []
+  l9.push(`
+-- ── Schemas : ${d.titre.replace(/--/g, ' ')} (${d.slug}) ──
+do ${tagSchemas}
+declare v_mod uuid; v_ver uuid; v_max integer; v_item uuid; v_nouveaux jsonb; v_conserves jsonb;
+begin
+  select id into v_mod from public.academy_modules where slug = ${q(d.slug)};
+  if v_mod is null then
+    raise notice 'academy_9_schemas : module % absent, rien a faire (semer la migration 7 d abord)', ${q(d.slug)};
+    return;
+  end if;
+  select id into v_ver from public.academy_module_versions where module_id = v_mod and statut = 'brouillon' order by numero desc limit 1;
+  if v_ver is null then
+    raise notice 'academy_9_schemas : aucun brouillon pour %, rien a faire (une version publiee ne se modifie pas)', ${q(d.slug)};
+    return;
+  end if;`)
+  if (schemas.length) {
+    l9.push(`  -- Schemas de la version : les cles du deck remplacent les leurs, les autres restent.
+  v_nouveaux := ${j(schemas)};
+  select coalesce(jsonb_agg(s), '[]'::jsonb) into v_conserves
+    from jsonb_array_elements(coalesce((select schemas from public.academy_module_versions where id = v_ver), '[]'::jsonb)) s
+   where not exists (select 1 from jsonb_array_elements(v_nouveaux) x where x ->> 'cle' = s ->> 'cle');
+  update public.academy_module_versions set schemas = v_conserves || v_nouveaux, updated_at = now() where id = v_ver;`)
+  }
+  if (avecFigure.length) {
+    l9.push(`  -- Figures : posee sur l exercice existant (ordre, type) qui n en a pas ; au dela du maximum, exercice nouveau.
+  select coalesce(max(ordre), 0) into v_max from public.academy_items where version_id = v_ver;`)
+    for (const { it, ordre } of avecFigure) {
+      l9.push(`  if v_max >= ${ordre} then
+    update public.academy_items set payload = payload || jsonb_build_object('figure', ${j(it.figure)}), updated_at = now()
+     where version_id = v_ver and ordre = ${ordre} and type = ${q(it.type)} and archive_le is null and not (payload ? 'figure');
+  else
+${sqlInsertionItem(it, ordre, '    ')}
+  end if;`)
+    }
+  }
+  l9.push(`end
+${tagSchemas};
+`)
+  const nom9 = `20260922_academy_9_schemas_${numero}_${slugSql}.sql`
+  const contenu9 = enteteSchemas + l9.join('\n')
+  if (contenu9.length > LIMITE_MIGRATION) avertissements.push(`${nom9} fait ${contenu9.length} caracteres : au dela de ${LIMITE_MIGRATION}, il ne se colle pas dans l outil MCP (alleger les svg)`)
+  fichiers.push({ nom: nom9, contenu: contenu9 })
 })
 for (const f of fichiers) writeFileSync(join(dest, f.nom), f.contenu)
 process.stdout.write(fichiers.map((f) => `${f.nom} (${f.contenu.length} caracteres)`).join('\n') + '\n')
+for (const a of avertissements) process.stderr.write(`Attention : ${a}\n`)

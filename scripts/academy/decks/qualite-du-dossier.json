@@ -2,7 +2,21 @@
  "slug": "qualite-du-dossier",
  "titre": "Qualité du dossier et vigilance",
  "competence": "Identifier pièces manquantes, incohérences et besoin d'escalade",
- "memo_md": "Le dossier prouve, il ne raconte pas : chaque information importante s'appuie sur une pièce datée.\n\n## Trois questions avant l'étude\n- Qui est cette personne, d'où vient l'argent, ce qu'elle veut faire.\n- Identité vérifiée sur document probant (L561-5), objet de la relation (L561-5-1), connaissance tenue à jour (L561-6).\n- Sans ces éléments : aucune opération, aucune relation (L561-8).\n- Une pièce produite après l'opération ne régularise rien. L'ancienneté du client ne dispense pas d'un dossier à jour.\n\n## Lire les incohérences\n- Croiser ce que le client dit, ce que les pièces montrent, ce que le projet suppose.\n- Quatre croisements : revenus contre avis d'imposition ; montant contre patrimoine et origine ; horizon contre besoin de liquidité ; risque déclaré contre expérience réelle.\n- Une incohérence se questionne avec neutralité et se documente : version corrigée, date, source, pièce. Corriger seul, c'est fabriquer le dossier.\n\n## Trois niveaux de réaction\n- Pièce manquante ou écart explicable : réglé avec le client.\n- Opération complexe, montant inhabituel ou sans logique économique : examen renforcé (L561-10-2) : origine et destination des fonds, objet, bénéficiaire.\n- Soupçon (infraction punie de plus d'un an d'emprisonnement, fraude fiscale) : déclaration à Tracfin (L561-15) par la personne habilitée (R561-23), inscrite sur ERMES.\n\n## Escalader\n- Rien à signer ; remontée écrite, datée, les faits sans qualification, le jour même.\n- Ne jamais informer le client d'un signalement (L561-18) : amende de 22 500 euros (L574-1).\n- « Je dois vérifier quelques éléments de mon côté avant de vous répondre. »\n",
+ "memo_md": "Le dossier prouve, il ne raconte pas : chaque information importante s'appuie sur une pièce datée.\n\n## Trois questions avant l'étude\n- Qui est cette personne, d'où vient l'argent, ce qu'elle veut faire.\n- Identité vérifiée sur document probant (L561-5), objet de la relation (L561-5-1), connaissance tenue à jour (L561-6).\n- Sans ces éléments : aucune opération, aucune relation (L561-8).\n- Une pièce produite après l'opération ne régularise rien. L'ancienneté du client ne dispense pas d'un dossier à jour.\n\n## Lire les incohérences\n- Croiser ce que le client dit, ce que les pièces montrent, ce que le projet suppose.\n- Quatre croisements : revenus contre avis d'imposition ; montant contre patrimoine et origine ; horizon contre besoin de liquidité ; risque déclaré contre expérience réelle.\n- Une incohérence se questionne avec neutralité et se documente : version corrigée, date, source, pièce. Corriger seul, c'est fabriquer le dossier.\n\n[schema:quatre_croisements]\n\n## Trois niveaux de réaction\n- Pièce manquante ou écart explicable : réglé avec le client.\n- Opération complexe, montant inhabituel ou sans logique économique : examen renforcé (L561-10-2) : origine et destination des fonds, objet, bénéficiaire.\n- Soupçon (infraction punie de plus d'un an d'emprisonnement, fraude fiscale) : déclaration à Tracfin (L561-15) par la personne habilitée (R561-23), inscrite sur ERMES.\n\n[schema:trois_niveaux]\n\n## Escalader\n- Rien à signer ; remontée écrite, datée, les faits sans qualification, le jour même.\n- Ne jamais informer le client d'un signalement (L561-18) : amende de 22 500 euros (L574-1).\n- « Je dois vérifier quelques éléments de mon côté avant de vous répondre. »\n",
+ "schemas": [
+  {
+   "cle": "trois_niveaux",
+   "titre": "Les trois niveaux de réaction",
+   "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 640 360\" font-family=\"system-ui, -apple-system, Segoe UI, sans-serif\">\n<title>Les trois niveaux de réaction</title>\n<rect x=\"0\" y=\"0\" width=\"640\" height=\"360\" fill=\"#FFFFFF\"/>\n<text x=\"320\" y=\"30\" text-anchor=\"middle\" font-size=\"20\" font-weight=\"700\" fill=\"#162443\">Les trois niveaux de réaction</text>\n<g font-size=\"14\" fill=\"#8A95A8\" text-anchor=\"middle\">\n<text x=\"211\" y=\"62\">Ce que je vois</text>\n<text x=\"482\" y=\"62\">Ce que je fais</text>\n</g>\n<rect x=\"30\" y=\"70\" width=\"580\" height=\"74\" rx=\"8\" fill=\"#FFFFFF\" stroke=\"#8A95A8\" stroke-width=\"2\"/>\n<rect x=\"30\" y=\"150\" width=\"580\" height=\"74\" rx=\"8\" fill=\"#FFFFFF\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<rect x=\"30\" y=\"230\" width=\"580\" height=\"74\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#162443\" stroke-width=\"2\"/>\n<g fill=\"#162443\">\n<circle cx=\"56\" cy=\"107\" r=\"15\"/>\n<circle cx=\"56\" cy=\"187\" r=\"15\"/>\n<circle cx=\"56\" cy=\"267\" r=\"15\"/>\n</g>\n<g font-size=\"14\" font-weight=\"700\" fill=\"#FFFFFF\" text-anchor=\"middle\">\n<text x=\"56\" y=\"112\">1</text>\n<text x=\"56\" y=\"192\">2</text>\n<text x=\"56\" y=\"272\">3</text>\n</g>\n<g stroke=\"#8A95A8\" stroke-width=\"2\">\n<line x1=\"346\" y1=\"82\" x2=\"346\" y2=\"132\"/>\n<line x1=\"346\" y1=\"162\" x2=\"346\" y2=\"212\"/>\n<line x1=\"346\" y1=\"242\" x2=\"346\" y2=\"292\"/>\n</g>\n<g font-size=\"15\" font-weight=\"700\" fill=\"#162443\">\n<text x=\"82\" y=\"96\">Pièce manquante</text>\n<text x=\"82\" y=\"176\">Opération inhabituelle</text>\n<text x=\"82\" y=\"256\">Soupçon</text>\n<text x=\"358\" y=\"96\">Réglé avec le client</text>\n<text x=\"358\" y=\"176\">Examen renforcé</text>\n<text x=\"358\" y=\"256\">Remontée écrite</text>\n</g>\n<g font-size=\"13\" fill=\"#2C3548\">\n<text x=\"82\" y=\"117\">ou écart explicable : adresse,</text>\n<text x=\"82\" y=\"135\">revenus, justificatif périmé</text>\n<text x=\"82\" y=\"197\">complexe, montant inhabituel,</text>\n<text x=\"82\" y=\"215\">sans logique économique</text>\n<text x=\"82\" y=\"277\">infraction punie de plus d’un an</text>\n<text x=\"82\" y=\"295\">d’emprisonnement, fraude fiscale</text>\n<text x=\"358\" y=\"117\">question neutre, réponse notée</text>\n<text x=\"358\" y=\"135\">avec sa date, sa source, sa pièce</text>\n<text x=\"358\" y=\"197\">origine et destination des fonds,</text>\n<text x=\"358\" y=\"215\">objet, bénéficiaire (L561-10-2)</text>\n<text x=\"358\" y=\"277\">au responsable, le jour même</text>\n<text x=\"358\" y=\"295\">puis Tracfin (L561-15), sur ERMES</text>\n</g>\n<rect x=\"30\" y=\"312\" width=\"580\" height=\"42\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"320\" y=\"331\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"700\" fill=\"#162443\">Le conseiller ne déclare jamais : la personne habilitée le fait (R561-23).</text>\n<text x=\"320\" y=\"350\" text-anchor=\"middle\" font-size=\"13\" fill=\"#2C3548\">Le client n’est jamais informé d’un signalement (L561-18).</text>\n</svg>",
+   "legende": "Le premier niveau se règle avec le client, le deuxième ouvre un examen renforcé, le troisième se remonte par écrit. Le conseiller ne déclare jamais lui même, et le client n’est jamais informé."
+  },
+  {
+   "cle": "quatre_croisements",
+   "titre": "Les quatre croisements du dossier",
+   "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 640 360\" font-family=\"system-ui, -apple-system, Segoe UI, sans-serif\">\n<title>Les quatre croisements du dossier</title>\n<rect x=\"0\" y=\"0\" width=\"640\" height=\"360\" fill=\"#FFFFFF\"/>\n<text x=\"320\" y=\"30\" text-anchor=\"middle\" font-size=\"20\" font-weight=\"700\" fill=\"#162443\">Les quatre croisements du dossier</text>\n<rect x=\"16\" y=\"44\" width=\"608\" height=\"46\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"320\" y=\"63\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"700\" fill=\"#162443\">Trois sources qui doivent raconter la même histoire</text>\n<text x=\"320\" y=\"83\" text-anchor=\"middle\" font-size=\"13\" fill=\"#2C3548\">ce que le client dit, ce que les pièces montrent, ce que le projet suppose</text>\n<g font-size=\"14\" fill=\"#8A95A8\" text-anchor=\"middle\">\n<text x=\"172\" y=\"110\">Ce que le client annonce</text>\n<text x=\"487\" y=\"110\">Ce qui doit le confirmer</text>\n</g>\n<g fill=\"#FFFFFF\" stroke=\"#8A95A8\" stroke-width=\"2\">\n<rect x=\"54\" y=\"120\" width=\"236\" height=\"40\" rx=\"8\"/>\n<rect x=\"54\" y=\"166\" width=\"236\" height=\"40\" rx=\"8\"/>\n<rect x=\"54\" y=\"212\" width=\"236\" height=\"40\" rx=\"8\"/>\n<rect x=\"54\" y=\"258\" width=\"236\" height=\"40\" rx=\"8\"/>\n</g>\n<g fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\">\n<rect x=\"350\" y=\"120\" width=\"274\" height=\"40\" rx=\"8\"/>\n<rect x=\"350\" y=\"166\" width=\"274\" height=\"40\" rx=\"8\"/>\n<rect x=\"350\" y=\"212\" width=\"274\" height=\"40\" rx=\"8\"/>\n<rect x=\"350\" y=\"258\" width=\"274\" height=\"40\" rx=\"8\"/>\n</g>\n<g fill=\"#162443\">\n<circle cx=\"32\" cy=\"140\" r=\"13\"/>\n<circle cx=\"32\" cy=\"186\" r=\"13\"/>\n<circle cx=\"32\" cy=\"232\" r=\"13\"/>\n<circle cx=\"32\" cy=\"278\" r=\"13\"/>\n</g>\n<g font-size=\"13\" font-weight=\"700\" fill=\"#FFFFFF\" text-anchor=\"middle\">\n<text x=\"32\" y=\"145\">1</text>\n<text x=\"32\" y=\"191\">2</text>\n<text x=\"32\" y=\"237\">3</text>\n<text x=\"32\" y=\"283\">4</text>\n</g>\n<g font-size=\"15\" fill=\"#162443\" text-anchor=\"middle\">\n<text x=\"172\" y=\"145\">Revenus déclarés</text>\n<text x=\"172\" y=\"191\">Montant à investir</text>\n<text x=\"172\" y=\"237\">Horizon et objectif</text>\n<text x=\"172\" y=\"283\">Risque déclaré</text>\n<text x=\"487\" y=\"145\">Avis d’imposition</text>\n<text x=\"487\" y=\"191\">Patrimoine et origine des fonds</text>\n<text x=\"487\" y=\"237\">Besoin de liquidité</text>\n<text x=\"487\" y=\"283\">Expérience réelle</text>\n</g>\n<g font-size=\"14\" font-weight=\"700\" fill=\"#C5A55A\" text-anchor=\"middle\">\n<text x=\"320\" y=\"145\">contre</text>\n<text x=\"320\" y=\"191\">contre</text>\n<text x=\"320\" y=\"237\">contre</text>\n<text x=\"320\" y=\"283\">contre</text>\n</g>\n<rect x=\"16\" y=\"306\" width=\"608\" height=\"44\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"320\" y=\"325\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"700\" fill=\"#162443\">Un écart se questionne et se documente : version corrigée, date, source, pièce.</text>\n<text x=\"320\" y=\"345\" text-anchor=\"middle\" font-size=\"13\" fill=\"#2C3548\">Corriger seul, c’est fabriquer le dossier.</text>\n</svg>",
+   "legende": "Ce que le client dit, ce que les pièces montrent et ce que le projet suppose doivent raconter la même histoire. Un écart se questionne avec neutralité et se documente : version corrigée, date, source, pièce."
+  }
+ ],
  "items": [
   {
    "cle": "i01",
@@ -85,6 +99,9 @@
    "type": "choix",
    "competence": "Détecter les incohérences",
    "difficulte": 2,
+   "figure": {
+    "ref": "quatre_croisements"
+   },
    "payload": {
     "enonce": "Cas fictif. Le questionnaire de Monsieur Lecoq indique 60 000 euros de revenus annuels, son avis d'imposition 38 000 euros. Il veut placer 250 000 euros d'économies. Quelle est la bonne suite ?",
     "choix": [
@@ -843,6 +860,78 @@
    },
    "corrige": {},
    "explication": "Ton calme et factuel, sans argumenter, sans menacer, sans rassurer à tort, et rien à signer."
+  },
+  {
+   "cle": "i41",
+   "type": "choix",
+   "competence": "Examen renforcé",
+   "difficulte": 2,
+   "figure": {
+    "ref": "trois_niveaux"
+   },
+   "payload": {
+    "enonce": "Sur le schéma, cas fictif : un client remet toutes ses pièces sauf son justificatif de domicile, périmé depuis trois mois, qu’il promet d’envoyer jeudi. À quel niveau se traite ce dossier ?",
+    "choix": [
+     "Au premier : pièce manquante ou écart explicable, réglé avec le client",
+     "Au deuxième : une pièce manquante ouvre toujours un examen renforcé",
+     "Au troisième : une pièce périmée vaut soupçon et se remonte par écrit",
+     "À aucun : l’opération peut se faire, la pièce la régularisera jeudi"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Le premier niveau du schéma couvre la pièce manquante ou l’écart explicable ; l’examen renforcé vise l’opération inhabituelle et le soupçon porte sur l’origine des sommes. La pièce reste attendue : produite après l’opération, elle ne régulariserait rien."
+  },
+  {
+   "cle": "i42",
+   "type": "multi",
+   "competence": "Détecter les incohérences",
+   "difficulte": 3,
+   "figure": {
+    "ref": "quatre_croisements"
+   },
+   "payload": {
+    "enonce": "Sur le schéma des croisements, cochez tout ce que sa lecture permet d’affirmer.",
+    "choix": [
+     "Les trois sources du haut sont ce que le client dit, ce que les pièces montrent, ce que le projet suppose",
+     "Chaque ligne oppose ce que le client annonce à ce qui doit le confirmer",
+     "Un écart se note avec sa version corrigée, sa date, sa source et sa pièce",
+     "Une ligne qui ne colle pas suffit à faire une déclaration de soupçon",
+     "Le conseiller aligne lui même la fiche sur la pièce pour que les deux colonnes concordent",
+     "Les frais du contrat proposé font partie des lignes à croiser"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "Les trois sources se croisent ligne par ligne et l’écart se documente. Un écart n’est pas un soupçon, corriger seul revient à fabriquer le dossier, et les frais du contrat ne font pas partie des croisements."
+  },
+  {
+   "cle": "i43",
+   "type": "trou_choix",
+   "competence": "Détecter les incohérences",
+   "difficulte": 1,
+   "figure": {
+    "ref": "quatre_croisements"
+   },
+   "payload": {
+    "phrase": "Sur le schéma, la troisième ligne croise l’horizon et l’objectif annoncés avec ___.",
+    "choix": [
+     "le besoin de liquidité",
+     "le patrimoine déclaré",
+     "l’expérience réelle du client",
+     "l’avis d’imposition"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Horizon et objectif contre besoin de liquidité : un projet daté proche contredit un horizon long, et aucune enveloppe peu disponible ne se recommande tant que l’écart n’est pas levé."
   }
  ]
 }

@@ -1,11 +1,16 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // MES RÉSULTATS : ce que le collaborateur a fait, et ce qui reste fragile
 //
-// La série et la meilleure série, l XP total, l XP par semaine (barres CSS
-// doublées d’un tableau lisible), toutes les sessions terminées, puis les
-// « Exercices à consolider » : les items dont la force est basse, avec leur
-// prochaine date de révision et le bouton qui ouvre une session sur le deck
-// concerné. C’est la progression qui compte, pas la note isolée.
+// Le niveau atteint, la série et la meilleure série, l XP total, le nombre de
+// succès, l XP par semaine (barres CSS doublées d’un tableau lisible), toutes
+// les sessions terminées, puis les « Exercices à consolider » : les items dont
+// la force est basse, avec leur prochaine date de révision et le bouton qui
+// ouvre une session sur le deck concerné. C’est la progression qui compte, pas
+// la note isolée.
+//
+// Le niveau et la liste des succès viennent de academy_mes_resultats (clés
+// niveau et succes, migration 8) : la carte de niveau est celle de l’écran
+// Aujourd hui, importée telle quelle pour ne pas en tenir deux versions.
 //
 // Conteneur (academy_mes_resultats) et présentation séparés.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -15,6 +20,7 @@ import { mesResultats } from '../../services/academy'
 import { messageErreur } from '../../lib/ui-shared'
 import { dateHeureParis, jourParis, semaineLibelle } from '../../lib/academy/format'
 import { Flamme } from './Couronnes'
+import { CarteNiveau } from './MonParcours'
 import { SkeletonTable } from '../ui/Skeleton'
 
 const FORCE_MAX = 5
@@ -134,15 +140,30 @@ export function MesResultatsVue({ resultats, aujourdhui, onNaviguer }) {
 
   const bons = sessions.reduce((n, s) => n + (Number(s.nb_bons) || 0), 0)
   const total = sessions.reduce((n, s) => n + (Number(s.nb_total) || 0), 0)
+  // La liste complète du catalogue avec obtenu_le : un serveur qui ne la rend
+  // pas encore n’affiche simplement pas la carte des succès.
+  const catalogue = Array.isArray(r.succes) ? r.succes : null
+  const obtenus = catalogue ? catalogue.filter((s) => Boolean(s?.obtenu_le)).length : 0
 
   return (
     <div>
       <Entete sousTitre={`${pluriel(sessions.length, 'session terminée', 'sessions terminées')} · ${bons} bonnes réponses sur ${total} · ${xpTotal} XP`} />
 
       <div className="kpi-grid">
+        <CarteNiveau niveau={r.niveau} xpTotal={xpTotal} />
         <Kpi kicker="Série en cours" valeur={pluriel(serie, 'jour', 'jours')} avant={<Flamme eteinte={serie === 0} />} sous={serie === 0 ? 'une session aujourd’hui la relance' : 'jours consécutifs avec une session'} />
         <Kpi kicker="Meilleure série" valeur={pluriel(meilleure, 'jour', 'jours')} sous="ton record" />
         <Kpi kicker="XP total" valeur={xpTotal} sous="10 XP par bonne réponse, 5 par carte sue, bonus session parfaite et première du jour" />
+        {catalogue && (
+          <div className="card card-p ac-succes-kpi">
+            <div className="ac-kpi-kicker">Succès</div>
+            <div className="ac-kpi-valeur">{obtenus} <span className="ac-kpi-unite">sur {catalogue.length}</span></div>
+            <div className="ac-kpi-sous">{obtenus === 0 ? 'la première session terminée en débloque un' : 'débloqués par tes sessions'}</div>
+            <div className="ac-succes-pied">
+              <button type="button" className="btn btn-outline btn-sm" onClick={() => onNaviguer?.('#/formation/succes')}>Tous mes succès</button>
+            </div>
+          </div>
+        )}
         <Kpi kicker="À consolider" valeur={faibles.length} sous={faibles.length ? 'exercices à force basse' : 'aucun exercice fragile'} />
       </div>
 

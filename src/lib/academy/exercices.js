@@ -6,8 +6,9 @@
 // jamais un corrigé avant d’avoir répondu. Ce qui reste ici est ce qu’il
 // faut pour jouer une session sans réseau ni React : la valeur vide de
 // chaque type, savoir si une saisie est complète, écrire une bonne réponse
-// en clair, normaliser un texte comme la base le fait, et compter les XP
-// comme academy_terminer_entrainement.
+// en clair, normaliser un texte comme la base le fait, et recompter les XP
+// comme academy_repondre et academy_terminer_entrainement (pour animer et
+// pour le repli, jamais pour remplacer ce que le serveur rend).
 //
 // Les identifiants de réponse sont des INDICES PRÉSENTÉS : le serveur a
 // mélangé les choix, les éléments ou la colonne de droite, et le client
@@ -198,16 +199,74 @@ export function estBonneReponse(type, valeur, bonne) {
   }
 }
 
+// ─── XP, le miroir de la règle serveur (migration 8) ──────────────────────
+//
+// Le serveur seul fait foi : academy_repondre rend xp_gagne, xp_session,
+// combo et combo_max, academy_terminer_entrainement rend xp_detail. Ce qui
+// suit recalcule la même règle pour animer (compteur qui monte) et pour le
+// repli quand une réponse ou un bilan arrive sans ces champs.
+
+/** Le combo à partir duquel chaque bonne réponse rapporte 5 XP de plus. */
+export const COMBO_BONUS = 3
+
+/**
+ * L’XP d’une réponse, comme academy_repondre : 10 pour une bonne réponse,
+ * 5 pour une carte sue, 0 pour une mauvaise réponse ou une carte à revoir ;
+ * +5 quand le combo APRÈS cette réponse (bonnes réponses d’affilée, carte
+ * sue comprise) atteint 3. Une erreur remet le combo à zéro : 0 XP.
+ */
+export function xpReponse(type, correcte, combo) {
+  if (correcte !== true) return 0
+  const base = type === 'carte' ? 5 : 10
+  const c = Math.max(0, Math.floor(Number(combo) || 0))
+  return base + (c >= COMBO_BONUS ? 5 : 0)
+}
+
+/**
+ * La ventilation des XP d’une liste de réponses, pour le bilan :
+ * { reponses (somme des 10 et des 5), combo (somme des bonus +5), total,
+ * combo_max, nb_bons }. Les réponses sont lues dans l’ordre donné
+ * ({ type, correcte, combo? }) ; le combo courant se recalcule (une bonne
+ * réponse l’augmente, une erreur le remet à zéro) sauf quand la réponse
+ * porte le combo rendu par le serveur, qui prime (reprise d’une session
+ * ouverte, réponses déjà enregistrées).
+ */
+export function ventilationXp(reponses) {
+  let courant = 0
+  let comboMax = 0
+  let base = 0
+  let bonus = 0
+  let bons = 0
+  for (const r of liste(reponses)) {
+    const correcte = r?.correcte === true
+    if (Number.isInteger(r?.combo) && r.combo >= 0) courant = correcte ? r.combo : 0
+    else courant = correcte ? courant + 1 : 0
+    if (courant > comboMax) comboMax = courant
+    if (!correcte) continue
+    bons += 1
+    const xp = xpReponse(r.type, true, courant)
+    const b = courant >= COMBO_BONUS ? 5 : 0
+    base += xp - b
+    bonus += b
+  }
+  return { reponses: base, combo: bonus, total: base + bonus, combo_max: comboMax, nb_bons: bons }
+}
+
 /**
  * Les XP d’une session, comme academy_terminer_entrainement : 10 par bonne
  * réponse hors carte, 5 par carte sue (les cartes sues sont comptées dans
- * les bonnes réponses), 20 de plus pour une session parfaite, 10 de plus
- * pour la première session du jour.
+ * les bonnes réponses), plus les bonus de combo (xpCombo, la clé `combo` de
+ * ventilationXp), 20 de plus pour une session parfaite, 10 de plus pour la
+ * première session du jour, plus l’XP des défis du jour complétés par la
+ * session (xpDefis, que seul le serveur connaît). Sert au repli quand le
+ * bilan arrive sans xp_detail.
  */
-export function xpSession(nbBons, nbCartes, parfaite, premiere) {
+export function xpSession(nbBons, nbCartes, parfaite, premiere, xpCombo = 0, xpDefis = 0) {
   const bons = Math.max(0, Math.floor(Number(nbBons) || 0))
   const cartes = Math.max(0, Math.min(bons, Math.floor(Number(nbCartes) || 0)))
-  return (bons - cartes) * 10 + cartes * 5 + (parfaite ? 20 : 0) + (premiere ? 10 : 0)
+  const combo = Math.max(0, Math.floor(Number(xpCombo) || 0))
+  const defis = Math.max(0, Math.floor(Number(xpDefis) || 0))
+  return (bons - cartes) * 10 + cartes * 5 + combo + (parfaite ? 20 : 0) + (premiere ? 10 : 0) + defis
 }
 
 /**

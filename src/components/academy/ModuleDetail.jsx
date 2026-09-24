@@ -11,18 +11,28 @@
 //
 // L’attestation se génère à la demande : le module PDF (jsPDF) n’est chargé
 // qu’au clic, pour rester hors du paquet servi à l’ouverture du CRM.
+//
+// Le mémo porte ses SCHÉMAS : la version rend une liste
+// [{ cle, titre, svg, legende }] et le markdown place chaque figure avec un
+// marqueur [schema:cle] seul sur sa ligne. On découpe donc le mémo autour
+// des marqueurs et on rend chaque morceau ; un schéma que le mémo n’appelle
+// pas se pose à la fin, un marqueur sans schéma disparaît sans bruit (un
+// mémo ne doit jamais afficher une erreur au collaborateur).
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { lireModule } from '../../services/academy'
 import { messageErreur } from '../../lib/ui-shared'
 import { jourISO } from '../../lib/ma-journee'
 import { classeBadge, enRetard, libelleEcheance, STATUTS } from '../../lib/academy/statuts'
 import { dateHeureParis, formatDuree, jourParis, libelleNiveau, libelleTheme } from '../../lib/academy/format'
+import { decouperMemo, normaliserCle } from '../../lib/academy/editeur-items'
 import { Couronnes } from './Couronnes'
+import Schema from './Schema'
 import RenduMarkdown from '../ui/RenduMarkdown'
 import { SkeletonText } from '../ui/Skeleton'
+import './academy-schemas.css'
 
 const FORCE_MAX = 5
 const pluriel = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`
@@ -64,6 +74,40 @@ function Competence({ c }) {
         <span className="team-bar-pct">{String(force).replace('.', ',')}/{FORCE_MAX}</span>
       </div>
     </li>
+  )
+}
+
+// Le mémo et ses figures, dans l’ordre de lecture : les morceaux de texte
+// rendus par le markdown, les schémas appelés par un marqueur à leur place,
+// et à la fin ceux que le mémo n’a pas appelés (un mémo sans marqueur les
+// reçoit donc tous à la suite).
+function Memo({ memo, schemas }) {
+  const { parties, fin } = useMemo(() => {
+    const liste = (Array.isArray(schemas) ? schemas : []).filter((s) => s && normaliserCle(s.cle))
+    const parCle = new Map(liste.map((s) => [normaliserCle(s.cle), s]))
+    const appeles = new Set()
+    const morceaux = decouperMemo(memo)
+      .map((p) => (p.type === 'schema' ? { ...p, schema: parCle.get(p.cle) || null } : p))
+      .filter((p) => {
+        if (p.type !== 'schema') return true
+        if (!p.schema) return false
+        appeles.add(p.cle)
+        return true
+      })
+    return { parties: morceaux, fin: liste.filter((s) => !appeles.has(normaliserCle(s.cle))) }
+  }, [memo, schemas])
+
+  if (parties.length === 0 && fin.length === 0) {
+    return <div className="ac-muet">Ce deck n’a pas encore de mémo : tout s’apprend par les exercices.</div>
+  }
+  const figure = (s, cle) => <Schema key={cle} svg={s.svg} titre={s.titre} legende={s.legende} />
+  return (
+    <>
+      {parties.map((p, i) => (p.type === 'schema'
+        ? figure(p.schema, `m${i}`)
+        : <RenduMarkdown key={`m${i}`} markdown={p.texte} />))}
+      {fin.map((s, i) => figure(s, `f${i}`))}
+    </>
   )
 }
 
@@ -143,7 +187,7 @@ export function ModuleDetailVue({ module, profile, aujourdhui, onNaviguer, onAtt
       <section className="ac-bloc" aria-labelledby="ac-md-memo">
         <h3 id="ac-md-memo" className="ac-bloc-titre">Mémo</h3>
         <div className="card card-p ac-memo">
-          {memo ? <RenduMarkdown markdown={memo} /> : <div className="ac-muet">Ce deck n’a pas encore de mémo : tout s’apprend par les exercices.</div>}
+          <Memo memo={memo} schemas={m.schemas} />
         </div>
       </section>
 

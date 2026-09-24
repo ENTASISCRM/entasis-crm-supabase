@@ -1,11 +1,18 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // AUJOURD HUI : l’écran d’entrée du collaborateur dans la formation
 //
-// Ce que l’écran dit en un coup d’œil : la série de jours (et si elle est en
-// danger), l objectif quotidien en sessions, l XP du jour et de la semaine,
-// les exercices dus. Puis les decks affectés, chacun avec ses couronnes, ses
-// exercices vus et dus, son échéance, et un seul geste qui compte :
-// « S’entraîner ». En bas, les dernières réussites.
+// Ce que l’écran dit en un coup d’œil : le niveau atteint et ce qui reste
+// avant le suivant, la série de jours (et si elle est en danger), l objectif
+// quotidien en sessions, l XP du jour et de la semaine, les exercices dus.
+// Puis les trois défis du jour, le classement anonyme de la semaine, les
+// decks affectés, chacun avec ses couronnes, ses exercices vus et dus, son
+// échéance, et un seul geste qui compte : « S’entraîner ». En bas, les
+// succès récents et les dernières réussites.
+//
+// Le serveur décide de tout ce qui se compte (spec du 22 septembre 2026) :
+// academy_mon_parcours rend niveau, defis, classement et succes tout faits.
+// niveauPour et phraseClassement ne servent qu’à combler un serveur qui ne
+// les rend pas encore, et à écrire la phrase d’encouragement.
 //
 // Conteneur (charge academy_mon_parcours, enregistre l’objectif quotidien)
 // et présentation séparés : la vue reçoit tout par props et se teste avec
@@ -18,13 +25,18 @@ import { monParcours, objectifQuotidien } from '../../services/academy'
 import { messageErreur } from '../../lib/ui-shared'
 import { classeBadge, enRetard, libelleEcheance, STATUTS } from '../../lib/academy/statuts'
 import { jourParis } from '../../lib/academy/format'
+import { libellesDefi, niveauPour, phraseClassement, titrePour } from '../../lib/academy/niveaux'
 import { Couronnes, Flamme } from './Couronnes'
+import { Picto } from './Picto'
 import { SkeletonCards } from '../ui/Skeleton'
 
 const OBJECTIFS = [1, 2, 3]
 const pluriel = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`
 const jour = (v) => (v ? String(v).slice(0, 10) : '')
 const SANS_EXERCICE = 'Aucun exercice dans ce deck'
+const ROUTE_SUCCES = '#/formation/succes'
+const entierPositif = (v) => Math.max(0, Math.floor(Number(v) || 0))
+const ordinal = (n) => (n === 1 ? '1er' : `${n}e`)
 
 function Entete({ sousTitre }) {
   return (
@@ -38,11 +50,176 @@ function Entete({ sousTitre }) {
   )
 }
 
+/**
+ * La carte de niveau : le titre du palier, le numéro, l XP total et la barre
+ * vers le palier suivant (« 70 XP avant Initié »). `niveau` est l’objet rendu
+ * par le serveur (academy_niveau) ; sans lui, on retombe sur le miroir client
+ * à partir de l XP total, le temps qu’un ancien serveur soit à jour.
+ *
+ * Exportée : l’écran Mes résultats pose la même carte.
+ */
+export function CarteNiveau({ niveau, xpTotal }) {
+  const n = niveau && typeof niveau === 'object' && niveau.niveau != null
+    ? { ...niveauPour(niveau.xp_total ?? xpTotal), ...niveau }
+    : niveauPour(xpTotal)
+  const palier = Math.max(1, entierPositif(n.niveau) || 1)
+  const total = entierPositif(n.xp_total)
+  const pct = Math.max(0, Math.min(100, entierPositif(n.progression_pct)))
+  const reste = Math.max(0, entierPositif(n.xp_suivant) - total)
+  const suivant = titrePour(palier + 1)
+  const avant = suivant && suivant !== n.titre ? `avant ${suivant}` : `avant le niveau ${palier + 1}`
+  return (
+    <div className="card card-p ac-jour-carte ac-niveau">
+      <div className="ac-kpi-kicker">Niveau</div>
+      <div className="ac-niveau-haut">
+        <span className="ac-niveau-pastille" aria-hidden="true">{palier}</span>
+        <div className="ac-croissance">
+          <div className="ac-kpi-valeur ac-niveau-titre">{n.titre}</div>
+          <div className="ac-kpi-sous">niveau {palier} · {total} XP au total</div>
+        </div>
+      </div>
+      <div className="team-bar-wrap ac-niveau-barre" aria-label={`Niveau ${palier}, ${pct} % vers le palier suivant`}>
+        <div className="team-bar-track"><div className="team-bar-fill" style={{ width: `${pct}%` }} /></div>
+        <span className="team-bar-pct">{pct} %</span>
+      </div>
+      <div className="ac-kpi-sous">{reste > 0 ? `${reste} XP ${avant}` : 'Palier suivant atteint'}</div>
+    </div>
+  )
+}
+
+// Un défi du jour : le pictogramme, le titre, la condition en clair, la barre
+// vers la cible, l XP promis, et la coche quand il est fait.
+function Defi({ defi }) {
+  const repli = libellesDefi[defi?.code] || {}
+  const titre = defi?.titre || repli.titre || 'Défi du jour'
+  const description = defi?.description || repli.description || ''
+  const cible = Math.max(1, entierPositif(defi?.cible) || 1)
+  const progression = Math.min(cible, entierPositif(defi?.progression))
+  const fait = defi?.fait === true
+  const pct = fait ? 100 : Math.round((100 * progression) / cible)
+  const xp = entierPositif(defi?.xp)
+  return (
+    <li className={`card card-p ac-defi${fait ? ' fait' : ''}`}>
+      <div className="ac-defi-haut">
+        <Picto nom={defi?.icone || repli.icone} taille={22} />
+        <div className="ac-croissance">
+          <div className="ac-defi-titre">{titre}</div>
+          {description && <div className="ac-kpi-sous">{description}</div>}
+        </div>
+        {fait && <span className="ac-coche" role="img" aria-label="Défi fait">✓</span>}
+      </div>
+      <div className="team-bar-wrap" aria-label={`${progression} sur ${cible}`}>
+        <div className="team-bar-track"><div className={`team-bar-fill${fait ? ' signed' : ''}`} style={{ width: `${pct}%` }} /></div>
+        <span className="team-bar-pct">{progression}/{cible}</span>
+      </div>
+      <div className="ac-defi-pied">
+        <span className="ac-defi-xp">+{xp} XP</span>
+        {fait && <span className="badge badge-signed">Fait</span>}
+      </div>
+    </li>
+  )
+}
+
+// Les trois défis du jour, les mêmes pour tout le cabinet. Un serveur qui ne
+// les rend pas encore ne doit pas laisser un trou muet à l’écran.
+function Defis({ defis }) {
+  const liste = Array.isArray(defis) ? defis : null
+  return (
+    <section className="ac-bloc" aria-labelledby="ac-mp-defis">
+      <h3 id="ac-mp-defis" className="ac-bloc-titre">Défis du jour</h3>
+      {liste === null ? (
+        <div className="ac-muet">Les défis du jour arrivent avec la prochaine mise à jour de la formation.</div>
+      ) : liste.length === 0 ? (
+        <div className="ac-muet">Aucun défi aujourd’hui : une session compte quand même pour ta série.</div>
+      ) : (
+        <ul className="ac-liste-plate ac-defis">
+          {liste.map((d, i) => <Defi key={d?.code || i} defi={d} />)}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+/**
+ * Le classement de la semaine, anonyme : le rang, le nombre de participants,
+ * l écart avec le premier et avec la place au dessus. Jamais un nom, jamais
+ * l identifiant d’un collègue : le serveur n’en rend aucun, l’écran n’en
+ * invente pas.
+ */
+function Classement({ classement }) {
+  const c = classement
+  const participants = entierPositif(c.participants)
+  const rang = Math.max(1, entierPositif(c.rang) || 1)
+  const xpMoi = entierPositif(c.xp_moi)
+  const xpPremier = entierPositif(c.xp_premier)
+  const ecartPremier = c.ecart_premier == null ? Math.max(0, xpPremier - xpMoi) : entierPositif(c.ecart_premier)
+  const ecartDevant = c.xp_devant == null ? null : Math.max(0, entierPositif(c.xp_devant) - xpMoi)
+  const classe = xpMoi > 0 && participants > 0
+  return (
+    <section className="ac-bloc" aria-labelledby="ac-mp-classement">
+      <h3 id="ac-mp-classement" className="ac-bloc-titre">Classement de la semaine</h3>
+      <div className="card card-p ac-classement">
+        <div className="ac-classement-haut">
+          <div className="ac-classement-rang">
+            <span className="ac-kpi-valeur">{classe ? ordinal(rang) : 'Non classé'}</span>
+            {participants > 0 && <span className="ac-kpi-unite">sur {pluriel(participants, 'participant', 'participants')}</span>}
+          </div>
+          <div className="ac-classement-phrase">{phraseClassement(c)}</div>
+        </div>
+        <ul className="ac-classement-detail">
+          <li>{xpMoi} XP cette semaine</li>
+          {classe && rang > 1 && ecartPremier > 0 && <li>{ecartPremier} XP derrière le premier</li>}
+          {classe && rang > 1 && ecartDevant != null && ecartDevant > 0 && <li>{ecartDevant} XP de la place au dessus</li>}
+        </ul>
+        <div className="ac-muet">Classement anonyme : ni les noms ni les scores des collègues n’apparaissent.</div>
+      </div>
+    </section>
+  )
+}
+
+// Les trois derniers succès débloqués, et la porte vers la galerie complète.
+function SuccesRecents({ succes, onNaviguer }) {
+  const recents = Array.isArray(succes?.recents) ? succes.recents.slice(0, 3) : []
+  const obtenus = entierPositif(succes?.obtenus)
+  const total = entierPositif(succes?.total)
+  return (
+    <section className="ac-bloc" aria-labelledby="ac-mp-succes">
+      <h3 id="ac-mp-succes" className="ac-bloc-titre">Succès récents</h3>
+      <div className="card card-p ac-succes-recents">
+        {recents.length === 0 ? (
+          <div className="ac-muet">Aucun succès pour l’instant : la première session terminée en débloque un.</div>
+        ) : (
+          <ul className="ac-succes-pictos">
+            {recents.map((s) => (
+              <li key={s.code} className="ac-succes-puce">
+                <Picto nom={s.icone} taille={26} />
+                <div className="ac-croissance">
+                  <div className="ac-succes-titre">{s.titre}</div>
+                  {s.obtenu_le && <div className="ac-kpi-sous">Obtenu le {jourParis(s.obtenu_le)}</div>}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="ac-succes-pied">
+          {total > 0 && <span className="ac-muet">{obtenus} sur {total}</span>}
+          <button type="button" className="btn btn-outline btn-sm" onClick={() => onNaviguer?.(ROUTE_SUCCES)}>Tous mes succès</button>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 // La série de jours : la flamme, le nombre, et le mot qui va avec.
 function Serie({ serie }) {
   const jours = Number(serie?.serie) || 0
   const meilleure = Number(serie?.meilleure) || 0
   const danger = serie?.en_danger === true
+  // La série du jour est acquise dès qu’une session est terminée aujourd’hui :
+  // la flamme vit alors doucement (animation CSS, coupée sous
+  // prefers-reduced-motion), sinon elle reste fixe ou éteinte.
+  const acquise = (Number(serie?.sessions_aujourdhui) || 0) > 0
+  const eteinte = jours === 0 || danger
   let sous
   if (danger) sous = 'Une session aujourd’hui et la série continue.'
   else if (jours === 0) sous = 'Une session terminée aujourd’hui lance ta série.'
@@ -52,7 +229,9 @@ function Serie({ serie }) {
     <div className={`card card-p ac-jour-carte${danger ? ' danger' : ''}`}>
       <div className="ac-kpi-kicker">Série</div>
       <div className="ac-serie">
-        <Flamme eteinte={jours === 0 || danger} />
+        <span className={acquise && !eteinte ? 'ac-flamme-vive' : undefined}>
+          <Flamme eteinte={eteinte} />
+        </span>
         <div>
           <div className="ac-kpi-valeur">{pluriel(jours, 'jour', 'jours')}</div>
           <div className="ac-kpi-sous">{meilleure > 0 ? `meilleure série : ${pluriel(meilleure, 'jour', 'jours')}` : 'première série à lancer'}</div>
@@ -189,6 +368,7 @@ export function MonParcoursVue({ parcours, aujourdhui, onNaviguer, onObjectif })
       <Entete sousTitre={sousTitre} />
 
       <div className="ac-jour">
+        <CarteNiveau niveau={parcours?.niveau} xpTotal={xp.total} />
         <Serie serie={serie} />
         <Objectif serie={serie} onObjectif={onObjectif} />
         <div className="card card-p ac-jour-carte">
@@ -202,6 +382,10 @@ export function MonParcoursVue({ parcours, aujourdhui, onNaviguer, onObjectif })
           <div className="ac-kpi-sous">{dus > 0 ? 'exercices dont la révision est arrivée : ils passent en premier dans ta prochaine session' : 'aucun exercice en attente de révision'}</div>
         </div>
       </div>
+
+      <Defis defis={parcours?.defis} />
+
+      {parcours?.classement && <Classement classement={parcours.classement} />}
 
       <section className="ac-bloc" aria-labelledby="ac-mp-decks">
         <h3 id="ac-mp-decks" className="ac-bloc-titre">Mes decks</h3>
@@ -221,6 +405,8 @@ export function MonParcoursVue({ parcours, aujourdhui, onNaviguer, onObjectif })
           </div>
         )}
       </section>
+
+      {parcours?.succes && <SuccesRecents succes={parcours.succes} onNaviguer={onNaviguer} />}
 
       <section className="ac-bloc" aria-labelledby="ac-mp-reussites">
         <h3 id="ac-mp-reussites" className="ac-bloc-titre">Dernières réussites</h3>

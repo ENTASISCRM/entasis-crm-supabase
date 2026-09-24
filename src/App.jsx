@@ -5863,7 +5863,8 @@ export default function App(){
       const libelle = r.type === 'items_dus' ? `${r.nombre} exercice${r.nombre > 1 ? 's' : ''} de formation à réviser`
         : r.type === 'serie_en_danger' ? `Ta série de ${r.nombre} jour${r.nombre > 1 ? 's' : ''} tombe ce soir sans session`
           : r.type === 'affectations_en_retard' ? `${r.nombre} deck${r.nombre > 1 ? 's' : ''} de formation en retard`
-            : `${r.nombre} deck${r.nombre > 1 ? 's' : ''} de formation à rendre sous 7 jours`
+            : r.type === 'defis_du_jour' ? `${r.nombre} défi${r.nombre > 1 ? 's' : ''} du jour restant${r.nombre > 1 ? 's' : ''}`
+              : `${r.nombre} deck${r.nombre > 1 ? 's' : ''} de formation à rendre sous 7 jours`
       out.push({
         id: `academy-${r.type}`,
         date: r.echeance ? `${String(r.echeance).slice(0, 10)}T08:00:00` : new Date().toISOString(),
@@ -5928,7 +5929,7 @@ export default function App(){
             <SubTabs
               ariaLabel={`Vues ${activeDomain.label}`}
               tabs={activeDomain.views.map(v => ({ key: viewId(v), label: v.label, badge: subBadges[v.badgeKey] || 0 }))}
-              active={activeTab === 'clients' ? `clients:${selectedClientId ? 'annuaire' : clientsVue}` : activeTab === 'leads' ? `leads:${leadsVue}` : activeTab === 'formation' ? `formation:${['parcours','catalogue','resultats','pilotage','administration'].includes(formationRoute[0]) ? formationRoute[0] : (formationRoute[0] === 'fiche' ? 'pilotage' : 'catalogue')}` : activeTab}
+              active={activeTab === 'clients' ? `clients:${selectedClientId ? 'annuaire' : clientsVue}` : activeTab === 'leads' ? `leads:${leadsVue}` : activeTab === 'formation' ? `formation:${['parcours','catalogue','resultats','pilotage','administration'].includes(formationRoute[0]) ? formationRoute[0] : (formationRoute[0] === 'fiche' ? 'pilotage' : formationRoute[0] === 'succes' ? 'resultats' : 'catalogue')}` : activeTab}
               onChange={(id) => {
                 if (id.startsWith('clients:')) {
                   setActiveTab('clients'); setSelectedClientId(null); setClientsVue(id.split(':')[1])

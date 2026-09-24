@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// ENTASIS ACADEMY, l édition d’un exercice côté administration
+// ENTASIS ACADEMY, l édition d’un exercice et les règles du mémo
 //
 // Un exercice (item) porte son énoncé dans `payload` et sa réponse dans
 // `corrige`, les deux en indices ORIGINAUX : c’est le serveur qui mélange
@@ -9,11 +9,21 @@
 // (corrigé = identité), pour une association les lignes gauche et droite en
 // face (corrigé = diagonale) : c’est plus simple à relire pour Louis.
 //
+// Un exercice peut aussi porter une FIGURE dans `payload.figure` : soit
+// { ref } qui renvoie à un schéma de la version (academy_module_versions.
+// schemas), soit { svg, alt } propre à l’exercice. Le mémo, lui, place ses
+// schémas avec un marqueur [schema:cle] ; ce fichier tient les deux règles,
+// parce que le compteur de mots du mémo doit ignorer ces marqueurs et que
+// l’écran du deck a besoin de la même découpe pour rendre les figures au
+// bon endroit.
+//
 // Rien ici ne touche à React ni au réseau : l’état d’un formulaire, sa
 // validation, le patch envoyé à academy_enregistrer_item et la bonne
 // réponse de l’aperçu (les choix présentés sans mélange, la comparaison
 // rejouée par estBonneReponse de lib/academy/exercices) se testent à sec.
 // ═══════════════════════════════════════════════════════════════════════════
+
+import { LONGUEUR_MAX } from './svg'
 
 /** Les huit types, dans l’ordre du choix « Nouvel exercice ». */
 export const TYPES_ITEM = ['choix', 'vrai_faux', 'multi', 'ordre', 'association', 'trou_choix', 'trou_saisie', 'carte']
@@ -34,15 +44,54 @@ const entier = (v, defaut) => {
   const n = Number.parseInt(v, 10)
   return Number.isFinite(n) ? n : defaut
 }
+// Le séparateur de milliers français est une espace insécable (même parti
+// pris que lib/campagnes.js : on fixe la classique, pas la fine d ICU).
+const milliers = (n) => Number(n).toLocaleString('fr-FR').replace(/\u202f/g, '\u00a0')
 const remplir = (liste, n) => {
   const l = [...liste]
   while (l.length < n) l.push('')
   return l
 }
 
-/** Nombre de mots d’un texte (suites de caractères séparées par des blancs). */
+// ─── Le mémo et ses schémas ────────────────────────────────────────────────
+
+// Le marqueur qui place un schéma dans un mémo : [schema:cle], seul sur sa
+// ligne. La clé ne porte ni espace ni majuscule ; on reste tolérant à la
+// lecture (majuscules acceptées, clé normalisée ensuite) pour qu’un mémo
+// écrit à la main ne perde pas sa figure en silence.
+const MARQUEUR = /\[schema:([^\]\s]{1,64})\]/i
+const MARQUEUR_PARTOUT = new RegExp(MARQUEUR.source, 'gi')
+
+/** La clé d’un schéma, telle qu’on la range : minuscules, sans espace. */
+export function normaliserCle(v) {
+  return texte(v).trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '')
+}
+
+/** Nombre de mots d’un texte, marqueurs [schema:…] exclus. */
 export function compterMots(t) {
-  return texte(t).split(/\s+/).filter(Boolean).length
+  return texte(t).replace(MARQUEUR_PARTOUT, ' ').split(/\s+/).filter(Boolean).length
+}
+
+/**
+ * Découpe un mémo en morceaux autour des marqueurs : une suite de
+ * { type: 'texte', texte } et { type: 'schema', cle }. Les morceaux de
+ * texte se rendent chacun par le rendu markdown ; comme un marqueur occupe
+ * sa ligne, la découpe tombe entre deux blocs et ne coupe jamais une liste
+ * ni un tableau en deux.
+ */
+export function decouperMemo(markdown) {
+  const morceaux = texte(markdown).split(MARQUEUR)
+  const parties = []
+  morceaux.forEach((v, i) => {
+    if (i % 2 === 1) {
+      const cle = normaliserCle(v)
+      if (cle) parties.push({ type: 'schema', cle })
+      return
+    }
+    const t = v.trim()
+    if (t) parties.push({ type: 'texte', texte: t })
+  })
+  return parties
 }
 
 /** Les réponses acceptées d’un texte à compléter : une par ligne, sans les vides. */
@@ -59,6 +108,9 @@ export function etatItem(item) {
   const p = it.payload && typeof it.payload === 'object' ? it.payload : {}
   const c = it.corrige && typeof it.corrige === 'object' ? it.corrige : {}
   const choix = textes(p.choix)
+  const fig = p.figure && typeof p.figure === 'object' ? p.figure : {}
+  const figureRef = normaliserCle(fig.ref)
+  const figureSvg = texte(fig.svg)
 
   // Les éléments d’un « ordre » s’affichent dans le bon ordre ; un corrigé
   // absent ou incomplet laisse l’ordre du payload.
@@ -99,6 +151,10 @@ export function etatItem(item) {
     reponses: textes(c.reponses).join('\n'),
     recto: texte(p.recto),
     verso: texte(p.verso),
+    figure_mode: figureRef ? 'ref' : (figureSvg.trim() ? 'svg' : 'aucune'),
+    figure_ref: figureRef,
+    figure_svg: figureSvg,
+    figure_alt: texte(fig.alt),
   }
 }
 
@@ -128,13 +184,49 @@ function erreurTrou(phrase) {
 
 const vides = (liste) => liste.some((v) => !texte(v).trim())
 
+/** Les trois états du champ « Figure » d’un exercice. */
+export const FIGURES = ['aucune', 'ref', 'svg']
+
+/**
+ * La figure d’un exercice depuis l’état du formulaire : { figure: null }
+ * quand il n’y en a pas, { figure: { ref } } pour un schéma de la version,
+ * { figure: { svg, alt } } pour une figure propre, ou { erreur }. Le SVG est
+ * refusé ici, avant l’envoi, au delà de la longueur que la base et
+ * l’assainisseur acceptent.
+ */
+export function figureItem(f) {
+  const mode = FIGURES.includes(f?.figure_mode) ? f.figure_mode : 'aucune'
+  if (mode === 'ref') {
+    const ref = normaliserCle(f.figure_ref)
+    if (!ref) return { erreur: 'Choisissez le schéma de la version, ou mettez la figure à « Aucune »' }
+    return { figure: { ref } }
+  }
+  if (mode === 'svg') {
+    const svg = texte(f.figure_svg).trim()
+    if (!svg) return { erreur: 'Collez le SVG de la figure, ou mettez la figure à « Aucune »' }
+    if (svg.length > LONGUEUR_MAX) return { erreur: `La figure dépasse ${milliers(LONGUEUR_MAX)} caractères : elle ne serait pas rendue` }
+    const alt = texte(f.figure_alt).trim()
+    return { figure: alt ? { svg, alt } : { svg } }
+  }
+  return { figure: null }
+}
+
 /**
  * Vérifie l’état d’un formulaire et construit le patch pour
  * academy_enregistrer_item. Rend { erreur } avec un message lisible, ou
  * { patch } prêt à envoyer (type, competence, difficulte, explication,
- * payload, corrige) en indices originaux.
+ * payload, corrige) en indices originaux. La figure, commune aux huit
+ * types, s’ajoute au payload une fois le reste vérifié.
  */
 export function validerItem(f) {
+  const { erreur, figure } = figureItem(f)
+  if (erreur) return { erreur }
+  const resultat = validerChamps(f)
+  if (resultat.erreur || !figure) return resultat
+  return { patch: { ...resultat.patch, payload: { ...resultat.patch.payload, figure } } }
+}
+
+function validerChamps(f) {
   const type = f?.type
   if (!TYPES_ITEM.includes(type)) return { erreur: 'Type d’exercice inconnu' }
   const competence = texte(f.competence).trim()

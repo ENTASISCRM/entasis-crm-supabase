@@ -3,8 +3,10 @@
 //
 // App.jsx lit le hash après #/formation/ et passe la route en tableau :
 //   ['parcours'] (défaut, Aujourd hui), ['catalogue'], ['module', slug],
-//   ['entrainement', versionId], ['resultats'], ['pilotage'],
+//   ['entrainement', versionId], ['resultats'], ['succes'], ['pilotage'],
 //   ['fiche', profileId], ['administration', ...]
+// La galerie des succès s’ouvre depuis Aujourd hui et Mes résultats : elle
+// n’a pas de sous onglet à elle, App.jsx la range sous « Mes résultats ».
 // Ce composant choisit l’écran. Pilotage, fiche d’un autre et administration
 // sont réservés à la direction (manager ou drapeau academy_admin) : ce
 // n’est qu’un affichage, la RLS et les fonctions SQL restent le vrai verrou.
@@ -23,6 +25,7 @@ import Catalogue from './Catalogue'
 import ModuleDetail from './ModuleDetail'
 import Entrainement from './Entrainement'
 import MesResultats from './MesResultats'
+import Succes from './Succes'
 import Pilotage from './Pilotage'
 import FicheCollaborateur from './FicheCollaborateur'
 import Administration from './Administration'
@@ -78,6 +81,9 @@ export default function Academy({ profile, route, onNaviguer }) {
       break
     case 'resultats':
       contenu = <MesResultats profile={profile} onNaviguer={onNaviguer} />
+      break
+    case 'succes':
+      contenu = <Succes profile={profile} onNaviguer={onNaviguer} />
       break
     case 'pilotage':
       contenu = direction ? <Pilotage profile={profile} onNaviguer={onNaviguer} /> : <ReserveDirection />

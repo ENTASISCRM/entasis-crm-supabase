@@ -2,7 +2,21 @@
  "slug": "per-et-retraite",
  "titre": "PER et préparation de la retraite",
  "competence": "Expliquer mécanisme, disponibilité, fiscalité à vérifier et arbitrages",
- "memo_md": "**Les sommes versées sur un PER sont bloquées jusqu'à la retraite, et le conseiller l'énonce avant tout avantage fiscal.**\n\n## Mécanisme\n- Depuis le 1er octobre 2020, remplace le PERP et le Madelin.\n- Déblocage anticipé limitatif : décès du conjoint ou partenaire de Pacs, invalidité de 2e ou 3e catégorie, handicap d'un enfant, surendettement, fin des droits au chômage, cessation de mandat social depuis deux ans, liquidation judiciaire d'un non salarié, achat de la résidence principale.\n- Résidence principale : versements volontaires et épargne salariale seulement, versements obligatoires bloqués.\n- Sortie en capital (une ou plusieurs fois), en rente ou mixte. Rente choisie définitivement à l'ouverture : plus de capital.\n- Gestion pilotée par défaut. Unités de compte : risque de perte en capital.\n\n## Fiscalité\n- Versements volontaires avant 70 ans déductibles par principe, renonciation sur option.\n- Déduits : capital au barème progressif, rente comme une pension. Non déduits : capital exonéré.\n- Impôt reporté, pas effacé : l'intérêt se mesure entre la tranche actuelle et celle de la retraite.\n- Plafond sur les revenus de l'année précédente, lu sur l'avis d'imposition. Salarié 2026 : 10 % des revenus 2025 nets de frais, maximum 37 680 euros, ou 4 710 euros si plus élevé. Non salarié : à vérifier.\n- Report du plafond non utilisé sur trois ans. Mutualisation entre conjoints ou pacsés sur demande expresse.\n\n## Arbitrages\n- Ordre : protéger les revenus, épargne disponible, puis épargne longue.\n- PER : déduction et blocage. Assurance vie : disponibilité, sans déduction. Livret : liquidité et sécurité.\n- Versement calibré en dernier, sur la capacité d'épargne réelle, pas sur l'impôt à effacer.\n",
+ "memo_md": "**Les sommes versées sur un PER sont bloquées jusqu'à la retraite, et le conseiller l'énonce avant tout avantage fiscal.**\n\n## Mécanisme\n- Depuis le 1er octobre 2020, remplace le PERP et le Madelin.\n- Déblocage anticipé limitatif : décès du conjoint ou partenaire de Pacs, invalidité de 2e ou 3e catégorie, handicap d'un enfant, surendettement, fin des droits au chômage, cessation de mandat social depuis deux ans, liquidation judiciaire d'un non salarié, achat de la résidence principale.\n- Résidence principale : versements volontaires et épargne salariale seulement, versements obligatoires bloqués.\n\n[schema:deblocage_anticipe]\n\n- Sortie en capital (une ou plusieurs fois), en rente ou mixte. Rente choisie définitivement à l'ouverture : plus de capital.\n- Gestion pilotée par défaut. Unités de compte : risque de perte en capital.\n\n## Fiscalité\n- Versements volontaires avant 70 ans déductibles par principe, renonciation sur option.\n- Déduits : capital au barème progressif, rente comme une pension. Non déduits : capital exonéré.\n- Impôt reporté, pas effacé : l'intérêt se mesure entre la tranche actuelle et celle de la retraite.\n- Plafond sur les revenus de l'année précédente, lu sur l'avis d'imposition. Salarié 2026 : 10 % des revenus 2025 nets de frais, maximum 37 680 euros, ou 4 710 euros si plus élevé. Non salarié : à vérifier.\n- Report du plafond non utilisé sur trois ans. Mutualisation entre conjoints ou pacsés sur demande expresse.\n\n[schema:vie_versement]\n\n## Arbitrages\n- Ordre : protéger les revenus, épargne disponible, puis épargne longue.\n- PER : déduction et blocage. Assurance vie : disponibilité, sans déduction. Livret : liquidité et sécurité.\n- Versement calibré en dernier, sur la capacité d'épargne réelle, pas sur l'impôt à effacer.\n",
+ "schemas": [
+  {
+   "cle": "vie_versement",
+   "titre": "La vie d’un versement PER",
+   "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 640 360\" font-family=\"system-ui, -apple-system, Segoe UI, sans-serif\"><title>La vie d’un versement PER</title><rect x=\"0\" y=\"0\" width=\"640\" height=\"360\" fill=\"#FFFFFF\"/><text x=\"320\" y=\"36\" text-anchor=\"middle\" font-size=\"20\" font-weight=\"600\" fill=\"#162443\">La vie d’un versement PER</text><rect x=\"16\" y=\"66\" width=\"176\" height=\"192\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#162443\" stroke-width=\"2\"/><rect x=\"232\" y=\"66\" width=\"176\" height=\"192\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#162443\" stroke-width=\"2\"/><rect x=\"448\" y=\"66\" width=\"176\" height=\"192\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#162443\" stroke-width=\"2\"/><circle cx=\"40\" cy=\"66\" r=\"15\" fill=\"#C5A55A\"/><circle cx=\"256\" cy=\"66\" r=\"15\" fill=\"#C5A55A\"/><circle cx=\"472\" cy=\"66\" r=\"15\" fill=\"#C5A55A\"/><text x=\"40\" y=\"71\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"600\" fill=\"#FFFFFF\">1</text><text x=\"256\" y=\"71\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"600\" fill=\"#FFFFFF\">2</text><text x=\"472\" y=\"71\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"600\" fill=\"#FFFFFF\">3</text><text x=\"104\" y=\"102\" text-anchor=\"middle\" font-size=\"17\" font-weight=\"600\" fill=\"#162443\">À l’entrée</text><text x=\"320\" y=\"102\" text-anchor=\"middle\" font-size=\"17\" font-weight=\"600\" fill=\"#162443\">Pendant</text><text x=\"536\" y=\"102\" text-anchor=\"middle\" font-size=\"17\" font-weight=\"600\" fill=\"#162443\">À la sortie</text><line x1=\"40\" y1=\"114\" x2=\"168\" y2=\"114\" stroke=\"#8A95A8\" stroke-width=\"2\"/><line x1=\"256\" y1=\"114\" x2=\"384\" y2=\"114\" stroke=\"#8A95A8\" stroke-width=\"2\"/><line x1=\"472\" y1=\"114\" x2=\"600\" y2=\"114\" stroke=\"#8A95A8\" stroke-width=\"2\"/><text x=\"104\" y=\"140\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">Versement volontaire</text><text x=\"104\" y=\"162\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">déduit du revenu</text><text x=\"104\" y=\"184\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">imposable, dans la</text><text x=\"104\" y=\"206\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">limite du plafond</text><text x=\"104\" y=\"232\" text-anchor=\"middle\" font-size=\"13\" fill=\"#8A95A8\">Avant 70 ans</text><text x=\"104\" y=\"249\" text-anchor=\"middle\" font-size=\"13\" fill=\"#8A95A8\">Renonciation sur option</text><text x=\"320\" y=\"140\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">Sommes bloquées</text><text x=\"320\" y=\"162\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">jusqu’à la retraite</text><text x=\"320\" y=\"184\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">sauf cas prévus</text><text x=\"320\" y=\"206\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">par la loi</text><text x=\"320\" y=\"232\" text-anchor=\"middle\" font-size=\"13\" fill=\"#8A95A8\">Gestion pilotée</text><text x=\"320\" y=\"249\" text-anchor=\"middle\" font-size=\"13\" fill=\"#8A95A8\">par défaut</text><text x=\"536\" y=\"140\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">Capital imposé</text><text x=\"536\" y=\"162\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">au barème progressif</text><text x=\"536\" y=\"184\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">Rente imposée</text><text x=\"536\" y=\"206\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">comme une pension</text><text x=\"536\" y=\"232\" text-anchor=\"middle\" font-size=\"13\" fill=\"#8A95A8\">Non déduit :</text><text x=\"536\" y=\"249\" text-anchor=\"middle\" font-size=\"13\" fill=\"#8A95A8\">capital exonéré</text><line x1=\"194\" y1=\"162\" x2=\"222\" y2=\"162\" stroke=\"#C5A55A\" stroke-width=\"2\"/><polygon points=\"220,155 232,162 220,169\" fill=\"#C5A55A\"/><line x1=\"410\" y1=\"162\" x2=\"438\" y2=\"162\" stroke=\"#C5A55A\" stroke-width=\"2\"/><polygon points=\"436,155 448,162 436,169\" fill=\"#C5A55A\"/><rect x=\"16\" y=\"282\" width=\"608\" height=\"60\" rx=\"8\" fill=\"#FFFFFF\" stroke=\"#C5A55A\" stroke-width=\"2\"/><text x=\"320\" y=\"308\" text-anchor=\"middle\" font-size=\"16\" font-weight=\"600\" fill=\"#162443\">Impôt reporté, pas effacé</text><text x=\"320\" y=\"330\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">L’intérêt se mesure entre la tranche actuelle et celle de la retraite.</text></svg>",
+   "legende": "Déduit à l’entrée, bloqué jusqu’à la retraite, imposé à la sortie : l’impôt est reporté, pas effacé."
+  },
+  {
+   "cle": "deblocage_anticipe",
+   "titre": "Les cas de déblocage anticipé du PER",
+   "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 640 360\" font-family=\"system-ui, -apple-system, Segoe UI, sans-serif\"><title>Les cas de déblocage anticipé du PER</title><rect x=\"0\" y=\"0\" width=\"640\" height=\"360\" fill=\"#FFFFFF\"/><text x=\"320\" y=\"36\" text-anchor=\"middle\" font-size=\"20\" font-weight=\"600\" fill=\"#162443\">Les cas de déblocage anticipé du PER</text><rect x=\"16\" y=\"62\" width=\"392\" height=\"224\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#162443\" stroke-width=\"2\"/><text x=\"212\" y=\"90\" text-anchor=\"middle\" font-size=\"17\" font-weight=\"600\" fill=\"#162443\">Sept accidents de la vie</text><line x1=\"32\" y1=\"102\" x2=\"392\" y2=\"102\" stroke=\"#8A95A8\" stroke-width=\"2\"/><circle cx=\"40\" cy=\"120\" r=\"4\" fill=\"#C5A55A\"/><circle cx=\"40\" cy=\"144\" r=\"4\" fill=\"#C5A55A\"/><circle cx=\"40\" cy=\"168\" r=\"4\" fill=\"#C5A55A\"/><circle cx=\"40\" cy=\"192\" r=\"4\" fill=\"#C5A55A\"/><circle cx=\"40\" cy=\"216\" r=\"4\" fill=\"#C5A55A\"/><circle cx=\"40\" cy=\"240\" r=\"4\" fill=\"#C5A55A\"/><circle cx=\"40\" cy=\"264\" r=\"4\" fill=\"#C5A55A\"/><text x=\"52\" y=\"125\" font-size=\"14\" fill=\"#2C3548\">Décès du conjoint ou du partenaire de Pacs</text><text x=\"52\" y=\"149\" font-size=\"14\" fill=\"#2C3548\">Invalidité de 2e ou 3e catégorie</text><text x=\"52\" y=\"173\" font-size=\"14\" fill=\"#2C3548\">Handicap d’un enfant</text><text x=\"52\" y=\"197\" font-size=\"14\" fill=\"#2C3548\">Surendettement</text><text x=\"52\" y=\"221\" font-size=\"14\" fill=\"#2C3548\">Fin des droits au chômage</text><text x=\"52\" y=\"245\" font-size=\"14\" fill=\"#2C3548\">Cessation de mandat social depuis deux ans</text><text x=\"52\" y=\"269\" font-size=\"14\" fill=\"#2C3548\">Liquidation judiciaire d’un non salarié</text><rect x=\"424\" y=\"62\" width=\"200\" height=\"224\" rx=\"8\" fill=\"#FFFFFF\" stroke=\"#C5A55A\" stroke-width=\"2\"/><text x=\"524\" y=\"90\" text-anchor=\"middle\" font-size=\"17\" font-weight=\"600\" fill=\"#162443\">Le seul autre cas</text><line x1=\"440\" y1=\"102\" x2=\"608\" y2=\"102\" stroke=\"#C5A55A\" stroke-width=\"2\"/><text x=\"524\" y=\"132\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"600\" fill=\"#162443\">Achat de la</text><text x=\"524\" y=\"152\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"600\" fill=\"#162443\">résidence principale</text><text x=\"524\" y=\"184\" text-anchor=\"middle\" font-size=\"13\" fill=\"#2C3548\">Versements volontaires</text><text x=\"524\" y=\"202\" text-anchor=\"middle\" font-size=\"13\" fill=\"#2C3548\">et épargne salariale</text><text x=\"524\" y=\"220\" text-anchor=\"middle\" font-size=\"13\" fill=\"#2C3548\">seulement</text><text x=\"524\" y=\"250\" text-anchor=\"middle\" font-size=\"13\" fill=\"#8A95A8\">Versements obligatoires :</text><text x=\"524\" y=\"268\" text-anchor=\"middle\" font-size=\"13\" fill=\"#8A95A8\">toujours bloqués</text><rect x=\"16\" y=\"300\" width=\"608\" height=\"44\" rx=\"8\" fill=\"#FFFFFF\" stroke=\"#8A95A8\" stroke-width=\"2\"/><text x=\"320\" y=\"319\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">Rien d’autre : un besoin de trésorerie passager ou des travaux</text><text x=\"320\" y=\"337\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">n’ouvrent aucun déblocage avant la retraite.</text></svg>",
+   "legende": "Sept accidents de la vie et un seul projet, la résidence principale. Tout le reste attend la retraite."
+  }
+ ],
  "items": [
   {
    "cle": "i01",
@@ -123,6 +137,9 @@
    "type": "choix",
    "competence": "Choix des enveloppes",
    "difficulte": 3,
+   "figure": {
+    "ref": "deblocage_anticipe"
+   },
    "payload": {
     "enonce": "Cas fictif. Monsieur V., prévoyance en place et six mois de dépenses en épargne disponible, veut placer 40 000 euros, dont 25 000 euros destinés à des travaux dans trois ans. Il demande de tout verser sur un PER. Quelle réponse est conforme ?",
     "choix": [
@@ -277,6 +294,9 @@
    "type": "multi",
    "competence": "Blocage et déblocage anticipé",
    "difficulte": 1,
+   "figure": {
+    "ref": "deblocage_anticipe"
+   },
    "payload": {
     "enonce": "Cochez tout ce qui constitue un cas de déblocage anticipé du PER.",
     "choix": [
@@ -302,6 +322,9 @@
    "type": "multi",
    "competence": "Déduction et fiscalité de sortie",
    "difficulte": 2,
+   "figure": {
+    "ref": "vie_versement"
+   },
    "payload": {
     "enonce": "Cochez tout ce qui est exact au sujet des versements volontaires déduits du revenu imposable.",
     "choix": [
@@ -450,6 +473,9 @@
    "type": "ordre",
    "competence": "Déduction et fiscalité de sortie",
    "difficulte": 2,
+   "figure": {
+    "ref": "vie_versement"
+   },
    "payload": {
     "enonce": "Remettez dans l'ordre chronologique le parcours fiscal d'un versement volontaire déduit.",
     "elements": [
@@ -840,6 +866,77 @@
    },
    "corrige": {},
    "explication": "Le montant exact dépend du bénéfice réel et de l'année : seuil à vérifier sur la source officielle."
+  },
+  {
+   "cle": "i41",
+   "type": "choix",
+   "competence": "Déduction et fiscalité de sortie",
+   "difficulte": 1,
+   "figure": {
+    "ref": "vie_versement"
+   },
+   "payload": {
+    "enonce": "Sur le schéma de la vie d’un versement PER, à quelle étape l’impôt sur les sommes déduites se paie réellement ?",
+    "choix": [
+     "À l’entrée, au moment du versement",
+     "Pendant le blocage, chaque année",
+     "À la sortie, en capital ou en rente",
+     "Jamais, la déduction efface l’impôt"
+    ]
+   },
+   "corrige": {
+    "index": 2
+   },
+   "explication": "La déduction à l’entrée reporte l’impôt à la sortie : capital au barème progressif, rente comme une pension."
+  },
+  {
+   "cle": "i42",
+   "type": "multi",
+   "competence": "Blocage et déblocage anticipé",
+   "difficulte": 2,
+   "figure": {
+    "ref": "deblocage_anticipe"
+   },
+   "payload": {
+    "enonce": "Sur le schéma des cas de déblocage anticipé, cochez tout ce qui est exact au sujet de la case « Achat de la résidence principale ».",
+    "choix": [
+     "C’est le seul cas qui n’est pas un accident de la vie",
+     "Elle libère les droits issus des versements volontaires",
+     "Elle libère les droits issus de l’épargne salariale",
+     "Elle libère les droits issus des versements obligatoires",
+     "Elle s’étend à l’achat d’une résidence secondaire"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "La résidence principale est le seul projet de vie prévu par la loi ; les droits issus des versements obligatoires restent bloqués."
+  },
+  {
+   "cle": "i43",
+   "type": "trou_choix",
+   "competence": "Blocage et déblocage anticipé",
+   "difficulte": 2,
+   "figure": {
+    "ref": "deblocage_anticipe"
+   },
+   "payload": {
+    "phrase": "Sur le schéma, la bande du bas rappelle que des travaux ou un besoin de trésorerie passager n’ouvrent aucun déblocage : la liste des huit cas est donc ___.",
+    "choix": [
+     "limitative",
+     "indicative",
+     "négociable",
+     "provisoire"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "La loi fixe une liste limitative : sept accidents de la vie et l’achat de la résidence principale. Ce qui n’y figure pas attend la retraite."
   }
  ]
 }

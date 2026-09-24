@@ -6,6 +6,10 @@
 -- Identites simulees comme PostgREST (role authenticated + request.jwt.claims).
 -- Profils DEV fictifs : camille, noe (advisor), martin borgis (manager).
 --
+-- Migration 8 (gamification, 22 septembre 2026) : les XP par reponse et les
+-- combos entrent dans l XP de la session ; les etapes propres a la
+-- gamification sont dans acceptation-gamification.sql.
+--
 -- Relecture adversariale du 21 septembre 2026 : les items et les sessions ne
 -- se lisent plus en direct (tout passe par les fonctions), un exercice
 -- d ordre ou d association est melange a l enregistrement, une session
@@ -20,7 +24,7 @@ declare
   c_manager uuid := 'af124117-104e-4958-9283-e0864b6c8f17';
   v_mod jsonb; v_module uuid; v_version uuid; v_v2 uuid; v_json jsonb; v_json2 jsonb; v_res jsonb; v_res2 jsonb;
   v_ent uuid; v_nb int; v_erreur boolean; e jsonb; v_item uuid; v_type text; v_ordre jsonb; v_corr jsonb; v_pay jsonb;
-  v_rep jsonb; v_bonne jsonb; v_premier_choix uuid; v_force int; v_carte int := 0; v_bons int; v_xp_attendu int;
+  v_rep jsonb; v_bonne jsonb; v_premier_choix uuid; v_force int; v_carte int := 0; v_bons int; v_xp_attendu int := 0; v_combo int := 0;
   resume text := '';
   -- verification unitaire
   v_u jsonb; v_msg text; v_premier boolean := true;
@@ -138,6 +142,10 @@ begin
     end if;
     execute 'set local role authenticated';
     v_res := public.academy_repondre(v_ent, v_item, v_rep);
+    -- XP par reponse (migration 8) : 10, 5 pour une carte, +5 des la troisieme bonne d affilee.
+    if v_item = v_premier_choix then v_combo := 0;
+    else v_combo := v_combo + 1; v_xp_attendu := v_xp_attendu + (case when v_type = 'carte' then 5 else 10 end) + (case when v_combo >= 3 then 5 else 0 end); end if;
+    if (v_res ->> 'combo')::int <> v_combo or (v_res ->> 'xp_session')::int <> v_xp_attendu then raise exception 'ECHEC xp par reponse : % (attendu combo % et session %)', v_res, v_combo, v_xp_attendu; end if;
     if v_premier then
       v_premier := false; v_msg := '';
       begin v_res2 := public.academy_terminer_entrainement(v_ent); exception when others then v_msg := sqlerrm; end;
@@ -165,8 +173,10 @@ begin
   v_res := public.academy_terminer_entrainement(v_ent);
   v_bons := (v_res ->> 'nb_bons')::int;
   if v_bons <> 11 or (v_res ->> 'nb_total')::int <> 12 then raise exception 'ECHEC fin de session : %', v_res; end if;
-  v_xp_attendu := (11 - v_carte) * 10 + v_carte * 5 + 10;
+  -- XP de fin : reponses (combos compris) + 10 premiere du jour + defis du jour credites (0 a 3, selon la date).
+  v_xp_attendu := v_xp_attendu + 10 + (v_res -> 'xp_detail' ->> 'defis')::int;
   if (v_res ->> 'xp')::int <> v_xp_attendu then raise exception 'ECHEC XP : % au lieu de %', v_res ->> 'xp', v_xp_attendu; end if;
+  if (v_res -> 'xp_detail' ->> 'reponses')::int <> (11 - v_carte) * 10 + v_carte * 5 or (v_res -> 'xp_detail' ->> 'parfaite')::int <> 0 then raise exception 'ECHEC xp_detail : %', v_res -> 'xp_detail'; end if;
   if (v_res ->> 'serie')::int <> 1 or not (v_res ->> 'premiere_du_jour')::boolean then raise exception 'ECHEC serie : %', v_res; end if;
   if (v_res ->> 'couronnes_apres')::int <> 1 then raise exception 'ECHEC couronnes apres session 1 : %', v_res ->> 'couronnes_apres'; end if;
   if (v_res ->> 'statut_module') <> 'en_cours' then raise exception 'ECHEC statut : %', v_res ->> 'statut_module'; end if;

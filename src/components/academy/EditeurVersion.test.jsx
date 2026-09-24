@@ -272,3 +272,131 @@ describe('JoueurApercu, la prévisualisation d’un exercice', () => {
     expect(inconnu).toContain('Type d’exercice inconnu : qcm')
   })
 })
+
+// ─── Les schémas ───────────────────────────────────────────────────────────
+
+// Deux schémas de version, du SVG simple aux couleurs du guide d’auteur.
+const SCHEMAS = [
+  { cle: 'frise', titre: 'Les sept étapes', legende: 'Chaque étape a sa durée.', svg: '<svg viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg"><title>Les sept étapes</title><rect x="0" y="0" width="640" height="360" fill="#FFFFFF" /></svg>' },
+  { cle: 'poches', titre: 'Les trois poches', legende: 'Précaution, projets datés, long terme.', svg: '<svg viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg"><circle cx="100" cy="100" r="40" fill="#F5EDD8" /></svg>' },
+]
+
+describe('EditeurVersionVue, la section Schémas', () => {
+  it('liste les schémas, rappelle leur marqueur et montre l’aperçu assaini', () => {
+    const html = rendre(version({ schemas: SCHEMAS }))
+    expect(html).toContain('Schémas · 2 figures')
+    expect(html).toContain('Dans le mémo : [schema:frise]')
+    expect(html).toContain('Dans le mémo : [schema:poches]')
+    expect(html).toContain('id="aca-schema-1-cle"')
+    expect(html).toContain('id="aca-schema-1-titre"')
+    expect(html).toContain('id="aca-schema-1-legende"')
+    expect(html).toContain('id="aca-schema-2-svg"')
+    expect(html).toContain('value="frise"')
+    expect(html).toContain('value="Les sept étapes"')
+    // L’aperçu passe par le composant Schema : figure assainie, légende gardée.
+    expect(html.match(/class="ac-schema"/g)).toHaveLength(2)
+    expect(html).toContain('aria-label="Les sept étapes"')
+    expect(html).toContain('Chaque étape a sa durée.')
+    // Les gestes, et le compte de caractères.
+    expect(html.match(/>Monter<\/button>/g)).toHaveLength(2)
+    expect(html.match(/>Descendre<\/button>/g)).toHaveLength(2)
+    expect(html).toContain('Ajouter un schéma')
+    expect(html).toContain('Enregistrer les schémas')
+    expect(html).toMatch(/\d+ caractères sur 24\u00a0000 au plus/)
+  })
+
+  it('sans schéma, le dit, et propose quand même d’en ajouter un', () => {
+    const html = rendre(version())
+    expect(html).toContain('Schémas · 0 figure')
+    expect(html).toContain('Aucun schéma pour l’instant.')
+    expect(html).toContain('Ajouter un schéma')
+    expect(html).not.toContain('class="ac-schema"')
+  })
+
+  it('un SVG refusé dit pourquoi sous la zone de saisie, sans attendre le serveur', () => {
+    const html = rendre(version({ schemas: [{ cle: 'frise', titre: 'Frise', legende: 'Une phrase.', svg: '<svg viewBox="0 0 10 10"><script>alert(1)</script></svg>' }] }))
+    expect(html).toContain('aca-schema-refus')
+    expect(html).toContain('Balise interdite : script')
+    expect(html).toContain('Schéma indisponible')
+    // Le texte hostile reste lisible dans la zone de saisie (échappé), il
+    // n’atteint jamais l’aperçu.
+    expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;')
+    expect(html).not.toContain('<script>')
+    // La légende reste : elle dit ce qu’il faut retenir.
+    expect(html).toContain('Une phrase.')
+  })
+
+  it('une version publiée montre ses schémas en lecture seule, sans geste', () => {
+    const html = rendre(version({ statut: 'publie', schemas: SCHEMAS }))
+    expect(champsActifs(html)).toEqual([])
+    expect(html).toContain('Schémas · 2 figures')
+    expect(html).not.toContain('Ajouter un schéma')
+    expect(html).not.toContain('Enregistrer les schémas')
+  })
+})
+
+describe('FormulaireExercice, le champ Figure', () => {
+  const avecSchemas = { id: 'v2', schemas: SCHEMAS }
+  const figure = (item, v = avecSchemas) => renderToStaticMarkup(
+    <FormulaireExercice version={v} item={item} lectureSeule={false} onRecharger={() => {}} onFermer={() => {}} />,
+  )
+
+  it('propose les trois modes, aucune figure par défaut', () => {
+    const html = figure(items[0])
+    expect(html).toContain('id="aca-exo-i1-figure"')
+    expect(html).toContain('>Aucune figure</option>')
+    expect(html).toContain('>Un schéma de la version</option>')
+    expect(html).toContain('>Un SVG propre à cet exercice</option>')
+    expect(html).not.toContain('id="aca-exo-i1-figure-ref"')
+    expect(html).not.toContain('id="aca-exo-i1-figure-svg"')
+  })
+
+  it('un exercice qui renvoie à un schéma de la version choisit sa clé', () => {
+    const html = figure({ ...items[0], payload: { ...items[0].payload, figure: { ref: 'poches' } } })
+    expect(html).toContain('id="aca-exo-i1-figure-ref"')
+    expect(html).toMatch(/<option value="poches"[^>]*selected=""[^>]*>poches · Les trois poches<\/option>/)
+    expect(html).toContain('>frise · Les sept étapes</option>')
+  })
+
+  it('sans schéma dans la version, le mode « schéma de la version » renvoie à la section', () => {
+    const html = figure({ ...items[0], payload: { ...items[0].payload, figure: { ref: 'poches' } } }, { id: 'v2' })
+    expect(html).toContain('Cette version n’a pas encore de schéma')
+    expect(html).not.toContain('id="aca-exo-i1-figure-ref"')
+  })
+
+  it('une figure propre à l’exercice : le SVG, son texte de remplacement et son aperçu', () => {
+    const html = figure({ ...items[0], payload: { ...items[0].payload, figure: { svg: SCHEMAS[1].svg, alt: 'Les trois poches' } } })
+    expect(html).toContain('id="aca-exo-i1-figure-svg"')
+    expect(html).toContain('id="aca-exo-i1-figure-alt"')
+    expect(html).toContain('value="Les trois poches"')
+    expect(html).toContain('class="ac-schema"')
+    expect(html).toContain('aria-label="Les trois poches"')
+    expect(html).toMatch(/\d+ caractères sur 24\u00a0000 au plus/)
+  })
+
+  it('en lecture seule, les champs de la figure sont désactivés comme le reste', () => {
+    const html = renderToStaticMarkup(
+      <FormulaireExercice version={avecSchemas} item={{ ...items[0], payload: { ...items[0].payload, figure: { ref: 'frise' } } }}
+        lectureSeule onRecharger={() => {}} onFermer={() => {}} />,
+    )
+    expect(champsActifs(html)).toEqual([])
+    expect(html).toContain('id="aca-exo-i1-figure-ref"')
+  })
+})
+
+describe('JoueurApercu et la figure d’un exercice', () => {
+  it('montre la figure de la version au dessus de l’exercice', () => {
+    const item = { ...items[0], payload: { ...items[0].payload, figure: { ref: 'frise' } } }
+    const html = renderToStaticMarkup(<JoueurApercu item={item} schemas={SCHEMAS} />)
+    expect(html).toContain('class="ac-schema"')
+    expect(html).toContain('Les sept étapes')
+    expect(html.indexOf('ac-schema')).toBeLessThan(html.indexOf('ae-exo'))
+  })
+
+  it('une clé qui ne désigne rien ne montre pas de figure, l’exercice se joue quand même', () => {
+    const item = { ...items[0], payload: { ...items[0].payload, figure: { ref: 'inconnu' } } }
+    const html = renderToStaticMarkup(<JoueurApercu item={item} schemas={SCHEMAS} />)
+    expect(html).not.toContain('ac-schema')
+    expect(html).toContain('ae-exo')
+  })
+})

@@ -83,6 +83,78 @@
 .ac-deck-chiffres { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12.5px; color: var(--t2); font-variant-numeric: tabular-nums; }
 .ac-deck-pied { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: auto; padding-top: 6px; }
 
+/* ─── Niveau, défis, classement (gamification) ──────────────────────────── */
+.ac-niveau { border-left: 3px solid var(--gold); }
+.ac-niveau-haut { display: flex; align-items: center; gap: 12px; }
+/* La pastille porte le numéro du palier ; le titre reste le texte lisible. */
+.ac-niveau-pastille {
+  flex-shrink: 0; width: 42px; height: 42px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--gold-subtle); border: 1.5px solid var(--gold);
+  color: var(--gold-dk); font-size: 17px; font-weight: 700;
+  font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+}
+.ac-niveau-titre { font-size: 22px; }
+.ac-niveau-barre { margin-top: 4px; }
+.ac-niveau-barre .team-bar-fill { transition: width var(--tr); }
+
+.ac-defis { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.ac-defi { display: flex; flex-direction: column; gap: 10px; }
+.ac-defi.fait { border-left: 3px solid var(--signed); }
+.ac-defi-haut { display: flex; align-items: flex-start; gap: 10px; }
+.ac-defi-haut .ac-picto { margin-top: 1px; color: var(--gold-dk); }
+.ac-defi.fait .ac-defi-haut .ac-picto { color: var(--signed); }
+.ac-defi-titre { font-size: 14px; font-weight: 700; color: var(--t1); letter-spacing: -0.01em; line-height: 1.3; }
+.ac-defi-pied { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: auto; }
+.ac-defi-xp { font-size: 12.5px; font-weight: 700; color: var(--gold-dk); font-variant-numeric: tabular-nums; }
+
+.ac-classement { display: flex; flex-direction: column; gap: 10px; }
+.ac-classement-haut { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.ac-classement-rang { display: flex; align-items: baseline; gap: 8px; }
+.ac-classement-phrase { font-size: 14px; font-weight: 600; color: var(--t1); }
+.ac-classement-detail { list-style: none; margin: 0; padding: 0; display: flex; gap: 18px; flex-wrap: wrap; font-size: 12.5px; color: var(--t2); font-variant-numeric: tabular-nums; }
+
+/* ─── Succès ────────────────────────────────────────────────────────────── */
+.ac-succes-recents { display: flex; flex-direction: column; gap: 12px; }
+.ac-succes-pictos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.ac-succes-puce { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ac-succes-puce .ac-picto { flex-shrink: 0; color: var(--gold-dk); }
+.ac-succes-pied { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: auto; padding-top: 4px; }
+.ac-succes-kpi { display: flex; flex-direction: column; gap: 6px; }
+
+.ac-succes-grille { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 12px; }
+.ac-succes { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; }
+.ac-succes .ac-picto { color: var(--gold-dk); }
+.ac-succes-titre { font-size: 13.5px; font-weight: 700; color: var(--t1); letter-spacing: -0.01em; line-height: 1.3; }
+.ac-succes-texte { font-size: 12px; color: var(--t2); line-height: 1.45; }
+.ac-succes-date { font-size: 11.5px; color: var(--t3); margin-top: auto; padding-top: 4px; }
+.ac-succes-date.on { color: var(--gold-dk); font-weight: 600; }
+/* Un succès verrouillé garde son dessin : seul le gris dit qu il reste à faire. */
+.ac-succes.verrouille { opacity: 0.55; }
+.ac-succes.verrouille .ac-picto { color: var(--t3); }
+.ac-succes.obtenu { border-color: var(--gold-line); box-shadow: var(--sh-gold); }
+
+/* ─── Pictogrammes (composant Picto) ────────────────────────────────────── */
+/* Traits en currentColor : la couleur vient du texte parent, jamais d une
+   valeur en dur ici. */
+.ac-picto { display: block; flex-shrink: 0; }
+
+/* Les schémas (composant Schema) ont leur propre feuille, academy-schemas.css,
+   importée par les écrans qui rendent une figure. */
+
+/* ─── Animations, toutes coupées sous prefers-reduced-motion ────────────── */
+/* La flamme vit doucement quand la série du jour est acquise. */
+@keyframes ac-battement { 0%, 100% { transform: rotate(-45deg) scale(0.9); } 50% { transform: rotate(-45deg) scale(0.98); } }
+.ac-flamme-vive .ac-flamme { animation: ac-battement 2.4s ease-in-out infinite; }
+/* Un défi qui vient d être fait : la coche apparaît d un pas. */
+@keyframes ac-coche-pop { 0% { transform: scale(0.6); opacity: 0; } 60% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
+.ac-defi.fait .ac-coche { display: inline-block; animation: ac-coche-pop 260ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .ac-flamme-vive .ac-flamme,
+  .ac-defi.fait .ac-coche { animation: none; }
+  .ac-niveau-barre .team-bar-fill { transition: none; }
+}
+
 /* ─── Catalogue ─────────────────────────────────────────────────────────── */
 .ac-outils { margin: 14px 0 10px; }
 .ac-outils .search-input { max-width: 420px; }
@@ -157,4 +229,12 @@
   .ac-maitrise-droite { max-width: none; width: 100%; }
   .ac-btn-grand { width: 100%; }
   .ac-barre-libelle { font-size: 9px; }
+  /* Cibles tactiles : les boutons de la gamification tiennent 44 px au doigt. */
+  .ac-retour .btn,
+  .ac-succes-pied .btn { min-height: 44px; }
+}
+@media (max-width: 420px) {
+  /* Deux colonnes de succès tiennent encore à 375 px de large. */
+  .ac-succes-grille { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .ac-classement-detail { gap: 4px 14px; }
 }

@@ -1,0 +1,103 @@
+/* Entasis Academy : les schémas (figures SVG) du mémo d un deck et de
+   l éditeur de version. Préfixe ac- pour ce que voit le collaborateur
+   (composant Schema), aca- pour l administration.
+   Jetons de :root seulement (styles.css), aucune couleur en dur : les
+   couleurs du dessin sont dans le SVG, pas ici.
+
+   Feuille importée par les écrans qui rendent une figure hors session
+   (ModuleDetail, EditeurVersion). La session d entraînement cadre les mêmes
+   classes sous son préfixe .ae (academy-entrainement.css) : ici, le cadre de
+   carte est donc posé sur les deux contextes de cette feuille, jamais sur
+   .ac-schema seul, pour ne pas doubler le cadre de la session.
+
+   Le dessin arrive assaini (lib/academy/svg.js) avec width="100%" et
+   height="auto" : il prend la largeur de sa figure et garde ses proportions.
+   Sur téléphone il ne dépasse jamais 45 % de la fenêtre ; il n y a jamais de
+   défilement à l intérieur d une figure, le dessin se réduit. */
+
+/* ─── La figure, côté collaborateur ─────────────────────────────────────── */
+
+.ac-schema { margin: 18px 0; width: 100%; box-sizing: border-box; min-width: 0; }
+
+/* Le dessin : jamais plus large que sa figure, jamais de scroll interne. */
+.ac-schema-image { width: 100%; min-width: 0; overflow: hidden; }
+.ac-schema-image svg { display: block; width: 100%; height: auto; max-width: 100%; }
+
+/* Un schéma refusé par l assainisseur ne laisse pas un trou muet : la
+   légende dit déjà ce qu il faut retenir, cette ligne dit qu il n y a pas de
+   dessin. */
+.ac-schema-indisponible {
+  margin: 0;
+  padding: 18px 12px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--t2);
+  background: var(--bg-subtle);
+  border-radius: var(--rad-sm);
+}
+
+/* La légende : le titre au dessus, la phrase à retenir en dessous. */
+.ac-schema-legende { display: block; margin-top: 10px; }
+.ac-schema-titre { display: block; font-size: 13px; font-weight: 650; color: var(--t1); line-height: 1.35; }
+.ac-schema-texte { display: block; margin-top: 3px; font-size: 12.5px; color: var(--t2); line-height: 1.45; }
+
+/* Le cadre de carte, là où cette feuille rend les figures : le mémo d un
+   deck et l aperçu de l éditeur. */
+.ac-memo .ac-schema,
+.aca-schema-apercu .ac-schema {
+  padding: 12px 12px 10px;
+  border: 0.5px solid var(--bd);
+  border-radius: var(--rad);
+  background: var(--card);
+  box-shadow: var(--sh-xs);
+}
+
+/* Un mémo enchaîne du texte et des figures : la première ne colle pas au
+   titre, la dernière ne laisse pas de marge en trop au bas de la carte. */
+.ac-memo .ac-schema:first-child { margin-top: 0; }
+.ac-memo .ac-schema:last-child { margin-bottom: 0; }
+.aca-schema-apercu .ac-schema { margin: 0; }
+
+@media (max-width: 640px) {
+  .ac-memo .ac-schema { padding: 10px 10px 8px; }
+  /* 45 % de la fenêtre au plus : le dessin se réduit et reste entier. */
+  .ac-memo .ac-schema-image svg { max-height: 45vh; }
+}
+
+/* ─── L éditeur de version ──────────────────────────────────────────────── */
+
+.aca-schemas { display: flex; flex-direction: column; gap: 14px; }
+.aca-schema {
+  padding: 12px 14px;
+  border: 0.5px solid var(--bd);
+  border-radius: var(--rad);
+  background: var(--bg-subtle);
+}
+.aca-schema-tete { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.aca-schema-numero { font-weight: 650; color: var(--t1); font-variant-numeric: tabular-nums; }
+.aca-schema-tete .aca-actions { margin-left: auto; }
+
+/* La saisie du SVG à gauche, l aperçu à droite sur un grand écran : la même
+   grille que le mémo, pour que l éditeur se lise d un seul mouvement. */
+.aca-schema-corps { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+@media (min-width: 1100px) {
+  .aca-schema-corps { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+.aca-svg {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 12px; line-height: 1.45; min-height: 200px; resize: vertical; white-space: pre;
+}
+/* La raison du refus, rendue par preVerifierSvg : elle s affiche tout de
+   suite sous la zone de saisie, sans aller retour avec le serveur. */
+.aca-schema-refus { font-size: 12px; color: var(--cancelled); margin-top: 6px; line-height: 1.4; }
+.aca-schema-compte { font-size: 12px; color: var(--t2); margin-top: 6px; }
+.aca-schema-apercu { min-width: 0; align-self: start; }
+.aca-schema-vide { color: var(--t2); font-style: italic; font-size: 12.5px; }
+
+/* Le champ Figure d un exercice : le choix du mode, puis ce que le mode
+   demande (une clé de la version, ou un SVG propre avec son aperçu). */
+.aca-figure { margin-top: 4px; }
+.aca-figure-champs { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+@media (min-width: 900px) {
+  .aca-figure-champs { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}

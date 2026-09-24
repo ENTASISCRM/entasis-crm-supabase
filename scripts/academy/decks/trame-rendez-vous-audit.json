@@ -6,7 +6,21 @@
  "competence": "Dérouler les sept étapes du rendez vous d’audit patrimonial standard, dans l’ordre et dans le temps imparti",
  "objectif": "Savoir par cœur les sept étapes de la trame, leur durée, ce que l’on demande à chacune et les documents à récupérer.",
  "duree_minutes": 10,
- "memo_md": "## La trame du rendez vous d’audit patrimonial\n\n**Durée : 1 h.** Objectif : évaluer la situation patrimoniale globale du client, identifier des leviers d’optimisation, récupérer les documents clés.\n\n1. **Accueil et cadrage, 5 min** : présenter le cabinet (indépendance, sur mesure, accompagnement long terme) ; reformuler l’objectif (situation pro et perso, projets, axes d’optimisation) ; confirmer le temps disponible et la disponibilité pour un futur rendez vous.\n2. **Situation personnelle et familiale, 10 min** : état civil, régime matrimonial, enfants, succession ; lieu de résidence, résident fiscal français ou non ; objectifs familiaux (protection, transmission, donations).\n3. **Situation professionnelle et revenus, 10 min** : profession et statut (salarié, indépendant, société, TNS, libéral) ; revenus annuels nets imposables et revenus du foyer ; régime social, IR ou IS, sociétés détenues.\n4. **Patrimoine actuel, 15 min** : immobilier (résidence principale, locatif, SCI, SCPI) ; financier (assurance vie, PER, PEA, CTO, livrets, épargne) ; situation bancaire, crédits, endettement ; épargne retraite, prévoyance, Madelin ou 154 bis ; transmission en cours ou anticipée (donation, usufruit).\n5. **Objectifs du client, 10 min** : réduire la fiscalité ; revenus complémentaires ou passifs ; retraite ; structuration de société ou de trésorerie ; transmission ou protection de la famille ; immobilier ou diversification à court ou moyen terme.\n6. **Premiers axes de recommandation, 5 min** : structuration à l’IS, holding, dividendes contre rémunération ; ouverture ou arbitrage de contrats (AV, PER, CTO) ; optimisation immobilière (LMNP, déficit foncier, SCPI, MH) ; épargne pro ou perso selon la nature des flux.\n7. **Documents à récupérer, 5 min** : un maximum de documents pour lancer l’analyse : dernier avis d’imposition (foyer complet) ; tableau d’actifs ou liste des placements ; relevés AV, PER, PEA, comptes titres ; bilan et liasse fiscale si entrepreneur ; relevé de carrière, tableau de retraite, mutuelle et prévoyance ; situation locative (baux, crédits, loyers perçus).\n",
+ "memo_md": "## La trame du rendez vous d’audit patrimonial\n\n**Durée : 1 h.** Objectif : évaluer la situation patrimoniale globale du client, identifier des leviers d’optimisation, récupérer les documents clés.\n\n[schema:frise]\n\n1. **Accueil et cadrage, 5 min** : présenter le cabinet (indépendance, sur mesure, accompagnement long terme) ; reformuler l’objectif (situation pro et perso, projets, axes d’optimisation) ; confirmer le temps disponible et la disponibilité pour un futur rendez vous.\n2. **Situation personnelle et familiale, 10 min** : état civil, régime matrimonial, enfants, succession ; lieu de résidence, résident fiscal français ou non ; objectifs familiaux (protection, transmission, donations).\n3. **Situation professionnelle et revenus, 10 min** : profession et statut (salarié, indépendant, société, TNS, libéral) ; revenus annuels nets imposables et revenus du foyer ; régime social, IR ou IS, sociétés détenues.\n4. **Patrimoine actuel, 15 min** : immobilier (résidence principale, locatif, SCI, SCPI) ; financier (assurance vie, PER, PEA, CTO, livrets, épargne) ; situation bancaire, crédits, endettement ; épargne retraite, prévoyance, Madelin ou 154 bis ; transmission en cours ou anticipée (donation, usufruit).\n5. **Objectifs du client, 10 min** : réduire la fiscalité ; revenus complémentaires ou passifs ; retraite ; structuration de société ou de trésorerie ; transmission ou protection de la famille ; immobilier ou diversification à court ou moyen terme.\n6. **Premiers axes de recommandation, 5 min** : structuration à l’IS, holding, dividendes contre rémunération ; ouverture ou arbitrage de contrats (AV, PER, CTO) ; optimisation immobilière (LMNP, déficit foncier, SCPI, MH) ; épargne pro ou perso selon la nature des flux.\n7. **Documents à récupérer, 5 min** : un maximum de documents pour lancer l’analyse : dernier avis d’imposition (foyer complet) ; tableau d’actifs ou liste des placements ; relevés AV, PER, PEA, comptes titres ; bilan et liasse fiscale si entrepreneur ; relevé de carrière, tableau de retraite, mutuelle et prévoyance ; situation locative (baux, crédits, loyers perçus).\n\n[schema:documents]\n",
+ "schemas": [
+  {
+   "cle": "frise",
+   "titre": "Les sept étapes et leurs durées",
+   "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 640 360\" font-family=\"system-ui, -apple-system, Segoe UI, sans-serif\">\n<title>Les sept étapes et leurs durées</title>\n<rect x=\"0\" y=\"0\" width=\"640\" height=\"360\" fill=\"#FFFFFF\"/>\n<text x=\"320\" y=\"36\" text-anchor=\"middle\" font-size=\"20\" font-weight=\"700\" fill=\"#162443\">Une heure, sept étapes</text>\n<line x1=\"40\" y1=\"72\" x2=\"40\" y2=\"306\" stroke=\"#8A95A8\" stroke-width=\"2\"/>\n<g font-size=\"17\" fill=\"#2C3548\">\n<circle cx=\"40\" cy=\"72\" r=\"14\" fill=\"#162443\"/>\n<text x=\"40\" y=\"77\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"700\" fill=\"#FFFFFF\">1</text>\n<text x=\"66\" y=\"78\">Accueil et cadrage</text>\n<rect x=\"384\" y=\"60\" width=\"78\" height=\"24\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"423\" y=\"77\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"600\">5 min</text>\n<circle cx=\"40\" cy=\"111\" r=\"14\" fill=\"#162443\"/>\n<text x=\"40\" y=\"116\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"700\" fill=\"#FFFFFF\">2</text>\n<text x=\"66\" y=\"117\">Situation personnelle et familiale</text>\n<rect x=\"384\" y=\"99\" width=\"156\" height=\"24\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"462\" y=\"116\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"600\">10 min</text>\n<circle cx=\"40\" cy=\"150\" r=\"14\" fill=\"#162443\"/>\n<text x=\"40\" y=\"155\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"700\" fill=\"#FFFFFF\">3</text>\n<text x=\"66\" y=\"156\">Situation professionnelle et revenus</text>\n<rect x=\"384\" y=\"138\" width=\"156\" height=\"24\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"462\" y=\"155\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"600\">10 min</text>\n<circle cx=\"40\" cy=\"189\" r=\"14\" fill=\"#162443\"/>\n<text x=\"40\" y=\"194\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"700\" fill=\"#FFFFFF\">4</text>\n<text x=\"66\" y=\"195\" font-weight=\"700\" fill=\"#162443\">Patrimoine actuel</text>\n<rect x=\"384\" y=\"177\" width=\"234\" height=\"24\" rx=\"8\" fill=\"#C5A55A\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"501\" y=\"194\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"700\" fill=\"#162443\">15 min, la plus longue</text>\n<circle cx=\"40\" cy=\"228\" r=\"14\" fill=\"#162443\"/>\n<text x=\"40\" y=\"233\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"700\" fill=\"#FFFFFF\">5</text>\n<text x=\"66\" y=\"234\">Objectifs du client</text>\n<rect x=\"384\" y=\"216\" width=\"156\" height=\"24\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"462\" y=\"233\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"600\">10 min</text>\n<circle cx=\"40\" cy=\"267\" r=\"14\" fill=\"#162443\"/>\n<text x=\"40\" y=\"272\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"700\" fill=\"#FFFFFF\">6</text>\n<text x=\"66\" y=\"273\">Premiers axes de recommandation</text>\n<rect x=\"384\" y=\"255\" width=\"78\" height=\"24\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"423\" y=\"272\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"600\">5 min</text>\n<circle cx=\"40\" cy=\"306\" r=\"14\" fill=\"#162443\"/>\n<text x=\"40\" y=\"311\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"700\" fill=\"#FFFFFF\">7</text>\n<text x=\"66\" y=\"312\">Documents à récupérer</text>\n<rect x=\"384\" y=\"294\" width=\"78\" height=\"24\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"423\" y=\"311\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"600\">5 min</text>\n</g>\n<text x=\"320\" y=\"348\" text-anchor=\"middle\" font-size=\"15\" fill=\"#2C3548\">5 + 10 + 10 + 15 + 10 + 5 + 5 = 60 minutes, soit une heure</text>\n</svg>",
+   "legende": "Sept étapes pour une heure : le patrimoine actuel prend le quart du temps, les trois étapes de cinq minutes ouvrent et ferment le rendez vous."
+  },
+  {
+   "cle": "documents",
+   "titre": "Les six documents à récupérer",
+   "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 640 360\" font-family=\"system-ui, -apple-system, Segoe UI, sans-serif\">\n<title>Les six documents à récupérer</title>\n<rect x=\"0\" y=\"0\" width=\"640\" height=\"360\" fill=\"#FFFFFF\"/>\n<text x=\"320\" y=\"36\" text-anchor=\"middle\" font-size=\"20\" font-weight=\"700\" fill=\"#162443\">Les six documents à récupérer</text>\n<text x=\"320\" y=\"58\" text-anchor=\"middle\" font-size=\"15\" fill=\"#2C3548\">Étape 7, 5 minutes : un maximum de documents pour lancer l’analyse</text>\n<rect x=\"20\" y=\"72\" width=\"600\" height=\"272\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<g font-size=\"17\" fill=\"#2C3548\">\n<rect x=\"40\" y=\"85\" width=\"22\" height=\"22\" rx=\"4\" fill=\"#FFFFFF\" stroke=\"#162443\" stroke-width=\"2\"/>\n<text x=\"76\" y=\"102\"><tspan font-weight=\"700\" fill=\"#162443\">Dernier avis d’imposition</tspan>, foyer complet</text>\n<rect x=\"40\" y=\"129\" width=\"22\" height=\"22\" rx=\"4\" fill=\"#FFFFFF\" stroke=\"#162443\" stroke-width=\"2\"/>\n<text x=\"76\" y=\"146\"><tspan font-weight=\"700\" fill=\"#162443\">Tableau d’actifs</tspan>, sinon la liste des placements</text>\n<rect x=\"40\" y=\"173\" width=\"22\" height=\"22\" rx=\"4\" fill=\"#FFFFFF\" stroke=\"#162443\" stroke-width=\"2\"/>\n<text x=\"76\" y=\"190\"><tspan font-weight=\"700\" fill=\"#162443\">Relevés</tspan> d’assurance vie, PER, PEA, comptes titres</text>\n<rect x=\"40\" y=\"217\" width=\"22\" height=\"22\" rx=\"4\" fill=\"#FFFFFF\" stroke=\"#162443\" stroke-width=\"2\"/>\n<text x=\"76\" y=\"234\"><tspan font-weight=\"700\" fill=\"#162443\">Bilan et liasse fiscale</tspan>, si entrepreneur</text>\n<rect x=\"40\" y=\"261\" width=\"22\" height=\"22\" rx=\"4\" fill=\"#FFFFFF\" stroke=\"#162443\" stroke-width=\"2\"/>\n<text x=\"76\" y=\"278\"><tspan font-weight=\"700\" fill=\"#162443\">Relevé de carrière</tspan>, tableau de retraite, mutuelle, prévoyance</text>\n<rect x=\"40\" y=\"305\" width=\"22\" height=\"22\" rx=\"4\" fill=\"#FFFFFF\" stroke=\"#162443\" stroke-width=\"2\"/>\n<text x=\"76\" y=\"322\"><tspan font-weight=\"700\" fill=\"#162443\">Situation locative</tspan> : baux, crédits, loyers perçus</text>\n</g>\n</svg>",
+   "legende": "Six familles de documents à demander à la dernière étape : plus le client en apporte, plus vite l’analyse démarre."
+  }
+ ],
  "items": [
   {
    "cle": "i01",
@@ -151,6 +165,9 @@
    "type": "multi",
    "competence": "Les durées",
    "difficulte": 2,
+   "figure": {
+    "ref": "frise"
+   },
    "payload": {
     "enonce": "Coche les étapes qui durent cinq minutes.",
     "choix": [
@@ -364,6 +381,9 @@
    "type": "multi",
    "competence": "Les documents à récupérer",
    "difficulte": 1,
+   "figure": {
+    "ref": "documents"
+   },
    "payload": {
     "enonce": "Coche les documents à récupérer selon la trame.",
     "choix": [
@@ -503,6 +523,9 @@
    "type": "choix",
    "competence": "Les durées",
    "difficulte": 1,
+   "figure": {
+    "ref": "frise"
+   },
    "payload": {
     "enonce": "Quelle est l’étape la plus longue ?",
     "choix": [
@@ -892,6 +915,9 @@
    "type": "vrai_faux",
    "competence": "Les documents à récupérer",
    "difficulte": 2,
+   "figure": {
+    "ref": "documents"
+   },
    "payload": {
     "enonce": "Si le client n’a pas de tableau d’actifs, on ne demande rien d’autre."
    },
@@ -1105,6 +1131,77 @@
    },
    "corrige": {},
    "explication": "L’objectif en tête de trame."
+  },
+  {
+   "cle": "i56",
+   "type": "choix",
+   "competence": "Les durées",
+   "difficulte": 2,
+   "figure": {
+    "ref": "frise"
+   },
+   "payload": {
+    "enonce": "Sur le schéma, combien de minutes se sont écoulées quand commence l’étape Patrimoine actuel ?",
+    "choix": [
+     "15 minutes",
+     "25 minutes",
+     "30 minutes",
+     "40 minutes"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Accueil 5, situation personnelle 10, situation professionnelle 10 : le patrimoine actuel commence à la 25e minute et occupe ensuite le quart du rendez vous."
+  },
+  {
+   "cle": "i57",
+   "type": "multi",
+   "competence": "Les durées",
+   "difficulte": 2,
+   "figure": {
+    "ref": "frise"
+   },
+   "payload": {
+    "enonce": "Sur le schéma, coche les étapes qui durent dix minutes.",
+    "choix": [
+     "Situation personnelle et familiale",
+     "Situation professionnelle et revenus",
+     "Patrimoine actuel",
+     "Objectifs du client",
+     "Documents à récupérer"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     3
+    ]
+   },
+   "explication": "Trois étapes de dix minutes : la situation personnelle, la situation professionnelle et les objectifs ; le patrimoine en prend quinze, les documents cinq."
+  },
+  {
+   "cle": "i58",
+   "type": "trou_choix",
+   "competence": "Les documents à récupérer",
+   "difficulte": 2,
+   "figure": {
+    "ref": "documents"
+   },
+   "payload": {
+    "phrase": "Sur le schéma, la ligne qui commence par le relevé de carrière regroupe aussi ___.",
+    "choix": [
+     "le tableau de retraite, la mutuelle et la prévoyance",
+     "le bilan et la liasse fiscale",
+     "les baux, les crédits et les loyers perçus",
+     "les relevés d’assurance vie et de PER"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Une seule ligne de la liste porte la retraite et la protection : relevé de carrière, tableau de retraite, mutuelle, prévoyance. La mutuelle et la prévoyance se demandent donc en même temps que les pièces de retraite."
   }
  ]
 }

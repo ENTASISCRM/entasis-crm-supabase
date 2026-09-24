@@ -2,7 +2,21 @@
  "slug": "assurance-vie",
  "titre": "Assurance vie : enveloppe, supports, frais, rachats et transmission",
  "competence": "Expliquer enveloppe, supports, frais, rachats et principes de transmission",
- "memo_md": "Disponible ne veut pas dire sans risque : l'assurance vie est une enveloppe, le rendement et le risque viennent des supports.\n\n## Enveloppe et supports\n- Fonds en euros : capital garanti par l'assureur, net des frais.\n- Unités de compte : nombre de parts garanti, valeur non garantie, risque de perte en capital.\n- Rachat à la valeur du jour. Renonciation : 30 jours calendaires.\n- Trois questions : horizon, part intacte, baisse supportable.\n\n## Frais et rachats\n- Quatre frais : versement, gestion (fonds en euros compris), arbitrage, support.\n- Paiement du rachat : deux mois au plus.\n- Seuls les gains sont imposés, jamais le capital versé.\n- Versements depuis le 27 septembre 2017 : 12,8 % avant huit ans, 7,5 % après (12,8 % au delà de 150 000 euros).\n- Après huit ans : abattement annuel 4 600 euros (seul) ou 9 200 euros (couple).\n- Prélèvements sociaux : 17,2 % (fiche F2329), 18,6 % en général. À revérifier.\n- Fonds en euros : prélevés chaque année sur les intérêts.\n\n## Transmission\n- L132-13 : ni rapport ni réduction, sauf primes manifestement exagérées.\n- Primes avant 70 ans : 152 500 euros par bénéficiaire, puis 20 % jusqu'à 700 000 euros, puis 31,25 %.\n- Primes après 70 ans : 30 500 euros en tout, puis droits de succession.\n- Conjoint marié et partenaire de PACS exonérés.\n- Clause à éviter : personne sans précision, enfant sans « vivant ou représenté », montant fixe.\n- Bénéficiaire acceptant : rien sans son accord.",
+ "memo_md": "Disponible ne veut pas dire sans risque : l'assurance vie est une enveloppe, le rendement et le risque viennent des supports.\n\n## Enveloppe et supports\n- Fonds en euros : capital garanti par l'assureur, net des frais.\n- Unités de compte : nombre de parts garanti, valeur non garantie, risque de perte en capital.\n- Rachat à la valeur du jour. Renonciation : 30 jours calendaires.\n- Trois questions : horizon, part intacte, baisse supportable.\n\n[schema:enveloppe]\n\n## Frais et rachats\n- Quatre frais : versement, gestion (fonds en euros compris), arbitrage, support.\n- Paiement du rachat : deux mois au plus.\n- Seuls les gains sont imposés, jamais le capital versé.\n- Versements depuis le 27 septembre 2017 : 12,8 % avant huit ans, 7,5 % après (12,8 % au delà de 150 000 euros).\n- Après huit ans : abattement annuel 4 600 euros (seul) ou 9 200 euros (couple).\n- Prélèvements sociaux : 17,2 % (fiche F2329), 18,6 % en général. À revérifier.\n- Fonds en euros : prélevés chaque année sur les intérêts.\n\n## Transmission\n- L132-13 : ni rapport ni réduction, sauf primes manifestement exagérées.\n- Primes avant 70 ans : 152 500 euros par bénéficiaire, puis 20 % jusqu'à 700 000 euros, puis 31,25 %.\n- Primes après 70 ans : 30 500 euros en tout, puis droits de succession.\n- Conjoint marié et partenaire de PACS exonérés.\n\n[schema:primes_70_ans]\n\n- Clause à éviter : personne sans précision, enfant sans « vivant ou représenté », montant fixe.\n- Bénéficiaire acceptant : rien sans son accord.",
+ "schemas": [
+  {
+   "cle": "enveloppe",
+   "titre": "L’enveloppe et ses deux supports",
+   "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 640 360\" font-family=\"system-ui, -apple-system, Segoe UI, sans-serif\">\n<title>L’enveloppe et ses deux supports</title>\n<rect x=\"0\" y=\"0\" width=\"640\" height=\"360\" fill=\"#FFFFFF\"/>\n<text x=\"320\" y=\"34\" text-anchor=\"middle\" font-size=\"20\" font-weight=\"700\" fill=\"#162443\">L’enveloppe et ses deux supports</text>\n<rect x=\"24\" y=\"54\" width=\"592\" height=\"230\" rx=\"8\" fill=\"#FFFFFF\" stroke=\"#162443\" stroke-width=\"2\"/>\n<text x=\"44\" y=\"82\" font-size=\"16\" font-weight=\"700\" fill=\"#162443\">Enveloppe : le contrat conclu avec l’assureur</text>\n<rect x=\"44\" y=\"96\" width=\"176\" height=\"26\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"132\" y=\"114\" text-anchor=\"middle\" font-size=\"14\" fill=\"#162443\">Versements</text>\n<rect x=\"232\" y=\"96\" width=\"176\" height=\"26\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"320\" y=\"114\" text-anchor=\"middle\" font-size=\"14\" fill=\"#162443\">Arbitrages</text>\n<rect x=\"420\" y=\"96\" width=\"176\" height=\"26\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"508\" y=\"114\" text-anchor=\"middle\" font-size=\"14\" fill=\"#162443\">Rachats à tout moment</text>\n<text x=\"596\" y=\"82\" text-anchor=\"end\" font-size=\"14\" fill=\"#8A95A8\">la souplesse du contrat</text>\n<rect x=\"44\" y=\"136\" width=\"264\" height=\"134\" rx=\"8\" fill=\"#FFFFFF\" stroke=\"#162443\" stroke-width=\"2\"/>\n<path d=\"M44 144 a8 8 0 0 1 8 -8 h248 a8 8 0 0 1 8 8 v24 h-264 z\" fill=\"#162443\"/>\n<text x=\"176\" y=\"158\" text-anchor=\"middle\" font-size=\"16\" font-weight=\"700\" fill=\"#FFFFFF\">Fonds en euros</text>\n<text x=\"176\" y=\"192\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"700\" fill=\"#162443\">Capital garanti par l’assureur</text>\n<text x=\"176\" y=\"214\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">net des frais du contrat</text>\n<text x=\"176\" y=\"236\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">Intérêts acquis chaque année</text>\n<text x=\"176\" y=\"258\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">Prélèvements sociaux chaque année</text>\n<rect x=\"332\" y=\"136\" width=\"264\" height=\"134\" rx=\"8\" fill=\"#FFFFFF\" stroke=\"#162443\" stroke-width=\"2\"/>\n<path d=\"M332 144 a8 8 0 0 1 8 -8 h248 a8 8 0 0 1 8 8 v24 h-264 z\" fill=\"#C5A55A\"/>\n<text x=\"464\" y=\"158\" text-anchor=\"middle\" font-size=\"16\" font-weight=\"700\" fill=\"#162443\">Unités de compte</text>\n<text x=\"464\" y=\"192\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"700\" fill=\"#162443\">Nombre de parts garanti</text>\n<text x=\"464\" y=\"214\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">Valeur des parts non garantie</text>\n<text x=\"464\" y=\"236\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">Risque de perte en capital</text>\n<text x=\"464\" y=\"258\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">Rachat à la valeur du jour</text>\n<text x=\"320\" y=\"316\" text-anchor=\"middle\" font-size=\"16\" font-weight=\"700\" fill=\"#162443\">Disponible ne veut pas dire sans risque.</text>\n<text x=\"320\" y=\"340\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">Le rendement et le risque viennent des supports, pas de l’enveloppe.</text>\n</svg>",
+   "legende": "L’enveloppe donne la souplesse, le support donne le rendement et le risque. Seul le fonds en euros garantit le capital ; les unités de compte ne garantissent qu’un nombre de parts."
+  },
+  {
+   "cle": "primes_70_ans",
+   "titre": "Primes versées avant et après 70 ans",
+   "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 640 360\" font-family=\"system-ui, -apple-system, Segoe UI, sans-serif\">\n<title>Primes versées avant et après 70 ans</title>\n<rect x=\"0\" y=\"0\" width=\"640\" height=\"360\" fill=\"#FFFFFF\"/>\n<text x=\"320\" y=\"32\" text-anchor=\"middle\" font-size=\"20\" font-weight=\"700\" fill=\"#162443\">Primes versées avant et après 70 ans</text>\n<text x=\"40\" y=\"56\" font-size=\"13\" fill=\"#8A95A8\">Âge de l’assuré au moment du versement</text>\n<line x1=\"40\" y1=\"70\" x2=\"598\" y2=\"70\" stroke=\"#8A95A8\" stroke-width=\"2\"/>\n<polygon points=\"598,64 612,70 598,76\" fill=\"#8A95A8\"/>\n<line x1=\"320\" y1=\"84\" x2=\"320\" y2=\"310\" stroke=\"#C5A55A\" stroke-width=\"2\" stroke-dasharray=\"6 6\"/>\n<rect x=\"286\" y=\"57\" width=\"68\" height=\"26\" rx=\"8\" fill=\"#162443\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"320\" y=\"75\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"700\" fill=\"#FFFFFF\">70 ans</text>\n<text x=\"168\" y=\"108\" text-anchor=\"middle\" font-size=\"16\" font-weight=\"700\" fill=\"#162443\">Primes versées avant 70 ans</text>\n<text x=\"472\" y=\"108\" text-anchor=\"middle\" font-size=\"16\" font-weight=\"700\" fill=\"#162443\">Primes versées après 70 ans</text>\n<rect x=\"44\" y=\"122\" width=\"248\" height=\"48\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"168\" y=\"142\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"700\" fill=\"#162443\">Abattement de 152 500 euros</text>\n<text x=\"168\" y=\"161\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">par bénéficiaire</text>\n<line x1=\"168\" y1=\"170\" x2=\"168\" y2=\"184\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<polygon points=\"162,183 174,183 168,191\" fill=\"#C5A55A\"/>\n<rect x=\"44\" y=\"192\" width=\"248\" height=\"48\" rx=\"8\" fill=\"#FFFFFF\" stroke=\"#162443\" stroke-width=\"2\"/>\n<text x=\"168\" y=\"212\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"700\" fill=\"#162443\">puis 20 %</text>\n<text x=\"168\" y=\"231\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">jusqu’à 700 000 euros</text>\n<line x1=\"168\" y1=\"240\" x2=\"168\" y2=\"254\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<polygon points=\"162,253 174,253 168,261\" fill=\"#C5A55A\"/>\n<rect x=\"44\" y=\"262\" width=\"248\" height=\"48\" rx=\"8\" fill=\"#FFFFFF\" stroke=\"#162443\" stroke-width=\"2\"/>\n<text x=\"168\" y=\"282\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"700\" fill=\"#162443\">puis 31,25 %</text>\n<text x=\"168\" y=\"301\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">au delà de 700 000 euros</text>\n<rect x=\"348\" y=\"122\" width=\"248\" height=\"66\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"472\" y=\"142\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"700\" fill=\"#162443\">Abattement de 30 500 euros</text>\n<text x=\"472\" y=\"161\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">en tout, quel que soit</text>\n<text x=\"472\" y=\"179\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">le nombre de bénéficiaires</text>\n<line x1=\"472\" y1=\"188\" x2=\"472\" y2=\"202\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<polygon points=\"466,201 478,201 472,209\" fill=\"#C5A55A\"/>\n<rect x=\"348\" y=\"210\" width=\"248\" height=\"48\" rx=\"8\" fill=\"#FFFFFF\" stroke=\"#162443\" stroke-width=\"2\"/>\n<text x=\"472\" y=\"230\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"700\" fill=\"#162443\">puis droits de succession</text>\n<text x=\"472\" y=\"249\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">sur le surplus des primes</text>\n<rect x=\"24\" y=\"322\" width=\"592\" height=\"30\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"320\" y=\"342\" text-anchor=\"middle\" font-size=\"14\" font-weight=\"700\" fill=\"#162443\">Conjoint marié et partenaire de PACS : exonérés, avant comme après 70 ans.</text>\n</svg>",
+   "legende": "Avant 70 ans, chaque bénéficiaire a son abattement de 152 500 euros ; après 70 ans, un seul abattement de 30 500 euros pour tous, puis les droits de succession sur le surplus des primes. Le conjoint marié et le partenaire de PACS sont exonérés dans les deux cas."
+  }
+ ],
  "items": [
   {
    "cle": "i01",
@@ -127,6 +141,9 @@
    "type": "choix",
    "competence": "Enveloppe et supports",
    "difficulte": 2,
+   "figure": {
+    "ref": "enveloppe"
+   },
    "payload": {
     "enonce": "Cas fictif. Un client vous dit : « Avec l'assurance vie, je peux retirer quand je veux, donc je ne peux pas perdre d'argent. » Quelle réponse est juste ?",
     "choix": [
@@ -146,6 +163,9 @@
    "type": "choix",
    "competence": "Enveloppe et supports",
    "difficulte": 2,
+   "figure": {
+    "ref": "enveloppe"
+   },
    "payload": {
     "enonce": "Cas fictif. Une cliente dispose de 60 000 euros. Elle aura besoin de 20 000 euros dans dix-huit mois pour des travaux ; le reste n'a pas d'usage prévu avant dix ans. Quelle orientation retenir pour les 20 000 euros ?",
     "choix": [
@@ -682,6 +702,9 @@
    "type": "choix",
    "competence": "Fiscalité décès",
    "difficulte": 2,
+   "figure": {
+    "ref": "primes_70_ans"
+   },
    "payload": {
     "enonce": "Cas fictif. Un client de 72 ans souhaite verser 100 000 euros sur une assurance vie au profit de ses deux enfants « pour profiter des 152 500 euros par enfant ». Que lui expliquer ?",
     "choix": [
@@ -853,6 +876,77 @@
     ]
    },
    "explication": "Lire la clause, questionner le souhait, situer les régimes, faire relire par le notaire, consigner et réexaminer."
+  },
+  {
+   "cle": "i41",
+   "type": "multi",
+   "competence": "Enveloppe et supports",
+   "difficulte": 2,
+   "figure": {
+    "ref": "enveloppe"
+   },
+   "payload": {
+    "enonce": "Sur le schéma, cochez tout ce que l’enveloppe apporte au client, quel que soit le support choisi.",
+    "choix": [
+     "Des versements",
+     "Des arbitrages entre supports",
+     "Des rachats à tout moment",
+     "La garantie du capital investi",
+     "Un nombre de parts garanti"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2
+    ]
+   },
+   "explication": "L’enveloppe donne la souplesse : versements, arbitrages, rachats ; la garantie du capital ou du nombre de parts vient du support, pas du contrat."
+  },
+  {
+   "cle": "i42",
+   "type": "choix",
+   "competence": "Fiscalité décès",
+   "difficulte": 2,
+   "figure": {
+    "ref": "primes_70_ans"
+   },
+   "payload": {
+    "enonce": "Cas fictif. Un client désigne ses trois enfants comme bénéficiaires à parts égales, le contrat étant suffisamment provisionné pour que chaque abattement joue en entier. En vous appuyant sur le schéma, quel total d’abattements s’applique aux capitaux décès, selon que les primes ont été versées avant ou après ses 70 ans ?",
+    "choix": [
+     "457 500 euros si les primes ont été versées avant 70 ans, soit 152 500 euros pour chacun des trois enfants, et 30 500 euros en tout si elles l’ont été après",
+     "457 500 euros avant 70 ans et 91 500 euros après 70 ans, soit 30 500 euros pour chacun des trois enfants",
+     "152 500 euros avant 70 ans et 30 500 euros après 70 ans, chaque abattement se partageant entre les trois enfants",
+     "30 500 euros dans les deux cas, l’abattement de 152 500 euros étant réservé au conjoint marié"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Avant 70 ans, l’abattement de 152 500 euros se compte par bénéficiaire : trois enfants, trois abattements, soit 457 500 euros. Après 70 ans, 30 500 euros en tout, quel que soit le nombre de bénéficiaires et de contrats."
+  },
+  {
+   "cle": "i43",
+   "type": "choix",
+   "competence": "Fiscalité décès",
+   "difficulte": 3,
+   "figure": {
+    "ref": "primes_70_ans"
+   },
+   "payload": {
+    "enonce": "Cas fictif. Un client a versé 400 000 euros avant ses 70 ans au profit d’un seul bénéficiaire, son fils, et le contrat vaut ce montant au décès. En vous appuyant sur le schéma, quelle fraction est taxée à 20 % ?",
+    "choix": [
+     "247 500 euros : ce qui dépasse l’abattement de 152 500 euros, sans atteindre le palier de 31,25 %",
+     "400 000 euros : l’abattement de 152 500 euros ne joue qu’après 70 ans",
+     "369 500 euros : ce qui dépasse l’abattement global de 30 500 euros",
+     "Aucune : un enfant est exonéré comme le conjoint"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Avant 70 ans, chaque bénéficiaire a 152 500 euros d’abattement ; 400 000 moins 152 500 = 247 500 euros à 20 %, le taux de 31,25 % ne commençant qu’au delà de 700 000 euros."
   }
  ]
 }

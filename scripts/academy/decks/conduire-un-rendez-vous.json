@@ -2,7 +2,21 @@
  "slug": "conduire-un-rendez-vous",
  "titre": "Conduire un rendez-vous et répondre aux objections",
  "competence": "Reformuler, expliquer les frais, répondre sans promettre et conclure une prochaine étape",
- "memo_md": "On reformule avant de répondre, on dit les frais avant de recommander, on s'engage sur une méthode et jamais sur une performance, et l'on conclut sur une étape datée.\n\n## Reformuler l'objection\n- Une objection est une information, pas une attaque : ce que le client comprend, craint ou attend.\n- Trois temps : accueillir, reformuler jusqu'à « C'est bien cela ? », faire préciser par une seule question. Répondre après confirmation.\n- Trois erreurs : argumenter sans vérifier, déformer (« trop cher »), orienter (« n'est-ce pas ? »).\n\n## Expliquer les frais\n- Deux familles (AMF) : ponctuels (entrée, sortie) et récurrents (gestion annuelle, parfois surperformance).\n- Assurance vie : arbitrage à chaque transfert entre supports ; deux étages, contrat et supports (document d'informations clés).\n- Toujours en pourcentage et en euros sur le montant réel : 2 % sur 40 000 euros, c'est 800 euros.\n- Mots interdits : « négligeable », « classique », « offert ».\n- CIF : lettre de mission signée des deux parties avant le conseil (rémunération, coûts et frais, mise en garde).\n\n## Répondre sans promettre\n- Exacte, claire, non trompeuse : ni promesse de résultat, ni superlatif, ni garantie implicite comme « sécurisé ».\n- Test : la phrase est-elle vraie quel que soit le marché ?\n- Performance passée : mention « ne préjuge pas des performances futures » et information sur le risque.\n\n## Conclure\n- Action, date, responsable, document : validés, puis saisis dans le CRM.\n- « Réfléchissez et rappelez-moi » n'est pas une étape.\n",
+ "memo_md": "On reformule avant de répondre, on dit les frais avant de recommander, on s'engage sur une méthode et jamais sur une performance, et l'on conclut sur une étape datée.\n\n## Reformuler l'objection\n- Une objection est une information, pas une attaque : ce que le client comprend, craint ou attend.\n- Trois temps : accueillir, reformuler jusqu'à « C'est bien cela ? », faire préciser par une seule question. Répondre après confirmation.\n- Trois erreurs : argumenter sans vérifier, déformer (« trop cher »), orienter (« n'est-ce pas ? »).\n\n[schema:reformulation]\n\n## Expliquer les frais\n- Deux familles (AMF) : ponctuels (entrée, sortie) et récurrents (gestion annuelle, parfois surperformance).\n- Assurance vie : arbitrage à chaque transfert entre supports ; deux étages, contrat et supports (document d'informations clés).\n- Toujours en pourcentage et en euros sur le montant réel : 2 % sur 40 000 euros, c'est 800 euros.\n- Mots interdits : « négligeable », « classique », « offert ».\n- CIF : lettre de mission signée des deux parties avant le conseil (rémunération, coûts et frais, mise en garde).\n\n[schema:etages_frais]\n\n## Répondre sans promettre\n- Exacte, claire, non trompeuse : ni promesse de résultat, ni superlatif, ni garantie implicite comme « sécurisé ».\n- Test : la phrase est-elle vraie quel que soit le marché ?\n- Performance passée : mention « ne préjuge pas des performances futures » et information sur le risque.\n\n## Conclure\n- Action, date, responsable, document : validés, puis saisis dans le CRM.\n- « Réfléchissez et rappelez-moi » n'est pas une étape.\n",
+ "schemas": [
+  {
+   "cle": "reformulation",
+   "titre": "Les trois temps de la reformulation",
+   "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 640 360\" font-family=\"system-ui, -apple-system, Segoe UI, sans-serif\">\n<title>Les trois temps de la reformulation</title>\n<rect x=\"0\" y=\"0\" width=\"640\" height=\"360\" fill=\"#FFFFFF\"/>\n<text x=\"320\" y=\"34\" text-anchor=\"middle\" font-size=\"20\" font-weight=\"700\" fill=\"#162443\">Les trois temps de la reformulation</text>\n<text x=\"320\" y=\"58\" text-anchor=\"middle\" font-size=\"14\" fill=\"#8A95A8\">Une objection dit ce que le client comprend, craint ou attend</text>\n<line x1=\"110\" y1=\"84\" x2=\"530\" y2=\"84\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<g fill=\"#FFFFFF\" stroke=\"#162443\" stroke-width=\"2\">\n<rect x=\"10\" y=\"84\" width=\"200\" height=\"130\" rx=\"8\"/>\n<rect x=\"220\" y=\"84\" width=\"200\" height=\"130\" rx=\"8\"/>\n<rect x=\"430\" y=\"84\" width=\"200\" height=\"130\" rx=\"8\"/>\n</g>\n<g font-size=\"16\" font-weight=\"700\" fill=\"#FFFFFF\" text-anchor=\"middle\">\n<circle cx=\"110\" cy=\"84\" r=\"16\" fill=\"#162443\"/>\n<text x=\"110\" y=\"90\">1</text>\n<circle cx=\"320\" cy=\"84\" r=\"16\" fill=\"#162443\"/>\n<text x=\"320\" y=\"90\">2</text>\n<circle cx=\"530\" cy=\"84\" r=\"16\" fill=\"#162443\"/>\n<text x=\"530\" y=\"90\">3</text>\n</g>\n<g font-size=\"17\" font-weight=\"700\" fill=\"#162443\" text-anchor=\"middle\">\n<text x=\"110\" y=\"124\">Accueillir</text>\n<text x=\"320\" y=\"124\">Reformuler</text>\n<text x=\"530\" y=\"124\">Faire préciser</text>\n</g>\n<g stroke=\"#C5A55A\" stroke-width=\"2\">\n<line x1=\"60\" y1=\"134\" x2=\"160\" y2=\"134\"/>\n<line x1=\"270\" y1=\"134\" x2=\"370\" y2=\"134\"/>\n<line x1=\"480\" y1=\"134\" x2=\"580\" y2=\"134\"/>\n</g>\n<g font-size=\"14\" fill=\"#2C3548\" text-anchor=\"middle\">\n<text x=\"110\" y=\"152\">Une information,</text>\n<text x=\"110\" y=\"170\">pas une attaque.</text>\n<text x=\"110\" y=\"188\">« C’est une question</text>\n<text x=\"110\" y=\"206\">légitime. »</text>\n<text x=\"320\" y=\"152\">Avec les mots du client,</text>\n<text x=\"320\" y=\"170\">sans traduire ni orienter,</text>\n<text x=\"320\" y=\"188\">jusqu’à la validation :</text>\n<text x=\"320\" y=\"206\">« C’est bien cela ? »</text>\n<text x=\"530\" y=\"152\">Une seule question,</text>\n<text x=\"530\" y=\"170\">après la confirmation :</text>\n<text x=\"530\" y=\"188\">« Concrètement, que</text>\n<text x=\"530\" y=\"206\">feriez vous seul ? »</text>\n</g>\n<polygon points=\"308,218 332,218 320,232\" fill=\"#C5A55A\"/>\n<rect x=\"10\" y=\"236\" width=\"620\" height=\"38\" rx=\"8\" fill=\"#162443\"/>\n<text x=\"320\" y=\"261\" text-anchor=\"middle\" font-size=\"16\" font-weight=\"700\" fill=\"#FFFFFF\">Répondre, seulement après la confirmation du client</text>\n<rect x=\"10\" y=\"284\" width=\"620\" height=\"68\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"320\" y=\"305\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"700\" fill=\"#162443\">Trois erreurs : répondre à la question que l’on croit avoir entendue</text>\n<g font-size=\"14\" font-weight=\"700\" fill=\"#162443\" text-anchor=\"middle\">\n<text x=\"110\" y=\"326\">Argumenter</text>\n<text x=\"320\" y=\"326\">Déformer</text>\n<text x=\"530\" y=\"326\">Orienter</text>\n</g>\n<g font-size=\"14\" fill=\"#2C3548\" text-anchor=\"middle\">\n<text x=\"110\" y=\"344\">sans avoir vérifié</text>\n<text x=\"320\" y=\"344\">traduire par « trop cher »</text>\n<text x=\"530\" y=\"344\">souffler la réponse</text>\n</g>\n</svg>",
+   "legende": "Accueillir, reformuler avec les mots du client jusqu’à la validation, faire préciser par une seule question : on ne répond qu’après la confirmation. Argumenter sans vérifier, déformer ou orienter, c’est répondre à côté."
+  },
+  {
+   "cle": "etages_frais",
+   "titre": "Les deux étages de frais en assurance vie",
+   "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 640 360\" font-family=\"system-ui, -apple-system, Segoe UI, sans-serif\">\n<title>Les deux étages de frais en assurance vie</title>\n<rect x=\"0\" y=\"0\" width=\"640\" height=\"360\" fill=\"#FFFFFF\"/>\n<text x=\"320\" y=\"34\" text-anchor=\"middle\" font-size=\"20\" font-weight=\"700\" fill=\"#162443\">Les deux étages de frais en assurance vie</text>\n<text x=\"320\" y=\"58\" text-anchor=\"middle\" font-size=\"14\" fill=\"#8A95A8\">Deux familles selon l’AMF : ponctuels (entrée, sortie) et récurrents (gestion annuelle)</text>\n<rect x=\"10\" y=\"72\" width=\"620\" height=\"120\" rx=\"8\" fill=\"#FFFFFF\" stroke=\"#162443\" stroke-width=\"2\"/>\n<text x=\"24\" y=\"95\" font-size=\"16\" font-weight=\"700\" fill=\"#162443\">Étage 1 : le contrat</text>\n<g fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\">\n<rect x=\"24\" y=\"106\" width=\"142\" height=\"74\" rx=\"8\"/>\n<rect x=\"174\" y=\"106\" width=\"142\" height=\"74\" rx=\"8\"/>\n<rect x=\"324\" y=\"106\" width=\"142\" height=\"74\" rx=\"8\"/>\n<rect x=\"474\" y=\"106\" width=\"142\" height=\"74\" rx=\"8\"/>\n</g>\n<g font-size=\"15\" font-weight=\"700\" fill=\"#162443\" text-anchor=\"middle\">\n<text x=\"95\" y=\"130\">Versement</text>\n<text x=\"245\" y=\"130\">Gestion</text>\n<text x=\"395\" y=\"130\">Arbitrage</text>\n<text x=\"545\" y=\"130\">Retrait</text>\n</g>\n<g font-size=\"13\" fill=\"#2C3548\" text-anchor=\"middle\">\n<text x=\"95\" y=\"150\">à l’entrée,</text>\n<text x=\"95\" y=\"167\">sur chaque versement</text>\n<text x=\"245\" y=\"150\">chaque année,</text>\n<text x=\"245\" y=\"167\">sur l’encours</text>\n<text x=\"395\" y=\"150\">à chaque transfert</text>\n<text x=\"395\" y=\"167\">entre supports</text>\n<text x=\"545\" y=\"150\">à la sortie,</text>\n<text x=\"545\" y=\"167\">quand le client retire</text>\n</g>\n<circle cx=\"320\" cy=\"198\" r=\"12\" fill=\"#FFFFFF\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"320\" y=\"204\" text-anchor=\"middle\" font-size=\"17\" font-weight=\"700\" fill=\"#162443\">+</text>\n<rect x=\"10\" y=\"204\" width=\"620\" height=\"74\" rx=\"8\" fill=\"#FFFFFF\" stroke=\"#162443\" stroke-width=\"2\"/>\n<text x=\"24\" y=\"227\" font-size=\"16\" font-weight=\"700\" fill=\"#162443\">Étage 2 : les supports</text>\n<rect x=\"24\" y=\"238\" width=\"592\" height=\"30\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"320\" y=\"258\" text-anchor=\"middle\" font-size=\"14\" fill=\"#2C3548\">Frais courants de chaque fonds, récurrents, lus dans son document d’informations clés</text>\n<rect x=\"10\" y=\"290\" width=\"620\" height=\"62\" rx=\"8\" fill=\"#162443\"/>\n<text x=\"320\" y=\"315\" text-anchor=\"middle\" font-size=\"16\" font-weight=\"700\" fill=\"#FFFFFF\">Toujours en pourcentage et en euros sur le montant réel</text>\n<text x=\"320\" y=\"338\" text-anchor=\"middle\" font-size=\"14\" fill=\"#FFFFFF\">2 % sur 40 000 euros, c’est 800 euros. Jamais « négligeable », « classique » ni « offert ».</text>\n</svg>",
+   "legende": "Les frais du contrat (versement, gestion, arbitrage, retrait) et les frais courants de chaque fonds s’additionnent. Ne présenter qu’un étage, c’est faire croire au client qu’il paie moins qu’il ne paie."
+  }
+ ],
  "items": [
   {
    "cle": "i01",
@@ -47,6 +61,9 @@
    "type": "choix",
    "competence": "Reformuler une objection",
    "difficulte": 3,
+   "figure": {
+    "ref": "reformulation"
+   },
    "payload": {
     "enonce": "Cas fictif. Un client dit : « Je peux très bien faire cela seul avec une application. » Quelle reformulation est fidèle ?",
     "choix": [
@@ -85,6 +102,9 @@
    "type": "choix",
    "competence": "Familles et étages de frais",
    "difficulte": 2,
+   "figure": {
+    "ref": "etages_frais"
+   },
    "payload": {
     "enonce": "Cas fictif. Un client envisage un versement de 20 000 euros sur un contrat dont les frais sur versement sont de 2 %. Quelle présentation est conforme ?",
     "choix": [
@@ -225,6 +245,9 @@
    "type": "vrai_faux",
    "competence": "Familles et étages de frais",
    "difficulte": 1,
+   "figure": {
+    "ref": "etages_frais"
+   },
    "payload": {
     "enonce": "En assurance vie, les frais courants des fonds détenus dans le contrat sont compris dans les frais de gestion du contrat."
    },
@@ -301,6 +324,9 @@
    "type": "multi",
    "competence": "Reformuler une objection",
    "difficulte": 3,
+   "figure": {
+    "ref": "reformulation"
+   },
    "payload": {
     "enonce": "Cochez tout ce qui constitue une erreur de reformulation.",
     "choix": [
@@ -842,6 +868,79 @@
    },
    "corrige": {},
    "explication": "« Je reviens vers vous » sans date n'est pas une prochaine étape ; les quatre composantes se valident avec le client."
+  },
+  {
+   "cle": "i41",
+   "type": "choix",
+   "competence": "Reformuler une objection",
+   "difficulte": 2,
+   "figure": {
+    "ref": "reformulation"
+   },
+   "payload": {
+    "enonce": "Cas fictif. Un client trouve les frais élevés. Le conseiller répond : « Si je vous comprends bien, ce qui vous gêne n’est pas le montant, mais de payer sans voir ce que vous achetez. C’est bien cela ? » Sur le schéma, où se place cette phrase ?",
+    "choix": [
+     "Au premier temps, l’accueil de l’objection",
+     "Au deuxième temps, la reformulation qui attend la validation du client",
+     "Au troisième temps, la question de précision",
+     "Après la réponse, pour vérifier que le client a suivi"
+    ]
+   },
+   "corrige": {
+    "index": 1
+   },
+   "explication": "Elle reprend les mots du client et demande validation : c’est le deuxième temps. Vient ensuite une seule question de précision, et la réponse seulement après la confirmation."
+  },
+  {
+   "cle": "i42",
+   "type": "multi",
+   "competence": "Familles et étages de frais",
+   "difficulte": 2,
+   "figure": {
+    "ref": "etages_frais"
+   },
+   "payload": {
+    "enonce": "Sur le schéma des deux étages, le conseiller n’a présenté que les frais sur versement. Cochez tout ce qu’il lui reste à annoncer avant de recommander.",
+    "choix": [
+     "Les frais de gestion du contrat, chaque année sur l’encours",
+     "Les frais d’arbitrage, à chaque transfert entre supports",
+     "Les frais de retrait, à la sortie",
+     "Les frais courants de chaque fonds, lus dans son document d’informations clés",
+     "Une remise sur les frais sur versement",
+     "Le rendement attendu de l’allocation"
+    ]
+   },
+   "corrige": {
+    "indices": [
+     0,
+     1,
+     2,
+     3
+    ]
+   },
+   "explication": "Le premier étage compte encore gestion, arbitrage et retrait, le second les frais courants des fonds : tout s’annonce avant la recommandation. Une remise ou un rendement attendu ne sont pas des frais."
+  },
+  {
+   "cle": "i43",
+   "type": "trou_choix",
+   "competence": "Familles et étages de frais",
+   "difficulte": 2,
+   "figure": {
+    "ref": "etages_frais"
+   },
+   "payload": {
+    "phrase": "Sur le schéma, un contrat à 0,8 % de frais de gestion investi sur un fonds à 1,5 % de frais courants cumule les deux étages : le client supporte chaque année ___.",
+    "choix": [
+     "2,3 %",
+     "0,8 %",
+     "1,5 %",
+     "0,7 %"
+    ]
+   },
+   "corrige": {
+    "index": 0
+   },
+   "explication": "Les deux étages s’additionnent : 0,8 % de gestion du contrat et 1,5 % de frais courants du fonds, soit 2,3 % par an. N’annoncer que 0,8 %, c’est faire croire au client qu’il paie moins qu’il ne paie."
   }
  ]
 }

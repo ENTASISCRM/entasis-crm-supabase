@@ -1,7 +1,8 @@
 // src/services/academy.js
 // Couche d'accès Supabase de l'Entasis Academy, la rubrique de formation
-// interne (migrations 20260921_academy_1 à 6 ; le mode entraînement est la
-// migration 6).
+// interne (migrations 20260921_academy_1 à 7 et 20260922_academy_8 ; le
+// mode entraînement est la migration 6, la gamification, XP par réponse,
+// niveaux, succès, défis du jour et classement anonyme, la migration 8).
 //
 // Presque tout passe par des fonctions SQL security definer qui lisent
 // l'identité dans auth.uid() : un collaborateur ne voit que ses decks, ses
@@ -151,7 +152,9 @@ export async function demarrerEntrainement(versionId, jeton) {
 /**
  * Répond à un exercice : la base corrige, met la répétition espacée à jour et
  * compte le temps actif. Rejoué sur coupure réseau (idempotent par item).
- * Rend { correcte, bonne_reponse, explication, force, deja }.
+ * Rend { correcte, bonne_reponse, explication, force, deja } et, depuis la
+ * migration 8, { xp_gagne, xp_session, combo, combo_max } (les valeurs
+ * mémorisées et deja = true pour une réponse déjà enregistrée).
  */
 export async function repondre(entrainementId, itemId, reponse) {
   if (!entrainementId || !itemId) throw new Error('Réponse sans session ou sans exercice.')
@@ -165,7 +168,9 @@ export async function repondre(entrainementId, itemId, reponse) {
 /**
  * Termine la session : XP, série, couronnes, validation. Rend le résumé
  * { nb_bons, nb_total, xp, serie, couronnes_avant, couronnes_apres, valide,
- * attestation, erreurs:[...] }. Rejouer rend le même résumé.
+ * attestation, erreurs:[...] } et, depuis la migration 8, { xp_detail,
+ * niveau_avant, niveau_apres, combo_max, succes_debloques, defis,
+ * classement }. Rejouer rend le même résumé.
  */
 export async function terminerEntrainement(entrainementId) {
   if (!entrainementId) throw new Error('Session sans identifiant.')
@@ -179,6 +184,24 @@ export async function terminerEntrainement(entrainementId) {
 /** Sessions, XP par semaine, série et exercices faibles du collaborateur. */
 export async function mesResultats() {
   return appel('mesResultats', 'academy_mes_resultats')
+}
+
+/**
+ * Tous les succès du catalogue, dans l'ordre, avec obtenu_le (null tant
+ * qu'il est verrouillé) : [{ code, titre, description, icone, ordre,
+ * secret, obtenu_le }]. Écran Succès (migration 8).
+ */
+export async function mesSucces() {
+  return appel('mesSucces', 'academy_mes_succes', undefined, [])
+}
+
+/**
+ * Le classement anonyme de la semaine de la personne connectée :
+ * { semaine, rang, participants, xp_moi, xp_premier, xp_devant,
+ * ecart_premier }. Jamais un nom ni un identifiant d'autrui (migration 8).
+ */
+export async function classementSemaine() {
+  return appel('classementSemaine', 'academy_classement_semaine')
 }
 
 /** Nombre de sessions visées par jour (1 à 10). */
