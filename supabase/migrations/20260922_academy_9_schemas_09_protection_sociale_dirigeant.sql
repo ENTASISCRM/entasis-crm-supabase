@@ -1,0 +1,99 @@
+-- Entasis Academy, migration 9 : schemas et figures des decks (brouillons).
+--
+-- Genere par scripts/academy/generer-decks.mjs depuis scripts/academy/decks/*.json :
+-- ne pas editer a la main, regenerer. Complete le brouillon courant d un
+-- module deja seme par la migration 7 : pose les schemas de la version
+-- (remplacement par cle, les autres cles conservees), pose payload.figure
+-- sur les exercices existants reperes par (ordre, type) qui n en ont pas
+-- encore, insere les exercices nouveaux (ordre au dela du maximum existant)
+-- avec leur corrige, ordre et association deja melanges. Idempotent. Une
+-- version publiee n est jamais touchee : sans brouillon, raise notice et
+-- rien. A appliquer apres la migration 8 (colonne academy_module_versions.schemas).
+
+-- ── Schemas : Protection sociale du dirigeant (protection-sociale-dirigeant) ──
+do $schemas_protection_sociale_dirigeant$
+declare v_mod uuid; v_ver uuid; v_max integer; v_item uuid; v_nouveaux jsonb; v_conserves jsonb;
+begin
+  select id into v_mod from public.academy_modules where slug = $academy_deck$protection-sociale-dirigeant$academy_deck$;
+  if v_mod is null then
+    raise notice 'academy_9_schemas : module % absent, rien a faire (semer la migration 7 d abord)', $academy_deck$protection-sociale-dirigeant$academy_deck$;
+    return;
+  end if;
+  select id into v_ver from public.academy_module_versions where module_id = v_mod and statut = 'brouillon' order by numero desc limit 1;
+  if v_ver is null then
+    raise notice 'academy_9_schemas : aucun brouillon pour %, rien a faire (une version publiee ne se modifie pas)', $academy_deck$protection-sociale-dirigeant$academy_deck$;
+    return;
+  end if;
+  -- Schemas de la version : les cles du deck remplacent les leurs, les autres restent.
+  v_nouveaux := $academy_deck$[{"cle":"statut_social","titre":"Statut social : indépendant ou assimilé salarié","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 640 360\" font-family=\"system-ui, -apple-system, Segoe UI, sans-serif\">\n<title>Statut social : indépendant ou assimilé salarié</title>\n<rect x=\"0\" y=\"0\" width=\"640\" height=\"360\" fill=\"#FFFFFF\"/>\n<text x=\"320\" y=\"32\" text-anchor=\"middle\" font-size=\"20\" font-weight=\"700\" fill=\"#162443\">Statut social : indépendant ou assimilé salarié</text>\n<text x=\"320\" y=\"54\" text-anchor=\"middle\" font-size=\"14\" fill=\"#8A95A8\">La forme juridique et le capital décident, jamais le titre</text>\n<g fill=\"#FFFFFF\" stroke=\"#162443\" stroke-width=\"2\">\n<rect x=\"10\" y=\"70\" width=\"300\" height=\"166\" rx=\"8\"/>\n<rect x=\"330\" y=\"70\" width=\"300\" height=\"166\" rx=\"8\"/>\n</g>\n<g stroke=\"#C5A55A\" stroke-width=\"2\">\n<line x1=\"60\" y1=\"104\" x2=\"260\" y2=\"104\"/>\n<line x1=\"380\" y1=\"104\" x2=\"580\" y2=\"104\"/>\n</g>\n<g font-size=\"17\" font-weight=\"700\" fill=\"#162443\" text-anchor=\"middle\">\n<text x=\"160\" y=\"94\">Travailleur indépendant</text>\n<text x=\"480\" y=\"94\">Assimilé salarié</text>\n</g>\n<g font-size=\"14\" fill=\"#2C3548\" text-anchor=\"middle\">\n<text x=\"160\" y=\"125\">Entrepreneur individuel</text>\n<text x=\"160\" y=\"147\">Gérant majoritaire d’EURL ou de SARL</text>\n<text x=\"160\" y=\"188\">Associé de SNC</text>\n<text x=\"480\" y=\"125\">Président de SASU</text>\n<text x=\"480\" y=\"147\">Président ou DG de SAS</text>\n<text x=\"480\" y=\"188\">Gérant minoritaire ou égalitaire de SARL</text>\n</g>\n<g font-size=\"13\" fill=\"#8A95A8\" text-anchor=\"middle\">\n<text x=\"160\" y=\"163\">collège de gérance à plus de 50 %</text>\n<text x=\"480\" y=\"163\">quelle que soit la part de capital</text>\n</g>\n<g font-size=\"13\" font-weight=\"700\" fill=\"#162443\" text-anchor=\"middle\">\n<text x=\"160\" y=\"211\">IJ plafonnée du régime obligatoire,</text>\n<text x=\"160\" y=\"228\">personne ne complète sans contrat</text>\n<text x=\"480\" y=\"211\">Régime général, salarié cadre,</text>\n<text x=\"480\" y=\"228\">sans assurance chômage</text>\n</g>\n<rect x=\"150\" y=\"262\" width=\"340\" height=\"38\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"320\" y=\"286\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"700\" fill=\"#162443\">SARL : les parts du collège de gérance</text>\n<g stroke=\"#C5A55A\" stroke-width=\"2\" fill=\"none\">\n<line x1=\"190\" y1=\"262\" x2=\"152\" y2=\"239\"/>\n<line x1=\"450\" y1=\"262\" x2=\"488\" y2=\"239\"/>\n</g>\n<g fill=\"#C5A55A\">\n<polygon points=\"150,238 164,240 155,249\"/>\n<polygon points=\"490,238 476,240 485,249\"/>\n</g>\n<g font-size=\"14\" font-weight=\"700\" fill=\"#162443\" text-anchor=\"middle\">\n<text x=\"112\" y=\"258\">plus de 50 %</text>\n<text x=\"528\" y=\"258\">au plus 50 %</text>\n</g>\n<rect x=\"10\" y=\"310\" width=\"620\" height=\"42\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<g font-size=\"14\" fill=\"#2C3548\" text-anchor=\"middle\">\n<text x=\"320\" y=\"328\">Les parts du conjoint, du partenaire de PACS et des enfants mineurs</text>\n<text x=\"320\" y=\"345\">comptent avec celles du gérant.</text>\n</g>\n</svg>","legende":"Le statut découle de la forme juridique et du capital, jamais du titre. Le président de SAS est toujours assimilé salarié ; le gérant de SARL dépend des parts du collège de gérance, conjoint, partenaire de PACS et enfants mineurs compris."},{"cle":"revenu_moins_ij","titre":"Revenu moins IJ : le trou à chiffrer","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 640 360\" font-family=\"system-ui, -apple-system, Segoe UI, sans-serif\">\n<title>Revenu moins IJ : le trou à chiffrer</title>\n<rect x=\"0\" y=\"0\" width=\"640\" height=\"360\" fill=\"#FFFFFF\"/>\n<text x=\"320\" y=\"32\" text-anchor=\"middle\" font-size=\"20\" font-weight=\"700\" fill=\"#162443\">Revenu moins IJ : le trou à chiffrer</text>\n<g fill=\"#FFFFFF\" stroke=\"#162443\" stroke-width=\"2\">\n<rect x=\"10\" y=\"66\" width=\"140\" height=\"94\" rx=\"8\"/>\n<rect x=\"170\" y=\"66\" width=\"140\" height=\"94\" rx=\"8\"/>\n<rect x=\"330\" y=\"66\" width=\"140\" height=\"94\" rx=\"8\"/>\n<rect x=\"490\" y=\"66\" width=\"140\" height=\"94\" rx=\"8\"/>\n</g>\n<g fill=\"#162443\">\n<circle cx=\"80\" cy=\"66\" r=\"12\"/>\n<circle cx=\"240\" cy=\"66\" r=\"12\"/>\n<circle cx=\"400\" cy=\"66\" r=\"12\"/>\n<circle cx=\"560\" cy=\"66\" r=\"12\"/>\n</g>\n<g font-size=\"13\" font-weight=\"700\" fill=\"#FFFFFF\" text-anchor=\"middle\">\n<text x=\"80\" y=\"71\">1</text>\n<text x=\"240\" y=\"71\">2</text>\n<text x=\"400\" y=\"71\">3</text>\n<text x=\"560\" y=\"71\">4</text>\n</g>\n<g fill=\"#C5A55A\">\n<polygon points=\"152,106 167,113 152,120\"/>\n<polygon points=\"312,106 327,113 312,120\"/>\n<polygon points=\"472,106 487,113 472,120\"/>\n</g>\n<g font-size=\"15\" font-weight=\"700\" fill=\"#162443\" text-anchor=\"middle\">\n<text x=\"80\" y=\"98\">Revenu moyen</text>\n<text x=\"240\" y=\"98\">Plafonné</text>\n<text x=\"400\" y=\"98\">÷ 730</text>\n<text x=\"560\" y=\"98\">× jours d’arrêt</text>\n</g>\n<g font-size=\"13\" fill=\"#2C3548\" text-anchor=\"middle\">\n<text x=\"80\" y=\"120\">3 dernières années</text>\n<text x=\"80\" y=\"140\">avis d’imposition</text>\n<text x=\"240\" y=\"120\">48 060 € en 2026</text>\n<text x=\"240\" y=\"140\">artisan, commerçant</text>\n<text x=\"400\" y=\"120\">= IJ par jour</text>\n<text x=\"400\" y=\"140\">65,84 € au plus</text>\n<text x=\"560\" y=\"120\">dès le 4e jour</text>\n<text x=\"560\" y=\"140\">3 jours sans IJ</text>\n</g>\n<text x=\"225\" y=\"184\" text-anchor=\"middle\" font-size=\"14\" fill=\"#8A95A8\">Le résultat, face au revenu habituel</text>\n<rect x=\"70\" y=\"196\" width=\"120\" height=\"126\" fill=\"#162443\"/>\n<rect x=\"230\" y=\"286\" width=\"120\" height=\"36\" fill=\"#C5A55A\"/>\n<line x1=\"40\" y1=\"322\" x2=\"380\" y2=\"322\" stroke=\"#8A95A8\" stroke-width=\"2\"/>\n<line x1=\"190\" y1=\"196\" x2=\"380\" y2=\"196\" stroke=\"#162443\" stroke-width=\"2\" stroke-dasharray=\"6 5\"/>\n<line x1=\"370\" y1=\"204\" x2=\"370\" y2=\"278\" stroke=\"#162443\" stroke-width=\"2\"/>\n<g fill=\"#162443\">\n<polygon points=\"370,196 364,206 376,206\"/>\n<polygon points=\"370,286 364,276 376,276\"/>\n</g>\n<g font-size=\"13\" fill=\"#2C3548\" text-anchor=\"middle\">\n<text x=\"130\" y=\"342\">Revenu habituel</text>\n<text x=\"290\" y=\"342\">IJ du régime obligatoire</text>\n</g>\n<text x=\"515\" y=\"224\" text-anchor=\"middle\" font-size=\"16\" font-weight=\"700\" fill=\"#162443\">L’écart, c’est le besoin</text>\n<g font-size=\"13\" fill=\"#2C3548\" text-anchor=\"middle\">\n<text x=\"515\" y=\"246\">comparé aux charges fixes</text>\n<text x=\"515\" y=\"264\">personne ne le complète</text>\n</g>\n<rect x=\"400\" y=\"284\" width=\"230\" height=\"46\" rx=\"8\" fill=\"#F5EDD8\" stroke=\"#C5A55A\" stroke-width=\"2\"/>\n<text x=\"515\" y=\"303\" text-anchor=\"middle\" font-size=\"13\" font-weight=\"700\" fill=\"#162443\">Chiffres officiels du jour,</text>\n<text x=\"515\" y=\"321\" text-anchor=\"middle\" font-size=\"13\" fill=\"#2C3548\">jamais de mémoire.</text>\n</svg>","legende":"L’IJ du régime obligatoire se calcule sur un revenu plafonné, jamais sur le revenu réel : l’écart avec le revenu habituel, comparé aux charges fixes, est le besoin de prévoyance. On l’écrit devant le client avec les chiffres officiels du jour."}]$academy_deck$::jsonb;
+  select coalesce(jsonb_agg(s), '[]'::jsonb) into v_conserves
+    from jsonb_array_elements(coalesce((select schemas from public.academy_module_versions where id = v_ver), '[]'::jsonb)) s
+   where not exists (select 1 from jsonb_array_elements(v_nouveaux) x where x ->> 'cle' = s ->> 'cle');
+  update public.academy_module_versions set schemas = v_conserves || v_nouveaux, updated_at = now() where id = v_ver;
+  -- Figures : posee sur l exercice existant (ordre, type) qui n en a pas ; au dela du maximum, exercice nouveau.
+  select coalesce(max(ordre), 0) into v_max from public.academy_items where version_id = v_ver;
+  if v_max >= 1 then
+    update public.academy_items set payload = payload || jsonb_build_object('figure', $academy_deck${"ref":"statut_social"}$academy_deck$::jsonb), updated_at = now()
+     where version_id = v_ver and ordre = 1 and type = $academy_deck$choix$academy_deck$ and archive_le is null and not (payload ? 'figure');
+  else
+    insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+    values (v_ver, 1, $academy_deck$choix$academy_deck$, $academy_deck$Statut social du dirigeant$academy_deck$, 1, $academy_deck${"enonce":"Cas fictif : Madame Perrin est présidente rémunérée d'une SAS dont elle détient 80 % du capital. Quelle affirmation sur sa protection sociale est exacte ?","choix":["Elle relève du régime général comme un salarié cadre, mais ne cotise pas à l'assurance chômage","Elle relève du régime des indépendants, car elle détient plus de 50 % du capital","Elle relève du régime général et bénéficie de l'assurance chômage comme tout salarié","Elle n'a aucune protection sociale obligatoire tant qu'elle ne souscrit pas de contrat"],"figure":{"ref":"statut_social"}}$academy_deck$::jsonb)
+    returning id into v_item;
+    insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":0}$academy_deck$::jsonb, $academy_deck$Le président de SAS est assimilé salarié quelle que soit sa part de capital : régime général, sans cotisation chômage.$academy_deck$);
+  end if;
+  if v_max >= 2 then
+    update public.academy_items set payload = payload || jsonb_build_object('figure', $academy_deck${"ref":"statut_social"}$academy_deck$::jsonb), updated_at = now()
+     where version_id = v_ver and ordre = 2 and type = $academy_deck$choix$academy_deck$ and archive_le is null and not (payload ? 'figure');
+  else
+    insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+    values (v_ver, 2, $academy_deck$choix$academy_deck$, $academy_deck$Statut social du dirigeant$academy_deck$, 3, $academy_deck${"enonce":"Cas fictif : Monsieur Adam est gérant d'une SARL et détient 45 % des parts ; l'autre gérant en détient 20 %. De quel régime social relève Monsieur Adam ?","choix":["Travailleur indépendant, car le collège de gérance détient 65 % des parts","Assimilé salarié, car il détient personnellement moins de 50 %","Salarié de droit commun, avec assurance chômage","Cela dépend uniquement de l'option choisie lors de la création"],"figure":{"ref":"statut_social"}}$academy_deck$::jsonb)
+    returning id into v_item;
+    insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":0}$academy_deck$::jsonb, $academy_deck$La règle Urssaf s'apprécie au niveau du collège de gérance : 45 % plus 20 % font 65 %, donc les deux gérants sont indépendants.$academy_deck$);
+  end if;
+  if v_max >= 4 then
+    update public.academy_items set payload = payload || jsonb_build_object('figure', $academy_deck${"ref":"revenu_moins_ij"}$academy_deck$::jsonb), updated_at = now()
+     where version_id = v_ver and ordre = 4 and type = $academy_deck$choix$academy_deck$ and archive_le is null and not (payload ? 'figure');
+  else
+    insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+    values (v_ver, 4, $academy_deck$choix$academy_deck$, $academy_deck$Plafonds des IJ 2026$academy_deck$, 2, $academy_deck${"enonce":"Cas fictif : un artisan gérant majoritaire a un revenu annuel moyen de 90 000 € sur trois ans. Quel ordre de grandeur d'indemnité journalière brute retenez-vous pour 2026 ?","choix":["Environ 66 € par jour, car le revenu retenu est limité au plafond annuel de la Sécurité sociale","Environ 123 € par jour, soit 1/730e de 90 000 €","Environ 197 € par jour, soit le maximum publié par ameli.fr","Environ 246 € par jour, soit son revenu journalier réel"],"figure":{"ref":"revenu_moins_ij"}}$academy_deck$::jsonb)
+    returning id into v_item;
+    insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":0}$academy_deck$::jsonb, $academy_deck$Pour l'artisan, le revenu retenu est plafonné à 48 060 € en 2026, soit une IJ maximale de 65,84 € bruts.$academy_deck$);
+  end if;
+  if v_max >= 38 then
+    update public.academy_items set payload = payload || jsonb_build_object('figure', $academy_deck${"ref":"revenu_moins_ij"}$academy_deck$::jsonb), updated_at = now()
+     where version_id = v_ver and ordre = 38 and type = $academy_deck$carte$academy_deck$ and archive_le is null and not (payload ? 'figure');
+  else
+    insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+    values (v_ver, 38, $academy_deck$carte$academy_deck$, $academy_deck$Posture en rendez-vous$academy_deck$, 1, $academy_deck${"recto":"Quelle question poser à un dirigeant pour lui faire sentir le trou de revenu en cas d'arrêt ?","verso":"« Si demain vous êtes arrêté trois mois, qui vous verse quoi, et à partir de quand ? »","figure":{"ref":"revenu_moins_ij"}}$academy_deck$::jsonb)
+    returning id into v_item;
+    insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${}$academy_deck$::jsonb, $academy_deck$Poser la question, laisser le silence, puis chiffrer sur une feuille avec les chiffres officiels du jour, jamais de mémoire.$academy_deck$);
+  end if;
+  if v_max >= 41 then
+    update public.academy_items set payload = payload || jsonb_build_object('figure', $academy_deck${"ref":"statut_social"}$academy_deck$::jsonb), updated_at = now()
+     where version_id = v_ver and ordre = 41 and type = $academy_deck$choix$academy_deck$ and archive_le is null and not (payload ? 'figure');
+  else
+    insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+    values (v_ver, 41, $academy_deck$choix$academy_deck$, $academy_deck$Statut social du dirigeant$academy_deck$, 2, $academy_deck${"enonce":"Sur le schéma du statut social, cas fictif : Madame Roux est gérante d’une SARL et détient 30 % des parts ; son mari, associé non gérant, en détient 25 % et un tiers 45 %. Dans quelle colonne la placez vous ?","choix":["Assimilée salariée : elle détient personnellement moins de 50 % des parts","Travailleur indépendant : les parts de son mari lui sont attribuées, la gérance dépasse 50 %","Assimilée salariée : les parts du mari ne comptent que s’il est gérant lui aussi","Travailleur indépendant : toute gérante de SARL relève des indépendants"],"figure":{"ref":"statut_social"}}$academy_deck$::jsonb)
+    returning id into v_item;
+    insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":1}$academy_deck$::jsonb, $academy_deck$Le bas du schéma le rappelle : les parts du conjoint comptent avec celles de la gérante, 30 % plus 25 % font 55 %, collège majoritaire, donc travailleur indépendant.$academy_deck$);
+  end if;
+  if v_max >= 42 then
+    update public.academy_items set payload = payload || jsonb_build_object('figure', $academy_deck${"ref":"revenu_moins_ij"}$academy_deck$::jsonb), updated_at = now()
+     where version_id = v_ver and ordre = 42 and type = $academy_deck$multi$academy_deck$ and archive_le is null and not (payload ? 'figure');
+  else
+    insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+    values (v_ver, 42, $academy_deck$multi$academy_deck$, $academy_deck$Plafonds des IJ 2026$academy_deck$, 2, $academy_deck${"enonce":"Sur le schéma de la soustraction, cochez tout ce qui explique pourquoi la barre de l’IJ reste si loin de celle du revenu habituel, pour un artisan.","choix":["Le revenu retenu est plafonné à 48 060 € en 2026, quel que soit le revenu réel","L’IJ vaut 1/730e du revenu retenu, soit 65,84 € bruts par jour au plus","Les trois premiers jours d’arrêt ne sont pas indemnisés","L’Assurance Maladie complète jusqu’au revenu réel après le 90e jour","La SARL maintient la rémunération de gérance pendant l’arrêt"],"figure":{"ref":"revenu_moins_ij"}}$academy_deck$::jsonb)
+    returning id into v_item;
+    insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"indices":[0,1,2]}$academy_deck$::jsonb, $academy_deck$Revenu plafonné, divisé par 730, trois jours sans IJ : l’écart avec le revenu habituel, comparé aux charges fixes, est le besoin, et personne ne le complète sans contrat.$academy_deck$);
+  end if;
+  if v_max >= 43 then
+    update public.academy_items set payload = payload || jsonb_build_object('figure', $academy_deck${"ref":"revenu_moins_ij"}$academy_deck$::jsonb), updated_at = now()
+     where version_id = v_ver and ordre = 43 and type = $academy_deck$trou_choix$academy_deck$ and archive_le is null and not (payload ? 'figure');
+  else
+    insert into public.academy_items (version_id, ordre, type, competence, difficulte, payload)
+    values (v_ver, 43, $academy_deck$trou_choix$academy_deck$, $academy_deck$Posture en rendez-vous$academy_deck$, 1, $academy_deck${"phrase":"Sur le schéma, l’écart entre la barre du revenu habituel et celle de l’IJ se compare ___ pour démontrer le besoin de prévoyance, chiffres officiels en main.","choix":["aux charges fixes","à la cotisation du contrat proposé","au plafond annuel de la Sécurité sociale","à l’économie d’impôt Madelin"],"figure":{"ref":"revenu_moins_ij"}}$academy_deck$::jsonb)
+    returning id into v_item;
+    insert into public.academy_items_corriges (item_id, corrige, explication) values (v_item, $academy_deck${"index":0}$academy_deck$::jsonb, $academy_deck$Le besoin se démontre par la soustraction revenu moins IJ, comparée aux charges fixes, écrite devant le client avec les chiffres du jour, jamais de mémoire.$academy_deck$);
+  end if;
+end
+$schemas_protection_sociale_dirigeant$;
